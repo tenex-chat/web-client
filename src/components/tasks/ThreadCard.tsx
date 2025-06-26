@@ -10,7 +10,7 @@ interface ThreadOverviewProps {
     onClick?: () => void;
 }
 
-export function ThreadOverview({ thread, replies, onClick }: ThreadOverviewProps) {
+export function ThreadCard({ thread, replies, onClick }: ThreadOverviewProps) {
     const { formatRelativeTime } = useTimeFormat({ relativeFormat: "short" });
 
     // Get thread title

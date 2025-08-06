@@ -10,7 +10,7 @@ interface AgentSelectorProps {
     filterType?: 'all' | 'agent' | 'mcp-server';
 }
 
-export function AgentSelector({ selectedAgents, onAgentsChange, filterType = 'agent' }: AgentSelectorProps) {
+export function AgentSelector({ selectedAgents, onAgentsChange }: AgentSelectorProps) {
     const { events: allEvents } = useSubscribe<NDKAgent>(
         [{ kinds: [NDKAgent.kind], limit: 100 }],
         { wrap: true },

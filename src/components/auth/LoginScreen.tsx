@@ -33,8 +33,8 @@ export function LoginScreen() {
             const signer = new NDKNip07Signer();
             await signer.blockUntilReady();
             login(signer);
-        } catch (_error) {
-            // console.error("NIP-07 login failed:", error);
+        } catch {
+            // Silently fail - user canceled or extension not available
         } finally {
             setIsLoading(false);
         }
@@ -47,8 +47,8 @@ export function LoginScreen() {
         try {
             const signer = new NDKPrivateKeySigner(nsecInput.trim());
             login(signer);
-        } catch (_error) {
-            // console.error("Nsec login failed:", error);
+        } catch {
+            // Invalid nsec key - user will see no action
         } finally {
             setIsLoading(false);
         }

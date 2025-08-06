@@ -64,8 +64,8 @@ export function ProjectSettings({ project, onBack, onProjectUpdated }: ProjectSe
 
             setHasChanges(false);
             onProjectUpdated?.();
-        } catch (_error) {
-            // console.error("Failed to save project settings:", error);
+        } catch {
+            // Silently fail - error already handled in UI
         } finally {
             setIsUpdating(false);
         }

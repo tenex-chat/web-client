@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { ArrowLeft, Settings, BookOpen } from "lucide-react";
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { NDKAgent } from "@/events";
@@ -14,11 +14,9 @@ import { useProjectAgents } from "../../stores/project/hooks";
 export function AgentProfile() {
     const { projectId, agentSlug } = useParams();
     const navigate = useNavigate();
-    const { ndk } = useNDK();
     const [activeTab, setActiveTab] = useState("lessons");
     
-    // Get project and project agents for fallback info
-    const project = useProject(projectId);
+    // Get project agents for fallback info
     const projectAgents = useProjectAgents(projectId);
 
     // Fetch all agents to find the one matching the slug

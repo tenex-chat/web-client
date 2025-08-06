@@ -13,7 +13,7 @@ interface AgentSettingsTabProps {
     agentSlug: string;
 }
 
-export function AgentSettingsTab({ agent, agentSlug }: AgentSettingsTabProps) {
+export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
     const [selectedVoice, setSelectedVoice] = useState<string>("");
     const [isSaving, setIsSaving] = useState(false);
     const { getTTSConfig } = useLLMConfig();

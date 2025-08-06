@@ -309,7 +309,7 @@ export function ChatInterface({
     );
 
     // Subscribe to streaming responses for the current thread
-    const { streamingResponses } = useStreamingResponses(currentThreadEvent?.id || null);
+    useStreamingResponses(currentThreadEvent?.id || null);
 
     // Process typing indicators - only keep latest per pubkey
     const activeTypingIndicators = useMemo(() => {
@@ -384,7 +384,10 @@ export function ChatInterface({
         // Extract and play the content
         const ttsContent = extractTTSContent(latestMessage.content);
         if (ttsContent && !tts.isPlaying) {
-            tts.play(ttsContent).catch(console.error);
+            tts.play(ttsContent).catch((error) => {
+                console.error("TTS playback failed:", error);
+                // Silently fail - TTS is a nice-to-have feature
+            });
         }
         
         setLastMessageId(latestMessage.id);

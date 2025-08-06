@@ -1,8 +1,8 @@
 import { NDKProject, useNDK, useProfileValue, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Camera, FileText, Info, Plus, Server, Terminal, Users, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { NDKAgent, NDKMCPTool } from "@/events";
-import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Input } from "../ui/input";
@@ -117,7 +117,9 @@ export function EditProjectModal({
             onOpenChange(false);
         } catch (error) {
             console.error("Failed to update project:", error);
-            // TODO: Show error toast
+            toast.error("Failed to update project", {
+                description: error instanceof Error ? error.message : "An unexpected error occurred"
+            });
         } finally {
             setIsUpdating(false);
         }

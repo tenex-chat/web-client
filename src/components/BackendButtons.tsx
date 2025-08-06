@@ -33,8 +33,8 @@ export function BackendButtons({ taskId, projectTagId }: BackendButtonsProps) {
 
             // Mark this backend as triggered
             setTriggeredBackends((prev) => new Set([...prev, backendPubkey]));
-        } catch (_error) {
-            // console.error("Failed to trigger task:", error);
+        } catch {
+            // Silently fail - backend may be offline
         }
     };
 

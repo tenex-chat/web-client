@@ -144,7 +144,7 @@ export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
                         )}
                         <SearchIconButton
                             onClick={() => {
-                                // TODO: Implement chat search
+                                setIsSearchOpen(!isSearchOpen);
                             }}
                             size="sm"
                             className="sm:w-9 sm:h-9"

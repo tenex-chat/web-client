@@ -455,18 +455,24 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
     };
 
     const handleCopyId = async () => {
+        const { toast } = await import("sonner");
         try {
             await navigator.clipboard.writeText(event.encode());
+            toast.success("Event ID copied to clipboard");
         } catch (error) {
             console.error("Failed to copy event ID:", error);
+            toast.error("Failed to copy event ID");
         }
     };
 
     const handleCopyRawEvent = async () => {
+        const { toast } = await import("sonner");
         try {
             await navigator.clipboard.writeText(event.inspect);
+            toast.success("Raw event copied to clipboard");
         } catch (error) {
             console.error("Failed to copy raw event:", error);
+            toast.error("Failed to copy raw event");
         }
     };
 

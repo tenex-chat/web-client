@@ -297,6 +297,47 @@ export const ValidationRules = {
 };
 
 /**
+ * Project avatar utilities
+ */
+export const ProjectAvatarUtils = {
+    /**
+     * Get project avatar URL
+     */
+    getAvatar(project: { picture?: string; tagValue?: (key: string) => string | undefined; title?: string }): string {
+        if (project.picture) {
+            return project.picture;
+        }
+        const seed = project.tagValue?.("d") || project.title || "default";
+        return `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(seed)}`;
+    },
+
+    /**
+     * Get avatar gradient colors based on title
+     */
+    getColors(title: string): string {
+        const colors = [
+            "bg-gradient-to-br from-blue-500 to-blue-600",
+            "bg-gradient-to-br from-emerald-500 to-emerald-600",
+            "bg-gradient-to-br from-purple-500 to-purple-600",
+            "bg-gradient-to-br from-amber-500 to-amber-600",
+            "bg-gradient-to-br from-rose-500 to-rose-600",
+            "bg-gradient-to-br from-indigo-500 to-indigo-600",
+            "bg-gradient-to-br from-teal-500 to-teal-600",
+            "bg-gradient-to-br from-orange-500 to-orange-600",
+        ];
+        const index = title.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+        return colors[index];
+    },
+
+    /**
+     * Get initials from project title
+     */
+    getInitials(title: string): string {
+        return StringUtils.getInitials(title);
+    },
+};
+
+/**
  * CSS utility functions
  */
 export const CSSUtils = {

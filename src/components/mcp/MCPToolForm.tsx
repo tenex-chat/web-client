@@ -5,9 +5,20 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Badge } from "../ui/badge";
 
+interface MCPToolFormData {
+    title: string;
+    description: string;
+    serverUrl: string;
+    documentation: string;
+    installation: string;
+    usageExample: string;
+    tags: string[];
+    newTag: string;
+}
+
 interface MCPToolFormProps {
-    formData: Record<string, unknown>;
-    onFormChange: (field: string, value: unknown) => void;
+    formData: MCPToolFormData;
+    onFormChange: (field: keyof MCPToolFormData, value: string | string[]) => void;
     onAddTag: () => void;
     onRemoveTag: (tag: string) => void;
 }

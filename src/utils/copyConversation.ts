@@ -1,6 +1,7 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { EVENT_KINDS } from "../lib/types.js";
 import { logger } from "../lib/logger";
+import { toast } from "sonner";
 
 /**
  * Get a display name for a pubkey
@@ -92,9 +93,11 @@ export async function copyThreadToClipboard(
     try {
         const markdown = threadToMarkdown(messages, profiles, threadTitle);
         await navigator.clipboard.writeText(markdown);
+        toast.success("Conversation copied to clipboard");
         return true;
     } catch (error) {
         logger.error("Failed to copy to clipboard:", error);
+        toast.error("Failed to copy conversation to clipboard");
         return false;
     }
 }

@@ -17,8 +17,8 @@ export function AgentSelector({ selectedAgents, onAgentsChange }: AgentSelectorP
         []
     );
 
-    // For now, use all events since NDKAgent doesn't have a type property
-    // TODO: If agent types are needed, they should be stored as a tag
+    // Use all events since NDKAgent doesn't have a type property
+    // Agent types can be stored as tags if needed in the future
     const agentEvents = allEvents;
 
     const handleAgentSelect = (agent: NDKAgent) => {

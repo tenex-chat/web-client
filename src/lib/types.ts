@@ -150,3 +150,20 @@ interface OllamaModelsResponse {
 export function isOllamaModelsResponse(response: any): response is OllamaModelsResponse {
     return response && Array.isArray(response.models);
 }
+
+// Type guards for NDK events
+export function isNDKTask(event: any): event is import("@nostr-dev-kit/ndk").NDKEvent {
+    return event && typeof event.kind === "number" && event.kind === EVENT_KINDS.task;
+}
+
+export function isNDKInstruction(event: any): event is import("@nostr-dev-kit/ndk").NDKEvent {
+    return event && typeof event.kind === "number" && event.kind === EVENT_KINDS.agent_instruction;
+}
+
+export function isNDKAgent(event: any): event is import("@nostr-dev-kit/ndk").NDKEvent {
+    return event && typeof event.kind === "number" && event.kind === EVENT_KINDS.agent;
+}
+
+export function isNDKProject(event: any): event is import("@nostr-dev-kit/ndk").NDKEvent {
+    return event && typeof event.kind === "number" && event.kind === EVENT_KINDS.project;
+}

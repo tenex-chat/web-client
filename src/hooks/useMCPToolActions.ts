@@ -2,7 +2,7 @@ import { NDKMCPTool } from "@/events";
 import { useEntityActions } from "./useEntityActions";
 
 export function useMCPToolActions() {
-    const { copiedId, copyEntityId, deleteEntity, DeleteConfirmationDialog } = useEntityActions<NDKMCPTool>();
+    const { copiedId, copyEntityId, deleteEntity } = useEntityActions<NDKMCPTool>();
 
     const copyToolId = (tool: NDKMCPTool) => copyEntityId(tool);
     
@@ -13,6 +13,5 @@ export function useMCPToolActions() {
         copiedId,
         copyToolId,
         deleteTool,
-        DeleteConfirmationDialog,
     };
 }

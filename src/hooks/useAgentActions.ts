@@ -2,7 +2,7 @@ import type { NDKAgent } from "@/events";
 import { useEntityActions } from "./useEntityActions";
 
 export function useAgentActions() {
-    const { copiedId, copyEntityId, deleteEntity, DeleteConfirmationDialog } = useEntityActions<NDKAgent>();
+    const { copiedId, copyEntityId, deleteEntity } = useEntityActions<NDKAgent>();
 
     const copyAgentId = (agent: NDKAgent) => copyEntityId(agent);
     
@@ -13,6 +13,5 @@ export function useAgentActions() {
         copiedId,
         copyAgentId,
         deleteAgent,
-        DeleteConfirmationDialog,
     };
 }

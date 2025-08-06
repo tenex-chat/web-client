@@ -17,10 +17,9 @@ import {
 interface ParticipantAvatarsWithModelsProps {
     participants: string[];
     messages: NDKEvent[];
-    projectPubkey: string;
     projectId?: string;
     projectEvent?: NDKProject;
-    availableModels?: Record<string, any>;
+    availableModels?: Record<string, unknown>;
     maxVisible?: number;
     size?: "sm" | "md" | "lg";
     className?: string;
@@ -29,7 +28,6 @@ interface ParticipantAvatarsWithModelsProps {
 export function ParticipantAvatarsWithModels({
     participants,
     messages,
-    projectPubkey: _projectPubkey, // prefix with _ to indicate it's intentionally unused
     projectId,
     projectEvent,
     availableModels = {},

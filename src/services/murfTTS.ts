@@ -1,3 +1,5 @@
+import { logger } from '../lib/logger';
+
 export interface MurfTTSConfig {
     apiKey: string;
     voiceId: string;
@@ -145,7 +147,7 @@ export class MurfTTSService {
                             ws.close();
                         }
                     } catch (e) {
-                        console.error('Error processing message:', e);
+                        logger.error('Error processing message:', e);
                     }
                 }
             };

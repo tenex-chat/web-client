@@ -14,9 +14,6 @@ interface StreamingResponse {
  * for a specific conversation/thread
  */
 export function useStreamingResponses(conversationId: string | null) {
-    // Debug logging
-    console.log("[useStreamingResponses] Hook called with conversationId:", conversationId);
-    
     // Subscribe to streaming responses for this conversation
     const { events: streamingEvents } = useSubscribe(
         conversationId
@@ -30,21 +27,6 @@ export function useStreamingResponses(conversationId: string | null) {
         {},
         [conversationId]
     );
-    
-    // Debug logging
-    if (streamingEvents && streamingEvents.length > 0) {
-        console.log("[useStreamingResponses] Found streaming events:", {
-            conversationId,
-            eventCount: streamingEvents.length,
-            events: streamingEvents.map(e => ({
-                id: e.id,
-                pubkey: e.pubkey,
-                eTags: e.tags.filter(t => t[0] === "e").map(t => t[1]),
-                sequence: e.tagValue("sequence"),
-                contentLength: e.content.length,
-            })),
-        });
-    }
 
     // Process streaming events to get the latest content per agent
     const streamingResponses = useMemo(() => {
@@ -56,10 +38,6 @@ export function useStreamingResponses(conversationId: string | null) {
         for (const event of streamingEvents) {
             const agentPubkey = event.tagValue("p");
             if (!agentPubkey) {
-                console.log("[useStreamingResponses] Event missing p tag:", {
-                    eventId: event.id,
-                    tags: event.tags,
-                });
                 continue;
             }
 
@@ -75,16 +53,6 @@ export function useStreamingResponses(conversationId: string | null) {
                 });
             }
         }
-        
-        console.log("[useStreamingResponses] Processed responses by agent:", {
-            agentCount: responsesByAgent.size,
-            agents: Array.from(responsesByAgent.entries()).map(([pubkey, resp]) => ({
-                pubkey,
-                sequence: resp.sequence,
-                contentLength: resp.content.length,
-                contentPreview: resp.content.substring(0, 50) + "...",
-            })),
-        });
 
         return responsesByAgent;
     }, [streamingEvents]);

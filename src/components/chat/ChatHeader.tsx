@@ -14,7 +14,7 @@ interface ChatHeaderProps {
     projectPubkey?: string;
     projectId?: string;
     projectEvent?: NDKProject;
-    availableModels?: Record<string, any>;
+    availableModels?: Record<string, unknown>;
     onBack?: () => void;
     autoTTS?: boolean;
     onAutoTTSToggle?: () => void;

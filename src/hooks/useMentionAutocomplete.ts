@@ -115,31 +115,22 @@ export function useMentionAutocomplete(
             const mentionedAgents: ProjectAgent[] = [];
             const cleanContent = content;
 
-            // Debug log
-            console.log("Extracting mentions from:", content);
-            console.log("Available agents for matching:", projectAgents);
-
             // Find all @mentions in the content
             const matches = content.matchAll(mentionRegex);
             for (const match of matches) {
                 const mentionName = match[1];
-                console.log("Found mention:", mentionName);
                 
                 const agent = projectAgents.find(
                     (a) => a.name.toLowerCase() === mentionName?.toLowerCase()
                 );
                 
                 if (agent) {
-                    console.log("Matched agent:", agent);
                     if (!mentionedAgents.some((a) => a.pubkey === agent.pubkey)) {
                         mentionedAgents.push(agent);
                     }
-                } else {
-                    console.log("No matching agent found for:", mentionName);
                 }
             }
 
-            console.log("Final mentioned agents:", mentionedAgents);
             return { cleanContent, mentionedAgents };
         },
         [projectAgents]

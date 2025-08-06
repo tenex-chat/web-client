@@ -153,7 +153,8 @@ export function CreateProjectDialog({
             resetForm();
             onOpenChange(false);
             onProjectCreated?.();
-        } catch (_error) {
+        } catch {
+            // Project creation failed
         } finally {
             setIsCreating(false);
         }

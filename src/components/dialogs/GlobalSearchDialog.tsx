@@ -41,7 +41,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
     );
 
     // TODO: Status updates should also come from a centralized store
-    const statusUpdates: NDKEvent[] = [];
+    const statusUpdates = useMemo(() => [] as NDKEvent[], []);
 
     // Helper functions
     const getTaskTitle = useCallback((task: NDKTask) => {

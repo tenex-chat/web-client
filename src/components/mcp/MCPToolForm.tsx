@@ -6,8 +6,8 @@ import { Textarea } from "../ui/textarea";
 import { Badge } from "../ui/badge";
 
 interface MCPToolFormProps {
-    formData: any;
-    onFormChange: (field: string, value: any) => void;
+    formData: Record<string, unknown>;
+    onFormChange: (field: string, value: unknown) => void;
     onAddTag: () => void;
     onRemoveTag: (tag: string) => void;
 }

@@ -1,4 +1,5 @@
 import { MurfVoice } from '../hooks/useMurfVoices';
+import { logger } from '../lib/logger';
 
 interface CachedVoices {
     voices: MurfVoice[];
@@ -25,7 +26,7 @@ export class MurfVoicesCache {
 
             return data.voices;
         } catch (error) {
-            console.error('Error reading Murf voices cache:', error);
+            logger.error('Error reading Murf voices cache:', error);
             return null;
         }
     }
@@ -38,7 +39,7 @@ export class MurfVoicesCache {
             };
             localStorage.setItem(CACHE_KEY, JSON.stringify(data));
         } catch (error) {
-            console.error('Error saving Murf voices to cache:', error);
+            logger.error('Error saving Murf voices to cache:', error);
         }
     }
 
@@ -46,7 +47,7 @@ export class MurfVoicesCache {
         try {
             localStorage.removeItem(CACHE_KEY);
         } catch (error) {
-            console.error('Error clearing Murf voices cache:', error);
+            logger.error('Error clearing Murf voices cache:', error);
         }
     }
 

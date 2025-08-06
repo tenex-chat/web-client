@@ -117,7 +117,7 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
             const encoded = article.encode();
             await navigator.clipboard.writeText(encoded);
             toast.success("Spec encoding copied to clipboard");
-        } catch (_error) {
+        } catch {
             toast.error("Failed to copy spec encoding");
         }
     };

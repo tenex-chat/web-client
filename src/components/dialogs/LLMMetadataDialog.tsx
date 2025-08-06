@@ -31,8 +31,8 @@ export function LLMMetadataDialog({ open, onOpenChange, metadata }: LLMMetadataD
             await navigator.clipboard.writeText(text);
             setCopiedField(field);
             setTimeout(() => setCopiedField(null), 2000);
-        } catch (_err) {
-            // console.error("Failed to copy text:", err);
+        } catch {
+            // Failed to copy text
         }
     };
 

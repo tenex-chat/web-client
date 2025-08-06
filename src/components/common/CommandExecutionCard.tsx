@@ -114,8 +114,8 @@ export function CommandExecutionCard({ projectId, rootEventId }: CommandExecutio
                         return next;
                     });
                 }
-            } catch (_error) {
-                // console.error("Failed to parse command event:", error);
+            } catch {
+                // Failed to parse command event
             }
         }
     }, [events]);

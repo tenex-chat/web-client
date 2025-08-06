@@ -1,14 +1,13 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { ArrowLeft, Settings, BookOpen } from "lucide-react";
-import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { NDKAgent } from "@/events";
 import { ParticipantAvatar } from "../common/ParticipantAvatar";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { AgentLessonsTabSimple } from "./AgentLessonsTabSimple";
 import { AgentSettingsTab } from "./AgentSettingsTab";
-import { useProject } from "../../hooks/useProject";
 import { useProjectAgents } from "../../stores/project/hooks";
 
 export function AgentProfile() {

@@ -77,7 +77,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
     const { ndk } = useNDK();
     const projectAgents = useProjectAgents(project.tagId());
     const [showAgentSelector, setShowAgentSelector] = useState(false);
-    const [isAddingAgents, setIsAddingAgents] = useState(false);
+    const [, setIsAddingAgents] = useState(false);
     
     // Fetch all NDKAgent events to match with project agents
     const { events: allAgents } = useSubscribe<NDKAgent>(

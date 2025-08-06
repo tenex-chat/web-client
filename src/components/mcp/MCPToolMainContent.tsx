@@ -1,4 +1,3 @@
-import { Server } from "lucide-react";
 import { NDKMCPTool } from "@/events";
 import { MCPToolForm } from "./MCPToolForm";
 import { MCPToolHeader } from "./MCPToolHeader";
@@ -9,13 +8,13 @@ interface MCPToolMainContentProps {
     isCreatingNew: boolean;
     isEditing: boolean;
     copiedId: string | null;
-    formData: any;
+    formData: Record<string, unknown>;
     onEdit: () => void;
     onCancel: () => void;
     onSave: () => void;
     onCopyToolId: (tool: NDKMCPTool) => void;
     onDeleteTool: (tool: NDKMCPTool) => void;
-    onFormChange: (field: string, value: any) => void;
+    onFormChange: (field: string, value: unknown) => void;
     onAddTag: () => void;
     onRemoveTag: (tag: string) => void;
 }

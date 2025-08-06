@@ -72,8 +72,8 @@ export function ProjectList() {
 
     // TODO: In the future, we should get task counts and latest activity from the store
     // For now, we'll simplify and just show projects without the activity tracking
-    const tasks: NDKTask[] = [];
-    const statusUpdates: NDKEvent[] = [];
+    const tasks = useMemo(() => [] as NDKTask[], []);
+    const statusUpdates = useMemo(() => [] as NDKEvent[], []);
 
     // Create maps for project activity and status updates
     const { projectActivityMap, mostRecentStatusMap, unreadCountMap } = useMemo(() => {

@@ -1,6 +1,8 @@
 // Voice configuration management for agents
 // Stores voice settings in localStorage keyed by agent slug
 
+import { logger } from './logger';
+
 export interface AgentVoiceConfig {
     voiceId: string;
     voiceName: string;
@@ -24,7 +26,7 @@ export function getAgentVoiceConfig(agentSlug: string): AgentVoiceConfig | null 
             return JSON.parse(stored) as AgentVoiceConfig;
         }
     } catch (error) {
-        console.error("Failed to load voice config for agent:", agentSlug, error);
+        logger.error("Failed to load voice config for agent:", agentSlug, error);
     }
     
     return null;
@@ -43,7 +45,7 @@ export function saveAgentVoiceConfig(agentSlug: string, config: AgentVoiceConfig
     try {
         localStorage.setItem(`${VOICE_CONFIG_PREFIX}${agentSlug}`, JSON.stringify(config));
     } catch (error) {
-        console.error("Failed to save voice config for agent:", agentSlug, error);
+        logger.error("Failed to save voice config for agent:", agentSlug, error);
         throw error;
     }
 }
@@ -58,7 +60,7 @@ export function removeAgentVoiceConfig(agentSlug: string): void {
     try {
         localStorage.removeItem(`${VOICE_CONFIG_PREFIX}${agentSlug}`);
     } catch (error) {
-        console.error("Failed to remove voice config for agent:", agentSlug, error);
+        logger.error("Failed to remove voice config for agent:", agentSlug, error);
     }
 }
 
@@ -81,7 +83,7 @@ export function getAllAgentVoiceConfigs(): Record<string, AgentVoiceConfig> {
             }
         }
     } catch (error) {
-        console.error("Failed to load all voice configs:", error);
+        logger.error("Failed to load all voice configs:", error);
     }
     
     return configs;

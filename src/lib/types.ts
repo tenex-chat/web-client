@@ -90,38 +90,8 @@ export interface ProfileData {
 /**
  * Utility functions
  */
-export const StringUtils = {
-    truncate: (str: string, length: number) => {
-        if (str.length <= length) return str;
-        return `${str.slice(0, length)}...`;
-    },
-
-    capitalize: (str: string) => {
-        return str.charAt(0).toUpperCase() + str.slice(1);
-    },
-
-    slugify: (str: string) => {
-        return str
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/(^-|-$)/g, "");
-    },
-};
-
-export const TaskUtils = {
-    getStatusColor: (status: string) => {
-        switch (status) {
-            case "completed":
-                return "green";
-            case "in-progress":
-                return "blue";
-            case "failed":
-                return "red";
-            default:
-                return "gray";
-        }
-    },
-};
+// StringUtils and TaskUtils moved to lib/utils/business.ts for consolidation
+// Import from there instead
 
 /**
  * Backend status parsing utilities

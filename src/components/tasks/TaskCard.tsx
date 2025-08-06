@@ -1,5 +1,5 @@
 import type { NDKTask } from "@nostr-dev-kit/ndk-hooks";
-import { StringUtils } from "../../lib/types.js";
+import { StringUtils } from "../../lib/utils/business";
 import { Circle, Code2, Square } from "lucide-react";
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";

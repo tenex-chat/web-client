@@ -123,7 +123,9 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
             await navigator.clipboard.writeText(event.encode());
             setCopiedEvent(event.id);
             setTimeout(() => setCopiedEvent(null), 2000);
-        } catch (_err) {}
+        } catch {
+            // Silently handle copy failure
+        }
     };
 
     const handleSaveAgents = async () => {
@@ -167,7 +169,7 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
             setTimeout(() => {
                 window.location.reload(); // Refresh to show updated list
             }, 1000);
-        } catch (_err) {
+        } catch {
             // console.error("Failed to save agent list:", err);
             setError("Failed to save agent list. Please try again.");
         } finally {

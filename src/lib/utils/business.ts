@@ -12,7 +12,9 @@ export const StringUtils = {
      */
     truncate(text: string, maxLength: number, suffix = "..."): string {
         if (text.length <= maxLength) return text;
-        return text.slice(0, maxLength) + suffix;
+        // Ensure suffix is not longer than the truncated text
+        const truncateAt = Math.max(0, maxLength - suffix.length);
+        return text.slice(0, truncateAt) + suffix;
     },
 
     /**
@@ -41,6 +43,24 @@ export const StringUtils = {
     getFirstLine(content: string, maxLength?: number): string {
         const firstLine = content.split("\n")[0] || "";
         return maxLength ? this.truncate(firstLine, maxLength) : firstLine;
+    },
+
+    /**
+     * Capitalize first letter of string
+     */
+    capitalize(str: string): string {
+        if (!str) return "";
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    },
+
+    /**
+     * Convert string to URL-friendly slug
+     */
+    slugify(str: string): string {
+        return str
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "");
     },
 };
 

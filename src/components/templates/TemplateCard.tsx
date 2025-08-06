@@ -1,18 +1,5 @@
 import type { NDKProjectTemplate } from "@nostr-dev-kit/ndk-hooks";
-// Simple string utility functions
-const StringUtils = {
-    truncateString: (str: string, maxLength: number) =>
-        str.length > maxLength ? `${str.substring(0, maxLength)}...` : str,
-    truncate: (str: string, maxLength: number) =>
-        str.length > maxLength ? `${str.substring(0, maxLength)}...` : str,
-    getInitials: (name: string) =>
-        name
-            .split(" ")
-            .map((word) => word[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2),
-};
+import { StringUtils } from "../../lib/utils/business";
 import { Clock, ExternalLink, GitBranch } from "lucide-react";
 import { memo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
@@ -35,9 +22,6 @@ export const TemplateCard = memo(function TemplateCard({
 }: TemplateCardProps) {
     const { formatAutoTime } = useTimeFormat({ includeTime: false });
 
-    const getInitials = (name: string) => {
-        return StringUtils.getInitials(name);
-    };
 
     const getRepoUrl = () => {
         const repo = template.tagValue("repo");
@@ -58,7 +42,7 @@ export const TemplateCard = memo(function TemplateCard({
         return (
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                 <span className="text-white font-semibold text-sm">
-                    {getInitials(template.tagValue("title") || "Template")}
+                    {StringUtils.getInitials(template.tagValue("title") || "Template")}
                 </span>
             </div>
         );
@@ -74,7 +58,7 @@ export const TemplateCard = memo(function TemplateCard({
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Avatar className="w-4 h-4">
                         <AvatarFallback className="text-xs bg-muted">
-                            {getInitials(
+                            {StringUtils.getInitials(
                                 template.author?.profile?.name || template.author?.npub || "A"
                             )}
                         </AvatarFallback>

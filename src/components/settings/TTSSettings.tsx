@@ -55,7 +55,7 @@ export function TTSSettings() {
     const [isTesting, setIsTesting] = useState(false);
     const [testResult, setTestResult] = useState<boolean | null>(null);
     const [voices, setVoices] = useState<MurfVoice[]>([]);
-    const [isLoadingVoices, setIsLoadingVoices] = useState(false);
+    const [, setIsLoadingVoices] = useState(false);
     const [voiceStyle, setVoiceStyle] = useState("Conversational");
     const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
@@ -92,7 +92,7 @@ export function TTSSettings() {
                 const data = await response.json();
                 // Murf API returns an array of voice objects
                 if (data && Array.isArray(data)) {
-                    const parsedVoices = data.map((voice: any) => ({
+                    const parsedVoices = data.map((voice: MurfVoice) => ({
                         voiceId: voice.voiceId,
                         displayName: voice.displayName,
                         gender: voice.gender,
@@ -204,7 +204,7 @@ export function TTSSettings() {
                     }, 1000);
                 };
 
-                ws.onmessage = (event) => {
+                ws.onmessage = () => {
                     // If we receive any message back, the connection is working
                     clearTimeout(timeout);
                     ws.close();
@@ -295,7 +295,7 @@ export function TTSSettings() {
             const ws = new WebSocket(wsUrl);
             
             // Create audio context for playback
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
             const audioChunks: ArrayBuffer[] = [];
             let messageCount = 0;
             

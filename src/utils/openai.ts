@@ -3,6 +3,7 @@
  */
 
 import type { LLMTitleGenerationError } from "../types/llm";
+import { logger } from "../lib/logger";
 
 /**
  * Get the current LLM configuration from the unified configuration system
@@ -35,7 +36,7 @@ function getLLMConfig() {
             baseUrl: credentials.baseUrl,
         };
     } catch (error) {
-        console.error("Failed to parse LLM config:", error);
+        logger.error("Failed to parse LLM config:", error);
         return null;
     }
 }

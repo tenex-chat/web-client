@@ -67,7 +67,7 @@ export function TaskUpdates({ project, taskId, onBack, embedded = false }: TaskU
                 const tag = task.tags?.find(t => t[0] === tagName);
                 return tag?.[1];
             }
-        } as any; // Type assertion needed since this is a pseudo-event
+        } as NDKEvent; // Type assertion needed since this is a pseudo-event
     }, [task]);
 
     // Combine task description with status updates

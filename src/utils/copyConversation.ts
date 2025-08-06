@@ -1,5 +1,6 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { EVENT_KINDS } from "../lib/types.js";
+import { logger } from "../lib/logger";
 
 /**
  * Get a display name for a pubkey
@@ -93,7 +94,7 @@ export async function copyThreadToClipboard(
         await navigator.clipboard.writeText(markdown);
         return true;
     } catch (error) {
-        console.error("Failed to copy to clipboard:", error);
+        logger.error("Failed to copy to clipboard:", error);
         return false;
     }
 }

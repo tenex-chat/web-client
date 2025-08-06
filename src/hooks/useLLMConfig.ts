@@ -7,7 +7,6 @@ import type {
     SpeechConfig,
     SpeechProvider,
     TTSConfig,
-    TTSProvider,
     UnifiedLLMConfig,
 } from "../types/llm";
 import { SPEECH_MODELS } from "../types/llm";
@@ -106,7 +105,8 @@ export function useLLMConfig() {
     // Remove a configuration
     const removeConfiguration = useCallback((name: string) => {
         setConfig((prev) => {
-            const { [name]: removed, ...rest } = prev.configurations;
+            const configurations = { ...prev.configurations };
+            delete configurations[name];
             const newDefaults = { ...prev.defaults };
 
             // Remove from defaults if it was set as default
@@ -118,7 +118,7 @@ export function useLLMConfig() {
 
             return {
                 ...prev,
-                configurations: rest,
+                configurations,
                 defaults: newDefaults,
             };
         });
@@ -138,10 +138,11 @@ export function useLLMConfig() {
     // Remove credentials for a provider
     const removeCredentials = useCallback((provider: LLMProvider) => {
         setConfig((prev) => {
-            const { [provider]: removed, ...rest } = prev.credentials;
+            const credentials = { ...prev.credentials };
+            delete credentials[provider];
             return {
                 ...prev,
-                credentials: rest,
+                credentials,
             };
         });
     }, []);

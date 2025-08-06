@@ -83,13 +83,11 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
         
         // Try to get agent-specific voice configuration
         let voiceId = ttsConfig.config.voiceId || '';
-        let voiceName = 'Default';
         
         if (agentSlug) {
             const agentVoiceConfig = getAgentVoiceConfig(agentSlug);
             if (agentVoiceConfig?.voiceId) {
                 voiceId = agentVoiceConfig.voiceId;
-                voiceName = agentVoiceConfig.voiceName;
             }
         }
         

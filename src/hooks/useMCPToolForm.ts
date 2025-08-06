@@ -55,7 +55,7 @@ export function useMCPToolForm() {
     }, [formState]);
 
     const saveMCPTool = useCallback(
-        async (selectedTool: NDKMCPTool | null, isCreatingNew: boolean): Promise<boolean> => {
+        async (): Promise<boolean> => {
             if (!ndk || !validateForm()) return false;
 
             const newTool = new NDKMCPTool(ndk);
@@ -77,7 +77,7 @@ export function useMCPToolForm() {
             try {
                 await newTool.publish();
                 return true;
-            } catch (_error) {
+            } catch {
                 return false;
             }
         },

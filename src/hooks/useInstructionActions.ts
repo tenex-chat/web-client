@@ -54,8 +54,8 @@ export function useInstructionActions() {
             try {
                 await newInstruction.publish();
                 return true;
-            } catch (_error) {
-                // console.error("Failed to publish instruction:", error);
+            } catch {
+                // Failed to publish instruction
                 return false;
             }
         },
@@ -73,8 +73,8 @@ export function useInstructionActions() {
             setTimeout(() => {
                 setCopiedId(null);
             }, 2000);
-        } catch (_error) {
-            // console.error("Failed to copy instruction ID:", error);
+        } catch {
+            // Failed to copy instruction ID
         }
     }, []);
 

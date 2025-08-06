@@ -5,6 +5,7 @@ import {
     useNDKCurrentUser,
     useNDK,
 } from "@nostr-dev-kit/ndk-hooks";
+import { logger } from "../lib/logger";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useMemo, useState } from "react";
 import { useNavigation } from "../contexts/NavigationContext";
@@ -187,7 +188,7 @@ export function DesktopLayout() {
 
                             setShowVoiceDialog(false);
                         } catch (error) {
-                            console.error("Error creating content:", error);
+                            logger.error("Error creating content:", error);
                             toast.error("Failed to create content");
                         }
                     }}

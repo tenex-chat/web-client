@@ -21,8 +21,8 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
     const [error, setError] = useState<string | null>(null);
     const [currentWebSocket, setCurrentWebSocket] = useState<WebSocket | null>(null);
     const [audioQueue, setAudioQueue] = useState<AudioBufferSourceNode[]>([]);
-    const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
-    const [isProcessing, setIsProcessing] = useState(false);
+    const [, setAudioContext] = useState<AudioContext | null>(null);
+    const [, setIsProcessing] = useState(false);
 
     const stop = useCallback(() => {
         // Stop all queued audio sources
@@ -30,7 +30,7 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
             try {
                 source.stop();
                 source.disconnect();
-            } catch (e) {
+            } catch {
                 // Already stopped
             }
         });
@@ -68,7 +68,7 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
             setCurrentWebSocket(ws);
             
             // Create audio context for playback
-            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
             setAudioContext(ctx);
             
             // Track audio chunks
@@ -208,7 +208,7 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
             setIsPlaying(false);
             setIsProcessing(false);
         }
-    }, [options, stop, isProcessing]);
+    }, [options, stop]);
 
     return {
         isPlaying,

@@ -20,7 +20,6 @@ export function ArticleChatSidebar({
   project,
   article,
   isOpen,
-  onOpenChange,
   initialQuotedText,
   onQuoteHandled
 }: ArticleChatSidebarProps) {

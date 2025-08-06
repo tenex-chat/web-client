@@ -6,6 +6,7 @@ import type {
 } from "../types/llm";
 import { isOllamaModelsResponse } from "../lib/types.js";
 import { STATIC_MODELS as MODELS } from "../types/llm";
+import { logger } from "../lib/logger";
 
 /**
  * Fetch available models from OpenRouter API
@@ -49,7 +50,7 @@ export async function fetchOpenRouterModels(): Promise<OpenRouterModelWithMetada
             }))
             .sort((a, b) => a.id.localeCompare(b.id));
     } catch (error) {
-        console.warn(`Could not fetch OpenRouter models: ${error}`);
+        logger.warn(`Could not fetch OpenRouter models: ${error}`);
         // Return common OpenRouter models as fallback
         return [
             {
@@ -111,7 +112,7 @@ export async function fetchOllamaModels(): Promise<LLMModelOption[]> {
             provider: "ollama" as LLMProvider,
         }));
     } catch (error) {
-        console.warn(`Could not fetch Ollama models: ${error}`);
+        logger.warn(`Could not fetch Ollama models: ${error}`);
         console.info("Make sure Ollama is running with: ollama serve");
 
         // Return fallback models if Ollama is not available
@@ -172,7 +173,7 @@ export async function getAllModels(): Promise<LLMModelOption[]> {
         try {
             return await getModelsForProvider(provider);
         } catch (error) {
-            console.warn(`Failed to fetch models for ${provider}:`, error);
+            logger.warn(`Failed to fetch models for ${provider}:`, error);
             return MODELS[provider] || [];
         }
     });
@@ -247,7 +248,7 @@ export async function testLLMConfiguration(
 
         return response.ok;
     } catch (error) {
-        console.error(`Failed to test ${provider} configuration:`, error);
+        logger.error(`Failed to test ${provider} configuration:`, error);
         return false;
     }
 }

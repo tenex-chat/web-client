@@ -1,8 +1,9 @@
 import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
-import { useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Users, BookOpen, Plus } from "lucide-react";
-import { useState } from "react";
-import { NDKAgent } from "@tenex/cli/events";
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { NDKAgent } from "@/events";
 import { ParticipantAvatar } from "../common/ParticipantAvatar";
 import { useProjectAgents } from "../../stores/project/hooks";
 import { useAgentLessonsByEventId } from "../../hooks/useAgentLessons";
@@ -16,25 +17,50 @@ interface AgentsTabContentProps {
 }
 
 interface AgentItemProps {
-    agent: any;
+    agent: NDKAgent | null;
+    projectAgent: { pubkey: string; name: string };
+    projectId: string;
 }
 
-function AgentItem({ agent }: AgentItemProps) {
-    const lessons = useAgentLessonsByEventId(agent.id);
+function AgentItem({ agent, projectAgent, projectId }: AgentItemProps) {
+    const navigate = useNavigate();
+    const lessons = useAgentLessonsByEventId(agent?.id);
+    
+    const handleClick = () => {
+        // Use agent slug/id if available, otherwise use the project agent name
+        let identifier: string | undefined;
+        
+        if (agent) {
+            identifier = agent.tagValue("slug") || agent.id;
+        } else {
+            // For built-in agents without NDKAgent events, use the name
+            identifier = projectAgent.name;
+        }
+        
+        if (identifier) {
+            navigate(`/project/${projectId}/agent/${identifier}`);
+        }
+    };
+    
+    const agentName = agent?.tagValue("name") || agent?.tagValue("title") || projectAgent.name || "Unnamed Agent";
+    const agentDescription = agent?.tagValue("description") || "";
     
     return (
-        <div className="flex items-center space-x-4 p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors">
+        <div 
+            className="flex items-center space-x-4 p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+            onClick={handleClick}
+        >
             <ParticipantAvatar 
-                pubkey={agent.pubkey} 
+                pubkey={projectAgent.pubkey} 
                 className="w-12 h-12 flex-shrink-0" 
             />
             
             <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-foreground">
-                    {agent.name || "Unnamed Agent"}
+                    {agentName}
                 </h3>
                 <p className="text-sm text-muted-foreground line-clamp-1">
-                    {agent.description || "No description available"}
+                    {agentDescription || "No description available"}
                 </p>
             </div>
             
@@ -52,6 +78,24 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
     const projectAgents = useProjectAgents(project.tagId());
     const [showAgentSelector, setShowAgentSelector] = useState(false);
     const [isAddingAgents, setIsAddingAgents] = useState(false);
+    
+    // Fetch all NDKAgent events to match with project agents
+    const { events: allAgents } = useSubscribe<NDKAgent>(
+        [{ kinds: NDKAgent.kinds, limit: 100 }],
+        { wrap: true },
+        []
+    );
+    
+    // Map project agents to their corresponding NDKAgent objects
+    const agentMap = useMemo(() => {
+        const map = new Map<string, NDKAgent>();
+        if (allAgents) {
+            for (const agent of allAgents) {
+                map.set(agent.pubkey, agent);
+            }
+        }
+        return map;
+    }, [allAgents]);
 
     const handleAddAgents = async (selectedAgents: NDKAgent[]) => {
         if (!ndk || selectedAgents.length === 0) return;
@@ -154,9 +198,17 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
 
                 {/* Agent list */}
                 <div className="flex flex-col space-y-3">
-                    {projectAgents.map((agent) => (
-                        <AgentItem key={agent.id} agent={agent} />
-                    ))}
+                    {projectAgents.map((projectAgent) => {
+                        const fullAgent = agentMap.get(projectAgent.pubkey);
+                        return (
+                            <AgentItem 
+                                key={projectAgent.pubkey} 
+                                agent={fullAgent || null}
+                                projectAgent={projectAgent}
+                                projectId={project.tagId()} 
+                            />
+                        );
+                    })}
                 </div>
             </div>
 
@@ -167,7 +219,9 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
                         <DialogTitle>Select Agents</DialogTitle>
                     </DialogHeader>
                     <AgentSelector
-                        selectedAgents={projectAgents}
+                        selectedAgents={allAgents?.filter(a => 
+                            projectAgents.some(pa => pa.pubkey === a.pubkey)
+                        ) || []}
                         onAgentsChange={handleAddAgents}
                     />
                 </DialogContent>

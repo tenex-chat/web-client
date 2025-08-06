@@ -1,5 +1,5 @@
 import { ArrowLeft, Edit, Terminal } from "lucide-react";
-import { NDKMCPTool } from "@tenex/cli/events";
+import { NDKMCPTool } from "@/events";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { ProfileDisplay } from "../ProfileDisplay";

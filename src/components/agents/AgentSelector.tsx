@@ -1,6 +1,6 @@
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Bot } from "lucide-react";
-import { NDKAgent } from "@tenex/cli/events";
+import { NDKAgent } from "@/events";
 import { ItemSelector } from "../common/ItemSelector";
 import { AgentCard } from "./AgentCard";
 

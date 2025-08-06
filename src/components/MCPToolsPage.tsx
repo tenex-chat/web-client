@@ -2,7 +2,7 @@ import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useState } from "react";
 import { useMCPToolActions } from "../hooks/useMCPToolActions";
 import { useMCPToolForm } from "../hooks/useMCPToolForm";
-import { NDKMCPTool } from "@tenex/cli/events";
+import { NDKMCPTool } from "@/events";
 import { MCPToolList } from "./mcp/MCPToolList";
 import { MCPToolMainContent } from "./mcp/MCPToolMainContent";
 import { MCPToolDetailPage } from "./mcp/MCPToolDetailPage";

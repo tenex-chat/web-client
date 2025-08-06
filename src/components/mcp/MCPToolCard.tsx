@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { NDKMCPTool } from "@tenex/cli/events";
+import { NDKMCPTool } from "@/events";
 import { CheckIcon, Server, Terminal } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 

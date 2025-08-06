@@ -1,6 +1,5 @@
-import type { NDKAgentLesson } from "../../../../tenex/src/events/NDKAgentLesson.ts";
+import type { NDKAgent, NDKAgentLesson } from "@/events";
 import { Bot } from "lucide-react";
-import type { NDKAgent } from "../../lib/ndk-setup";
 import { AgentDetail } from "./AgentDetail";
 import { AgentForm } from "./AgentForm";
 import { AgentHeader } from "./AgentHeader";

@@ -6,6 +6,8 @@ import type {
     LLMProvider,
     SpeechConfig,
     SpeechProvider,
+    TTSConfig,
+    TTSProvider,
     UnifiedLLMConfig,
 } from "../types/llm";
 import { SPEECH_MODELS } from "../types/llm";
@@ -226,6 +228,40 @@ export function useLLMConfig() {
         return SPEECH_MODELS[provider] || [];
     }, []);
 
+    // Set TTS configuration
+    const setTTSConfig = useCallback(
+        (ttsConfig: TTSConfig, credentials: LLMCredentials) => {
+            setConfig((prev) => ({
+                ...prev,
+                tts: {
+                    configuration: ttsConfig,
+                    credentials,
+                },
+            }));
+        },
+        []
+    );
+
+    // Remove TTS configuration
+    const removeTTSConfig = useCallback(() => {
+        setConfig((prev) => ({
+            ...prev,
+            tts: undefined,
+        }));
+    }, []);
+
+    // Get TTS configuration
+    const getTTSConfig = useCallback((): {
+        config: TTSConfig;
+        credentials: LLMCredentials;
+    } | null => {
+        if (!config.tts) return null;
+        return {
+            config: config.tts.configuration,
+            credentials: config.tts.credentials,
+        };
+    }, [config]);
+
     // Get all configured providers
     const getConfiguredProviders = useCallback((): LLMProvider[] => {
         return Object.keys(config.credentials) as LLMProvider[];
@@ -264,6 +300,11 @@ export function useLLMConfig() {
         removeSpeechConfig,
         getSpeechConfig,
         getSpeechModels,
+
+        // TTS configuration
+        setTTSConfig,
+        removeTTSConfig,
+        getTTSConfig,
 
         // Model management
         loadModels,

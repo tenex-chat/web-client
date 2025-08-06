@@ -16,6 +16,9 @@ import { useProjectAgents, useProjectLLMConfigs } from "../stores/project/hooks"
 import { useScrollManagement } from "../hooks/useScrollManagement";
 import { messageDraftsAtom, selectedTaskAtom } from "../lib/store";
 import { generateThreadTitle } from "../utils/openai";
+import { extractTTSContent } from "../utils/extractTTSContent";
+import { useMurfTTS } from "../hooks/useMurfTTS";
+import { useLLMConfig } from "../hooks/useLLMConfig";
 import { BackendButtons } from "./BackendButtons";
 import { ChatDebugDialog } from "./chat/ChatDebugDialog";
 import { ChatHeader } from "./chat/ChatHeader";
@@ -122,6 +125,7 @@ export function ChatInterface({
     const [showDebugDialog, setShowDebugDialog] = useState(false);
     const [debugIndicator, setDebugIndicator] = useState<NDKEvent | null>(null);
     const [, setSelectedTask] = useAtom(selectedTaskAtom);
+    const [autoTTS, setAutoTTS] = useState(false);
     const [messageDrafts, setMessageDrafts] = useAtom(messageDraftsAtom);
 
     // Determine if we're in thread mode (include new threads without titles)
@@ -154,6 +158,27 @@ export function ChatInterface({
 
     // State for new thread detection
     const isNewThread = threadId === "new" && (threadTitle === undefined || threadTitle === "");
+    
+    // TTS configuration
+    const { getTTSConfig } = useLLMConfig();
+    const ttsConfig = getTTSConfig();
+    
+    const ttsOptions = useMemo(() => {
+        if (!ttsConfig) return null;
+        return {
+            apiKey: ttsConfig.credentials.apiKey || '',
+            voiceId: ttsConfig.config.voiceId || '',
+            style: 'Conversational',
+            rate: ttsConfig.config.settings?.speed || 1.0,
+            pitch: ttsConfig.config.settings?.pitch || 1.0,
+            volume: ttsConfig.config.settings?.volume || 1.0,
+        };
+    }, [ttsConfig]);
+    
+    const tts = useMurfTTS(ttsOptions || {
+        apiKey: '',
+        voiceId: '',
+    });
 
     // State for voice dialog
     const [showVoiceDialog, setShowVoiceDialog] = useState(false);
@@ -339,6 +364,31 @@ export function ChatInterface({
         // Sort by created_at timestamp
         return messages.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
     }, [currentThreadEvent, threadReplies, relatedTasks]);
+    
+    // Track the last message ID to detect new messages
+    const [lastMessageId, setLastMessageId] = useState<string | null>(null);
+    
+    // Auto-play new messages when auto-TTS is enabled
+    useEffect(() => {
+        if (!autoTTS || !ttsOptions || threadMessages.length === 0) return;
+        
+        const latestMessage = threadMessages[threadMessages.length - 1];
+        if (!latestMessage || latestMessage.id === lastMessageId) return;
+        
+        // Don't auto-play messages from the current user
+        if (latestMessage.pubkey === currentUserPubkey) {
+            setLastMessageId(latestMessage.id);
+            return;
+        }
+        
+        // Extract and play the content
+        const ttsContent = extractTTSContent(latestMessage.content);
+        if (ttsContent && !tts.isPlaying) {
+            tts.play(ttsContent).catch(console.error);
+        }
+        
+        setLastMessageId(latestMessage.id);
+    }, [threadMessages, autoTTS, ttsOptions, lastMessageId, currentUserPubkey, tts]);
 
     // Get unique participants from thread messages and p-tags
     const threadParticipants = useMemo(() => {
@@ -428,6 +478,11 @@ export function ChatInterface({
                             event.tags.push(["p", mostRecentNonUserMessage.pubkey]);
                         }
                     }
+                    
+                    // Add voice mode tag if auto-TTS is enabled
+                    if (autoTTS) {
+                        event.tags.push(["mode", "voice"]);
+                    }
                 } else if (!kind11Event) {
                     // This is the first message, create a new thread (kind 11)
                     if (initialThreadEvent) {
@@ -475,6 +530,11 @@ export function ChatInterface({
                         if (!event.tags.some((tag) => tag[0] === "p" && tag[1] === agent.pubkey)) {
                             event.tags.push(["p", agent.pubkey]);
                         }
+                    }
+                    
+                    // Add voice mode tag if auto-TTS is enabled
+                    if (autoTTS) {
+                        event.tags.push(["mode", "voice"]);
                     }
 
                     await event.sign();
@@ -561,6 +621,11 @@ export function ChatInterface({
 
                 // Always add claude-session for routing
                 event.tags.push(["claude-session", claudeSessionId]);
+                
+                // Add voice mode tag if auto-TTS is enabled
+                if (autoTTS) {
+                    event.tags.push(["mode", "voice"]);
+                }
             } else {
                 // This shouldn't happen due to the check above, but TypeScript needs this
                 return;
@@ -583,6 +648,7 @@ export function ChatInterface({
         messageInput,
         ndk,
         isSending,
+        autoTTS,
         isThreadMode,
         task,
         extractMentions,
@@ -597,6 +663,10 @@ export function ChatInterface({
         setMessageDrafts,
         scrollToBottom,
         statusUpdates,
+        currentUserPubkey,
+        initialThreadEvent,
+        onThreadCreated,
+        threadMessages,
     ]);
 
     const handleKeyPress = useCallback(
@@ -626,6 +696,8 @@ export function ChatInterface({
                     projectEvent={project}
                     availableModels={availableLLMConfigs}
                     onBack={onBack}
+                    autoTTS={autoTTS}
+                    onAutoTTSToggle={ttsOptions ? () => setAutoTTS(!autoTTS) : undefined}
                 />
             )}
             {/* Messages Container */}

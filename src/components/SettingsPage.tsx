@@ -4,18 +4,19 @@ import {
     useNDKSessionLogout,
     useNDKSessionSigners,
 } from "@nostr-dev-kit/ndk-hooks";
-import { ArrowLeft, Bot, Check, Copy, Eye, EyeOff, LogOut, Mic, Settings } from "lucide-react";
+import { ArrowLeft, Bot, Check, Copy, Eye, EyeOff, LogOut, Mic, Settings, Volume2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { LLMSettings } from "./settings/LLMSettings";
 import { SpeechSettings } from "./settings/SpeechSettings";
+import { TTSSettings } from "./settings/TTSSettings";
 
 interface SettingsPageProps {
     onBack: () => void;
 }
 
-type SettingsTab = "llm" | "speech" | "account" | "agents";
+type SettingsTab = "llm" | "speech" | "tts" | "account" | "agents";
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
     const [activeTab, setActiveTab] = useState<SettingsTab>("llm");
@@ -55,6 +56,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     const tabs = [
         { id: "llm" as SettingsTab, label: "LLM Models", icon: Settings },
         { id: "speech" as SettingsTab, label: "Speech-to-Text", icon: Mic },
+        { id: "tts" as SettingsTab, label: "TTS", icon: Volume2 },
         { id: "account" as SettingsTab, label: "Account", icon: Bot },
         { id: "agents" as SettingsTab, label: "Agents", icon: Bot },
     ];
@@ -105,6 +107,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                 {activeTab === "llm" && <LLMSettings />}
 
                 {activeTab === "speech" && <SpeechSettings />}
+
+                {activeTab === "tts" && <TTSSettings />}
 
                 {activeTab === "account" && (
                     <div className="space-y-6">

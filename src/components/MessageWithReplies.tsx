@@ -141,7 +141,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 
     return (
         <div className="group">
-            <StatusUpdate event={event} onReply={() => handleReply(event)} conversationId={conversationId} />
+            <StatusUpdate event={event} onReply={() => handleReply(event)} conversationId={conversationId} projectTagId={project?.tagId()} />
             
             {/* Reply count and toggle - Slack style */}
             {replyCount > 0 && (

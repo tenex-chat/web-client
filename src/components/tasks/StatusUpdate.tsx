@@ -15,6 +15,8 @@ import {
     Reply,
     ChevronDown,
     ChevronRight,
+    Volume2,
+    Square,
 } from "lucide-react";
 import { type ReactNode, memo, useMemo, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
@@ -38,19 +40,91 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { isAudioEvent } from "../../utils/audioEvents";
 import { VoiceMessage } from "../chat/VoiceMessage";
 import { useStreamingResponses } from "../../hooks/useStreamingResponses";
+import { extractTTSContent } from "../../utils/extractTTSContent";
+import { useMurfTTS } from "../../hooks/useMurfTTS";
+import { useLLMConfig } from "../../hooks/useLLMConfig";
+import { getAgentVoiceConfig } from "../../lib/voice-config";
+import { useProjectAgents } from "../../stores/project/hooks";
+import { Link, useParams } from "react-router-dom";
 
 interface StatusUpdateProps {
     event: NDKEvent;
     onReply?: (event: NDKEvent) => void;
     conversationId?: string; // To enable streaming response subscriptions
+    projectTagId?: string; // Project tag ID to get agent information
 }
 
-export const StatusUpdate = memo(function StatusUpdate({ event, onReply, conversationId }: StatusUpdateProps) {
+export const StatusUpdate = memo(function StatusUpdate({ event, onReply, conversationId, projectTagId }: StatusUpdateProps) {
     const profile = useProfileValue(event.pubkey);
     const { formatRelativeTime } = useTimeFormat();
     const [showMetadataDialog, setShowMetadataDialog] = useState(false);
     const [showRawEventDialog, setShowRawEventDialog] = useState(false);
     const [expandedThinkingBlocks, setExpandedThinkingBlocks] = useState<Set<number>>(new Set());
+    const { projectId } = useParams();
+    
+    // Get project agents to find the agent's slug from its pubkey
+    const projectAgents = useProjectAgents(projectTagId);
+    
+    // Get the agent's slug from the project agents
+    const agentSlug = useMemo(() => {
+        if (!projectAgents || projectAgents.length === 0) return null;
+        const agent = projectAgents.find(a => a.pubkey === event.pubkey);
+        // The agent's name in the project status is the slug
+        return agent?.name || null;
+    }, [projectAgents, event.pubkey]);
+    
+    // TTS configuration
+    const { getTTSConfig } = useLLMConfig();
+    const ttsConfig = getTTSConfig();
+    
+    // Get agent's configured voice or use default
+    const ttsOptions = useMemo(() => {
+        if (!ttsConfig) return null;
+        
+        // Try to get agent-specific voice configuration
+        let voiceId = ttsConfig.config.voiceId || '';
+        let voiceName = 'Default';
+        
+        if (agentSlug) {
+            const agentVoiceConfig = getAgentVoiceConfig(agentSlug);
+            if (agentVoiceConfig?.voiceId) {
+                voiceId = agentVoiceConfig.voiceId;
+                voiceName = agentVoiceConfig.voiceName;
+            }
+        }
+        
+        return {
+            apiKey: ttsConfig.credentials.apiKey || '',
+            voiceId: voiceId,
+            style: 'Conversational',
+            rate: ttsConfig.config.settings?.speed || 1.0,
+            pitch: ttsConfig.config.settings?.pitch || 1.0,
+            volume: ttsConfig.config.settings?.volume || 1.0,
+        };
+    }, [ttsConfig, agentSlug]);
+    
+    // Get voice name for tooltip
+    const voiceName = useMemo(() => {
+        if (!ttsOptions?.voiceId) return 'Default';
+        
+        // Try to get the agent's configured voice name
+        if (agentSlug) {
+            const agentVoiceConfig = getAgentVoiceConfig(agentSlug);
+            if (agentVoiceConfig?.voiceName) {
+                return agentVoiceConfig.voiceName;
+            }
+        }
+        
+        // Fall back to extracting from voice ID
+        const parts = ttsOptions.voiceId.split('-');
+        const name = parts[parts.length - 1];
+        return name ? name.charAt(0).toUpperCase() + name.slice(1) : 'Default';
+    }, [ttsOptions, agentSlug]);
+    
+    const tts = useMurfTTS(ttsOptions || {
+        apiKey: '',
+        voiceId: '',
+    });
     
     // Subscribe to streaming responses if we have a conversationId
     const { streamingResponses } = useStreamingResponses(conversationId || null);
@@ -550,12 +624,45 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
                 <div className="flex-1 min-w-0">
                     {/* Header */}
                     <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm text-foreground">
-                            {getDisplayName()}
-                        </span>
+                        {agentSlug && projectId ? (
+                            <Link
+                                to={`/project/${projectId}/agent/${agentSlug}`}
+                                className="font-semibold text-sm text-foreground hover:text-primary transition-colors hover:underline"
+                            >
+                                {getDisplayName()}
+                            </Link>
+                        ) : (
+                            <span className="font-semibold text-sm text-foreground">
+                                {getDisplayName()}
+                            </span>
+                        )}
                         <span className="text-xs text-muted-foreground">
                             {formatRelativeTime(event.created_at!)}
                         </span>
+                        {/* TTS button */}
+                        {ttsOptions && event.content && (
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    if (tts.isPlaying) {
+                                        tts.stop();
+                                    } else {
+                                        const ttsContent = extractTTSContent(event.content);
+                                        if (ttsContent) {
+                                            await tts.play(ttsContent);
+                                        }
+                                    }
+                                }}
+                                className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-sm hover:bg-accent"
+                                title={tts.isPlaying ? `Stop reading (Voice: ${voiceName})` : `Read aloud (Voice: ${voiceName})`}
+                            >
+                                {tts.isPlaying ? (
+                                    <Square className="w-3.5 h-3.5" />
+                                ) : (
+                                    <Volume2 className="w-3.5 h-3.5" />
+                                )}
+                            </button>
+                        )}
                         {/* Phase indicator */}
                         {getPhase() && (
                             <div className="flex items-center gap-1">

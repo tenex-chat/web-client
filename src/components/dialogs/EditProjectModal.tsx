@@ -1,7 +1,7 @@
 import { NDKProject, useNDK, useProfileValue, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Camera, FileText, Info, Plus, Server, Terminal, Users, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { NDKAgent, NDKMCPTool } from "@tenex/cli/events";
+import { NDKAgent, NDKMCPTool } from "@/events";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";

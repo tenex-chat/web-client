@@ -1,39 +1,18 @@
-import { useNDK } from "@nostr-dev-kit/ndk-hooks";
-import { useCallback, useState } from "react";
-import { NDKMCPTool } from "@tenex/cli/events";
+import { NDKMCPTool } from "@/events";
+import { useEntityActions } from "./useEntityActions";
 
 export function useMCPToolActions() {
-    const { ndk } = useNDK();
-    const [copiedId, setCopiedId] = useState<string | null>(null);
+    const { copiedId, copyEntityId, deleteEntity, DeleteConfirmationDialog } = useEntityActions<NDKMCPTool>();
 
-    const copyToolId = useCallback((tool: NDKMCPTool) => {
-        if (tool.id) {
-            navigator.clipboard.writeText(tool.id);
-            setCopiedId(tool.id);
-            setTimeout(() => setCopiedId(null), 2000);
-        }
-    }, []);
-
-    const deleteTool = useCallback(
-        (tool: NDKMCPTool, onSuccess?: () => void) => {
-            if (!ndk || !tool.id) return;
-
-            const confirmDelete = window.confirm(
-                `Are you sure you want to delete "${tool.name || "this MCP tool"}"?`
-            );
-
-            if (confirmDelete) {
-                // Create a deletion event
-                tool.delete();
-                onSuccess?.();
-            }
-        },
-        [ndk]
-    );
+    const copyToolId = (tool: NDKMCPTool) => copyEntityId(tool);
+    
+    const deleteTool = (tool: NDKMCPTool, onSuccess?: () => void) => 
+        deleteEntity(tool, tool.name || "this MCP tool", onSuccess);
 
     return {
         copiedId,
         copyToolId,
         deleteTool,
+        DeleteConfirmationDialog,
     };
 }

@@ -1,5 +1,4 @@
-import { NDKEvent } from "@nostr-dev-kit/ndk";
-import type { NDKEvent as NDKEventType } from "@nostr-dev-kit/ndk";
+import { NDKEvent, type NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { CSSUtils } from "../../lib/utils/business";
 import { EVENT_KINDS } from "../../lib/constants";
@@ -17,10 +16,10 @@ import {
 
 interface ParticipantAvatarsWithModelsProps {
     participants: string[];
-    messages: NDKEventType[];
+    messages: NDKEvent[];
     projectPubkey: string;
     projectId?: string;
-    projectEvent?: NDKEventType; // Changed from NDKArticle to NDKEventType
+    projectEvent?: NDKProject;
     availableModels?: Record<string, any>;
     maxVisible?: number;
     size?: "sm" | "md" | "lg";
@@ -93,7 +92,7 @@ interface ModelDropdownProps {
     agentPubkey: string;
     currentModel?: string;
     availableModels: string[];
-    projectEvent?: NDKEventType;
+    projectEvent?: NDKProject;
 }
 
 function ModelDropdown({
@@ -124,8 +123,8 @@ function ModelDropdown({
             }
 
             await event.publish();
-        } catch (_error) {
-            // // console.error("Failed to change model:", error);
+        } catch (error) {
+            console.error("Failed to change model:", error);
         } finally {
             setIsChanging(false);
         }

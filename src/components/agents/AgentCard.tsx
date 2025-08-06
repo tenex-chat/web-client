@@ -1,6 +1,6 @@
-import { Bot, Server, Terminal } from "lucide-react";
+import { Bot } from "lucide-react";
 import { memo } from "react";
-import type { NDKAgent } from "@tenex/cli/events";
+import type { NDKAgent } from "@/events";
 import { ProfileDisplay } from "../ProfileDisplay";
 import { SelectableCard } from "../common/SelectableCard";
 
@@ -17,32 +17,18 @@ export const AgentCard = memo(function AgentCard({
     onSelect,
     onDeselect,
 }: AgentCardProps) {
-    const isMCPTool = agent.type === 'mcp-server';
-    
     return (
         <SelectableCard
             item={agent}
             isSelected={isSelected}
             onSelect={onSelect}
             onDeselect={onDeselect}
-            renderIcon={() => 
-                isMCPTool 
-                    ? <Server className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    : <Bot className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            }
-            renderTitle={(agent) => agent.name || (isMCPTool ? "Unnamed MCP Tool" : "Unnamed Agent")}
+            renderIcon={() => <Bot className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
+            renderTitle={(agent) => agent.name || "Unnamed Agent"}
             renderDescription={(agent) => (
                 <>
                     {agent.description && <p className="mb-2">{agent.description}</p>}
-                    {isMCPTool && agent.mcpCommand && (
-                        <div className="flex items-center gap-2">
-                            <Terminal className="h-3 w-3 text-muted-foreground" />
-                            <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">
-                                {agent.mcpCommand}
-                            </code>
-                        </div>
-                    )}
-                    {!isMCPTool && agent.role && <p className="text-primary font-medium">Role: {agent.role}</p>}
+                    {agent.role && <p className="text-primary font-medium">Role: {agent.role}</p>}
                 </>
             )}
             renderMeta={(agent) => (

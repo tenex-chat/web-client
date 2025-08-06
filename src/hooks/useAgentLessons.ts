@@ -1,6 +1,6 @@
 import type { NDKKind } from "@nostr-dev-kit/ndk";
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { NDKAgentLesson } from "../../../tenex/src/events/NDKAgentLesson.ts";
+import { NDKAgentLesson } from "@/events";
 import { EVENT_KINDS } from "../lib/types.js";
 import { atom, useAtom } from "jotai";
 import { useEffect, useRef } from "react";

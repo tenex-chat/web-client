@@ -1,4 +1,4 @@
-import type { NDKAgent } from "@/lib/ndk-setup";
+import type { NDKAgent } from "@/events";
 import { EntityListSidebar } from "@/components/common/EntityListSidebar";
 import { ProfileDisplay } from "../ProfileDisplay";
 

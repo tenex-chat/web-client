@@ -64,9 +64,9 @@ export const useProjectStore = create<ProjectStore>()(
             
             // Subscribe to user's projects
             const projectsSub = ndk.subscribe({ kinds: NDKProject.kinds, authors: [userPubkey] }, {  wrap: true }, {
-                onEvent: (project: NDKEvent) => {
+                onEvent: (project: NDKProject) => {
                     const { updateProject } = get();
-                    updateProject(project as NDKProject);
+                    updateProject(project);
 
                     // Open permanent subscription to retrieve all events tagging a project
                     ndk.subscribe([
@@ -109,7 +109,7 @@ export const useProjectStore = create<ProjectStore>()(
             
             // Store the project
             set(state => ({
-                userProjects: new Map(state.userProjects).set(tagId, project as NDKProject)
+                userProjects: new Map(state.userProjects).set(tagId, project)
             }));
         },
         

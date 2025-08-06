@@ -1,5 +1,5 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { ArrowLeft, Copy, Check } from "lucide-react";
+import type { NDKEvent, NDKProject } from "@nostr-dev-kit/ndk";
+import { ArrowLeft, Copy, Check, Phone, PhoneOff } from "lucide-react";
 import { useState, useMemo } from "react";
 import { copyThreadToClipboard } from "../../utils/copyConversation";
 import { useProfilesMap } from "../../hooks/useProfilesMap";
@@ -13,9 +13,11 @@ interface ChatHeaderProps {
     messages?: NDKEvent[];
     projectPubkey?: string;
     projectId?: string;
-    projectEvent?: NDKEvent;
+    projectEvent?: NDKProject;
     availableModels?: Record<string, any>;
     onBack?: () => void;
+    autoTTS?: boolean;
+    onAutoTTSToggle?: () => void;
 }
 
 export function ChatHeader({
@@ -28,6 +30,8 @@ export function ChatHeader({
     projectEvent,
     availableModels,
     onBack,
+    autoTTS = false,
+    onAutoTTSToggle,
 }: ChatHeaderProps) {
     const [copied, setCopied] = useState(false);
 
@@ -78,6 +82,22 @@ export function ChatHeader({
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    {/* Auto-TTS toggle */}
+                    {onAutoTTSToggle && (
+                        <Button
+                            variant={autoTTS ? "default" : "ghost"}
+                            size="icon"
+                            onClick={onAutoTTSToggle}
+                            className={`w-8 h-8 sm:w-9 sm:h-9 ${autoTTS ? 'bg-green-600 hover:bg-green-700' : 'hover:bg-accent'}`}
+                            title={autoTTS ? "Disable auto-speak for new messages" : "Enable auto-speak for new messages"}
+                        >
+                            {autoTTS ? (
+                                <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                            ) : (
+                                <PhoneOff className="w-4 h-4 sm:w-5 sm:h-5" />
+                            )}
+                        </Button>
+                    )}
                     {/* Copy conversation button */}
                     {messages && messages.length > 0 && (
                         <Button

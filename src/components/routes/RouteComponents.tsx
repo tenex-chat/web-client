@@ -4,6 +4,7 @@ import { useArticle } from "../../hooks/useArticle";
 import { useProject } from "../../hooks/useProject";
 import { AgentRequestsPage } from "../AgentRequestsPage";
 import { AgentsPage } from "../AgentsPage";
+import { AgentProfile } from "../agents/AgentProfile";
 import { ChatInterface } from "../ChatInterface";
 import { ChatsPage } from "../ChatsPage";
 import { DesktopLayout } from "../DesktopLayout";
@@ -138,6 +139,11 @@ export function InstructionsPageWrapper() {
 export function AgentRequestsPageWrapper() {
     const { goBack } = useNavigation();
     return <AgentRequestsPage onBack={goBack} />;
+}
+
+// Agent profile page
+export function AgentProfilePageWrapper() {
+    return <AgentProfile />;
 }
 
 // Chats page

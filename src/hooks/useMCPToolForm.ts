@@ -1,6 +1,6 @@
 import { useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { useCallback } from "react";
-import { NDKMCPTool } from "@tenex/cli/events";
+import { NDKMCPTool } from "@/events";
 import { type FormValidators, useFormDialogState } from "./useDialogState";
 
 interface MCPToolFormData extends Record<string, unknown> {

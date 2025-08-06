@@ -1,6 +1,6 @@
 import { useNDKCurrentPubkey } from "@nostr-dev-kit/ndk-hooks";
 import { Check, Copy, Edit, Save, Trash2, X } from "lucide-react";
-import type { NDKAgent } from "../../lib/ndk-setup";
+import type { NDKAgent } from "@/events";
 import { Button } from "../ui/button";
 
 interface AgentHeaderProps {

@@ -1,5 +1,5 @@
 import type { ProjectFormData } from "@/types/template";
-import { NDKAgent } from "@tenex/cli/events";
+import { NDKAgent } from "@/events";
 import { Server } from "lucide-react";
 import { AgentSelector } from "../agents/AgentSelector";
 

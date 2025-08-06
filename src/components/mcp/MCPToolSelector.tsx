@@ -1,6 +1,6 @@
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Server } from "lucide-react";
-import { NDKMCPTool } from "@tenex/cli/events";
+import { NDKMCPTool } from "@/events";
 import { ItemSelector } from "../common/ItemSelector";
 import { MCPToolCard } from "./MCPToolCard";
 

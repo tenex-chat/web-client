@@ -1,5 +1,5 @@
 import { Server } from "lucide-react";
-import { NDKMCPTool } from "@tenex/cli/events";
+import { NDKMCPTool } from "@/events";
 import { MCPToolForm } from "./MCPToolForm";
 import { MCPToolHeader } from "./MCPToolHeader";
 import { EmptyToolState } from "./EmptyToolState";

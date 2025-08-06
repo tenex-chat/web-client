@@ -10,8 +10,7 @@
         "moduleResolution": "bundler",
         "baseUrl": ".",
         "paths": {
-            "@/*": ["./src/*"],
-            "@tenex/cli/*": ["../tenex/src/*"]
+            "@/*": ["./src/*"]
         }
     },
     "include": ["src"]

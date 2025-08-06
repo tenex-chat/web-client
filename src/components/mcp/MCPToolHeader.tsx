@@ -1,6 +1,6 @@
 import { Check, Copy, Edit, MoreHorizontal, Trash, X } from "lucide-react";
 import { useState } from "react";
-import { NDKMCPTool } from "@tenex/cli/events";
+import { NDKMCPTool } from "@/events";
 import { Button } from "../ui/button";
 import {
     DropdownMenu,

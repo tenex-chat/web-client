@@ -11,6 +11,8 @@ export type LLMProvider =
 
 export type SpeechProvider = "openai" | "openrouter";
 
+export type TTSProvider = "murf";
+
 export interface LLMCredentials {
     apiKey?: string;
     baseUrl?: string;
@@ -32,10 +34,25 @@ export interface SpeechConfig {
     language?: string;
 }
 
+export interface TTSConfig {
+    provider: TTSProvider;
+    voiceId?: string;
+    language?: string;
+    settings?: {
+        speed?: number;
+        pitch?: number;
+        volume?: number;
+    };
+}
+
 // The web client extends the base configuration with speech support
 export interface WebLLMConfiguration extends LLMFileConfiguration {
     speech?: {
         configuration: SpeechConfig;
+        credentials: LLMCredentials;
+    };
+    tts?: {
+        configuration: TTSConfig;
         credentials: LLMCredentials;
     };
 }

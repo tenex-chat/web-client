@@ -1,5 +1,5 @@
 import { NDKKind, NDKProject, NDKTask } from "@nostr-dev-kit/ndk";
-import { NDKAgent } from "@tenex/cli/events";
+import { NDKAgent } from "@/events";
 
 export const EVENT_KINDS = {
     METADATA: 0,

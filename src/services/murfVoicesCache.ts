@@ -60,7 +60,7 @@ export class MurfVoicesCache {
             const now = Date.now();
 
             return now - data.timestamp > CACHE_DURATION;
-        } catch (error) {
+        } catch {
             return true;
         }
     }

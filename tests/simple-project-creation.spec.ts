@@ -51,7 +51,7 @@ test.describe("Simple project creation test", () => {
                     await createButton.click();
                     break;
                 }
-            } catch (_e) {
+            } catch {
                 // Not on final step yet
             }
 
@@ -59,7 +59,7 @@ test.describe("Simple project creation test", () => {
             try {
                 await page.getByRole("button", { name: /Next/i }).click();
                 await page.waitForTimeout(500);
-            } catch (_e) {
+            } catch {
                 break; // No next button, we might be done
             }
 

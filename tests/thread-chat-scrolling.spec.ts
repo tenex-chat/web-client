@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 
 test.describe("Thread Chat Scrolling", () => {
     test("should auto-scroll to bottom when messages arrive", async ({ page }) => {

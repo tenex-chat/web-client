@@ -135,7 +135,7 @@ export class MurfTTSService {
                                 };
                                 
                                 source.start(0);
-                            } catch (decodeError) {
+                            } catch {
                                 reject(new Error('Failed to decode audio'));
                             }
                             
@@ -146,8 +146,8 @@ export class MurfTTSService {
                             reject(new Error(data.error));
                             ws.close();
                         }
-                    } catch (e) {
-                        logger.error('Error processing message:', e);
+                    } catch {
+                        logger.error('Error processing WebSocket message');
                     }
                 }
             };
@@ -170,7 +170,7 @@ export class MurfTTSService {
             try {
                 this.currentAudioSource.stop();
                 this.currentAudioSource.disconnect();
-            } catch (e) {
+            } catch {
                 // Already stopped
             }
             this.currentAudioSource = null;

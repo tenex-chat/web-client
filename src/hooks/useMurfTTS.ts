@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 
 interface MurfTTSOptions {
     apiKey: string;
@@ -108,11 +109,11 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
                             
                             // Just collect all chunks as-is for now
                             audioChunks.push(bytes.buffer);
-                            console.log(`Received audio chunk ${audioChunks.length}, size: ${bytes.length} bytes`);
+                            logger.debug(`Received audio chunk ${audioChunks.length}, size: ${bytes.length} bytes`);
                             if (isFirstChunk && bytes.length > 44) {
                                 // Log first few bytes to check for WAV header
                                 const header = Array.from(bytes.slice(0, 4)).map(b => String.fromCharCode(b)).join('');
-                                console.log(`First chunk header: "${header}" (expecting "RIFF" for WAV)`);
+                                logger.debug(`First chunk header: "${header}" (expecting "RIFF" for WAV)`);
                                 isFirstChunk = false;
                             }
                         }
@@ -135,7 +136,7 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
                                 
                                 // Decode and play the combined audio
                                 try {
-                                    console.log(`Decoding combined audio: ${combinedBuffer.byteLength} bytes total`);
+                                    logger.debug(`Decoding combined audio: ${combinedBuffer.byteLength} bytes total`);
                                     const audioBuffer = await ctx.decodeAudioData(combinedBuffer);
                                     const source = ctx.createBufferSource();
                                     source.buffer = audioBuffer;
@@ -158,7 +159,7 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
                                     
                                     source.start(0);
                                 } catch (decodeError) {
-                                    console.error('Error decoding audio:', decodeError);
+                                    logger.error('Error decoding audio:', decodeError);
                                     setError('Failed to decode audio');
                                     setIsPlaying(false);
                                 }
@@ -176,7 +177,7 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
                             ws.close();
                         }
                     } catch (e) {
-                        console.error('Error processing message:', e);
+                        logger.error('Error processing message:', e);
                     }
                 } else if (event.data instanceof Blob) {
                     // Handle blob data if needed
@@ -186,7 +187,7 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
             };
 
             ws.onerror = (event) => {
-                console.error('WebSocket error:', event);
+                logger.error('WebSocket error:', event);
                 setError('Failed to connect to Murf API');
                 setIsPlaying(false);
                 setIsProcessing(false);
@@ -203,7 +204,7 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
                 }
             };
         } catch (err) {
-            console.error('Failed to play TTS:', err);
+                logger.error('Failed to play TTS:', err);
             setError('Failed to play audio');
             setIsPlaying(false);
             setIsProcessing(false);
@@ -236,7 +237,7 @@ export async function fetchMurfVoices(apiKey: string) {
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error('Error fetching Murf voices:', error);
+        logger.error('Error fetching Murf voices:', error);
         throw error;
     }
 }

@@ -15,6 +15,7 @@ interface ChatsPageProps {
 export function ChatsPage({ onTaskSelect }: ChatsPageProps) {
     const currentUser = useNDKCurrentUser();
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const { formatRelativeTime } = useTimeFormat({ relativeFormat: "short" });
 
     // Get all user's projects from the store

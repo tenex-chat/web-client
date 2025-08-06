@@ -86,7 +86,7 @@ test.describe("Thread Drawer Debug", () => {
                         await createButton.click();
                         break;
                     }
-                } catch (_e) {
+                } catch {
                     // Not on final step yet
                 }
 
@@ -102,7 +102,7 @@ test.describe("Thread Drawer Debug", () => {
                     }
 
                     await page.waitForTimeout(500);
-                } catch (_e) {
+                } catch {
                     break; // No buttons, we might be done
                 }
 
@@ -156,13 +156,7 @@ test.describe("Thread Drawer Debug", () => {
             });
 
             // Look for all buttons in the dialog
-            const dialogButtons = await page.locator('[role="dialog"] button').all();
-            console.log(`Found ${dialogButtons.length} buttons in dialog`);
-
-            for (let i = 0; i < dialogButtons.length; i++) {
-                const text = await dialogButtons[i].textContent();
-                console.log(`Button ${i}: ${text}`);
-            }
+            await page.locator('[role="dialog"] button').all();
 
             // Select "Thread" option
             await page.locator("button").filter({ hasText: "Thread" }).click();

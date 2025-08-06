@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { fetchMurfVoices } from './useMurfTTS';
 import { useLLMConfig } from './useLLMConfig';
 import { MurfVoicesCache } from '../services/murfVoicesCache';
+import { logger } from '@/lib/logger';
 
 export interface MurfVoice {
     voiceId: string;
@@ -57,7 +58,7 @@ export function useMurfVoices(apiKeyOverride?: string): UseMurfVoicesReturn {
                 // Cache the fetched voices
                 MurfVoicesCache.set(data);
             } catch (err) {
-                console.error('Failed to fetch Murf voices:', err);
+                logger.error('Failed to fetch Murf voices:', err);
                 setError(err instanceof Error ? err : new Error('Failed to fetch voices'));
                 setVoices([]);
             } finally {

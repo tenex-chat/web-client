@@ -63,7 +63,7 @@ test.describe("Thread Drawer Functionality", () => {
                         await createButton.click();
                         break;
                     }
-                } catch (_e) {
+                } catch {
                     // Not on final step yet
                 }
 
@@ -79,7 +79,7 @@ test.describe("Thread Drawer Functionality", () => {
                     }
 
                     await page.waitForTimeout(500);
-                } catch (_e) {
+                } catch {
                     break; // No buttons, we might be done
                 }
 

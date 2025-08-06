@@ -102,7 +102,6 @@ test.describe("Create account and project", () => {
             .toUpperCase()
             .slice(0, 2);
 
-        console.log("Looking for project with initials:", projectInitials);
 
         // Wait for project buttons to appear in sidebar
         await expect(sidebar.locator("button.w-12.h-12").first()).toBeVisible({
@@ -112,8 +111,7 @@ test.describe("Create account and project", () => {
         // Look for our project - it might be already visible since it was just created
         // New projects are automatically shown in the filtered list
         const projectButtons = sidebar.locator("button.w-12.h-12");
-        const projectCount = await projectButtons.count();
-        console.log(`Found ${projectCount} project button(s) in sidebar`);
+        await projectButtons.count();
 
         // Since the project was just created, it should be visible in the main area
         // Check if the project name appears in the main content
@@ -125,14 +123,10 @@ test.describe("Create account and project", () => {
             .isVisible({ timeout: 10000 })
             .catch(() => false);
 
-        if (projectNameVisible) {
-            console.log("Project is visible in the main area!");
-            // Success - the project was created and is showing
-        } else {
+        if (!projectNameVisible) {
             // Try clicking on a project button if we can find one with our initials
             const avatarWithInitials = sidebar.locator(`text="${projectInitials}"`);
             if (await avatarWithInitials.isVisible({ timeout: 5000 }).catch(() => false)) {
-                console.log("Found project avatar with initials, clicking it");
                 const buttonWithAvatar = sidebar
                     .locator("button")
                     .filter({ hasText: projectInitials })

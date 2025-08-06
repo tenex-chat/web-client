@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLLMConfig } from "./useLLMConfig";
+import { logger } from "@/lib/logger";
 
 export function useSpeechToText() {
     const [isTranscribing, setIsTranscribing] = useState(false);
@@ -47,7 +48,7 @@ export function useSpeechToText() {
 
             return result.text || "";
         } catch (error) {
-            console.error("Speech-to-text error:", error);
+            logger.error("Speech-to-text error:", error);
             setIsTranscribing(false);
 
             // Fallback to a placeholder for development

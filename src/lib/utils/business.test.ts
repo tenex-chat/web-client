@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { StringUtils, ProfileUtils, StatusUtils, TaskUtils } from "./business";
+import { StringUtils, ProfileUtils, StatusUtils, TaskUtils, ProjectAvatarUtils } from "./business";
 
 describe("StringUtils", () => {
     describe("truncate", () => {
@@ -219,6 +219,58 @@ describe("TaskUtils", () => {
         it("should return Untitled Task if no title or content", () => {
             const task = {};
             expect(TaskUtils.getTaskTitle(task as any)).toBe("Untitled Task");
+        });
+    });
+});
+
+describe("ProjectAvatarUtils", () => {
+    describe("getAvatar", () => {
+        it("should return picture if available", () => {
+            const project = { picture: "avatar.jpg" };
+            expect(ProjectAvatarUtils.getAvatar(project)).toBe("avatar.jpg");
+        });
+
+        it("should generate avatar URL from d tag", () => {
+            const project = {
+                tagValue: (key: string) => key === "d" ? "project-id" : undefined,
+            };
+            const url = ProjectAvatarUtils.getAvatar(project);
+            expect(url).toContain("dicebear.com");
+            expect(url).toContain("project-id");
+        });
+
+        it("should use title as fallback", () => {
+            const project = { title: "My Project" };
+            const url = ProjectAvatarUtils.getAvatar(project);
+            expect(url).toContain("My%20Project");
+        });
+
+        it("should use default if nothing available", () => {
+            const project = {};
+            const url = ProjectAvatarUtils.getAvatar(project);
+            expect(url).toContain("default");
+        });
+    });
+
+    describe("getColors", () => {
+        it("should return consistent color for same title", () => {
+            const color1 = ProjectAvatarUtils.getColors("Test");
+            const color2 = ProjectAvatarUtils.getColors("Test");
+            expect(color1).toBe(color2);
+        });
+
+        it("should return a gradient color class", () => {
+            const color = ProjectAvatarUtils.getColors("Test");
+            expect(color).toContain("bg-gradient-to-br");
+            expect(color).toContain("from-");
+            expect(color).toContain("to-");
+        });
+    });
+
+    describe("getInitials", () => {
+        it("should delegate to StringUtils.getInitials", () => {
+            expect(ProjectAvatarUtils.getInitials("Test Project")).toBe("TP");
+            expect(ProjectAvatarUtils.getInitials("Single")).toBe("S");
         });
     });
 });

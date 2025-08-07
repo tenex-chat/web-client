@@ -1,7 +1,7 @@
 import type { ProjectFormData } from "@/types/template";
-import { NDKAgent } from "@/events";
+import { NDKMCPTool } from "@/events";
 import { Server } from "lucide-react";
-import { AgentSelector } from "../agents/AgentSelector";
+import { MCPToolSelector } from "../mcp/MCPToolSelector";
 
 interface MCPSelectionStepProps {
     formData: ProjectFormData;
@@ -9,7 +9,7 @@ interface MCPSelectionStepProps {
 }
 
 export function MCPSelectionStep({ formData, onFormDataChange }: MCPSelectionStepProps) {
-    const handleMCPToolsChange = (tools: NDKAgent[]) => {
+    const handleMCPToolsChange = (tools: NDKMCPTool[]) => {
         onFormDataChange({ selectedMCPTools: tools });
     };
 
@@ -23,10 +23,9 @@ export function MCPSelectionStep({ formData, onFormDataChange }: MCPSelectionSte
                 </p>
             </div>
 
-            <AgentSelector
-                selectedAgents={formData.selectedMCPTools || []}
-                onAgentsChange={handleMCPToolsChange}
-                filterType="mcp-server"
+            <MCPToolSelector
+                selectedTools={formData.selectedMCPTools || []}
+                onToolsChange={handleMCPToolsChange}
             />
         </div>
     );

@@ -1,5 +1,5 @@
 import type { NDKEvent, NDKProjectTemplate } from "@nostr-dev-kit/ndk-hooks";
-import type { NDKAgent } from "@/events";
+import type { NDKAgent, NDKMCPTool } from "@/events";
 
 export interface NDKLLMRule extends NDKEvent {
     title?: string;
@@ -20,7 +20,7 @@ export interface ProjectFormData {
     imageUrl?: string;
     selectedTemplate?: NDKProjectTemplate;
     selectedAgents?: NDKAgent[];
-    selectedMCPTools?: NDKAgent[];
+    selectedMCPTools?: NDKMCPTool[];
     selectedInstructions?: InstructionWithAgents[];
 }
 

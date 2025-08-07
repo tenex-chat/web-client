@@ -88,6 +88,22 @@ export function ConfirmationStep({ formData }: ConfirmationStepProps) {
                             </div>
                         </div>
                     )}
+                    {formData.selectedMCPTools && formData.selectedMCPTools.length > 0 && (
+                        <div>
+                            <span className="font-medium">MCP Tools:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                                {formData.selectedMCPTools.map((tool, index) => (
+                                    <Badge
+                                        key={`mcp-${tool.id || tool.name || index}`}
+                                        variant="outline"
+                                        className="text-xs"
+                                    >
+                                        {tool.name || "Unnamed Tool"}
+                                    </Badge>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     {formData.selectedInstructions && formData.selectedInstructions.length > 0 && (
                         <div>
                             <span className="font-medium">Instructions:</span>

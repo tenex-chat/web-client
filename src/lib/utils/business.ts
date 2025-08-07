@@ -87,8 +87,16 @@ export const ProfileUtils = {
     ): string {
         if (profile?.displayName) return profile.displayName;
         if (profile?.name) return profile.name;
-        if (pubkey) return `${pubkey.slice(0, 8)}...`;
+        if (pubkey) return this.formatPubkeyShort(pubkey);
         return fallback;
+    },
+
+    /**
+     * Format a pubkey as shortened display format (first 8 chars + ...)
+     */
+    formatPubkeyShort(pubkey: string): string {
+        if (!pubkey) return "";
+        return `${pubkey.slice(0, 8)}...`;
     },
 
     /**

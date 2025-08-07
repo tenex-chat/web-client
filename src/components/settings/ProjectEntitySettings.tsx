@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { getEntityAvatar as getEntityAvatarUtil, getInitials as getInitialsUtil } from "../../utils/ui-helpers";
+import { getEntityAvatar as getEntityAvatarUtil } from "../../utils/ui-helpers";
 
 interface Entity {
     id: string;

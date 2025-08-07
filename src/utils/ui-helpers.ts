@@ -2,6 +2,8 @@
  * Common UI helper functions to reduce redundancy across components
  */
 
+import { StringUtils } from "../lib/utils/business";
+
 /**
  * Generate avatar URL for an entity
  */
@@ -16,15 +18,11 @@ export function getEntityAvatar(
 
 /**
  * Get initials from a name string
+ * @deprecated Use StringUtils.getInitials from lib/utils/business instead
  */
 export function getInitials(name?: string, fallback: string = "UN"): string {
     if (!name) return fallback;
-    return name
-        .split(" ")
-        .map((word) => word.charAt(0))
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
+    return StringUtils.getInitials(name);
 }
 
 /**

@@ -1,6 +1,6 @@
 import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { StringUtils } from "../lib/utils/business";
+import { StringUtils, ProfileUtils } from "../lib/utils/business";
 
 interface ProfileDisplayProps {
     pubkey: string;
@@ -29,7 +29,7 @@ export function ProfileDisplay({
         lg: { avatar: "w-10 h-10", text: "text-lg" },
     };
 
-    const displayName = profile?.displayName || profile?.name || `${pubkey.slice(0, 8)}...`;
+    const displayName = profile?.displayName || profile?.name || ProfileUtils.formatPubkeyShort(pubkey);
     const avatarUrl = profile?.image || profile?.picture;
 
     return (

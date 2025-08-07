@@ -47,6 +47,7 @@ import { useLLMConfig } from "../../hooks/useLLMConfig";
 import { getAgentVoiceConfig } from "../../lib/voice-config";
 import { useProjectAgents } from "../../stores/project/hooks";
 import { Link, useParams } from "react-router-dom";
+import { ProfileUtils } from "../../lib/utils/business";
 
 interface StatusUpdateProps {
     event: NDKEvent;
@@ -362,7 +363,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
     };
 
     const getDisplayName = () => {
-        return profile?.displayName || profile?.name || `user_${event.pubkey.slice(0, 8)}`;
+        return profile?.displayName || profile?.name || `user_${ProfileUtils.formatPubkeyShort(event.pubkey).replace('...', '')}`;
     };
 
     const getConfidenceLevel = () => {
@@ -542,7 +543,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
                         </Avatar>
                         <div>
                             <p className="text-sm font-semibold">
-                                {profile?.name || `user_${pubkey.slice(0, 8)}`}
+                                {profile?.name || `user_${ProfileUtils.formatPubkeyShort(pubkey).replace('...', '')}`}
                             </p>
                         </div>
                     </div>

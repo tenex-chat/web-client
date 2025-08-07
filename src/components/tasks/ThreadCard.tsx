@@ -3,6 +3,7 @@ import { useProfileValue, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Clock, MessageCircle, Timer } from "lucide-react";
 import { useMemo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
+import { ProfileUtils } from "../../lib/utils/business";
 
 interface ThreadOverviewProps {
     thread: NDKEvent;
@@ -98,7 +99,7 @@ export function ThreadCard({ thread, replies, onClick }: ThreadOverviewProps) {
         const getAuthorName = () => {
             if (profile?.name) return profile.name;
             if (profile?.displayName) return profile.displayName;
-            return `User ${pubkey.slice(0, 8)}`;
+            return `User ${ProfileUtils.formatPubkeyShort(pubkey).replace('...', '')}`;
         };
 
         return <span className="text-xs font-medium text-foreground">{getAuthorName()}</span>;

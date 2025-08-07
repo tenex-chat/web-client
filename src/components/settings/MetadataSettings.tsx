@@ -5,7 +5,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
-import { getEntityAvatar, getInitials } from "../../utils/ui-helpers";
+import { getEntityAvatar } from "../../utils/ui-helpers";
+import { StringUtils } from "../../lib/utils/business";
 
 interface MetadataSettingsProps {
     project: NDKProject;
@@ -114,7 +115,7 @@ export function MetadataSettings({
                                 alt={formData.name || "Project"}
                             />
                             <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-                                {getInitials(formData.name || "Project")}
+                                {StringUtils.getInitials(formData.name || "Project")}
                             </AvatarFallback>
                         </Avatar>
                         <Button

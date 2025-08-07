@@ -1,6 +1,7 @@
 import { Bot, Sparkles, Tag, User } from "lucide-react";
 import { NDKAgent } from "../../lib/ndk-setup";
 import { Badge } from "../ui/badge";
+import { ProfileUtils } from "../../lib/utils/business";
 
 interface AgentDetailsTabProps {
     agent: NDKAgent;
@@ -28,7 +29,7 @@ export function AgentDetailsTab({ agent }: AgentDetailsTabProps) {
                             <div className="flex items-center gap-2">
                                 <span className="text-sm text-muted-foreground">Created by:</span>
                                 <span className="text-sm text-muted-foreground">
-                                    {agent.pubkey?.slice(0, 8)}...{agent.pubkey?.slice(-8)}
+                                    {agent.pubkey ? `${ProfileUtils.formatPubkeyShort(agent.pubkey)}${agent.pubkey.slice(-8)}` : "Unknown"}
                                 </span>
                             </div>
                         </div>

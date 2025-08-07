@@ -1,15 +1,15 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { EVENT_KINDS } from "../lib/types.js";
+import { EVENT_KINDS, type ProfileData } from "../lib/types.js";
 import { logger } from "../lib/logger";
 import { toast } from "sonner";
 
 /**
  * Get a display name for a pubkey
  */
-function getDisplayName(pubkey: string, profiles: Map<string, unknown>, isAgent = false): string {
+function getDisplayName(pubkey: string, profiles: Map<string, ProfileData>, isAgent = false): string {
     if (isAgent) {
-        const profile = profiles.get(pubkey) as Record<string, unknown> | undefined;
-        const agentName = (profile?.name as string) || "Agent";
+        const profile = profiles.get(pubkey);
+        const agentName = profile?.name || "Agent";
         return agentName;
     }
     return "User";
@@ -20,7 +20,7 @@ function getDisplayName(pubkey: string, profiles: Map<string, unknown>, isAgent 
  */
 export function threadToMarkdown(
     messages: NDKEvent[],
-    profiles: Map<string, unknown>,
+    profiles: Map<string, ProfileData>,
     threadTitle?: string
 ): string {
     if (!messages || messages.length === 0) {
@@ -87,7 +87,7 @@ export function threadToMarkdown(
  */
 export async function copyThreadToClipboard(
     messages: NDKEvent[],
-    profiles: Map<string, unknown>,
+    profiles: Map<string, ProfileData>,
     threadTitle?: string
 ): Promise<boolean> {
     try {

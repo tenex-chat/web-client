@@ -51,7 +51,6 @@ export function ArticleChatSidebar({
 
   // Handle quoted text
   useEffect(() => {
-    console.log('ArticleChatSidebar received initialQuotedText:', initialQuotedText);
     if (initialQuotedText) {
       setQuotedText(initialQuotedText);
       const quotedMessage = `Regarding this section:\n\n> ${initialQuotedText}\n\n`;

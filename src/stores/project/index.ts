@@ -60,7 +60,6 @@ export const useProjectStore = create<ProjectStore>()(
                 cleanup();
             }
 
-            console.log("Initializing project sub", {userPubkey})
             
             // Subscribe to user's projects
             const projectsSub = ndk.subscribe({ kinds: NDKProject.kinds, authors: [userPubkey] }, {  wrap: true }, {
@@ -72,11 +71,7 @@ export const useProjectStore = create<ProjectStore>()(
                     ndk.subscribe([
                         { kinds: [1111], ...project.filter()}
                     ], { groupable: true, groupableDelay: 1000 }, {
-                        onEvent: (e: NDKEvent) => {
-                            console.log(`Received an event for project ${project.dTag} (kind:${e.kind})`)
-                        },
-                        onEose: () => {
-                            console.log(`EOSE of events tagging project ${project.dTag}`)
+                        onEvent: (_e: NDKEvent) => {
                         }
                     });
                 }

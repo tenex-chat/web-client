@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { getEntityAvatar as getEntityAvatarUtil, getInitials as getInitialsUtil } from "../../utils/ui-helpers";
 
 interface Entity {
     id: string;
@@ -231,8 +232,7 @@ function EntityCard<T extends Entity>({
 
     const avatarUrl = getAvatar
         ? getAvatar(entity)
-        : authorProfile?.image || 
-          `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(entity.id)}`;
+        : getEntityAvatarUtil(entity.id, authorProfile?.image);
 
     const initials = getInitials
         ? getInitials(entity)

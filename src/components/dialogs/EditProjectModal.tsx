@@ -129,11 +129,8 @@ export function EditProjectModal({
     };
 
     const getProjectAvatar = () => {
-        if (editState.picture) {
-            return editState.picture;
-        }
         const seed = project?.tagValue("d") || "default";
-        return `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(seed)}`;
+        return getEntityAvatar(seed, editState.picture);
     };
 
 

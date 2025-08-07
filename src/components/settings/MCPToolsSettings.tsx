@@ -3,6 +3,7 @@ import { Server, Terminal } from "lucide-react";
 import { NDKMCPTool } from "@/events";
 import { MCPToolSelector } from "../mcp/MCPToolSelector";
 import { ProjectEntitySettings } from "./ProjectEntitySettings";
+import { getEntityAvatar } from "../../utils/ui-helpers";
 
 interface MCPToolsSettingsProps {
     project: NDKProject;
@@ -42,7 +43,7 @@ export function MCPToolsSettings({ project, editedProject, onProjectChanged }: M
                 </>
             )}
             getEntityAvatar={(tool) => 
-                tool.image || `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(tool.id)}`
+                getEntityAvatar(tool.id, tool.image, "shapes")
             }
         />
     );

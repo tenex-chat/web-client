@@ -287,7 +287,6 @@ export function TTSSettings() {
         }
 
         setIsPlayingAudio(true);
-        console.log("Starting audio playback test...");
 
         try {
             // Create WebSocket connection with proper parameters
@@ -300,7 +299,6 @@ export function TTSSettings() {
             let messageCount = 0;
             
             ws.onopen = () => {
-                console.log("WebSocket connected, sending test message...");
                 // Send test text with proper Murf API format
                 const testMessage = {
                     context_id: `audio-test-${Date.now()}`,
@@ -314,7 +312,6 @@ export function TTSSettings() {
                     text: "Hello! This is a test of the Murf text to speech system.",
                     end: true
                 };
-                console.log("Sending message:", testMessage);
                 ws.send(JSON.stringify(testMessage));
             };
 
@@ -323,11 +320,9 @@ export function TTSSettings() {
                     try {
                         const data = JSON.parse(event.data);
                         messageCount++;
-                        console.log(`Message ${messageCount}:`, data);
                         
                         // Check if this is an audio chunk
                         if (data.audio) {
-                            console.log("Received audio chunk, decoding base64...");
                             // Decode base64 audio data
                             const base64Audio = data.audio;
                             
@@ -344,17 +339,14 @@ export function TTSSettings() {
                             
                             // Add to audio chunks
                             audioChunks.push(bytes.buffer);
-                            console.log(`Added audio chunk ${audioChunks.length}, size: ${bytes.buffer.byteLength} bytes`);
                         }
                         
                         // Check if this is the final message (Murf sends {"final": true})
                         if (data.final === true) {
-                            console.log(`Received final message. Total audio chunks: ${audioChunks.length}`);
                             
                             // Combine all audio chunks and play
                             if (audioChunks.length > 0) {
                                 const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.byteLength, 0);
-                                console.log(`Combining ${audioChunks.length} chunks, total size: ${totalLength} bytes`);
                                 
                                 const combinedBuffer = new ArrayBuffer(totalLength);
                                 const view = new Uint8Array(combinedBuffer);
@@ -367,9 +359,7 @@ export function TTSSettings() {
                                 
                                 // Decode and play the audio
                                 try {
-                                    console.log("Decoding audio data...");
                                     const audioBuffer = await audioContext.decodeAudioData(combinedBuffer);
-                                    console.log(`Audio decoded: duration=${audioBuffer.duration}s, sampleRate=${audioBuffer.sampleRate}Hz`);
                                     
                                     const source = audioContext.createBufferSource();
                                     source.buffer = audioBuffer;
@@ -383,12 +373,10 @@ export function TTSSettings() {
                                     
                                     // Add ended event listener
                                     source.onended = () => {
-                                        console.log("Audio playback ended");
                                         setIsPlayingAudio(false);
                                     };
                                     
                                     source.start(0);
-                                    console.log("Audio playback started successfully");
                                 } catch (decodeError) {
                                     console.error("Error decoding audio:", decodeError);
                                     alert("Failed to decode audio. The audio format may not be supported.");
@@ -411,7 +399,6 @@ export function TTSSettings() {
                     }
                 } else if (event.data instanceof Blob) {
                     // Handle blob data if needed
-                    console.log("Received blob data");
                     const arrayBuffer = await event.data.arrayBuffer();
                     audioChunks.push(arrayBuffer);
                 }
@@ -424,7 +411,6 @@ export function TTSSettings() {
             };
 
             ws.onclose = (event) => {
-                console.log("WebSocket closed:", event.code, event.reason);
                 if (event.code !== 1000 && event.code !== 1005) {
                     console.error("WebSocket closed unexpectedly:", event.code, event.reason);
                     if (event.code === 1006 || event.code === 1008) {

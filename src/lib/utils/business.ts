@@ -3,6 +3,8 @@
  * Consolidates repeated patterns found across the codebase
  */
 
+import { getEntityAvatar } from "../../utils/ui-helpers";
+
 /**
  * String manipulation utilities
  */
@@ -304,11 +306,8 @@ export const ProjectAvatarUtils = {
      * Get project avatar URL
      */
     getAvatar(project: { picture?: string; tagValue?: (key: string) => string | undefined; title?: string }): string {
-        if (project.picture) {
-            return project.picture;
-        }
         const seed = project.tagValue?.("d") || project.title || "default";
-        return `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(seed)}`;
+        return getEntityAvatar(seed, project.picture);
     },
 
     /**

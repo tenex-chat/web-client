@@ -30,10 +30,6 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
     const projectData = useProject(project.tagId());
     const contentRef = useRef<HTMLDivElement>(null);
 
-    // Debug selected text
-    useEffect(() => {
-        console.log('selectedText changed to:', selectedText);
-    }, [selectedText]);
 
     // Handle text selection
     const handleTextSelection = () => {
@@ -58,7 +54,6 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
         const selection = window.getSelection();
         if (selection) {
             const text = selection.toString().trim();
-            console.log('Setting selected text:', text);
             setSelectedText(text);
             setShowChat(true);
             setShowSelectionPopup(false);

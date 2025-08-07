@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
+import { getEntityAvatar, getInitials } from "../../utils/ui-helpers";
 
 interface MetadataSettingsProps {
     project: NDKProject;
@@ -97,20 +98,8 @@ export function MetadataSettings({
     }, [formData, editedProject, originalData, onProjectChanged]);
 
     const getProjectAvatar = () => {
-        if (formData.imageUrl) {
-            return formData.imageUrl;
-        }
         const seed = project.tagValue("d") || "default";
-        return `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(seed)}`;
-    };
-
-    const getInitials = (title: string) => {
-        return title
-            .split(" ")
-            .map((word) => word.charAt(0))
-            .join("")
-            .toUpperCase()
-            .slice(0, 2);
+        return getEntityAvatar(seed, formData.imageUrl);
     };
 
     return (

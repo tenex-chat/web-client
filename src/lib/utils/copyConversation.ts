@@ -1,6 +1,6 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { EVENT_KINDS, type ProfileData } from "../lib/types.js";
-import { logger } from "../lib/logger";
+import { EVENT_KINDS, type ProfileData } from "../types.js";
+import { logger } from "../logger";
 import { toast } from "sonner";
 
 /**

@@ -2,8 +2,8 @@
  * Utility functions for OpenAI and OpenRouter integration
  */
 
-import type { LLMTitleGenerationError } from "../types/llm";
-import { logger } from "../lib/logger";
+import type { LLMTitleGenerationError } from "../../types/llm";
+import { logger } from "../logger";
 
 /**
  * Get the current LLM configuration from the unified configuration system

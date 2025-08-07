@@ -3,10 +3,10 @@ import type {
     LLMProvider,
     OpenRouterModelsResponse,
     OpenRouterModelWithMetadata,
-} from "../types/llm";
-import { isOllamaModelsResponse } from "../lib/types.js";
-import { STATIC_MODELS as MODELS } from "../types/llm";
-import { logger } from "../lib/logger";
+} from "../../types/llm";
+import { isOllamaModelsResponse } from "../types.js";
+import { STATIC_MODELS as MODELS } from "../../types/llm";
+import { logger } from "../logger";
 
 /**
  * Fetch available models from OpenRouter API

@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Textarea } from "../ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { StringUtils } from "../../lib/utils/business";
-import { getEntityAvatar } from "../../utils/ui-helpers";
+import { getEntityAvatar } from "../../lib/utils/ui-helpers";
 import { AgentSelector } from "../agents/AgentSelector";
 import { MCPToolSelector } from "../mcp/MCPToolSelector";
 

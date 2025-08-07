@@ -16,7 +16,7 @@ import {
     getModelsForProvider,
     testLLMConfiguration,
     validateApiKeyFormat,
-} from "../utils/llmModels";
+} from "../lib/utils/llmModels";
 
 const STORAGE_KEY = "tenex_llm_config";
 

@@ -25,7 +25,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import remarkGfm from "remark-gfm";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
-import { findNostrEntities } from "../../utils/nostrEntityParser";
+import { findNostrEntities } from "../../lib/utils/nostrEntityParser";
 import { NostrEntityCard } from "../common/NostrEntityCard";
 import { LLMMetadataDialog } from "../dialogs/LLMMetadataDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -38,10 +38,10 @@ import {
     DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { isAudioEvent } from "../../utils/audioEvents";
+import { isAudioEvent } from "../../lib/utils/audioEvents";
 import { VoiceMessage } from "../chat/VoiceMessage";
 import { useStreamingResponses } from "../../hooks/useStreamingResponses";
-import { extractTTSContent } from "../../utils/extractTTSContent";
+import { extractTTSContent } from "../../lib/utils/extractTTSContent";
 import { useMurfTTS } from "../../hooks/useMurfTTS";
 import { useLLMConfig } from "../../hooks/useLLMConfig";
 import { getAgentVoiceConfig } from "../../lib/voice-config";

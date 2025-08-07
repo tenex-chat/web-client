@@ -3,7 +3,7 @@ import { Play, Pause, Download } from "lucide-react";
 import { logger } from "../../lib/logger";
 import { Button } from "../ui/button";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
-import { getAudioURL, getAudioDuration, getAudioWaveform } from "../../utils/audioEvents";
+import { getAudioURL, getAudioDuration, getAudioWaveform } from "../../lib/utils/audioEvents";
 import { cn } from "../../lib/utils";
 
 interface VoiceMessageProps {

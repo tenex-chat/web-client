@@ -274,7 +274,7 @@ describe("voice-config utilities", () => {
             expect(configs).toEqual({});
         });
 
-        it("should handle invalid JSON in configs", () => {
+        it("should handle invalid JSON in configs and continue processing valid ones", () => {
             localStorageMock.length = 2;
             localStorageMock.key.mockImplementation((index) => {
                 const keys = ["agent-voice-agent-123", "agent-voice-agent-456"];
@@ -298,8 +298,15 @@ describe("voice-config utilities", () => {
 
             const configs = getAllAgentVoiceConfigs();
             
-            // When encountering invalid JSON, the entire operation fails and returns empty
-            expect(configs).toEqual({});
+            // After the fix, invalid JSON is skipped and valid configs are returned
+            expect(configs).toEqual({
+                "agent-456": {
+                    voiceId: "voice-2",
+                    voiceName: "Voice 2",
+                    language: "en-US",
+                    gender: "female"
+                }
+            });
         });
 
         it("should handle empty localStorage", () => {

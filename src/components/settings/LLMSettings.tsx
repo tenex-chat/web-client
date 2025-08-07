@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { LLMConfig, LLMProvider } from "../../types/llm";
 import { DEFAULT_MODELS } from "../../types/llm";
 import { useLLMConfig } from "../../hooks/useLLMConfig";
-import { formatModelWithPricing, validateApiKeyFormat } from "../../utils/llmModels";
+import { formatModelWithPricing, validateApiKeyFormat } from "../../lib/utils/llmModels";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Input } from "../ui/input";

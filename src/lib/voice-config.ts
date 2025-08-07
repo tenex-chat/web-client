@@ -71,8 +71,8 @@ export function removeAgentVoiceConfig(agentSlug: string): void {
 export function getAllAgentVoiceConfigs(): Record<string, AgentVoiceConfig> {
     const configs: Record<string, AgentVoiceConfig> = {};
     
-    try {
-        for (let i = 0; i < localStorage.length; i++) {
+    for (let i = 0; i < localStorage.length; i++) {
+        try {
             const key = localStorage.key(i);
             if (key?.startsWith(VOICE_CONFIG_PREFIX)) {
                 const agentSlug = key.replace(VOICE_CONFIG_PREFIX, "");
@@ -81,9 +81,10 @@ export function getAllAgentVoiceConfigs(): Record<string, AgentVoiceConfig> {
                     configs[agentSlug] = JSON.parse(value);
                 }
             }
+        } catch (error) {
+            // Log error for this specific item but continue processing others
+            logger.error(`Failed to parse voice config at index ${i}:`, error);
         }
-    } catch (error) {
-        logger.error("Failed to load all voice configs:", error);
     }
     
     return configs;

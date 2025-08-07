@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
-import { getEntityAvatar } from "../../utils/ui-helpers";
+import { getEntityAvatar } from "../../lib/utils/ui-helpers";
 import { StringUtils } from "../../lib/utils/business";
 
 interface MetadataSettingsProps {

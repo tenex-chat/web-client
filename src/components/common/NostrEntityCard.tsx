@@ -6,12 +6,12 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { selectedTaskAtom } from "../../lib/store";
-import type { NostrEntity } from "../../utils/nostrEntityParser";
+import type { NostrEntity } from "../../lib/utils/nostrEntityParser";
 import {
     getEntityDisplayInfo,
     isAddressPointer,
     isTaskEntity,
-} from "../../utils/nostrEntityParser";
+} from "../../lib/utils/nostrEntityParser";
 import { TaskCard } from "../tasks/TaskCard";
 import { Card } from "../ui/card";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "../ui/drawer";

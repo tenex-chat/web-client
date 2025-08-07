@@ -2,7 +2,7 @@ import { Check, Loader2, Mic, TestTube } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { SpeechConfig, SpeechProvider } from "../../types/llm";
 import { useLLMConfig } from "../../hooks/useLLMConfig";
-import { validateApiKeyFormat } from "../../utils/llmModels";
+import { validateApiKeyFormat } from "../../lib/utils/llmModels";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Input } from "../ui/input";

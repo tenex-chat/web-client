@@ -1,5 +1,5 @@
 import type React from "react";
-import { findNostrEntities, replaceNostrEntities } from "../../utils/nostrEntityParser";
+import { findNostrEntities, replaceNostrEntities } from "../../lib/utils/nostrEntityParser";
 import { NostrEntityCard } from "./NostrEntityCard";
 
 interface MessageWithEntitiesProps {

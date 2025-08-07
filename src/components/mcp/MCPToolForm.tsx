@@ -10,6 +10,8 @@ interface MCPToolFormData {
     description: string;
     tags: string[];
     newTag: string;
+    command: string;
+    image: string;
 }
 
 interface MCPToolFormProps {

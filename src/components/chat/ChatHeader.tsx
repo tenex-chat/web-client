@@ -1,7 +1,7 @@
 import type { NDKEvent, NDKProject } from "@nostr-dev-kit/ndk";
 import { ArrowLeft, Copy, Check, Phone, PhoneOff } from "lucide-react";
 import { useState, useMemo } from "react";
-import { copyThreadToClipboard } from "../../utils/copyConversation";
+import { copyThreadToClipboard } from "../../lib/utils/copyConversation";
 import { useProfilesMap } from "../../hooks/useProfilesMap";
 import { ParticipantAvatarsWithModels } from "../common/ParticipantAvatarsWithModels";
 import { Button } from "../ui/button";

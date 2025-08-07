@@ -3,7 +3,7 @@
  * Consolidates repeated patterns found across the codebase
  */
 
-import { getEntityAvatar } from "../../utils/ui-helpers";
+import { getEntityAvatar } from "./ui-helpers";
 
 /**
  * String manipulation utilities

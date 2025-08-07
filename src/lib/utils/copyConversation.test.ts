@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { threadToMarkdown, copyThreadToClipboard } from './copyConversation';
 import type { NDKEvent } from '@nostr-dev-kit/ndk';
-import { EVENT_KINDS } from '../lib/types';
+import { EVENT_KINDS } from '../types';
 
 describe('threadToMarkdown', () => {
     const mockProfiles = new Map([

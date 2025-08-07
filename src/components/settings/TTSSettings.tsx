@@ -9,6 +9,7 @@ import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { VoiceSelector } from "../voice/VoiceSelector";
 import { MurfVoicesCache } from "../../services/murfVoicesCache";
+import type { MurfVoice } from "../../hooks/useMurfVoices";
 
 const TTS_PROVIDER_NAMES: Record<TTSProvider, string> = {
     murf: "Murf.ai",
@@ -17,17 +18,6 @@ const TTS_PROVIDER_NAMES: Record<TTSProvider, string> = {
 const TTS_PROVIDER_DESCRIPTIONS: Record<TTSProvider, string> = {
     murf: "Professional text-to-speech service with realistic AI voices",
 };
-
-interface MurfVoice {
-    voiceId: string;
-    displayName: string;
-    gender?: string;
-    locale?: string;
-    accent?: string;
-    availableStyles?: string[];
-    description?: string;
-    displayLanguage?: string;
-}
 
 const LANGUAGES = [
     { code: "en-US", name: "English (US)" },

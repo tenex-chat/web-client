@@ -3,7 +3,7 @@ import { Server, Terminal } from "lucide-react";
 import { NDKMCPTool } from "@/events";
 import { MCPToolSelector } from "../mcp/MCPToolSelector";
 import { ProjectEntitySettings } from "./ProjectEntitySettings";
-import { getEntityAvatar } from "../../utils/ui-helpers";
+import { getEntityAvatar } from "../../lib/utils/ui-helpers";
 
 interface MCPToolsSettingsProps {
     project: NDKProject;

@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { NDKAgent } from "@/events";
 import { ParticipantAvatar } from "../common/ParticipantAvatar";
 import { useProjectAgents } from "../../stores/project/hooks";
-import { useAgentLessonsByEventId } from "../../hooks/useAgentLessons";
+import { useAgentLessonsByPubkey } from "../../hooks/useAgentLessons";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { AgentSelector } from "../agents/AgentSelector";
@@ -24,7 +24,7 @@ interface AgentItemProps {
 
 function AgentItem({ agent, projectAgent, projectId }: AgentItemProps) {
     const navigate = useNavigate();
-    const lessons = useAgentLessonsByEventId(agent?.id);
+    const lessons = useAgentLessonsByPubkey(projectAgent.pubkey);
     
     const handleClick = () => {
         // Use agent slug/id if available, otherwise use the project agent name

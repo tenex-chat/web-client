@@ -86,16 +86,21 @@ export function useAgentLessons() {
 }
 
 /**
- * Hook to get lessons for a specific agent
+ * Hook to get lessons for a specific agent by their pubkey
  */
-export function useAgentLessonsByEventId(agentEventId: string | undefined) {
+export function useAgentLessonsByPubkey(agentPubkey: string | undefined) {
     const { events: lessons } = useSubscribe(
-        agentEventId
-            ? [{ kinds: [EVENT_KINDS.AGENT_LESSON as NDKKind], "#e": [agentEventId] }]
+        agentPubkey
+            ? [{ kinds: [EVENT_KINDS.AGENT_LESSON as NDKKind], authors: [agentPubkey] }]
             : false,
         {},
-        [agentEventId]
+        [agentPubkey]
     );
 
     return (lessons || []).map(NDKAgentLesson.from);
 }
+
+/**
+ * @deprecated Use useAgentLessonsByPubkey instead
+ */
+export const useAgentLessonsByEventId = useAgentLessonsByPubkey;

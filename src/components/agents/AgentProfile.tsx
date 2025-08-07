@@ -6,7 +6,8 @@ import { NDKAgent } from "@/events";
 import { ParticipantAvatar } from "../common/ParticipantAvatar";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { AgentLessonsTabSimple } from "./AgentLessonsTabSimple";
+import { AgentLessonsTab } from "./AgentLessonsTab";
+import { useAgentLessonsByPubkey } from "../../hooks/useAgentLessons";
 import { AgentSettingsTab } from "./AgentSettingsTab";
 import { useProjectAgents } from "../../stores/project/hooks";
 
@@ -49,6 +50,9 @@ export function AgentProfile() {
     const agentName = agent?.tagValue("name") || agent?.tagValue("title") || projectAgent?.name || agentSlug || "Unnamed Agent";
     const agentDescription = agent?.tagValue("description") || "";
     const agentSlugValue = agent?.tagValue("slug") || agentSlug || "";
+    
+    // Get lessons for this agent
+    const lessons = useAgentLessonsByPubkey(agentPubkey);
     
     // If we have neither an NDKAgent nor a project agent, show not found
     if (!agent && !projectAgent) {
@@ -123,21 +127,7 @@ export function AgentProfile() {
 
                     <div className="flex-1 overflow-auto">
                         <TabsContent value="lessons" className="h-full m-0">
-                            {agent ? (
-                                <AgentLessonsTabSimple agent={agent} />
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-20 text-center">
-                                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                                        <BookOpen className="w-8 h-8 text-muted-foreground" />
-                                    </div>
-                                    <h3 className="text-lg font-semibold text-foreground mb-2">
-                                        No lessons available
-                                    </h3>
-                                    <p className="text-muted-foreground max-w-sm">
-                                        This is a built-in agent. Lessons will appear here when available.
-                                    </p>
-                                </div>
-                            )}
+                            <AgentLessonsTab agent={agent!} lessons={lessons} />
                         </TabsContent>
                         <TabsContent value="settings" className="h-full m-0">
                             <AgentSettingsTab agent={agent || undefined} agentSlug={agentSlugValue} />

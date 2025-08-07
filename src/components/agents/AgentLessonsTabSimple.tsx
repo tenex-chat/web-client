@@ -1,5 +1,5 @@
 import { NDKAgent } from "@/events";
-import { useAgentLessonsByEventId } from "../../hooks/useAgentLessons";
+import { useAgentLessonsByPubkey } from "../../hooks/useAgentLessons";
 import { BookOpen } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -8,7 +8,7 @@ interface AgentLessonsTabSimpleProps {
 }
 
 export function AgentLessonsTabSimple({ agent }: AgentLessonsTabSimpleProps) {
-    const lessons = useAgentLessonsByEventId(agent.id);
+    const lessons = useAgentLessonsByPubkey(agent.pubkey);
 
     if (lessons.length === 0) {
         return (

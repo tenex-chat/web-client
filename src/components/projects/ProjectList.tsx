@@ -1,4 +1,4 @@
-import { type NDKEvent, NDKProject } from "@nostr-dev-kit/ndk-hooks";
+import { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { StringUtils } from "../../lib/utils/business";
 import { Menu, MoreVertical, Plus, Settings, Users } from "lucide-react";
@@ -34,13 +34,10 @@ export function ProjectList() {
 
     // TODO: In the future, we should get task counts and latest activity from the store
     // For now, we'll simplify and just show projects without the activity tracking
-    const statusUpdates = useMemo(() => [] as NDKEvent[], []);
 
-    // Create maps for project activity and status updates
-    const { projectActivityMap, mostRecentStatusMap, unreadCountMap } = useMemo(() => {
+    // Create maps for project activity
+    const projectActivityMap = useMemo(() => {
         const activityMap = new Map<string, number>();
-        const statusMap = new Map<string, string>();
-        const unreadMap = new Map<string, number>();
 
         // Initialize with project creation dates
         for (const project of projects) {
@@ -48,49 +45,8 @@ export function ProjectList() {
             activityMap.set(projectId, project.created_at || 0);
         }
 
-        // Map status updates to projects and track unseen ones
-        for (const update of statusUpdates) {
-            // Find which task this update belongs to
-            const taskId = update.tags?.find((tag) => tag[0] === "e" && tag[3] === "task")?.[1];
-            if (taskId) {
-                // Find which project this task belongs to
-                // const task = tasks.find((t) => t.id === taskId);
-                if (task) {
-                    const projectReference = task.tags?.find((tag) => tag[0] === "a")?.[1];
-                    if (projectReference) {
-                        // Extract project tagId from the 'a' tag reference
-                        const parts = projectReference.split(":");
-                        if (parts.length >= 3) {
-                            const projectTagId = parts[2];
-                            const project = projects.find((p) => p.tagValue("d") === projectTagId);
-                            if (project) {
-                                const projectId = project.tagId();
-                                const currentActivity = activityMap.get(projectId) || 0;
-                                const updateTime = update.created_at || 0;
-
-                                if (updateTime > currentActivity) {
-                                    activityMap.set(projectId, updateTime);
-                                    statusMap.set(projectId, update.content);
-                                }
-
-                                // Count unseen updates
-                                if (!statusUpdateTracker.hasSeen(update.id)) {
-                                    const currentUnread = unreadMap.get(projectId) || 0;
-                                    unreadMap.set(projectId, currentUnread + 1);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return {
-            projectActivityMap: activityMap,
-            mostRecentStatusMap: statusMap,
-            unreadCountMap: unreadMap,
-        };
-    }, [projects, tasks, statusUpdates]);
+        return activityMap;
+    }, [projects]);
 
     // Sort projects by most recent activity
     const sortedProjects = useMemo(() => {
@@ -236,33 +192,9 @@ export function ProjectList() {
                                 project.title || project.tagValue("title") || "Untitled Project";
                             const lastActivityTime =
                                 projectActivityMap.get(project.tagId()) || project.created_at || 0;
-                            const mostRecentStatus = mostRecentStatusMap.get(project.tagId());
-                            const unreadCount = unreadCountMap.get(project.tagId()) || 0;
+                            // TODO: Add status and unread tracking when task/status update system is implemented
 
                             const handleProjectClick = () => {
-                                // Get all status updates for this project to mark them as seen
-                                const projectTasks = tasks.filter((task) => {
-                                    const projectReference = task.tags?.find(
-                                        (tag) => tag[0] === "a"
-                                    )?.[1];
-                                    if (projectReference) {
-                                        const parts = projectReference.split(":");
-                                        if (parts.length >= 3) {
-                                            const projectTagId = parts[2];
-                                            return project.tagValue("d") === projectTagId;
-                                        }
-                                    }
-                                    return false;
-                                });
-
-                                const projectStatusUpdates = statusUpdates.filter((update) => {
-                                    const taskId = update.tags?.find(
-                                        (tag) => tag[0] === "e" && tag[3] === "task"
-                                    )?.[1];
-                                    return projectTasks.some((task) => task.id === taskId);
-                                });
-
-                                markProjectStatusUpdatesSeen(project.tagId(), projectStatusUpdates);
                                 goToProject(project);
                             };
 
@@ -312,14 +244,6 @@ export function ProjectList() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1.5">
-                                                {unreadCount > 0 && (
-                                                    <Badge
-                                                        variant="destructive"
-                                                        className="h-5 px-1.5 text-xs font-medium"
-                                                    >
-                                                        {unreadCount}
-                                                    </Badge>
-                                                )}
                                                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                                     <Button
                                                         variant="ghost"
@@ -332,8 +256,7 @@ export function ProjectList() {
                                             </div>
                                         </div>
                                         <p className="text-xs sm:text-sm text-muted-foreground truncate leading-relaxed">
-                                            {mostRecentStatus ||
-                                                project.tagValue("summary") ||
+                                            {project.tagValue("summary") ||
                                                 (project.content
                                                     ? StringUtils.truncate(project.content, 60)
                                                     : null) ||

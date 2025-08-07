@@ -70,7 +70,7 @@ test.describe("Simple project creation test", () => {
         await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 10000 });
 
         // Success - project was created
-        console.log(`Created project: ${projectName}`);
+        console.info(`Created project: ${projectName}`);
 
         // Wait a bit for project to appear
         await page.waitForTimeout(5000);

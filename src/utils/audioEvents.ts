@@ -45,7 +45,9 @@ export function getAudioDuration(event: NDKEvent): number {
     // NIP-94 events
     if (event.kind === 1063) {
         const durationTag = event.tags.find(tag => tag[0] === "duration" && tag.length > 1)?.[1];
-        return durationTag ? parseInt(durationTag) : 0;
+        if (!durationTag) return 0;
+        const parsed = parseInt(durationTag);
+        return isNaN(parsed) ? 0 : parsed;
     }
     
     // Legacy NIP-A0 events - check imeta tag
@@ -55,7 +57,11 @@ export function getAudioDuration(event: NDKEvent): number {
             const durationPart = imetaTag.find(part => typeof part === 'string' && part.includes("duration"));
             if (durationPart) {
                 const match = durationPart.match(/duration (\d+)/);
-                return match && match[1] ? parseInt(match[1]) : 0;
+                if (match && match[1]) {
+                    const parsed = parseInt(match[1]);
+                    return isNaN(parsed) ? 0 : parsed;
+                }
+                return 0;
             }
         }
     }

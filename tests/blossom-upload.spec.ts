@@ -63,7 +63,7 @@ test.describe("Blossom file upload", () => {
         const failureMessage = page.getByText("❌ Upload failed");
 
         if (await successMessage.isVisible({ timeout: 1000 }).catch(() => false)) {
-            console.log("Upload successful!");
+            console.info("Upload successful!");
 
             // Verify the file URL is displayed
             const fileUrlElement = page
@@ -75,16 +75,16 @@ test.describe("Blossom file upload", () => {
             expect(fileUrl).toBeTruthy();
             expect(fileUrl).toMatch(/^https:\/\/blossom\.primal\.net\/.+/);
 
-            console.log("File uploaded successfully to:", fileUrl);
+            console.info("File uploaded successfully to:", fileUrl);
         } else if (await failureMessage.isVisible({ timeout: 1000 }).catch(() => false)) {
-            console.log("Upload failed - this is expected if the blossom server is not accessible");
+            console.info("Upload failed - this is expected if the blossom server is not accessible");
 
             // Verify error message is displayed
             const errorElement = page.locator(".text-\\[\\#F85149\\]").last();
             await expect(errorElement).toBeVisible();
 
             const errorText = await errorElement.textContent();
-            console.log("Upload error:", errorText);
+            console.info("Upload error:", errorText);
 
             // This is acceptable for the test - we've verified the upload process works
         } else {

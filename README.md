@@ -31,6 +31,9 @@ npm run test
 # Run tests with UI
 npm run test:ui
 
+# Run tests with coverage
+npm run test:coverage
+
 # Run e2e tests
 npm run test:e2e
 

@@ -187,24 +187,24 @@ test.describe("Thread Drawer Debug", () => {
 
             // Check if a drawer (sheet) opened
             const sheetExists = (await page.locator('[role="sheet"]').count()) > 0;
-            console.log(`Sheet exists: ${sheetExists}`);
+            console.info(`Sheet exists: ${sheetExists}`);
 
             if (sheetExists) {
-                console.log("Drawer opened successfully!");
+                console.info("Drawer opened successfully!");
                 await page.screenshot({
                     path: "test-results/12-drawer-opened.png",
                     fullPage: true,
                 });
             } else {
-                console.log("No drawer found, checking for other elements...");
+                console.info("No drawer found, checking for other elements...");
 
                 // Check for any dialogs
                 const dialogExists = (await page.locator('[role="dialog"]').count()) > 0;
-                console.log(`Dialog exists: ${dialogExists}`);
+                console.info(`Dialog exists: ${dialogExists}`);
 
                 // Check what's visible on the page
                 const visibleText = await page.locator("body").textContent();
-                console.log("Page contains:", visibleText?.substring(0, 500));
+                console.info("Page contains:", visibleText?.substring(0, 500));
             }
         });
 

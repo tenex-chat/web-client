@@ -1,42 +1,33 @@
-# Medium Risk: NDK Version Mismatch Issue
+# NDK Version Mismatch in Project Store
 
-## Problem
-The web-client has a dependency conflict where two different versions of `@nostr-dev-kit/ndk` are installed:
-1. Direct dependency: `@nostr-dev-kit/ndk@^2.14.33`
-2. Indirect dependency via `@nostr-dev-kit/ndk-hooks` which uses a different version
+## Severity: Medium
 
-This causes TypeScript compilation errors due to incompatible type definitions between the two versions.
+## Description
+There's a TypeScript error indicating that different versions of the `@nostr-dev-kit/ndk` package are being used by the main project and the `@nostr-dev-kit/ndk-hooks` dependency. This causes type incompatibility issues.
+
+## Location
+- `/src/stores/project/index.ts` lines 66 and 248
+
+## Error Messages
+```
+Type 'import("/.../@nostr-dev-kit/ndk-hooks/node_modules/@nostr-dev-kit/ndk/dist/index").NDKEvent' is not assignable to type 'import("/.../@nostr-dev-kit/ndk/dist/index").NDKEvent'.
+Types have separate declarations of a private property '_explicitRelayUrls'.
+```
+
+## Root Cause
+The `@nostr-dev-kit/ndk-hooks` package has its own version of `@nostr-dev-kit/ndk` in its node_modules, which differs from the project's direct dependency version.
+
+## Recommended Fix
+1. Check package.json for version mismatches
+2. Use npm/yarn resolutions to force a single NDK version
+3. Update all NDK-related packages to compatible versions
+4. Consider using `npm dedupe` or `yarn dedupe` to consolidate dependencies
 
 ## Impact
-- Build fails with TypeScript errors
-- Cannot compile for production
-- Type safety is compromised
-
-## Evidence
-Multiple TypeScript errors like:
-```
-Types have separate declarations of a private property '_explicitRelayUrls'
-```
-
-## Recommended Solution
-1. Ensure all NDK-related packages use the same version of the core NDK library
-2. Consider using npm/yarn resolutions to force a single version
-3. Or update all NDK packages to their latest compatible versions
-
-## Workaround
-Add to package.json:
-```json
-"overrides": {
-  "@nostr-dev-kit/ndk": "^2.14.33"
-}
-```
-
-Or for yarn:
-```json
-"resolutions": {
-  "@nostr-dev-kit/ndk": "^2.14.33"
-}
-```
+- Build failures
+- Potential runtime issues with NDK event handling
+- Type safety compromised between different parts of the application
 
 ## Risk Assessment
-Medium risk - This is a dependency management issue that blocks builds but doesn't affect runtime behavior once resolved.
+Medium risk - requires careful dependency management and testing of NDK functionality after fixing.
+EOF < /dev/null

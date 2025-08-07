@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { SpeechConfig, SpeechProvider } from "../../types/llm";
 import { useLLMConfig } from "../../hooks/useLLMConfig";
 import { validateApiKeyFormat } from "../../lib/utils/llmModels";
+import { logger } from "../../lib/logger";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Input } from "../ui/input";
@@ -99,7 +100,7 @@ export function SpeechSettings() {
 
             return response.ok;
         } catch (error) {
-            console.error("Speech configuration test failed:", error);
+            logger.error("Speech configuration test failed:", error);
             return false;
         }
     };
@@ -118,7 +119,7 @@ export function SpeechSettings() {
             const result = await testSpeechConfiguration();
             setTestResult(result);
         } catch (error) {
-            console.error("Test failed:", error);
+            logger.error("Test failed:", error);
             setTestResult(false);
         } finally {
             setIsTesting(false);
@@ -198,7 +199,7 @@ export function SpeechSettings() {
                 }
             }, 2000);
         } catch (error) {
-            console.error("Recording test failed:", error);
+            logger.error("Recording test failed:", error);
             setTestResult(false);
             alert("Failed to access microphone. Please check your permissions.");
         } finally {

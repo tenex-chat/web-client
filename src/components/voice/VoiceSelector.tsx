@@ -4,6 +4,7 @@ import { useMurfVoices, getCountryFromLocale, getLanguageFromLocale } from "../.
 import { Loader2, Play, Square } from "lucide-react";
 import { Button } from "../ui/button";
 import { useMurfTTS } from "../../hooks/useMurfTTS";
+import { logger } from "../../lib/logger";
 
 interface VoiceSelectorProps {
     value: string;
@@ -79,7 +80,7 @@ export function VoiceSelector({
             
             await tts.play(sampleText);
         } catch (error) {
-            console.error("Failed to play sample:", error);
+            logger.error("Failed to play sample:", error);
         }
     };
     

@@ -63,7 +63,8 @@ export const useProjectStore = create<ProjectStore>()(
             
             // Subscribe to user's projects
             const projectsSub = ndk.subscribe({ kinds: NDKProject.kinds, authors: [userPubkey] }, {  wrap: true }, {
-                onEvent: (project: NDKProject) => {
+                onEvent: (event: NDKEvent) => {
+                    const project = event as NDKProject;
                     const { updateProject } = get();
                     updateProject(project);
 

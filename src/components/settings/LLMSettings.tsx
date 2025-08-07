@@ -4,6 +4,7 @@ import type { LLMConfig, LLMProvider } from "../../types/llm";
 import { DEFAULT_MODELS } from "../../types/llm";
 import { useLLMConfig } from "../../hooks/useLLMConfig";
 import { formatModelWithPricing, validateApiKeyFormat } from "../../lib/utils/llmModels";
+import { logger } from "../../lib/logger";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Input } from "../ui/input";
@@ -73,7 +74,7 @@ function LLMConfigForm({ provider, onSave, onCancel, existingConfig }: LLMConfig
             const result = await testConfiguration(provider, apiKey, model);
             setTestResult(result);
         } catch (error) {
-            console.error("Test failed:", error);
+            logger.error("Test failed:", error);
             setTestResult(false);
         } finally {
             setIsTesting(false);
@@ -280,7 +281,7 @@ export function LLMSettings() {
             const credentials = getCredentials(llmConfig.provider);
             if (!credentials?.apiKey) {
                 // This should not happen if the form validation is working correctly
-                console.error("No credentials found for provider:", llmConfig.provider);
+                logger.error("No credentials found for provider:", llmConfig.provider);
             }
 
             // Set as default if it's the first configuration

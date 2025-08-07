@@ -8,10 +8,6 @@ import { Badge } from "../ui/badge";
 interface MCPToolFormData {
     title: string;
     description: string;
-    serverUrl: string;
-    documentation: string;
-    installation: string;
-    usageExample: string;
     tags: string[];
     newTag: string;
 }

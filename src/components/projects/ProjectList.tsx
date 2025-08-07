@@ -1,4 +1,4 @@
-import { type NDKEvent, NDKProject, NDKTask } from "@nostr-dev-kit/ndk-hooks";
+import { type NDKEvent, NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { StringUtils } from "../../lib/utils/business";
 import { Menu, MoreVertical, Plus, Settings, Users } from "lucide-react";
@@ -22,44 +22,6 @@ import {
 
 // Remove props - navigation is handled by context
 
-// Create seen tracker for status updates
-const statusUpdateTracker = {
-    markMultipleSeen: (ids: string[]) => {
-        try {
-            const seen = JSON.parse(localStorage.getItem("seenStatusUpdates") || "{}");
-            for (const id of ids) {
-                seen[id] = true;
-            }
-            localStorage.setItem("seenStatusUpdates", JSON.stringify(seen));
-        } catch (error) {
-            console.error("Failed to mark status updates as seen:", error);
-        }
-    },
-    getAllSeen: () => {
-        try {
-            return JSON.parse(localStorage.getItem("seenStatusUpdates") || "{}");
-        } catch (error) {
-            console.error("Failed to get seen status updates:", error);
-            return {};
-        }
-    },
-    hasSeen: (id: string) => {
-        try {
-            const seen = JSON.parse(localStorage.getItem("seenStatusUpdates") || "{}");
-            return !!seen[id];
-        } catch (error) {
-            console.error("Failed to check seen status:", error);
-            return false;
-        }
-    },
-};
-
-// Helper function to mark all status updates for a project as seen
-const markProjectStatusUpdatesSeen = (_projectId: string, projectStatusUpdates: NDKEvent[]) => {
-    const updateIds = projectStatusUpdates.map((update) => update.id);
-    statusUpdateTracker.markMultipleSeen(updateIds);
-};
-
 export function ProjectList() {
     const currentUser = useNDKCurrentUser();
     const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -72,7 +34,6 @@ export function ProjectList() {
 
     // TODO: In the future, we should get task counts and latest activity from the store
     // For now, we'll simplify and just show projects without the activity tracking
-    const tasks = useMemo(() => [] as NDKTask[], []);
     const statusUpdates = useMemo(() => [] as NDKEvent[], []);
 
     // Create maps for project activity and status updates
@@ -87,16 +48,13 @@ export function ProjectList() {
             activityMap.set(projectId, project.created_at || 0);
         }
 
-        // Get seen status updates from localStorage
-        // const seenUpdates = statusUpdateTracker.getAllSeen();
-
         // Map status updates to projects and track unseen ones
         for (const update of statusUpdates) {
             // Find which task this update belongs to
             const taskId = update.tags?.find((tag) => tag[0] === "e" && tag[3] === "task")?.[1];
             if (taskId) {
                 // Find which project this task belongs to
-                const task = tasks.find((t) => t.id === taskId);
+                // const task = tasks.find((t) => t.id === taskId);
                 if (task) {
                     const projectReference = task.tags?.find((tag) => tag[0] === "a")?.[1];
                     if (projectReference) {

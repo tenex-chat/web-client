@@ -318,7 +318,6 @@ export function TTSSettings() {
                 if (typeof event.data === 'string') {
                     try {
                         const data = JSON.parse(event.data);
-                        messageCount++;
                         
                         // Check if this is an audio chunk
                         if (data.audio) {

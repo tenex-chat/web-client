@@ -55,7 +55,7 @@ export interface LLMFileConfiguration {
     baseUrl?: string;
     temperature?: number;
     maxTokens?: number;
-    [key: string]: string | number | boolean | undefined;
+    [key: string]: unknown;
 }
 
 /**

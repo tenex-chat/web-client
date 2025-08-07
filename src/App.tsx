@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import { LoginScreen } from "./components/auth/LoginScreen";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import {
     AgentRequestsPageWrapper,
@@ -69,43 +70,45 @@ function AppContent() {
                     },
                 }}
             />
-            <NavigationProvider>
-                <Routes>
-                    <Route path="/login" element={<LoginScreen />} />
-                    {/* <Route path="/blossom-test" element={<BlossomTestPageWrapper />} /> */}
-                    <Route element={<AuthLayout />}>
-                        {/* Root path - show desktop layout on desktop, project list on mobile */}
-                        <Route path="/" element={<RootPage />} />
-                        <Route path="/projects" element={<ProjectListPage />} />
-                        <Route path="/chats" element={<ChatsPageWrapper />} />
-                        <Route path="/settings" element={<SettingsPageWrapper />} />
-                        <Route path="/agents" element={<AgentsPageWrapper />} />
-                        <Route path="/mcp-tools" element={<MCPToolsPageWrapper />} />
-                        <Route path="/instructions" element={<InstructionsPageWrapper />} />
-                        <Route path="/agent-requests" element={<AgentRequestsPageWrapper />} />
-                        <Route path="/project/:projectId" element={<ProjectDetailPage />} />
-                        <Route path="/project/:projectId/profile" element={<ProjectProfilePage />} />
-                        <Route path="/project/:projectId/agent/:agentSlug" element={<AgentProfilePageWrapper />} />
-                        <Route
-                            path="/project/:projectId/task/:taskId"
-                            element={<TaskUpdatesPage />}
-                        />
-                        <Route
-                            path="/project/:projectId/thread/:threadId"
-                            element={<ChatInterfacePage />}
-                        />
-                        <Route
-                            path="/project/:projectId/thread/new"
-                            element={<ChatInterfacePage />}
-                        />
-                        <Route path="/project/:projectId/docs" element={<DocsPageWrapper />} />
-                        <Route
-                            path="/project/:projectId/article/:articleId"
-                            element={<DocumentationViewPage />}
-                        />
-                    </Route>
-                </Routes>
-            </NavigationProvider>
+            <ErrorBoundary>
+                <NavigationProvider>
+                    <Routes>
+                        <Route path="/login" element={<LoginScreen />} />
+                        {/* <Route path="/blossom-test" element={<BlossomTestPageWrapper />} /> */}
+                        <Route element={<AuthLayout />}>
+                            {/* Root path - show desktop layout on desktop, project list on mobile */}
+                            <Route path="/" element={<RootPage />} />
+                            <Route path="/projects" element={<ProjectListPage />} />
+                            <Route path="/chats" element={<ChatsPageWrapper />} />
+                            <Route path="/settings" element={<SettingsPageWrapper />} />
+                            <Route path="/agents" element={<AgentsPageWrapper />} />
+                            <Route path="/mcp-tools" element={<MCPToolsPageWrapper />} />
+                            <Route path="/instructions" element={<InstructionsPageWrapper />} />
+                            <Route path="/agent-requests" element={<AgentRequestsPageWrapper />} />
+                            <Route path="/project/:projectId" element={<ProjectDetailPage />} />
+                            <Route path="/project/:projectId/profile" element={<ProjectProfilePage />} />
+                            <Route path="/project/:projectId/agent/:agentSlug" element={<AgentProfilePageWrapper />} />
+                            <Route
+                                path="/project/:projectId/task/:taskId"
+                                element={<TaskUpdatesPage />}
+                            />
+                            <Route
+                                path="/project/:projectId/thread/:threadId"
+                                element={<ChatInterfacePage />}
+                            />
+                            <Route
+                                path="/project/:projectId/thread/new"
+                                element={<ChatInterfacePage />}
+                            />
+                            <Route path="/project/:projectId/docs" element={<DocsPageWrapper />} />
+                            <Route
+                                path="/project/:projectId/article/:articleId"
+                                element={<DocumentationViewPage />}
+                            />
+                        </Route>
+                    </Routes>
+                </NavigationProvider>
+            </ErrorBoundary>
         </>
     );
 }

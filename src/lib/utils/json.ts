@@ -23,7 +23,8 @@ export function safeJsonParse<T>(jsonString: string, defaultValue: T): T {
 export function tryJsonParse<T>(jsonString: string): T | null {
     try {
         return JSON.parse(jsonString) as T;
-    } catch {
+    } catch (error) {
+        logger.error("Failed to parse JSON in tryJsonParse:", error);
         return null;
     }
 }

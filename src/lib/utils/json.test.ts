@@ -55,9 +55,12 @@ describe("JSON utilities", () => {
             expect(result).toEqual([1, 2, 3]);
         });
 
-        it("should not log errors", () => {
+        it("should log errors for invalid JSON", () => {
             tryJsonParse("invalid json");
-            expect(logger.error).not.toHaveBeenCalled();
+            expect(logger.error).toHaveBeenCalledWith(
+                "Failed to parse JSON in tryJsonParse:",
+                expect.any(Error)
+            );
         });
     });
 });

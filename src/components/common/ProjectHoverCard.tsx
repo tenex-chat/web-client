@@ -18,11 +18,6 @@ export function ProjectHoverCard({ project, isOnline, children }: ProjectHoverCa
     const projectDir = project.tagValue("d") || "";
     const agents = useProjectAgents(project.tagId());
 
-    const getProjectAvatar = () => ProjectAvatarUtils.getAvatar(project);
-    const getInitials = (title: string) => ProjectAvatarUtils.getInitials(title);
-    const getAvatarColors = (title: string) => ProjectAvatarUtils.getColors(title);
-
-
     return (
         <HoverCard openDelay={0} closeDelay={0}>
             <HoverCardTrigger asChild>
@@ -33,11 +28,11 @@ export function ProjectHoverCard({ project, isOnline, children }: ProjectHoverCa
                     {/* Header */}
                     <div className="flex items-start space-x-3">
                         <Avatar className="w-12 h-12">
-                            <AvatarImage src={getProjectAvatar()} alt={title} />
+                            <AvatarImage src={ProjectAvatarUtils.getAvatar(project)} alt={title} />
                             <AvatarFallback
-                                className={`text-primary-foreground font-semibold ${getAvatarColors(title)}`}
+                                className={`text-primary-foreground font-semibold ${ProjectAvatarUtils.getColors(title)}`}
                             >
-                                {getInitials(title)}
+                                {ProjectAvatarUtils.getInitials(title)}
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">

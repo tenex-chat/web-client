@@ -55,7 +55,7 @@ export function getAudioDuration(event: NDKEvent): number {
             const durationPart = imetaTag.find(part => typeof part === 'string' && part.includes("duration"));
             if (durationPart) {
                 const match = durationPart.match(/duration (\d+)/);
-                return match ? parseInt(match[1]) : 0;
+                return match && match[1] ? parseInt(match[1]) : 0;
             }
         }
     }

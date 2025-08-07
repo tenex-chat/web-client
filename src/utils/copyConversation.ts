@@ -6,9 +6,9 @@ import { toast } from "sonner";
 /**
  * Get a display name for a pubkey
  */
-function getDisplayName(pubkey: string, profiles: Map<string, any>, isAgent = false): string {
+function getDisplayName(pubkey: string, profiles: Map<string, unknown>, isAgent = false): string {
     if (isAgent) {
-        const profile = profiles.get(pubkey);
+        const profile = profiles.get(pubkey) as Record<string, unknown> | undefined;
         const agentName = profile?.name || "Agent";
         return agentName;
     }
@@ -20,7 +20,7 @@ function getDisplayName(pubkey: string, profiles: Map<string, any>, isAgent = fa
  */
 export function threadToMarkdown(
     messages: NDKEvent[],
-    profiles: Map<string, any>,
+    profiles: Map<string, unknown>,
     threadTitle?: string
 ): string {
     if (!messages || messages.length === 0) {
@@ -87,7 +87,7 @@ export function threadToMarkdown(
  */
 export async function copyThreadToClipboard(
     messages: NDKEvent[],
-    profiles: Map<string, any>,
+    profiles: Map<string, unknown>,
     threadTitle?: string
 ): Promise<boolean> {
     try {

@@ -205,20 +205,20 @@ describe("TaskUtils", () => {
             const task = {
                 tags: [["title", "Test Task"]]
             };
-            expect(TaskUtils.getTaskTitle(task as any)).toBe("Test Task");
+            expect(TaskUtils.getTaskTitle(task as unknown as NDKEvent)).toBe("Test Task");
         });
 
         it("should return truncated content if no title tag", () => {
             const task = {
                 content: "This is a very long task content that should be truncated"
             };
-            const title = TaskUtils.getTaskTitle(task as any);
+            const title = TaskUtils.getTaskTitle(task as unknown as NDKEvent);
             expect(title.length).toBeLessThanOrEqual(63); // 60 + "..."
         });
 
         it("should return Untitled Task if no title or content", () => {
             const task = {};
-            expect(TaskUtils.getTaskTitle(task as any)).toBe("Untitled Task");
+            expect(TaskUtils.getTaskTitle(task as unknown as NDKEvent)).toBe("Untitled Task");
         });
     });
 });

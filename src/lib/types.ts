@@ -45,7 +45,7 @@ export interface LLMConfig {
     baseUrl?: string;
     temperature?: number;
     maxTokens?: number;
-    [key: string]: any;
+    [key: string]: string | number | boolean | undefined;
 }
 
 export interface LLMFileConfiguration {
@@ -55,7 +55,7 @@ export interface LLMFileConfiguration {
     baseUrl?: string;
     temperature?: number;
     maxTokens?: number;
-    [key: string]: any;
+    [key: string]: string | number | boolean | undefined;
 }
 
 /**
@@ -70,8 +70,8 @@ export interface BackendInfo {
     status: "online" | "offline" | "busy";
     lastSeen?: number;
     capabilities?: string[];
-    projects: Array<{ name: string; [key: string]: any }>;
-    metadata?: Record<string, any>;
+    projects: Array<{ name: string; [key: string]: string | number | boolean | undefined }>;
+    metadata?: Record<string, string | number | boolean | undefined>;
 }
 
 export interface ProfileData {
@@ -84,7 +84,7 @@ export interface ProfileData {
     nip05?: string;
     lud16?: string;
     website?: string;
-    [key: string]: any;
+    [key: string]: string | undefined;
 }
 
 /**
@@ -96,16 +96,17 @@ export interface ProfileData {
 /**
  * Backend status parsing utilities
  */
-export function parseBackendStatusEvent(event: any): BackendInfo | null {
+export function parseBackendStatusEvent(event: unknown): BackendInfo | null {
     try {
-        const content = JSON.parse(event.content);
+        const eventObj = event as Record<string, unknown>;
+        const content = JSON.parse(eventObj.content as string);
         return {
-            pubkey: event.pubkey,
+            pubkey: eventObj.pubkey as string,
             name: content.name,
             description: content.description,
             avatar: content.avatar,
             status: content.status || "online",
-            lastSeen: event.created_at * 1000,
+            lastSeen: (eventObj.created_at as number) * 1000,
             capabilities: content.capabilities || [],
             projects: content.projects || [],
             metadata: content.metadata || {},
@@ -115,17 +116,18 @@ export function parseBackendStatusEvent(event: any): BackendInfo | null {
     }
 }
 
-export function migrateBackendStatus(status: any): BackendInfo {
+export function migrateBackendStatus(status: unknown): BackendInfo {
+    const statusObj = status as Record<string, unknown>;
     return {
-        pubkey: status.pubkey,
-        name: status.name,
-        description: status.description,
-        avatar: status.avatar,
-        status: status.status || "online",
-        lastSeen: status.lastSeen,
-        capabilities: status.capabilities || [],
-        projects: status.projects || [],
-        metadata: status.metadata || {},
+        pubkey: statusObj.pubkey as string,
+        name: statusObj.name as string | undefined,
+        description: statusObj.description as string | undefined,
+        avatar: statusObj.avatar as string | undefined,
+        status: (statusObj.status as "online" | "offline" | "busy") || "online",
+        lastSeen: statusObj.lastSeen as number | undefined,
+        capabilities: (statusObj.capabilities as string[]) || [],
+        projects: (statusObj.projects as Array<{ name: string; [key: string]: string | number | boolean | undefined }>) || [],
+        metadata: (statusObj.metadata as Record<string, string | number | boolean | undefined>) || {},
     };
 }
 
@@ -140,30 +142,30 @@ export function createBackendInfo(pubkey: string, data: Partial<BackendInfo> = {
 
 interface OllamaModel {
     name: string;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface OllamaModelsResponse {
     models: OllamaModel[];
 }
 
-export function isOllamaModelsResponse(response: any): response is OllamaModelsResponse {
-    return response && Array.isArray(response.models);
+export function isOllamaModelsResponse(response: unknown): response is OllamaModelsResponse {
+    return response !== null && typeof response === 'object' && 'models' in response && Array.isArray((response as Record<string, unknown>).models);
 }
 
 // Type guards for NDK events
-export function isNDKTask(event: any): event is import("@nostr-dev-kit/ndk").NDKEvent {
-    return event && typeof event.kind === "number" && event.kind === EVENT_KINDS.task;
+export function isNDKTask(event: unknown): event is import("@nostr-dev-kit/ndk").NDKEvent {
+    return event !== null && typeof event === 'object' && 'kind' in event && typeof (event as Record<string, unknown>).kind === "number" && (event as Record<string, unknown>).kind === EVENT_KINDS.TASK;
 }
 
-export function isNDKInstruction(event: any): event is import("@nostr-dev-kit/ndk").NDKEvent {
-    return event && typeof event.kind === "number" && event.kind === EVENT_KINDS.agent_instruction;
+export function isNDKInstruction(event: unknown): event is import("@nostr-dev-kit/ndk").NDKEvent {
+    return event !== null && typeof event === 'object' && 'kind' in event && typeof (event as Record<string, unknown>).kind === "number" && (event as Record<string, unknown>).kind === EVENT_KINDS.AGENT_CONFIG;
 }
 
-export function isNDKAgent(event: any): event is import("@nostr-dev-kit/ndk").NDKEvent {
-    return event && typeof event.kind === "number" && event.kind === EVENT_KINDS.agent;
+export function isNDKAgent(event: unknown): event is import("@nostr-dev-kit/ndk").NDKEvent {
+    return event !== null && typeof event === 'object' && 'kind' in event && typeof (event as Record<string, unknown>).kind === "number" && (event as Record<string, unknown>).kind === EVENT_KINDS.AGENT_CONFIG;
 }
 
-export function isNDKProject(event: any): event is import("@nostr-dev-kit/ndk").NDKEvent {
-    return event && typeof event.kind === "number" && event.kind === EVENT_KINDS.project;
+export function isNDKProject(event: unknown): event is import("@nostr-dev-kit/ndk").NDKEvent {
+    return event !== null && typeof event === 'object' && 'kind' in event && typeof (event as Record<string, unknown>).kind === "number" && (event as Record<string, unknown>).kind === EVENT_KINDS.PROJECT;
 }

@@ -326,7 +326,7 @@ export const ProjectAvatarUtils = {
             "bg-gradient-to-br from-orange-500 to-orange-600",
         ];
         const index = title.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-        return colors[index];
+        return colors[index] || colors[0];
     },
 
     /**

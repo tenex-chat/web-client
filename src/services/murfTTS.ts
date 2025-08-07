@@ -31,7 +31,7 @@ export class MurfTTSService {
 
     private getAudioContext(): AudioContext {
         if (!this.audioContext) {
-            this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            this.audioContext = new (window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
         }
         return this.audioContext;
     }

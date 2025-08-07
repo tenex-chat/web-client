@@ -7,6 +7,7 @@ import {
 import { ArrowRight, Chrome, Copy, Key, UserPlus, Zap } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { logger } from "../../lib/logger";
 import { Button } from "../ui/button";
 
 export function LoginScreen() {
@@ -63,7 +64,7 @@ export function LoginScreen() {
             setNewAccountSigner(signer);
             // Don't login immediately - wait for user to continue
         } catch (error) {
-            console.error("Account generation failed:", error);
+            logger.error("Account generation failed:", error);
         } finally {
             setIsLoading(false);
         }

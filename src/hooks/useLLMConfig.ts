@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { logger } from "../lib/logger";
 import type {
     LLMConfig,
     LLMCredentials,
@@ -26,7 +27,7 @@ export function useLLMConfig() {
             try {
                 return JSON.parse(saved);
             } catch (error) {
-                console.error("Failed to parse saved LLM config:", error);
+                logger.error("Failed to parse saved LLM config:", error);
             }
         }
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, MockedFunction } from "vitest";
 import {
     fetchOpenRouterModels,
     fetchOllamaModels,
@@ -9,8 +9,9 @@ import {
 } from "./llmModels";
 import type { LLMModelOption } from "../types/llm";
 
-// Mock fetch globally
-global.fetch = vi.fn();
+// Mock fetch globally with proper typing
+const mockFetch = vi.fn() as MockedFunction<typeof fetch>;
+global.fetch = mockFetch;
 
 describe("llmModels", () => {
     beforeEach(() => {
@@ -53,7 +54,7 @@ describe("llmModels", () => {
                 ],
             };
 
-            (global.fetch as any).mockResolvedValueOnce({
+            mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => mockResponse,
             });
@@ -75,7 +76,7 @@ describe("llmModels", () => {
         });
 
         it("should return fallback models when API fails", async () => {
-            (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
+            mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
             const models = await fetchOpenRouterModels();
 
@@ -105,7 +106,7 @@ describe("llmModels", () => {
                 ],
             };
 
-            (global.fetch as any).mockResolvedValueOnce({
+            mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => mockResponse,
             });
@@ -126,7 +127,7 @@ describe("llmModels", () => {
                 ],
             };
 
-            (global.fetch as any).mockResolvedValueOnce({
+            mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => mockResponse,
             });
@@ -142,7 +143,7 @@ describe("llmModels", () => {
         });
 
         it("should return fallback models when Ollama is not running", async () => {
-            (global.fetch as any).mockRejectedValueOnce(new Error("Connection refused"));
+            mockFetch.mockRejectedValueOnce(new Error("Connection refused"));
 
             const models = await fetchOllamaModels();
 
@@ -172,7 +173,7 @@ describe("llmModels", () => {
                 ],
             };
 
-            (global.fetch as any).mockResolvedValueOnce({
+            mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => mockResponse,
             });
@@ -191,7 +192,7 @@ describe("llmModels", () => {
                 models: [{ name: "mistral" }],
             };
 
-            (global.fetch as any).mockResolvedValueOnce({
+            mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => mockResponse,
             });

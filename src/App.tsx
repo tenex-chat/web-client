@@ -3,7 +3,6 @@ import { NDKHeadless, NDKSessionLocalStorage } from "@nostr-dev-kit/ndk-hooks";
 import { useAtomValue } from "jotai";
 import { useEffect, useRef } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-const DEFAULT_RELAYS = ["wss://tenex.chat"];
 import { Toaster } from "sonner";
 import { LoginScreen } from "./components/auth/LoginScreen";
 import { AuthLayout } from "./components/layout/AuthLayout";
@@ -27,6 +26,8 @@ import {
 import { NavigationProvider } from "./contexts/NavigationContext";
 import { themeAtom } from "./lib/store";
 import type { NDKCacheAdapter } from "@nostr-dev-kit/ndk-hooks";
+
+const DEFAULT_RELAYS = ["wss://tenex.chat"];
 
 function AppContent() {
     const sessionStorage = useRef(new NDKSessionLocalStorage());

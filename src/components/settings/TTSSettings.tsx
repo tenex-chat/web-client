@@ -296,7 +296,6 @@ export function TTSSettings() {
             // Create audio context for playback
             const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
             const audioChunks: ArrayBuffer[] = [];
-            let messageCount = 0;
             
             ws.onopen = () => {
                 // Send test text with proper Murf API format

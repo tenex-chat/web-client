@@ -10,6 +10,8 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Textarea } from "../ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { StringUtils } from "../../lib/utils/business";
+import { getEntityAvatar } from "../../utils/ui-helpers";
 import { AgentSelector } from "../agents/AgentSelector";
 import { MCPToolSelector } from "../mcp/MCPToolSelector";
 
@@ -133,14 +135,6 @@ export function EditProjectModal({
         return `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(seed)}`;
     };
 
-    const getInitials = (title: string) => {
-        return title
-            .split(" ")
-            .map((word) => word.charAt(0))
-            .join("")
-            .toUpperCase()
-            .slice(0, 2);
-    };
 
     if (!project) return null;
 
@@ -206,7 +200,7 @@ export function EditProjectModal({
                                                 alt={editState.title || "Project"}
                                             />
                                             <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-                                                {getInitials(editState.title || "Project")}
+                                                {StringUtils.getInitials(editState.title || "Project", "PR")}
                                             </AvatarFallback>
                                         </Avatar>
                                         <Button
@@ -656,17 +650,13 @@ function AgentCard({ agent, onRemove }: { agent?: NDKAgent; onRemove: () => void
         );
     }
     
-    const getAgentAvatar = () => {
-        if (authorProfile?.image) return authorProfile.image;
-        return `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(agent.id)}`;
-    };
     
     return (
         <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Avatar className="w-10 h-10">
-                        <AvatarImage src={getAgentAvatar()} alt={agent.name} />
+                        <AvatarImage src={getEntityAvatar(agent.id, authorProfile?.image)} alt={agent.name} />
                         <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm">
                             {agent.name?.slice(0, 2).toUpperCase() || "AG"}
                         </AvatarFallback>
@@ -712,17 +702,13 @@ function MCPToolCard({ tool, onRemove }: { tool?: NDKMCPTool; onRemove: () => vo
         );
     }
     
-    const getToolIcon = () => {
-        if (tool.icon) return tool.icon;
-        return `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(tool.id)}`;
-    };
     
     return (
         <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Avatar className="w-10 h-10 rounded-lg">
-                        <AvatarImage src={getToolIcon()} alt={tool.name} />
+                        <AvatarImage src={getEntityAvatar(tool.id, tool.icon, "shapes")} alt={tool.name} />
                         <AvatarFallback className="rounded-lg bg-gradient-to-br from-green-500 to-teal-600 text-white">
                             <Terminal className="w-5 h-5" />
                         </AvatarFallback>

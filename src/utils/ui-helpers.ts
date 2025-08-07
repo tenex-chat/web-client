@@ -3,6 +3,7 @@
  */
 
 import { StringUtils } from "../lib/utils/business";
+import { UI_CONSTANTS } from "../lib/ui-constants";
 
 /**
  * Generate avatar URL for an entity
@@ -13,7 +14,7 @@ export function getEntityAvatar(
     avatarStyle: "thumbs" | "shapes" | "avataaars" = "thumbs"
 ): string {
     if (imageUrl) return imageUrl;
-    return `https://api.dicebear.com/7.x/${avatarStyle}/svg?seed=${encodeURIComponent(entityId)}`;
+    return `${UI_CONSTANTS.APIS.DICEBEAR_BASE}/${avatarStyle}/svg?seed=${encodeURIComponent(entityId)}`;
 }
 
 /**

@@ -1,4 +1,5 @@
 import { logger } from '../lib/logger';
+import { UI_CONSTANTS } from '../lib/ui-constants';
 
 export interface MurfTTSConfig {
     apiKey: string;
@@ -48,7 +49,7 @@ export class MurfTTSService {
 
             const wsUrl = `wss://api.murf.ai/v1/speech/stream-input?api-key=${encodeURIComponent(
                 this.config.apiKey
-            )}&sample_rate=44100&channel_type=MONO&format=WAV`;
+            )}&sample_rate=${UI_CONSTANTS.AUDIO.SAMPLE_RATE}&channel_type=MONO&format=WAV`;
             
             const ws = new WebSocket(wsUrl);
             this.currentWebSocket = ws;
@@ -158,7 +159,7 @@ export class MurfTTSService {
 
             ws.onclose = (event) => {
                 this.currentWebSocket = null;
-                if (event.code === 1006 || event.code === 1008) {
+                if (event.code === UI_CONSTANTS.WEBSOCKET_ERROR_CODES.ABNORMAL_CLOSURE || event.code === UI_CONSTANTS.WEBSOCKET_ERROR_CODES.POLICY_VIOLATION) {
                     reject(new Error('Authentication failed'));
                 }
             };
@@ -187,7 +188,7 @@ export class MurfTTSService {
             throw new Error('API key is required to fetch voices');
         }
 
-        const response = await fetch('https://api.murf.ai/v1/speech/voices', {
+        const response = await fetch(UI_CONSTANTS.APIS.MURF_VOICES, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

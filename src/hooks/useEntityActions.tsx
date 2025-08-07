@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCopyWithFeedback } from "./useCopyWithFeedback";
 
 interface Entity {
     id: string;
@@ -14,16 +15,13 @@ interface UseEntityActionsReturn<T extends Entity> {
 
 export function useEntityActions<T extends Entity>(): UseEntityActionsReturn<T> {
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const { copyToClipboard } = useCopyWithFeedback();
 
     const copyEntityId = async (entity: T) => {
-        try {
-            const encoded = entity.encode();
-            await navigator.clipboard.writeText(encoded);
-            setCopiedId(entity.id);
-            setTimeout(() => setCopiedId(null), 2000);
-        } catch {
-            // Silent fail - consistent with existing codebase pattern
-        }
+        const encoded = entity.encode();
+        await copyToClipboard(encoded);
+        setCopiedId(entity.id);
+        setTimeout(() => setCopiedId(null), 2000);
     };
 
     const deleteEntity = async (entity: T, entityName: string, onSuccess?: () => void) => {

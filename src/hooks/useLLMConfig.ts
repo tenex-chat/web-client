@@ -86,7 +86,7 @@ export function useLLMConfig() {
                 setAvailableModels(modelsByProvider);
             }
         } catch (error) {
-            console.error("Failed to load models:", error);
+            logger.error("Failed to load models:", error);
         } finally {
             setIsLoadingModels(false);
         }

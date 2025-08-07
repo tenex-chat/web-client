@@ -1,3 +1,4 @@
+import { logger } from "../lib/logger";
 import { useLLMConfig } from "./useLLMConfig";
 
 export function useLLM() {
@@ -45,7 +46,7 @@ export function useLLM() {
             const result = await response.json();
             return result.choices[0]?.message?.content || text;
         } catch (error) {
-            console.error("LLM cleanup error:", error);
+            logger.error("LLM cleanup error:", error);
 
             // Fallback to basic cleanup
             return text.split(". ").join(".\n\n").trim();

@@ -7,6 +7,7 @@ import {
 import { ArrowLeft, Bot, Check, Copy, Eye, EyeOff, LogOut, Mic, Settings, Volume2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { UI_CONSTANTS } from "../lib/ui-constants";
 import { Button } from "./ui/button";
 import { LLMSettings } from "./settings/LLMSettings";
 import { SpeechSettings } from "./settings/SpeechSettings";
@@ -49,7 +50,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         if (nsec) {
             await navigator.clipboard.writeText(nsec);
             setCopiedNsec(true);
-            setTimeout(() => setCopiedNsec(false), 2000);
+            setTimeout(() => setCopiedNsec(false), UI_CONSTANTS.TIMEOUTS.COPY_FEEDBACK);
         }
     };
 

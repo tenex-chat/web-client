@@ -1,4 +1,5 @@
 import type { NDKTask } from "@nostr-dev-kit/ndk-hooks";
+import { logger } from "../../lib/logger";
 import { StringUtils } from "../../lib/utils/business";
 import { Circle, Code2, Square } from "lucide-react";
 import { memo } from "react";
@@ -83,7 +84,7 @@ export const TaskCard = memo(
             try {
                 await abortEvent.publish();
             } catch (error) {
-                console.error("Failed to publish abort event:", error);
+                logger.error("Failed to publish abort event:", error);
             }
         };
 

@@ -3,6 +3,7 @@ import { Camera, FileText, Info, Plus, Server, Terminal, Users, X } from "lucide
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { NDKAgent, NDKMCPTool } from "@/events";
+import { logger } from "@/lib/logger";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Input } from "../ui/input";
@@ -118,7 +119,7 @@ export function EditProjectModal({
             onProjectUpdated?.();
             onOpenChange(false);
         } catch (error) {
-            console.error("Failed to update project:", error);
+            logger.error("Failed to update project:", error);
             toast.error("Failed to update project", {
                 description: error instanceof Error ? error.message : "An unexpected error occurred"
             });

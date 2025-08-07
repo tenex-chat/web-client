@@ -9,7 +9,7 @@ import { toast } from "sonner";
 function getDisplayName(pubkey: string, profiles: Map<string, unknown>, isAgent = false): string {
     if (isAgent) {
         const profile = profiles.get(pubkey) as Record<string, unknown> | undefined;
-        const agentName = profile?.name || "Agent";
+        const agentName = (profile?.name as string) || "Agent";
         return agentName;
     }
     return "User";

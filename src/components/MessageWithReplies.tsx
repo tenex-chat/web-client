@@ -3,6 +3,7 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import type { NDKProject } from "@nostr-dev-kit/ndk-hooks";
 import { ChevronDown, ChevronRight, Send, Reply } from "lucide-react";
 import { memo, useCallback, useMemo, useState } from "react";
+import { logger } from "../lib/logger";
 import { StatusUpdate } from "./tasks/StatusUpdate";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -86,7 +87,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             setReplyInput("");
             setReplyToEvent(null);
         } catch (error) {
-            console.error("Failed to send reply:", error);
+            logger.error("Failed to send reply:", error);
         } finally {
             setIsSending(false);
         }
@@ -117,7 +118,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     const conversationId = useMemo(() => {
         // For kind 11 (thread/chat events), use the event ID itself as conversation ID
         if (event.kind === 11) {
-            console.log("[MessageWithReplies] Using thread event ID as conversationId:", {
+            logger.debug("[MessageWithReplies] Using thread event ID as conversationId:", {
                 eventId: event.id,
                 eventKind: event.kind,
             });
@@ -130,7 +131,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             eTag = event.tagValue("E");
         }
         const result = eTag || event.id;
-        console.log("[MessageWithReplies] Calculated conversationId for reply:", {
+        logger.debug("[MessageWithReplies] Calculated conversationId for reply:", {
             eventId: event.id,
             eTag,
             conversationId: result,

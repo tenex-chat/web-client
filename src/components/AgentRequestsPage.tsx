@@ -170,7 +170,6 @@ export function AgentRequestsPage({ onBack }: AgentRequestsPageProps = {}) {
                 window.location.reload(); // Refresh to show updated list
             }, 1000);
         } catch {
-            // console.error("Failed to save agent list:", err);
             setError("Failed to save agent list. Please try again.");
         } finally {
             setSaving(false);

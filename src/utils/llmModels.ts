@@ -113,7 +113,7 @@ export async function fetchOllamaModels(): Promise<LLMModelOption[]> {
         }));
     } catch (error) {
         logger.warn(`Could not fetch Ollama models: ${error}`);
-        console.info("Make sure Ollama is running with: ollama serve");
+        logger.info("Make sure Ollama is running with: ollama serve");
 
         // Return fallback models if Ollama is not available
         return [

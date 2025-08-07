@@ -8,6 +8,7 @@ import {
     useNDKCurrentPubkey,
 } from "@nostr-dev-kit/ndk-hooks";
 import { EVENT_KINDS } from "../lib/constants";
+import { logger } from "../lib/logger";
 import { useAtom } from "jotai";
 import { ArrowDown, Send } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
@@ -385,7 +386,7 @@ export function ChatInterface({
         const ttsContent = extractTTSContent(latestMessage.content);
         if (ttsContent && !tts.isPlaying) {
             tts.play(ttsContent).catch((error) => {
-                console.error("TTS playback failed:", error);
+                logger.error("TTS playback failed:", error);
                 // Silently fail - TTS is a nice-to-have feature
             });
         }
@@ -450,9 +451,9 @@ export function ChatInterface({
             const { cleanContent, mentionedAgents } = extractMentions(messageInput.trim());
             
             // Debug logging
-            console.log("Message input:", messageInput);
-            console.log("Mentioned agents found:", mentionedAgents);
-            console.log("Available project agents:", projectAgents);
+            logger.debug("Message input:", messageInput);
+            logger.debug("Mentioned agents found:", mentionedAgents);
+            logger.debug("Available project agents:", projectAgents);
 
             if (isThreadMode) {
                 // Check if we have an existing thread with reply capability
@@ -504,7 +505,7 @@ export function ChatInterface({
                             try {
                                 finalTitle = await generateThreadTitle(messageInput);
                             } catch (error) {
-                                console.warn("Failed to generate thread title:", error);
+                                logger.warn("Failed to generate thread title:", error);
                                 // Fallback to a simple title based on first few words
                                 finalTitle = `${messageInput.trim().split(" ").slice(0, 4).join(" ").slice(0, 30)}...`;
                             }

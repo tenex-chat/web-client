@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, memo, useMemo, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
+import { logger } from "@/lib/logger";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import remarkGfm from "remark-gfm";
@@ -433,7 +434,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
             await navigator.clipboard.writeText(event.encode());
             toast.success("Event ID copied to clipboard");
         } catch (error) {
-            console.error("Failed to copy event ID:", error);
+            logger.error("Failed to copy event ID:", error);
             toast.error("Failed to copy event ID");
         }
     };
@@ -444,7 +445,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
             await navigator.clipboard.writeText(event.inspect);
             toast.success("Raw event copied to clipboard");
         } catch (error) {
-            console.error("Failed to copy raw event:", error);
+            logger.error("Failed to copy raw event:", error);
             toast.error("Failed to copy raw event");
         }
     };

@@ -1,5 +1,6 @@
 import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { StringUtils } from "../lib/utils/business";
 
 interface ProfileDisplayProps {
     pubkey: string;
@@ -31,24 +32,12 @@ export function ProfileDisplay({
     const displayName = profile?.displayName || profile?.name || `${pubkey.slice(0, 8)}...`;
     const avatarUrl = profile?.image || profile?.picture;
 
-    const getInitials = (name: string) => {
-        if (name.includes("...")) {
-            return name.slice(0, 2).toUpperCase();
-        }
-        return name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2);
-    };
-
     return (
         <div className={`flex items-center gap-2 ${className}`}>
             {showAvatar && (
                 <Avatar className={`${sizeClasses[size].avatar} ${avatarClassName}`}>
                     <AvatarImage src={avatarUrl} alt={displayName} />
-                    <AvatarFallback className="text-xs">{getInitials(displayName)}</AvatarFallback>
+                    <AvatarFallback className="text-xs">{StringUtils.getInitials(displayName, pubkey)}</AvatarFallback>
                 </Avatar>
             )}
             {showName && (

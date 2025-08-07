@@ -74,6 +74,7 @@ export function createTagSearchFilter<T>(
 
 /**
  * Format timestamp to relative time
+ * @deprecated Use useTimeFormat hook instead for more robust formatting
  */
 export function formatRelativeTime(timestamp: number): string {
     const now = Date.now() / 1000;

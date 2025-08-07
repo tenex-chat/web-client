@@ -100,7 +100,6 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
     const handleAddAgents = async (selectedAgents: NDKAgent[]) => {
         if (!ndk || selectedAgents.length === 0) return;
 
-        console.log(selectedAgents)
 
         setIsAddingAgents(true);
         try {
@@ -136,8 +135,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
                 `Added ${newAgents.length} agent${newAgents.length > 1 ? "s" : ""} to the project`
             );
             setShowAgentSelector(false);
-        } catch (error) {
-            console.error("Failed to add agents:", error);
+        } catch {
             toast.error("Failed to add agents to the project");
         } finally {
             setIsAddingAgents(false);

@@ -2,7 +2,7 @@ import type { NDKProject, NDKArticle } from "@nostr-dev-kit/ndk-hooks";
 import { useSubscribe, NDKSubscriptionCacheUsage } from "@nostr-dev-kit/ndk-hooks";
 import { EVENT_KINDS } from "../../lib/constants";
 import { FeedItemCard } from "./FeedItemCard";
-import { useNavigation } from "../../contexts/NavigationContext";
+import { useNavigation } from "../../hooks/useNavigation";
 import { useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { Loader2 } from "lucide-react";

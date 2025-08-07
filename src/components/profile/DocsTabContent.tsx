@@ -4,7 +4,7 @@ import { EVENT_KINDS } from "../../lib/constants";
 import { BookOpen, Search } from "lucide-react";
 import { ParticipantAvatar } from "../common/ParticipantAvatar";
 import { Input } from "../ui/input";
-import { useNavigation } from "../../contexts/NavigationContext";
+import { useNavigation } from "../../hooks/useNavigation";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 import { useState, useMemo } from "react";
 

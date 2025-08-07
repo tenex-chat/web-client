@@ -8,7 +8,7 @@ import {
 import { logger } from "../lib/logger";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useMemo, useState } from "react";
-import { useNavigation } from "../contexts/NavigationContext";
+import { useNavigation } from "../hooks/useNavigation";
 import type { ProjectAgent } from "../stores/project/hooks";
 import { useUserProjects } from "../hooks/useUserProjects";
 import { useOnlineProjects } from "../stores/project/hooks";

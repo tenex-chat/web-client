@@ -1,26 +1,6 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
-import { type ReactNode, createContext, useContext } from "react";
+import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-
-interface NavigationContextType {
-    navigate: ReturnType<typeof useNavigate>;
-    location: ReturnType<typeof useLocation>;
-    goBack: () => void;
-    goToProject: (project: NDKEvent) => void;
-    goToProjectProfile: (project: NDKEvent) => void;
-    goToTask: (project: NDKEvent, taskId: string) => void;
-    goToThread: (project: NDKEvent, threadId: string) => void;
-    goToNewThread: (project: NDKEvent, title?: string, agentPubkeys?: string[]) => void;
-    goToArticle: (project: NDKEvent, article: NDKEvent) => void;
-    goToSettings: () => void;
-    goToAgents: () => void;
-    goToInstructions: () => void;
-    goToAgentRequests: () => void;
-    goToChats: () => void;
-    goToDocs: () => void;
-}
-
-const NavigationContext = createContext<NavigationContextType | null>(null);
+import { NavigationContext, type NavigationContextType } from "./NavigationContextTypes";
 
 interface NavigationProviderProps {
     children: ReactNode;
@@ -67,10 +47,3 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
     );
 }
 
-export function useNavigation() {
-    const context = useContext(NavigationContext);
-    if (!context) {
-        throw new Error("useNavigation must be used within a NavigationProvider");
-    }
-    return context;
-}

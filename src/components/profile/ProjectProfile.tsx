@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useProject } from "../../hooks/useProject";
-import { useNavigation } from "../../contexts/NavigationContext";
+import { useNavigation } from "../../hooks/useNavigation";
 import { ProjectProfileHeader } from "./ProjectProfileHeader";
 import { ProjectProfileNav } from "./ProjectProfileNav";
 import { ProjectProfileContent } from "./ProjectProfileContent";

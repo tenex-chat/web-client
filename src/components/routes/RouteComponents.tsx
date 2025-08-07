@@ -1,5 +1,5 @@
 import { useLocation, useParams } from "react-router-dom";
-import { useNavigation } from "../../contexts/NavigationContext";
+import { useNavigation } from "../../hooks/useNavigation";
 import { useArticle } from "../../hooks/useArticle";
 import { useProject } from "../../hooks/useProject";
 import { AgentRequestsPage } from "../AgentRequestsPage";

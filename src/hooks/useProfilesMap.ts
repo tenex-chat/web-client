@@ -9,7 +9,7 @@ import type { ProfileData } from "../lib/types.js";
  * 1. Use a fixed set of profile hooks
  * 2. Implement profile fetching outside of React hooks
  */
-export function useProfilesMap(_pubkeys: string[]): Map<string, ProfileData> {
+export function useProfilesMap(): Map<string, ProfileData> {
     // For now, return an empty map with proper typing
     // In production, you'd want to implement proper profile fetching
     const profilesMap = useMemo(() => {

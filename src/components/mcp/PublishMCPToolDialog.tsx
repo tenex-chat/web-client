@@ -43,7 +43,7 @@ export function PublishMCPToolDialog({ open, onOpenChange, onSuccess }: PublishM
     const handlePublish = async () => {
         setIsPublishing(true);
         try {
-            const success = await saveMCPTool(null, true);
+            const success = await saveMCPTool();
             if (success) {
                 reset();
                 onSuccess?.();
@@ -81,7 +81,7 @@ export function PublishMCPToolDialog({ open, onOpenChange, onSuccess }: PublishM
                             id="title"
                             value={data.title}
                             onChange={(e) => updateField("title", e.target.value)}
-                            onBlur={() => validateField("title", data.title)}
+                            onBlur={() => validateField("title")}
                             placeholder="e.g., YouTube MCP Server"
                         />
                         {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
@@ -93,7 +93,7 @@ export function PublishMCPToolDialog({ open, onOpenChange, onSuccess }: PublishM
                             id="description"
                             value={data.description}
                             onChange={(e) => updateField("description", e.target.value)}
-                            onBlur={() => validateField("description", data.description)}
+                            onBlur={() => validateField("description")}
                             placeholder="Brief description of what this MCP tool does"
                             rows={3}
                         />
@@ -108,7 +108,7 @@ export function PublishMCPToolDialog({ open, onOpenChange, onSuccess }: PublishM
                             id="command"
                             value={data.command}
                             onChange={(e) => updateField("command", e.target.value)}
-                            onBlur={() => validateField("command", data.command)}
+                            onBlur={() => validateField("command")}
                             placeholder="e.g., npx @modelcontextprotocol/server-youtube"
                             className="font-mono text-sm"
                         />
@@ -139,7 +139,7 @@ export function PublishMCPToolDialog({ open, onOpenChange, onSuccess }: PublishM
                             </Button>
                         </div>
                         <div className="flex flex-wrap gap-2 mt-2">
-                            {data.paths.map((path) => (
+                            {data.paths.map((path: string) => (
                                 <Badge key={path} variant="secondary">
                                     {path}
                                     <button
@@ -157,13 +157,13 @@ export function PublishMCPToolDialog({ open, onOpenChange, onSuccess }: PublishM
                         <Label>Environment Variables (optional)</Label>
                         <div className="flex gap-2">
                             <Input
-                                value={data.newEnvKey}
+                                value={data.newEnvKey as string}
                                 onChange={(e) => updateField("newEnvKey", e.target.value)}
                                 placeholder="KEY"
                                 className="flex-1"
                             />
                             <Input
-                                value={data.newEnvValue}
+                                value={data.newEnvValue as string}
                                 onChange={(e) => updateField("newEnvValue", e.target.value)}
                                 placeholder="VALUE"
                                 className="flex-1"
@@ -173,10 +173,10 @@ export function PublishMCPToolDialog({ open, onOpenChange, onSuccess }: PublishM
                             </Button>
                         </div>
                         <div className="space-y-1 mt-2">
-                            {Object.entries(data.env).map(([key, value]) => (
+                            {Object.entries(data.env as Record<string, string>).map(([key, value]) => (
                                 <div key={key} className="flex items-center gap-2 text-sm">
                                     <code className="bg-muted px-2 py-1 rounded">
-                                        {key}={value}
+                                        {key}={(value as string)}
                                     </code>
                                     <button
                                         onClick={() => removeEnvVar(key)}

@@ -1,4 +1,4 @@
-import { type NDKProject, type NDKTask, useEvent, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { NDKEvent, NDKProject, type NDKTask, useEvent, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { ArrowLeft, X } from "lucide-react";
 import { useMemo } from "react";
 import { useTimeFormat } from "../../hooks/useTimeFormat";

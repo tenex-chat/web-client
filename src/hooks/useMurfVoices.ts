@@ -51,7 +51,7 @@ export function useMurfVoices(apiKeyOverride?: string): UseMurfVoicesReturn {
                 }
                 
                 // Fetch from API if not cached or expired
-                const data = await fetchMurfVoices(apiKey);
+                const data = await fetchMurfVoices(apiKey as string);
                 setVoices(data);
                 setError(null);
                 
@@ -80,7 +80,7 @@ export function getVoiceInfo(voices: MurfVoice[], voiceId: string): MurfVoice | 
 // Helper function to extract country code from locale
 export function getCountryFromLocale(locale: string): string {
     const parts = locale.split('-');
-    return parts.length > 1 ? parts[1] : '';
+    return parts.length > 1 ? parts[1]! : '';
 }
 
 // Helper function to extract language code from locale

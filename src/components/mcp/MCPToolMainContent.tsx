@@ -1,5 +1,5 @@
 import { NDKMCPTool } from "@/events";
-import { MCPToolForm } from "./MCPToolForm";
+import { MCPToolForm, MCPToolFormData } from "./MCPToolForm";
 import { MCPToolHeader } from "./MCPToolHeader";
 import { EmptyToolState } from "./EmptyToolState";
 
@@ -55,7 +55,7 @@ export function MCPToolMainContent({
                     <div className="flex-1 overflow-y-auto">
                         {showForm ? (
                             <MCPToolForm
-                                formData={formData}
+                                formData={formData as MCPToolFormData}
                                 onFormChange={onFormChange}
                                 onAddTag={onAddTag}
                                 onRemoveTag={onRemoveTag}

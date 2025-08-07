@@ -142,7 +142,7 @@ export function VoiceSelector({
                             <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground sticky top-0 bg-background">
                                 {group}
                             </div>
-                            {groupedVoices[group].map((voice) => (
+                            {groupedVoices[group] && groupedVoices[group].map((voice) => (
                                 <SelectItem key={voice.voiceId} value={voice.voiceId}>
                                     <div className="flex items-center justify-between w-full gap-4">
                                         <span className="font-medium">{voice.displayName}</span>

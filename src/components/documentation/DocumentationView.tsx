@@ -74,11 +74,11 @@ export function DocumentationView({ project, article, onBack }: DocumentationVie
     }, [showSelectionPopup]);
 
     // Subscribe to real-time article updates
-    const { events: articleUpdates } = useSubscribe([{
+    const { events: articleUpdates } = useSubscribe(article.dTag ? [{
         kinds: [30023],
         authors: [article.pubkey],
         "#d": [article.dTag]
-    }], {
+    }] : [], {
         cacheUsage: NDKSubscriptionCacheUsage.PARALLEL,
         groupable: false,
         closeOnEose: false // Keep subscription open for real-time updates

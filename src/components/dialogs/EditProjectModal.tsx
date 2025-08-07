@@ -65,7 +65,7 @@ export function EditProjectModal({
                 hashtags: project.hashtags || [],
                 repo: project.repo,
                 picture: project.picture,
-                tags: [...project.tags]
+                tags: [...project.tags] as [string, ...string[]][]
             });
             setHasChanges(false);
         }
@@ -198,7 +198,7 @@ export function EditProjectModal({
                                                 alt={editState.title || "Project"}
                                             />
                                             <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-                                                {StringUtils.getInitials(editState.title || "Project", "PR")}
+                                                {StringUtils.getInitials(editState.title || "Project")}
                                             </AvatarFallback>
                                         </Avatar>
                                         <Button
@@ -706,7 +706,7 @@ function MCPToolCard({ tool, onRemove }: { tool?: NDKMCPTool; onRemove: () => vo
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Avatar className="w-10 h-10 rounded-lg">
-                        <AvatarImage src={getEntityAvatar(tool.id, tool.icon, "shapes")} alt={tool.name} />
+                        <AvatarImage src={getEntityAvatar(tool.id, undefined, "shapes")} alt={tool.name} />
                         <AvatarFallback className="rounded-lg bg-gradient-to-br from-green-500 to-teal-600 text-white">
                             <Terminal className="w-5 h-5" />
                         </AvatarFallback>

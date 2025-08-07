@@ -97,7 +97,7 @@ export function useLLMConfig() {
         setConfig((prev) => ({
             ...prev,
             configurations: {
-                ...prev.configurations,
+                ...(prev.configurations as Record<string, LLMConfig>),
                 [name]: llmConfig,
             },
         }));
@@ -106,9 +106,9 @@ export function useLLMConfig() {
     // Remove a configuration
     const removeConfiguration = useCallback((name: string) => {
         setConfig((prev) => {
-            const configurations = { ...prev.configurations };
+            const configurations = { ...(prev.configurations as Record<string, LLMConfig>) };
             delete configurations[name];
-            const newDefaults = { ...prev.defaults };
+            const newDefaults = { ...(prev.defaults as Record<string, string>) };
 
             // Remove from defaults if it was set as default
             Object.keys(newDefaults).forEach((key) => {
@@ -130,7 +130,7 @@ export function useLLMConfig() {
         setConfig((prev) => ({
             ...prev,
             credentials: {
-                ...prev.credentials,
+                ...(prev.credentials as Record<string, LLMCredentials>),
                 [provider]: credentials,
             },
         }));
@@ -139,7 +139,7 @@ export function useLLMConfig() {
     // Remove credentials for a provider
     const removeCredentials = useCallback((provider: LLMProvider) => {
         setConfig((prev) => {
-            const credentials = { ...prev.credentials };
+            const credentials = { ...(prev.credentials as Record<string, LLMCredentials>) };
             delete credentials[provider];
             return {
                 ...prev,
@@ -153,7 +153,7 @@ export function useLLMConfig() {
         setConfig((prev) => ({
             ...prev,
             defaults: {
-                ...prev.defaults,
+                ...(prev.defaults as Record<string, string>),
                 [useCase]: configName,
             },
         }));
@@ -196,11 +196,11 @@ export function useLLMConfig() {
     // Get configuration for a specific use case
     const getConfigForUseCase = useCallback(
         (useCase: string): LLMConfig | null => {
-            const configName = config.defaults[useCase] || config.defaults.default;
-            if (!configName || !config.configurations[configName]) {
+            const configName = (config.defaults as Record<string, string>)[useCase] || (config.defaults as Record<string, string>).default;
+            if (!configName || !(config.configurations as Record<string, LLMConfig>)[configName]) {
                 return null;
             }
-            return config.configurations[configName];
+            return (config.configurations as Record<string, LLMConfig>)[configName];
         },
         [config]
     );
@@ -208,7 +208,7 @@ export function useLLMConfig() {
     // Get credentials for a provider
     const getCredentials = useCallback(
         (provider: LLMProvider): LLMCredentials | null => {
-            return config.credentials[provider] || null;
+            return (config.credentials as Record<string, LLMCredentials>)[provider] || null;
         },
         [config]
     );
@@ -266,13 +266,13 @@ export function useLLMConfig() {
 
     // Get all configured providers
     const getConfiguredProviders = useCallback((): LLMProvider[] => {
-        return Object.keys(config.credentials) as LLMProvider[];
+        return Object.keys(config.credentials as Record<string, LLMCredentials>) as LLMProvider[];
     }, [config]);
 
     // Check if a provider is configured
     const isProviderConfigured = useCallback(
         (provider: LLMProvider): boolean => {
-            return !!config.credentials[provider]?.apiKey;
+            return !!(config.credentials as Record<string, LLMCredentials>)[provider]?.apiKey;
         },
         [config]
     );

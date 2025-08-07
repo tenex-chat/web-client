@@ -1,5 +1,5 @@
 import type { NDKArticle, NDKEvent, NDKTask } from "@nostr-dev-kit/ndk-hooks";
-import { useUserProjects } from "../../hooks/useUserProjects";
+import { ProjectAgent, useUserProjects } from "../../hooks/useUserProjects";
 import { ChatInterface } from "../ChatInterface";
 import { DocumentationView } from "../documentation/DocumentationView";
 import { TaskUpdates } from "../tasks/TaskUpdates";

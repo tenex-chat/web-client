@@ -57,20 +57,21 @@ export function ParticipantAvatarsWithModels({
                 const modelInfo = agentModels.get(pubkey);
 
                 return (
-                    <div key={pubkey} className="flex items-center gap-1">
-                        <ParticipantAvatar
-                            pubkey={pubkey}
-                            className={`border-2 border-background ${sizeClasses}`}
-                        />
-                        {isAgent && (
-                            <ModelDropdown
-                                agentPubkey={pubkey}
-                                currentModel={modelInfo?.model}
-                                availableModels={modelNames}
-                                projectEvent={projectEvent}
-                            />
-                        )}
-                    </div>
+                    <ParticipantAvatar
+                        key={pubkey}
+                        pubkey={pubkey}
+                        className={`border-2 border-background ${sizeClasses}`}
+                        hoverCardChildren={
+                            isAgent ? (
+                                <ModelDropdown
+                                    agentPubkey={pubkey}
+                                    currentModel={modelInfo?.model}
+                                    availableModels={modelNames}
+                                    projectEvent={projectEvent}
+                                />
+                            ) : undefined
+                        }
+                    />
                 );
             })}
             {remainingCount > 0 && (
@@ -132,30 +133,33 @@ function ModelDropdown({
     const displayModel = currentModel?.split("/").pop() || "Select model";
 
     return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <button
-                    type="button"
-                    className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-muted hover:bg-accent transition-colors border border-border"
-                    disabled={isChanging}
-                >
-                    <Cpu className="h-3 w-3 text-muted-foreground" />
-                    <span className="max-w-[100px] truncate font-medium">{displayModel}</span>
-                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-                {availableModels.map((model) => (
-                    <DropdownMenuItem
-                        key={model}
-                        onClick={() => handleModelChange(model)}
-                        className="flex items-center justify-between"
+        <div className="space-y-2">
+            <div className="text-xs text-muted-foreground font-medium">Model</div>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <button
+                        type="button"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-muted hover:bg-accent transition-colors border border-border"
+                        disabled={isChanging}
                     >
-                        <span>{model}</span>
-                        {model === currentModel && <Check className="h-3 w-3 text-primary" />}
-                    </DropdownMenuItem>
-                ))}
-            </DropdownMenuContent>
-        </DropdownMenu>
+                        <Cpu className="h-4 w-4 text-muted-foreground" />
+                        <span className="flex-1 text-left truncate font-medium">{displayModel}</span>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                    {availableModels.map((model) => (
+                        <DropdownMenuItem
+                            key={model}
+                            onClick={() => handleModelChange(model)}
+                            className="flex items-center justify-between"
+                        >
+                            <span>{model}</span>
+                            {model === currentModel && <Check className="h-4 w-4 text-primary" />}
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
     );
 }

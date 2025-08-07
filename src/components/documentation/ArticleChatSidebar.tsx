@@ -45,7 +45,9 @@ export function ArticleChatSidebar({
       const sortedThreads = [...existingThreads].sort((a, b) => 
         (b.created_at || 0) - (a.created_at || 0)
       );
-      setThreadId(sortedThreads[0].id);
+      if (sortedThreads[0]) {
+        setThreadId(sortedThreads[0].id);
+      }
     }
   }, [existingThreads]);
 
@@ -68,11 +70,11 @@ export function ArticleChatSidebar({
       ['a', project?.tagId() || ''], // Tag the project
       ['a', article.tagId()], // Tag the article
       ['p', article.pubkey], // Tag only the article author
-      ['title', `Discussion: ${article.title || article.name || 'Document'}`]
+      ['title', `Discussion: ${article.title || 'Document'}`]
     ];
     
     // Add preamble to the content
-    const preamble = `This discussion is about the spec "${article.title || article.name || 'this document'}" in the ${project?.name || 'project'}.\n\n`;
+    const preamble = `This discussion is about the spec \"${article.title || 'this document'}\" in the ${project?.tagValue('d') || 'project'}.\\n\\n`;
     event.content = preamble + (initialMessage || '');
     
     return event;
@@ -90,7 +92,7 @@ export function ArticleChatSidebar({
       <div className="p-4 border-b">
         <h3 className="font-semibold">Discuss with Author</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Chat about "{article.title || article.name || 'this document'}"
+          Chat about \"{article.title || 'this document'}\"
         </p>
       </div>
       
@@ -120,7 +122,7 @@ export function ArticleChatSidebar({
       <div className="flex-1 overflow-hidden">
         {project && (
           <ChatInterface
-            project={project}
+            project={project as NDKProject}
             threadId={threadId}
             onThreadCreated={handleThreadCreated}
             initialThreadEvent={threadId === 'new' ? createThreadEvent() : undefined}

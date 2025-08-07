@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { NavigationContext, type NavigationContextType } from "./NavigationContextTypes";
 
@@ -46,4 +46,12 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
         </NavigationContext.Provider>
     );
 }
+
+export const useNavigation = () => {
+    const context = useContext(NavigationContext);
+    if (!context) {
+        throw new Error("useNavigation must be used within a NavigationProvider");
+    }
+    return context;
+};
 

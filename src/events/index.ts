@@ -1,3 +1,3 @@
 export { NDKAgent } from "./NDKAgent";
-export { NDKAgentLesson, LessonQuality } from "./NDKAgentLesson";
+export { NDKAgentLesson } from "./NDKAgentLesson";
 export { NDKMCPTool } from "./NDKMCPTool";

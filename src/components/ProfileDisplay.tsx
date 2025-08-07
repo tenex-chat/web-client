@@ -37,7 +37,7 @@ export function ProfileDisplay({
             {showAvatar && (
                 <Avatar className={`${sizeClasses[size].avatar} ${avatarClassName}`}>
                     <AvatarImage src={avatarUrl} alt={displayName} />
-                    <AvatarFallback className="text-xs">{StringUtils.getInitials(displayName, pubkey)}</AvatarFallback>
+                    <AvatarFallback className="text-xs">{StringUtils.getInitials(displayName)}</AvatarFallback>
                 </Avatar>
             )}
             {showName && (

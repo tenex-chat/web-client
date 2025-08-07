@@ -226,7 +226,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
         li({ children }) {
             return <li className="pl-1">{children}</li>;
         },
-        p({ children }) {
+        p({ children, ...props }) {
             // Process text nodes to replace entity and thinking block placeholders
             const processChildren = (children: ReactNode): ReactNode => {
                 if (typeof children === "string") {

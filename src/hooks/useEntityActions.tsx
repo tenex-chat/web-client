@@ -1,19 +1,14 @@
 import { useState } from "react";
 import { useCopyWithFeedback } from "./useCopyWithFeedback";
+import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 
-interface Entity {
-    id: string;
-    encode(): string;
-    delete(): Promise<void>;
-}
-
-interface UseEntityActionsReturn<T extends Entity> {
+interface UseEntityActionsReturn<T extends NDKEvent> {
     copiedId: string | null;
     copyEntityId: (entity: T) => Promise<void>;
     deleteEntity: (entity: T, entityName: string, onSuccess?: () => void) => Promise<void>;
 }
 
-export function useEntityActions<T extends Entity>(): UseEntityActionsReturn<T> {
+export function useEntityActions<T extends NDKEvent>(): UseEntityActionsReturn<T> {
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const { copyToClipboard } = useCopyWithFeedback();
 

@@ -1,3 +1,4 @@
+import { NDKProject } from "@nostr-dev-kit/ndk";
 import { useParams } from "react-router-dom";
 import { useProject } from "../../hooks/useProject";
 import { useNavigation } from "../../hooks/useNavigation";
@@ -28,7 +29,7 @@ export function ProjectProfile() {
 
     return (
         <div className="min-h-screen bg-background">
-            <ProjectProfileHeader project={project} onBack={goBack} />
+            <ProjectProfileHeader project={project as NDKProject} onBack={goBack} />
             
             <div className="max-w-6xl mx-auto flex">
                 <ProjectProfileNav 
@@ -37,7 +38,7 @@ export function ProjectProfile() {
                 />
                 
                 <ProjectProfileContent 
-                    project={project}
+                    project={project as NDKProject}
                     activeTab={activeTab}
                 />
             </div>

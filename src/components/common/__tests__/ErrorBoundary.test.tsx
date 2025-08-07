@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { ErrorBoundary } from '../ErrorBoundary';
 
 // Component that throws an error for testing
@@ -15,7 +15,7 @@ describe('ErrorBoundary', () => {
 
     beforeEach(() => {
         // Suppress console.error for these tests
-        consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {}) as unknown as MockInstance<unknown[], unknown>;
     });
 
     afterEach(() => {

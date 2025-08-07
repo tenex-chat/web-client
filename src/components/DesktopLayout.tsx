@@ -1,6 +1,6 @@
 import {
-    type NDKArticle,
-    type NDKEvent,
+    NDKArticle,
+    NDKEvent,
     type NDKProject,
     useNDKCurrentUser,
     useNDK,

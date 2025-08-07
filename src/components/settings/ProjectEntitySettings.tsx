@@ -1,4 +1,4 @@
-import { type NDKProject, useProfileValue, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { NDKEvent, NDKProject, useProfileValue, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { getEntityAvatar as getEntityAvatarUtil } from "../../lib/utils/ui-helpers";
 
-interface Entity {
+interface Entity extends NDKEvent {
     id: string;
     name?: string;
     description?: string;

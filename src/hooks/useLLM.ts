@@ -7,7 +7,7 @@ export function useLLM() {
     const cleanupText = async (text: string): Promise<string> => {
         try {
             // Check if we have an API configuration
-            const openaiConfig = config?.providers?.find((p: { provider: string }) => p.provider === "openai");
+            const openaiConfig = (config?.providers as { provider: string }[])?.find((p: { provider: string }) => p.provider === "openai");
 
             if (!openaiConfig || !openaiConfig.apiKey) {
                 // If no API key, do basic cleanup

@@ -1,12 +1,6 @@
 import { NDKEvent, type NDKRawEvent } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 
-export enum LessonQuality {
-    TRIVIAL = "trivial",
-    VALUABLE = "valuable",
-    CRITICAL = "critical"
-}
-
 export class NDKAgentLesson extends NDKEvent {
     static kind = 4129;
     static kinds = [4129];
@@ -32,16 +26,6 @@ export class NDKAgentLesson extends NDKEvent {
         if (value) this.tags.push(["title", value]);
     }
 
-    // Alias for title
-    get description(): string | undefined {
-        return this.tagValue("title");
-    }
-
-    set description(value: string | undefined) {
-        this.removeTag("description");
-        if (value) this.tags.push(["description", value]);
-    }
-
     /**
      * The lesson content - what the agent learned.
      * This is stored in the event content.
@@ -60,7 +44,7 @@ export class NDKAgentLesson extends NDKEvent {
      */
     set agent(agentEvent: NDKEvent) {
         this.removeTag("e");
-        this.tags.push(["e", agentEvent.id]);
+        this.tag(agentEvent);
     }
 
     /**
@@ -68,19 +52,6 @@ export class NDKAgentLesson extends NDKEvent {
      */
     get agentId(): string | undefined {
         return this.tags.find((tag) => tag[0] === "e")?.[1];
-    }
-
-    /**
-     * Quality assessment of the lesson
-     */
-    get quality(): LessonQuality | undefined {
-        const qualityTag = this.tagValue("quality");
-        return qualityTag as LessonQuality | undefined;
-    }
-
-    set quality(value: LessonQuality | undefined) {
-        this.removeTag("quality");
-        if (value) this.tags.push(["quality", value]);
     }
 
     /**

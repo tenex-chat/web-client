@@ -376,9 +376,12 @@ export function ChatInterface({
         const latestMessage = threadMessages[threadMessages.length - 1];
         if (!latestMessage || latestMessage.id === lastMessageId) return;
         
-        // Don't auto-play messages from the current user
-        if (latestMessage.pubkey === currentUserPubkey) {
-            setLastMessageId(latestMessage.id);
+        // Update the last message ID to prevent replaying
+        setLastMessageId(latestMessage.id);
+        
+        // Only play TTS for agent messages, not human messages
+        const isAgentMessage = projectAgents.some(agent => agent.pubkey === latestMessage.pubkey);
+        if (!isAgentMessage) {
             return;
         }
         
@@ -390,9 +393,7 @@ export function ChatInterface({
                 // Silently fail - TTS is a nice-to-have feature
             });
         }
-        
-        setLastMessageId(latestMessage.id);
-    }, [threadMessages, autoTTS, ttsOptions, lastMessageId, currentUserPubkey, tts]);
+    }, [threadMessages, autoTTS, ttsOptions, lastMessageId, projectAgents, tts]);
 
     // Get unique participants from thread messages and p-tags
     const threadParticipants = useMemo(() => {

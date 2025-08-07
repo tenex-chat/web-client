@@ -46,7 +46,7 @@ export function ChatHeader({
     }, [messages]);
 
     // Fetch profiles for all participants
-    const profiles = useProfilesMap(allParticipants);
+    const profiles = useProfilesMap();
 
     const handleCopyConversation = async () => {
         if (!messages || messages.length === 0) return;
@@ -118,7 +118,6 @@ export function ChatHeader({
                         <ParticipantAvatarsWithModels
                             participants={participants}
                             messages={messages || []}
-                            projectPubkey={projectPubkey || ""}
                             projectId={projectId}
                             projectEvent={projectEvent}
                             availableModels={availableModels}

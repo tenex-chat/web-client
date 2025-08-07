@@ -121,7 +121,7 @@ export function DocsPage({ onBack }: DocsPageProps) {
                     </Button>
                     <div>
                         <h1 className="text-xl font-semibold">Documentation</h1>
-                        <p className="text-sm text-muted-foreground">{project.title}</p>
+                        <p className="text-sm text-muted-foreground">{project.tagValue('d')}</p>
                     </div>
                 </div>
             </div>

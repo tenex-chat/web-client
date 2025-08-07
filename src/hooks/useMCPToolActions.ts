@@ -1,4 +1,4 @@
-import { NDKMCPTool } from "@/events";
+import type { NDKMCPTool } from "@/events";
 import { useEntityActions } from "./useEntityActions";
 
 export function useMCPToolActions() {

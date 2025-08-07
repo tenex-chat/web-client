@@ -1,4 +1,5 @@
-import { useLocation, useParams } from "react-router-dom";
+import { NDKProject } from "@nostr-dev-kit/ndk";
+import { useParams, useLocation } from "react-router-dom";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useArticle } from "../../hooks/useArticle";
 import { useProject } from "../../hooks/useProject";
@@ -65,7 +66,7 @@ export function TaskUpdatesPage() {
         return <LoadingScreen />;
     }
 
-    return <TaskUpdates project={project} taskId={taskId || ""} onBack={goBack} />;
+    return <TaskUpdates project={project as NDKProject} taskId={taskId || ""} onBack={goBack} />;
 }
 
 
@@ -87,7 +88,7 @@ export function ChatInterfacePage() {
 
     return (
         <ChatInterface
-            project={project}
+            project={project as NDKProject}
             threadId={threadId || ""}
             threadTitle={threadTitle}
             initialAgentPubkeys={agentPubkeys}
@@ -108,7 +109,7 @@ export function DocumentationViewPage() {
         return <LoadingScreen />;
     }
 
-    return <DocumentationView project={project} article={article} onBack={goBack} />;
+    return <DocumentationView project={project as NDKProject} article={article} onBack={goBack} />;
 }
 
 // Settings page

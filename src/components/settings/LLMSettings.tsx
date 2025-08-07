@@ -285,7 +285,7 @@ export function LLMSettings() {
             }
 
             // Set as default if it's the first configuration
-            if (Object.keys(config.configurations).length === 0) {
+            if (Object.keys(config.configurations as Record<string, LLMConfig>).length === 0) {
                 setDefault("default", configName);
                 setDefault("titleGeneration", configName);
             }
@@ -311,7 +311,7 @@ export function LLMSettings() {
         [editingConfig, getCredentials, setCredentials, handleSaveConfig]
     );
 
-    const configurations = Object.entries(config.configurations) as [string, LLMConfig][];
+    const configurations = Object.entries(config.configurations as Record<string, LLMConfig>) as [string, LLMConfig][];
     const hasConfigurations = configurations.length > 0;
 
     return (
@@ -360,12 +360,12 @@ export function LLMSettings() {
                 </div>
             )}
 
-            {editingConfig && config.configurations[editingConfig] && (
+            {editingConfig && (config.configurations as Record<string, LLMConfig>)[editingConfig] && (
                 <LLMConfigForm
-                    provider={config.configurations[editingConfig].provider}
+                    provider={(config.configurations as Record<string, LLMConfig>)[editingConfig].provider}
                     onSave={handleSaveFromForm}
                     onCancel={() => setEditingConfig(null)}
-                    existingConfig={config.configurations[editingConfig]}
+                    existingConfig={(config.configurations as Record<string, LLMConfig>)[editingConfig]}
                 />
             )}
 
@@ -390,7 +390,7 @@ export function LLMSettings() {
                                             <h4 className="font-medium">
                                                 {PROVIDER_NAMES[llmConfig.provider]}
                                             </h4>
-                                            {config.defaults?.default === name && (
+                                            {(config.defaults as Record<string, string>)?.default === name && (
                                                 <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
                                                     Default
                                                 </span>

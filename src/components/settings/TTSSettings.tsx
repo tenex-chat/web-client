@@ -60,9 +60,11 @@ export function TTSSettings() {
         if (cachedVoices) {
             setVoices(cachedVoices);
             if (shouldSelectFirst && !voiceId && cachedVoices.length > 0) {
-                setVoiceId(cachedVoices[0].voiceId);
-                if (cachedVoices[0].availableStyles && cachedVoices[0].availableStyles.length > 0) {
-                    setVoiceStyle(cachedVoices[0].availableStyles[0]);
+                if (cachedVoices[0]) {
+                    setVoiceId(cachedVoices[0].voiceId);
+                    if (cachedVoices[0].availableStyles && cachedVoices[0].availableStyles.length > 0) {
+                        setVoiceStyle(cachedVoices[0].availableStyles[0]!);
+                    }
                 }
             }
             return;
@@ -99,9 +101,11 @@ export function TTSSettings() {
                     
                     // Only select first voice if explicitly requested and no voice is selected
                     if (shouldSelectFirst && !voiceId && parsedVoices.length > 0) {
-                        setVoiceId(parsedVoices[0].voiceId);
-                        if (parsedVoices[0].availableStyles && parsedVoices[0].availableStyles.length > 0) {
-                            setVoiceStyle(parsedVoices[0].availableStyles[0]);
+                        if (parsedVoices[0]) {
+                            setVoiceId(parsedVoices[0].voiceId);
+                            if (parsedVoices[0].availableStyles && parsedVoices[0].availableStyles.length > 0) {
+                                setVoiceStyle(parsedVoices[0].availableStyles[0]!);
+                            }
                         }
                     }
                 } else {
@@ -514,7 +518,7 @@ export function TTSSettings() {
                                 // Update style options based on selected voice (if using dynamic voices)
                                 const selectedVoice = voices.find(v => v.voiceId === value);
                                 if (selectedVoice?.availableStyles && selectedVoice.availableStyles.length > 0) {
-                                    setVoiceStyle(selectedVoice.availableStyles[0]);
+                                    setVoiceStyle(selectedVoice.availableStyles[0]!);
                                 }
                                 // Update language based on selected voice
                                 if (selectedVoice?.locale) {

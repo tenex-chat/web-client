@@ -10,6 +10,11 @@ interface MCPToolFormData extends Record<string, unknown> {
     image: string;
     tags: string[];
     newTag: string;
+    paths: string[];
+    newPath: string;
+    env: Record<string, string>;
+    newEnvKey: string;
+    newEnvValue: string;
 }
 
 const initialFormData: MCPToolFormData = {
@@ -19,6 +24,11 @@ const initialFormData: MCPToolFormData = {
     image: "",
     tags: [],
     newTag: "",
+    paths: [],
+    newPath: "",
+    env: {},
+    newEnvKey: "",
+    newEnvValue: "",
 };
 
 const validators: FormValidators<MCPToolFormData> = {
@@ -99,6 +109,38 @@ export function useMCPToolForm() {
         [formState]
     );
 
+    const addPath = useCallback(() => {
+        const newPath = formState.data.newPath.trim();
+        if (newPath && !formState.data.paths.includes(newPath)) {
+            formState.addToArrayField("paths", newPath);
+            formState.updateField("newPath", "");
+        }
+    }, [formState]);
+
+    const removePath = useCallback(
+        (pathToRemove: string) => {
+            formState.removeFromArrayFieldByValue("paths", pathToRemove);
+        },
+        [formState]
+    );
+
+    const addEnvVar = useCallback(() => {
+        const key = formState.data.newEnvKey.trim();
+        const value = formState.data.newEnvValue.trim();
+        if (key && value) {
+            formState.updateObjectField("env", key, value);
+            formState.updateField("newEnvKey", "");
+            formState.updateField("newEnvValue", "");
+        }
+    }, [formState]);
+
+    const removeEnvVar = useCallback(
+        (key: string) => {
+            formState.removeObjectField("env", key);
+        },
+        [formState]
+    );
+
     return {
         // Expose form state
         ...formState,
@@ -109,5 +151,9 @@ export function useMCPToolForm() {
         validateForm,
         addTag,
         removeTag,
+        addPath,
+        removePath,
+        addEnvVar,
+        removeEnvVar,
     };
 }

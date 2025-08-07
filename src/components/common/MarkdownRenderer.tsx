@@ -113,8 +113,6 @@ export function MarkdownRenderer({
         <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={mergedComponents}
-            skipHtml={skipHtml}
-            className={className}
         >
             {content}
         </ReactMarkdown>

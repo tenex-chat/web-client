@@ -49,7 +49,6 @@ export function MCPToolList({
                 </>
             )}
             createButtonText="Add new MCP tool"
-            searchPlaceholder="Search MCP tools..."
             className="w-full md:w-80 lg:w-96"
         />
     );

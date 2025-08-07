@@ -66,7 +66,7 @@ export function MCPToolsPage({ onBack }: MCPToolsPageProps) {
     };
 
     const handleSave = async () => {
-        const success = await saveMCPTool(selectedTool, isCreatingNew);
+        const success = await saveMCPTool();
         if (success) {
             setIsEditing(false);
             setIsCreatingNew(false);

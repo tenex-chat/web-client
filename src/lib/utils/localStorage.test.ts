@@ -27,8 +27,14 @@ describe('localStorage utilities', () => {
         });
 
         it('should handle complex nested objects', () => {
-            const item = createStorageItem<any>('test-key');
-            const complexData = {
+            interface ComplexData {
+                nested: {
+                    array: number[];
+                    object: { key: string };
+                };
+            }
+            const item = createStorageItem<ComplexData>('test-key');
+            const complexData: ComplexData = {
                 nested: {
                     array: [1, 2, 3],
                     object: { key: 'value' }
@@ -50,7 +56,7 @@ describe('localStorage utilities', () => {
 
         it('should handle invalid JSON gracefully', () => {
             localStorage.setItem('test-key', 'invalid-json');
-            const item = createStorageItem<any>('test-key', 'fallback');
+            const item = createStorageItem<string>('test-key', 'fallback');
             expect(item.get()).toBe('fallback');
         });
 

@@ -6,7 +6,7 @@ import { useMemo } from "react";
 interface StreamingResponse {
     agentPubkey: string;
     content: string;
-    sequence: number;
+    lastSequence: number;
 }
 
 /**
@@ -28,15 +28,26 @@ export function useStreamingResponses(conversationId: string | null) {
         [conversationId]
     );
 
-    // Process streaming events to get the latest content per agent
+    // Process streaming events to accumulate content per agent
     const streamingResponses = useMemo(() => {
         if (!streamingEvents || streamingEvents.length === 0) return new Map<string, StreamingResponse>();
 
         const responsesByAgent = new Map<string, StreamingResponse>();
 
-        // Group events by agent pubkey and find the latest (highest sequence) for each
-        for (const event of streamingEvents) {
-            const agentPubkey = event.tagValue("p");
+        // Sort events by created_at first, then by sequence to ensure proper ordering
+        const sortedEvents = [...streamingEvents].sort((a, b) => {
+            const timeDiff = (a.created_at || 0) - (b.created_at || 0);
+            if (timeDiff !== 0) return timeDiff;
+
+            const seqA = parseInt(a.tagValue("sequence") || "0", 10);
+            const seqB = parseInt(b.tagValue("sequence") || "0", 10);
+            return seqA - seqB;
+        });
+
+        // Process events in order, accumulating content
+        for (const event of sortedEvents) {
+            // The agent pubkey is the event's pubkey (the author of the streaming response)
+            const agentPubkey = event.pubkey;
             if (!agentPubkey) {
                 continue;
             }
@@ -45,11 +56,14 @@ export function useStreamingResponses(conversationId: string | null) {
             const sequence = sequenceStr ? parseInt(sequenceStr, 10) : 0;
 
             const existing = responsesByAgent.get(agentPubkey);
-            if (!existing || sequence > existing.sequence) {
+            
+            // Only append content if this is a new sequence number we haven't seen
+            if (!existing || sequence > existing.lastSequence) {
+                const accumulatedContent = (existing?.content || "") + event.content;
                 responsesByAgent.set(agentPubkey, {
                     agentPubkey,
-                    content: event.content,
-                    sequence,
+                    content: accumulatedContent,
+                    lastSequence: sequence,
                 });
             }
         }

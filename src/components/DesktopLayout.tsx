@@ -84,15 +84,18 @@ export function DesktopLayout() {
 
     const handleCreateAction = (project: NDKProject) => {
         // Directly create a new thread without title/agents - will be auto-generated
-        const tempThread = {
-            id: "new",
-            content: "",
-            tags: [
-                ["title", ""], // Empty title - will be generated when user types
-                ["a", project.tagId()],
-            ],
-            selectedAgents: [], // No pre-selected agents
-        } as unknown as NDKEvent & { selectedAgents?: ProjectAgent[] };
+        const tempThreadEvent = new NDKEvent(ndk);
+        tempThreadEvent.id = "new";
+        tempThreadEvent.content = "";
+        tempThreadEvent.tags = [
+            ["title", ""], // Empty title - will be generated when user types
+            ["a", project.tagId()],
+        ];
+        
+        // Extend with selectedAgents
+        const tempThread = Object.assign(tempThreadEvent, {
+            selectedAgents: [] as ProjectAgent[]
+        });
 
         // Set the thread as selected to open in drawer
         setSelectedThread(tempThread);

@@ -235,6 +235,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
                     const parts = [];
                     let lastIndex = 0;
                     let match: RegExpExecArray | null;
+                    let hasBlockElements = false;
 
                     while ((match = combinedRegex.exec(children)) !== null) {
                         // Add text before the placeholder
@@ -247,6 +248,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
                             const bech32 = match[1];
                             const entity = processedContent.entities?.find((e) => e.bech32 === bech32);
                             if (entity) {
+                                hasBlockElements = true;
                                 parts.push(
                                     <NostrEntityCard
                                         key={`entity-${bech32}`}
@@ -260,6 +262,7 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
                             const thinkingIndex = parseInt(match[3] || "0", 10);
                             const thinkingContent = processedContent.thinkingBlocks?.[thinkingIndex];
                             if (thinkingContent !== undefined) {
+                                hasBlockElements = true;
                                 const isExpanded = expandedThinkingBlocks.has(thinkingIndex);
                                 const lines = thinkingContent.trim().split('\n');
                                 const hasMultipleLines = lines.length > 2;
@@ -322,21 +325,37 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
                         parts.push(children.slice(lastIndex));
                     }
 
+                    // If we have block elements, return a div instead of a p
+                    if (hasBlockElements && parts.length > 0) {
+                        return parts;
+                    }
+
                     return parts.length > 0 ? parts : children;
                 }
                 if (Array.isArray(children)) {
-                    return children.map((child, idx) => {
-                        const processed = processChildren(child);
-                        return typeof processed === "string" || !processed ? (
-                            processed
+                    let hasBlockElements = false;
+                    const processed = children.map((child, idx) => {
+                        const processedChild = processChildren(child);
+                        // Check if any child contains block elements
+                        if (Array.isArray(processedChild)) {
+                            hasBlockElements = true;
+                        }
+                        return typeof processedChild === "string" || !processedChild ? (
+                            processedChild
                         ) : (
                             <span
                                 key={`child-${idx}-${typeof child === "string" ? child.slice(0, 10) : ""}`}
                             >
-                                {processed}
+                                {processedChild}
                             </span>
                         );
                     });
+                    
+                    if (hasBlockElements) {
+                        return processed;
+                    }
+                    
+                    return processed;
                 }
                 if (
                     children &&
@@ -358,6 +377,15 @@ export const StatusUpdate = memo(function StatusUpdate({ event, onReply, convers
             };
 
             const processedChildren = processChildren(children);
+            
+            // If processedChildren is an array with block elements, use div instead of p
+            if (Array.isArray(processedChildren) && processedChildren.some(child => 
+                child && typeof child === 'object' && 'type' in child && 
+                (child.type === 'div' || (child.type && typeof child.type === 'function' && child.type.name === 'NostrEntityCard'))
+            )) {
+                return <div {...props} className="mb-2 text-sm leading-relaxed">{processedChildren}</div>;
+            }
+            
             return <p {...props}>{processedChildren}</p>;
         },
     };

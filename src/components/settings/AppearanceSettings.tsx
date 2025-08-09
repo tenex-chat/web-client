@@ -29,7 +29,7 @@ export function AppearanceSettings() {
   }, []);
 
   // Save preferences to localStorage
-  const saveSettings = (updates: any) => {
+  const saveSettings = (updates: Partial<{ fontSize: string; compactMode: boolean; animations: boolean; }>) => {
     const current = {
       fontSize,
       compactMode,

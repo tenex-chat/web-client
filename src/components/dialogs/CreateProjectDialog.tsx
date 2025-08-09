@@ -31,6 +31,7 @@ import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { NDKAgent } from '@/lib/ndk-events/NDKAgent'
 import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
 import { cn } from '@/lib/utils'
+import { EVENT_KINDS } from '@/lib/constants'
 
 interface CreateProjectDialogProps {
   open: boolean
@@ -72,7 +73,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       setIsLoadingAgents(true)
       try {
         const events = await ndk.fetchEvents({
-          kinds: [4199 as any],
+          kinds: [EVENT_KINDS.AGENT_CONFIG],
           limit: 100,
         })
 
@@ -100,7 +101,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       setIsLoadingTools(true)
       try {
         const events = await ndk.fetchEvents({
-          kinds: [4200 as any],
+          kinds: [EVENT_KINDS.MCP_TOOL],
           limit: 100,
         })
 

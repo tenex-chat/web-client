@@ -4,7 +4,6 @@ import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
 import { ItemSelector } from '@/components/common/ItemSelector'
 import { SelectableCard } from '@/components/common/SelectableCard'
 import { Code2, Terminal, Wrench } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import type { NDKKind } from '@nostr-dev-kit/ndk'
 
 interface MCPToolSelectorProps {
@@ -59,46 +58,23 @@ export function MCPToolSelector({ selectedTools, onToolsChange }: MCPToolSelecto
       <SelectableCard
         key={tool.id}
         item={tool}
-        selected={isSelected}
-        onClick={() => handleToggle(tool.id)}
-      >
-        <div className="flex items-start space-x-3">
-          <div className="flex-shrink-0 mt-1">
-            {tool.command?.includes('mcp') ? (
-              <Terminal className="h-5 w-5 text-muted-foreground" />
-            ) : tool.command?.includes('code') ? (
-              <Code2 className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <Wrench className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-medium">{tool.name || 'Unnamed Tool'}</h4>
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-              {tool.description || 'No description available'}
-            </p>
-            {tool.command && (
-              <p className="text-xs text-muted-foreground mt-2 font-mono">
-                {tool.command}
-              </p>
-            )}
-            {capabilities.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {capabilities.slice(0, 3).map((cap, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {cap}
-                  </Badge>
-                ))}
-                {capabilities.length > 3 && (
-                  <Badge variant="secondary" className="text-xs">
-                    +{capabilities.length - 3} more
-                  </Badge>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </SelectableCard>
+        isSelected={isSelected}
+        onSelect={() => handleToggle(tool.id)}
+        onDeselect={() => handleToggle(tool.id)}
+        renderIcon={() => 
+          tool.command?.includes('mcp') ? (
+            <Terminal className="h-5 w-5 text-muted-foreground" />
+          ) : tool.command?.includes('code') ? (
+            <Code2 className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <Wrench className="h-5 w-5 text-muted-foreground" />
+          )
+        }
+        renderTitle={() => tool.name || 'Unnamed Tool'}
+        renderDescription={() => tool.description || 'No description available'}
+        renderMeta={() => tool.command ? <span className="font-mono">{tool.command}</span> : null}
+        renderTags={() => capabilities.slice(0, 3)}
+      />
     )
   }
 

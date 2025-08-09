@@ -1,5 +1,5 @@
 import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
-import { useSubscribe, useProfile, useNDK } from '@nostr-dev-kit/ndk-hooks'
+import { useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { ChevronDown, ChevronRight, Send, Reply, MoreVertical, Cpu, DollarSign, MessageCircle, Target, Play, CheckCircle, Settings, Volume2, Square, Brain } from 'lucide-react'
 import { memo, useCallback, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -8,7 +8,6 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
 import { logger } from '@/lib/logger'
@@ -41,39 +40,6 @@ interface MessageWithRepliesProps {
   isNested?: boolean
 }
 
-// Component for reply avatars
-const ReplyAvatar = memo(function ReplyAvatar({ 
-  pubkey 
-}: { 
-  pubkey: string
-}) {
-  const profileData = useProfile(pubkey)
-  const userProfile = profileData
-  
-  const getUserInitials = (name?: string, pubkey?: string) => {
-    if (name) {
-      return name
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    }
-    return pubkey?.slice(0, 2).toUpperCase() || '??'
-  }
-  
-  const displayName = userProfile?.displayName || userProfile?.name
-  const avatarUrl = userProfile?.image || userProfile?.picture
-  
-  return (
-    <Avatar className="w-6 h-6 border-2 border-white">
-      <AvatarImage src={avatarUrl} alt={displayName || "User"} />
-      <AvatarFallback className="text-[10px] bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-        {getUserInitials(displayName, pubkey)}
-      </AvatarFallback>
-    </Avatar>
-  )
-})
 
 export const MessageWithReplies = memo(function MessageWithReplies({
   event,
@@ -695,7 +661,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               {/* Show up to 3 user avatars who replied */}
               {sortedReplies.slice(0, 3).map((reply, idx) => (
                 <div key={reply.id} style={{ zIndex: 3 - idx }}>
-                  <ReplyAvatar pubkey={reply.pubkey} />
+                  <ProfileDisplay pubkey={reply.pubkey} showName={false} avatarClassName="w-6 h-6 border-2 border-white" />
                 </div>
               ))}
             </div>

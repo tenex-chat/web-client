@@ -1,4 +1,4 @@
-import { useState } from 'react';
+;
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, Bot, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,14 +9,14 @@ import { LLMSettings } from '../settings/LLMSettings';
 import { AppearanceSettings } from '../settings/AppearanceSettings';
 import { NotificationSettings } from '../settings/NotificationSettings';
 import { TTSSettings } from '../settings/TTSSettings';
-import { useToast } from '@/hooks/use-toast';
+;
 
 export function SettingsPage() {
   const navigate = useNavigate();
   const user = useNDKCurrentUser();
   const ndkLogout = useNDKSessionLogout();
   const userProfile = useCurrentUserProfile();
-  const { toast } = useToast();
+;
 
   const handleBack = () => {
     navigate({ to: '/' });

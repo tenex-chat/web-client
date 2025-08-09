@@ -59,7 +59,6 @@ const PROVIDER_INFO = {
 export function LLMSettings() {
   const [configs, setConfigs] = useAtom(llmConfigAtom);
   const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -80,7 +79,7 @@ export function LLMSettings() {
         console.error('Failed to load LLM configs:', error);
       }
     }
-  }, []);
+  }, [setConfigs]);
 
   // Save configs to localStorage whenever they change
   useEffect(() => {

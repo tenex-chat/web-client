@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react'
-import { atom, useAtom } from 'jotai'
+import { useAtom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 
 // Atom to store drafts per thread/task

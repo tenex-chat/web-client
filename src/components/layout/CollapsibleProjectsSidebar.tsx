@@ -4,7 +4,6 @@ import { Plus, Settings, LogOut, Search, Bot, Wrench, Home, User } from 'lucide-
 import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
-import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -132,7 +131,7 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={logout}>
+                      <DropdownMenuItem onClick={() => {}}>
                         <LogOut className="h-4 w-4 mr-2" />
                         Logout
                       </DropdownMenuItem>
@@ -316,7 +315,7 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={logout}>
+                      <DropdownMenuItem onClick={() => {}}>
                         <LogOut className="h-4 w-4 mr-2" />
                         Logout
                       </DropdownMenuItem>

@@ -5,6 +5,17 @@ export class NDKProject extends NDKEvent {
 		static kind: NDKKind = 31933 as NDKKind;
 		static kinds = [31933];
 
+		constructor(ndk?: NDK, rawEvent?: NostrEvent) {
+			super(ndk, rawEvent);
+			this.kind = NDKProject.kind;
+			if (!this.tags) {
+				this.tags = [];
+			}
+			if (!this.content) {
+				this.content = "";
+			}
+		}
+
 		get title(): string {
 			return this.tagValue("title") || this.tagValue("name") || "";
 		}

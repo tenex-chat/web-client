@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
+import { useNDK, useSubscribe, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { NDKKind } from '@nostr-dev-kit/ndk'
 import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
-import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -39,6 +38,7 @@ import {
 
 export function MCPToolsPage() {
   const navigate = useNavigate()
+  const { ndk } = useNDK()
   const user = useNDKCurrentUser()
   const [selectedTool, setSelectedTool] = useState<NDKMCPTool | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -52,9 +52,8 @@ export function MCPToolsPage() {
     name: '',
     description: '',
     command: '',
-    parameters: {} as Record<string, any>,
-    capabilities: [] as string[],
-    image: ''
+    parameters: {} as Record<string, unknown>,
+    capabilities: [] as string[]
   })
 
   // Subscribe to MCP tools
@@ -80,8 +79,7 @@ export function MCPToolsPage() {
       description: '',
       command: '',
       parameters: {},
-      capabilities: [],
-      image: ''
+      capabilities: []
     })
   }
 
@@ -94,8 +92,7 @@ export function MCPToolsPage() {
       description: tool.description || '',
       command: tool.command || '',
       parameters: tool.parameters || {},
-      capabilities: tool.capabilities || [],
-      image: tool.image || ''
+      capabilities: tool.capabilities || []
     })
   }
 
@@ -119,7 +116,6 @@ export function MCPToolsPage() {
       tool.command = formData.command
       tool.parameters = formData.parameters
       tool.capabilities = formData.capabilities
-      tool.image = formData.image
 
       await tool.publish()
       
@@ -171,8 +167,7 @@ export function MCPToolsPage() {
         description: '',
         command: '',
         parameters: {},
-        capabilities: [],
-        image: ''
+        capabilities: []
       })
     }
   }
@@ -371,15 +366,6 @@ export function MCPToolsPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="image">Image URL (optional)</Label>
-                  <Input
-                    id="image"
-                    value={formData.image}
-                    onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
-                    placeholder="https://example.com/tool-icon.png"
-                  />
-                </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">

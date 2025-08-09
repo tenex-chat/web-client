@@ -6,6 +6,8 @@ export interface ProjectAgent {
   pubkey: string
   name: string
   role?: string
+  status?: string
+  lastSeen?: number
 }
 
 export interface ProjectModel {

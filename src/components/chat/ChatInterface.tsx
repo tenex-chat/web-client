@@ -5,8 +5,7 @@ import { Send, Loader2, Mic, Phone, PhoneOff, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useProfile } from '@nostr-dev-kit/ndk-hooks'
+import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import { cn } from '@/lib/utils'
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
@@ -50,31 +49,6 @@ interface Agent {
   name: string
 }
 
-// Component for agent avatar that uses useProfile
-function AgentAvatar({ pubkey, name, className }: { pubkey: string; name?: string; className?: string }) {
-  const profile = useProfile(pubkey)
-  
-  const getUserInitials = (name?: string, pubkey?: string) => {
-    if (name) {
-      return name
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    }
-    return pubkey?.slice(0, 2).toUpperCase() || '??'
-  }
-  
-  return (
-    <Avatar className={className}>
-      <AvatarImage src={profile?.image} />
-      <AvatarFallback>
-        {getUserInitials(profile?.name || name, pubkey)}
-      </AvatarFallback>
-    </Avatar>
-  )
-}
 
 export function ChatInterface({ project, threadId, className, onBack }: ChatInterfaceProps) {
   const { ndk } = useNDK()
@@ -494,7 +468,7 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
               onClick={() => insertMention(agent)}
             >
               <div className="flex items-center gap-2">
-                <AgentAvatar pubkey={agent.pubkey} name={agent.name} className="h-6 w-6" />
+                <ProfileDisplay pubkey={agent.pubkey} showName={false} avatarClassName="h-6 w-6" />
                 <span className="text-sm font-medium">{agent.name}</span>
               </div>
             </button>

@@ -2,12 +2,11 @@ import { memo, useMemo } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Circle, Code2, Square, Clock, AlertCircle, CheckCircle2 } from 'lucide-react'
-import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
+import { Code2, Square } from 'lucide-react'
+import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { NDKKind, NDKEvent } from '@nostr-dev-kit/ndk'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import type { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { EVENT_KINDS } from '@/lib/constants'
 
@@ -22,7 +21,7 @@ interface TaskCardProps {
 
 export const TaskCard = memo(
   function TaskCard({ task, onClick, className, showUnread, unreadCount = 0 }: TaskCardProps) {
-    const user = useNDKCurrentUser()
+    const { ndk } = useNDK()
 
     // Subscribe to task updates
     const { events: updates } = useSubscribe(

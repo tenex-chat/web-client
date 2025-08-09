@@ -41,8 +41,6 @@ export function ThreadList({
   const [threads, setThreads] = useState<Thread[]>([])
 
   // Subscribe to project threads (kind 11 - CHAT)
-  const projectTagReference = project.tagId()
-  
   // Try subscribing with just kinds filter first to see if we get any events
   const { events: threadEvents } = useSubscribe(
     project

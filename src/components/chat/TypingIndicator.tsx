@@ -1,7 +1,6 @@
 import { memo } from 'react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
-import { useProfile } from '@nostr-dev-kit/ndk-hooks'
+import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 
 interface TypingUser {
   pubkey: string
@@ -13,30 +12,6 @@ interface TypingIndicatorProps {
   className?: string
 }
 
-function TypingUserAvatar({ user }: { user: TypingUser }) {
-  const profile = useProfile(user.pubkey)
-  
-  const getUserInitials = (name?: string, pubkey?: string) => {
-    if (name) {
-      return name
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    }
-    return pubkey?.slice(0, 2).toUpperCase() || '??'
-  }
-
-  return (
-    <Avatar className="h-6 w-6 border-2 border-background">
-      <AvatarImage src={profile?.image} />
-      <AvatarFallback className="text-[10px]">
-        {getUserInitials(profile?.name || user.name, user.pubkey)}
-      </AvatarFallback>
-    </Avatar>
-  )
-}
 
 export const TypingIndicator = memo(function TypingIndicator({
   users,
@@ -58,7 +33,7 @@ export const TypingIndicator = memo(function TypingIndicator({
     <div className={cn('flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground', className)}>
       <div className="flex -space-x-2">
         {users.slice(0, 3).map((user) => (
-          <TypingUserAvatar key={user.pubkey} user={user} />
+          <ProfileDisplay key={user.pubkey} pubkey={user.pubkey} showName={false} avatarClassName="h-6 w-6 border-2 border-background" />
         ))}
       </div>
       <div className="flex items-center gap-1">

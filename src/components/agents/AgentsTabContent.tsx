@@ -95,7 +95,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
       agentMap.set(pa.pubkey, {
         ...existing,
         pubkey: pa.pubkey,
-        name: pa.name || existing.name,
+        name: existing.name || pa.slug,
         fromProject: true
       });
     });
@@ -152,12 +152,11 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
           icon={<Bot className="w-12 h-12" />}
           title="No agents available"
           description="No agents are currently online for this project. Agents will appear here when they come online."
-        >
-          <Button className="mt-4">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Agents
-          </Button>
-        </EmptyState>
+          action={{
+            label: "Add Agents",
+            onClick: () => {}
+          }}
+        />
       </div>
     );
   }

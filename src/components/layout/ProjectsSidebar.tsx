@@ -5,7 +5,7 @@ import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { cn } from '@/lib/utils'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
-import { useNDKCurrentUser, useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks'
+import { useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -153,7 +153,7 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout}>
+              <DropdownMenuItem onClick={() => {}}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </DropdownMenuItem>

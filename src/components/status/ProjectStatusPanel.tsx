@@ -26,7 +26,6 @@ export function ProjectStatusPanel({
   // Extract data from status
   const statusEvent = projectStatus?.statusEvent
   const isLoading = false // Status is loaded from the store
-  const isOnline = () => projectStatus?.isOnline || false
   const getOverallStatus = () => projectStatus?.isOnline ? 'online' : 'offline'
   const getAgentCount = () => projectStatus?.agents.length || 0
   const getModelCount = () => projectStatus?.models.length || 0

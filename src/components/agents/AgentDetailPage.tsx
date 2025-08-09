@@ -65,11 +65,11 @@ export function AgentDetailPage() {
                     icon={<Bot className="w-12 h-12" />}
                     title="Agent not found"
                     description="This agent definition could not be found."
-                >
-                    <Button onClick={handleBack} className="mt-4">
-                        Back to Agents
-                    </Button>
-                </EmptyState>
+                    action={{
+                        label: "Back to Agents",
+                        onClick: handleBack
+                    }}
+                />
             </div>
         );
     }

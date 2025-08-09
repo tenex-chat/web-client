@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Link, useLocation } from '@tanstack/react-router'
+import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { Plus, Settings, LogOut, Search, Bot, Wrench, Home, User } from 'lucide-react'
 import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
@@ -35,7 +35,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useNDKCurrentPubkey, useProfileValue } from '@nostr-dev-kit/ndk-hooks'
+import { useNDKCurrentPubkey, useProfileValue, useNDKSessionLogout, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 
 interface CollapsibleProjectsSidebarProps {
   className?: string
@@ -44,13 +44,23 @@ interface CollapsibleProjectsSidebarProps {
 
 export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProjectsSidebarProps) {
   const currentPubkey = useNDKCurrentPubkey();
+  const currentUser = useNDKCurrentUser();
   const userProfile = useProfileValue(currentPubkey);
+  const ndkLogout = useNDKSessionLogout();
+  const navigate = useNavigate();
   const location = useLocation()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
   
   // Add keyboard shortcut for global search
   useGlobalSearchShortcut(() => setSearchDialogOpen(true))
+
+  const handleLogout = () => {
+    if (currentUser) {
+      ndkLogout(currentUser.pubkey);
+    }
+    navigate({ to: '/login' });
+  };
 
   // Use the cached array from the store to prevent infinite loops
   const projectsWithStatus = useProjectsStore(state => state.projectsWithStatusArray)
@@ -131,7 +141,7 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => {}}>
+                      <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="h-4 w-4 mr-2" />
                         Logout
                       </DropdownMenuItem>
@@ -315,7 +325,7 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => {}}>
+                      <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="h-4 w-4 mr-2" />
                         Logout
                       </DropdownMenuItem>

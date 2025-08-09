@@ -1,0 +1,30 @@
+// Event kinds as defined in the original implementation
+export const EVENT_KINDS = {
+  METADATA: 0,
+  CONTACT_LIST: 3,
+  CHAT: 11,
+  THREAD_REPLY: 1111,
+  GENERIC_REPLY: 1111,
+  
+  // TENEX Custom Events
+  TASK: 1934,
+  AGENT_REQUEST: 3199,
+  AGENT_REQUEST_LIST: 13199,
+  AGENT_LESSON: 4129,
+  AGENT_CONFIG: 4199,
+  MCP_TOOL: 4200,
+  PROJECT: 31933,
+  ARTICLE: 30023,
+  TEMPLATE: 30717,
+  
+  // Status & Real-time Events  
+  PROJECT_STATUS: 24010,
+  LLM_CONFIG_CHANGE: 24101,
+  TYPING_INDICATOR: 24111,
+  TYPING_INDICATOR_STOP: 24112,
+  STREAMING_RESPONSE: 21111,
+} as const
+
+export const DEFAULT_RELAYS = [
+  'wss://tenex.chat',
+]

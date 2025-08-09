@@ -1,0 +1,266 @@
+import { type NDKKind } from "@nostr-dev-kit/ndk";
+import { useNDK, useSubscribe, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
+import { useState, useMemo } from "react";
+import { useParams, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Bot, BookOpen, Copy, CheckCircle2 } from "lucide-react";
+import { EVENT_KINDS } from "../../lib/constants";
+import { NDKAgent } from "../../lib/ndk-events/NDKAgent";
+import type { NDKAgentLesson } from "../../lib/ndk-events/NDKAgentLesson";
+import { Button } from "../ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Badge } from "../ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { ScrollArea } from "../ui/scroll-area";
+import { EmptyState } from "../common/EmptyState";
+import { formatRelativeTime } from "../../lib/utils/time";
+import { AgentSettingsTab } from "./AgentSettingsTab";
+
+type TabType = "details" | "lessons" | "settings";
+
+export function AgentProfilePage() {
+    const { pubkey } = useParams({ from: '/_auth/p/$pubkey' });
+    const { ndk } = useNDK();
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState<TabType>("details");
+    const [copiedPubkey, setCopiedPubkey] = useState(false);
+    
+    // The agent IS the pubkey - get their profile
+    const profile = useProfileValue(pubkey);
+
+    // The pubkey parameter is the agent's pubkey (not the author of an NDKAgent event)
+    // For agent profiles, we may not have an NDKAgent event - the agent might just be in status events
+    const { events: agentEvents } = useSubscribe(
+        [{ 
+            kinds: [EVENT_KINDS.AGENT_CONFIG as NDKKind], 
+            authors: [pubkey],
+            limit: 1
+        }],
+        {},
+        [pubkey]
+    );
+
+    const agent = useMemo(
+        () => agentEvents?.[0] ? new NDKAgent(ndk || undefined, agentEvents[0].rawEvent()) : null,
+        [agentEvents, ndk]
+    );
+
+    // Fetch lessons for this agent (kind 4129)
+    // Lessons reference the agent by pubkey in a p-tag
+    const { events: lessons } =
+        useSubscribe <
+        NDKAgentLesson>(
+            pubkey
+                ? [
+                        {
+                            kinds: [EVENT_KINDS.AGENT_LESSON as NDKKind],
+                            authors: [pubkey],
+                        },
+                    ]
+                : false,
+            { wrap: true },
+            [pubkey],
+        );
+
+    const handleBack = () => {
+        // Check if we came from a project page by looking at the history
+        // If we can't determine, go back to the agents list
+        if (window.history.length > 1) {
+            navigate({ to: '..' });
+        } else {
+            navigate({ to: '/agents' });
+        }
+    };
+
+    const handleCopyPubkey = async () => {
+        try {
+            await navigator.clipboard.writeText(pubkey);
+            setCopiedPubkey(true);
+            setTimeout(() => setCopiedPubkey(false), 2000);
+        } catch (error) {
+            console.error("Failed to copy pubkey:", error);
+        }
+    };
+
+    return (
+        <div className="flex-1 flex flex-col">
+            {/* Header */}
+            <div className="bg-card border-b border-border">
+                <div className="max-w-4xl mx-auto px-4 py-4">
+                    <div className="flex items-center gap-4 mb-4">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleBack}
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </Button>
+                        <Avatar className="w-16 h-16">
+                            <AvatarImage src={profile?.image} />
+                            <AvatarFallback>
+                                <Bot className="w-8 h-8" />
+                            </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                            <h1 className="text-2xl font-semibold">
+                                {profile?.name || profile?.displayName || "Agent"}
+                            </h1>
+                            <div className="flex items-center gap-2 mt-1">
+                                {agent?.role && (
+                                    <Badge variant="secondary">
+                                        {agent.role}
+                                    </Badge>
+                                )}
+                                <button
+                                    onClick={handleCopyPubkey}
+                                    className="text-xs text-muted-foreground hover:text-foreground font-mono flex items-center gap-1"
+                                >
+                                    {pubkey.slice(0, 8)}...{pubkey.slice(-8)}
+                                    {copiedPubkey ? (
+                                        <CheckCircle2 className="w-3 h-3 text-green-500" />
+                                    ) : (
+                                        <Copy className="w-3 h-3" />
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Tabs */}
+                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
+                        <TabsList className="grid w-full grid-cols-3">
+                            <TabsTrigger value="details">Details</TabsTrigger>
+                            <TabsTrigger value="lessons">
+                                Lessons {lessons.length > 0 && `(${lessons.length})`}
+                            </TabsTrigger>
+                            <TabsTrigger value="settings">Settings</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
+            </div>
+
+            {/* Content */}
+            <ScrollArea className="flex-1">
+                <div className="max-w-4xl mx-auto p-4">
+                    <Tabs value={activeTab} className="w-full">
+                        <TabsContent value="details" className="space-y-4">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Description</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-muted-foreground">
+                                        {agent?.description || "No description provided"}
+                                    </p>
+                                </CardContent>
+                            </Card>
+
+                            {agent?.instructions && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Instructions</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <pre className="whitespace-pre-wrap text-sm">
+                                            {agent?.instructions}
+                                        </pre>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {agent?.useCriteria && agent.useCriteria.length > 0 && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Use Criteria</CardTitle>
+                                        <CardDescription>
+                                            When this agent should be used
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ul className="space-y-2">
+                                            {agent?.useCriteria?.map((criteria, idx) => (
+                                                <li key={idx} className="flex items-start gap-2">
+                                                    <span className="text-muted-foreground">•</span>
+                                                    <span>{criteria}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </TabsContent>
+
+                        <TabsContent value="lessons" className="space-y-4">
+                            {lessons.length === 0 ? (
+                                <EmptyState
+                                    icon={<BookOpen className="w-12 h-12" />}
+                                    title="No lessons yet"
+                                    description="This agent hasn't learned any lessons yet."
+                                />
+                            ) : (
+                                lessons.map((lesson) => (
+                                    <Card key={lesson.id}>
+                                        <CardHeader>
+                                            <div className="flex items-start justify-between">
+                                                <div>
+                                                    <CardTitle className="text-lg">
+                                                        {lesson.title || "Untitled Lesson"}
+                                                    </CardTitle>
+                                                    <CardDescription>
+                                                        {formatRelativeTime(lesson.created_at || 0)}
+                                                    </CardDescription>
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <div>
+                                                <h4 className="font-medium mb-2">Lesson</h4>
+                                                <p className="text-muted-foreground">
+                                                    {lesson.lesson}
+                                                </p>
+                                            </div>
+
+                                            {lesson.reasoning && (
+                                                <div>
+                                                    <h4 className="font-medium mb-2">Reasoning</h4>
+                                                    <p className="text-muted-foreground">
+                                                        {lesson.reasoning}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {lesson.metacognition && (
+                                                <div>
+                                                    <h4 className="font-medium mb-2">Metacognition</h4>
+                                                    <p className="text-muted-foreground">
+                                                        {lesson.metacognition}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {lesson.reflection && (
+                                                <div>
+                                                    <h4 className="font-medium mb-2">Reflection</h4>
+                                                    <p className="text-muted-foreground">
+                                                        {lesson.reflection}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                ))
+                            )}
+                        </TabsContent>
+
+                        <TabsContent value="settings" className="space-y-4">
+                            <AgentSettingsTab 
+                                agent={agent} 
+                                agentSlug={pubkey}
+                            />
+                        </TabsContent>
+                    </Tabs>
+                </div>
+            </ScrollArea>
+        </div>
+    );
+}

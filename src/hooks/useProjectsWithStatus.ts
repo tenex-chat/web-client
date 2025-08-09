@@ -1,0 +1,113 @@
+import { useEffect, useState } from 'react'
+import { useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
+import { NDKProjectStatus } from '../lib/ndk-events/NDKProjectStatus'
+import { EVENT_KINDS } from '../lib/constants'
+import type { NDKProject } from '../lib/ndk-events/NDKProject'
+
+interface ProjectWithStatus {
+  project: NDKProject
+  isOnline: boolean
+  lastSeen?: Date
+}
+
+export function useProjectsWithStatus(projects: NDKProject[]) {
+  const { ndk } = useNDK()
+  const [projectsWithStatus, setProjectsWithStatus] = useState<ProjectWithStatus[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Get all project tag IDs
+  const projectTagIds = projects.map(p => p.tagId())
+
+  // Subscribe to status events for all projects
+  // Note: We fetch ALL recent status events and filter client-side
+  // because NDK might not handle multiple #a tags correctly
+  const filter = projects.length > 0 ? {
+    kinds: [EVENT_KINDS.PROJECT_STATUS as number],
+    since: Math.floor(Date.now() / 1000) - 600 // Last 10 minutes
+  } : undefined
+
+  const { events } = useSubscribe(filter ? [filter] : [], { disabled: !filter })
+
+  useEffect(() => {
+    if (projects.length === 0) {
+      setProjectsWithStatus([])
+      setIsLoading(false)
+      return
+    }
+
+    // Create a set of our project IDs for quick lookup
+    const projectIdSet = new Set(projectTagIds)
+    
+    // Create a map of project ID to latest status event
+    const statusMap = new Map<string, NDKProjectStatus>()
+    
+    if (events && events.length > 0) {
+      console.log(`[Sidebar] Found ${events.length} total status events, filtering for ${projects.length} projects`)
+      
+      events.forEach(event => {
+        const status = new NDKProjectStatus(ndk, event.rawEvent())
+        const projectId = status.projectId
+        
+        // Only process status events for OUR projects
+        if (projectId && projectIdSet.has(projectId)) {
+          const existing = statusMap.get(projectId)
+          if (!existing || (event.created_at || 0) > (existing.created_at || 0)) {
+            statusMap.set(projectId, status)
+            const projectName = projects.find(p => p.tagId() === projectId)?.title
+            console.log(`Status for project ${projectName || projectId}:`, {
+              isOnline: status.isOnline,
+              agents: status.agents.length,
+              models: status.models.length,
+              lastSeen: status.lastSeen
+            })
+          }
+        }
+      })
+      
+      console.log(`[Sidebar] Filtered to ${statusMap.size} relevant status events`)
+    }
+
+    // Map projects with their status
+    const projectsWithStatusList = projects.map(project => {
+      const tagId = project.tagId()
+      const status = statusMap.get(tagId)
+      
+      if (project.title === 'Ambulando') {
+        console.log(`Ambulando tagId: ${tagId}`)
+        console.log(`Has status:`, !!status)
+        console.log(`Is online:`, status?.isOnline)
+      }
+      
+      return {
+        project,
+        isOnline: status?.isOnline || false,
+        lastSeen: status?.lastSeen
+      }
+    })
+
+    // Sort projects: online first, then by last seen, then by title
+    const sorted = projectsWithStatusList.sort((a, b) => {
+      // Online projects come first
+      if (a.isOnline && !b.isOnline) return -1
+      if (!a.isOnline && b.isOnline) return 1
+      
+      // If both have same online status, sort by last seen
+      if (a.lastSeen && b.lastSeen) {
+        return b.lastSeen.getTime() - a.lastSeen.getTime()
+      }
+      if (a.lastSeen && !b.lastSeen) return -1
+      if (!a.lastSeen && b.lastSeen) return 1
+      
+      // Finally, sort by title
+      return a.project.title.localeCompare(b.project.title)
+    })
+
+    setProjectsWithStatus(sorted)
+    setIsLoading(false)
+  }, [events, projects, ndk, projectTagIds])
+
+  return {
+    projectsWithStatus,
+    isLoading
+  }
+}

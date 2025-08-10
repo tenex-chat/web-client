@@ -10,7 +10,6 @@ import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Button } from '@/components/ui/button'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
-import { logger } from '@/lib/logger'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { EVENT_KINDS } from '@/lib/constants'
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
@@ -23,13 +22,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { LLMMetadataDialog } from '@/components/dialogs/LLMMetadataDialog'
-import { useStreamingResponses } from '@/hooks/useStreamingResponses'
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import { Link } from '@tanstack/react-router'
 import { useMurfTTS } from '@/hooks/useMurfTTS'
 import { extractTTSContent } from '@/lib/utils/extractTTSContent'
 import { getAgentVoiceConfig } from '@/lib/voice-config'
-import { useProjectAgents } from '@/hooks/useProjectAgents'
+import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { useAtom } from 'jotai'
 import { llmConfigAtom } from '@/stores/llmConfig'
 
@@ -63,15 +61,15 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     return document.documentElement.classList.contains('dark')
   }, [])
   
-  // Get project agents to find the agent's slug from its pubkey
-  const projectAgentTags = useProjectAgents(project.tagId())
+  // Get ONLINE agents to find the agent's name from its pubkey
+  const onlineAgents = useProjectOnlineAgents(project.tagId())
   
-  // Get the agent's slug from the project agents
+  // Get the agent's name from the online agents
   const agentSlug = useMemo(() => {
-    if (!projectAgentTags || projectAgentTags.length === 0) return null
-    const agent = projectAgentTags.find(a => a.pubkey === event.pubkey)
-    return agent?.slug || null
-  }, [projectAgentTags, event.pubkey])
+    if (!onlineAgents || onlineAgents.length === 0) return null
+    const agent = onlineAgents.find(a => a.pubkey === event.pubkey)
+    return agent?.name || null
+  }, [onlineAgents, event.pubkey])
   
   // TTS configuration
   const ttsOptions = useMemo(() => {
@@ -180,7 +178,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
       setReplyInput("")
       setReplyToEvent(null)
     } catch (error) {
-      logger.error("Failed to send reply:", error)
+      console.error("Failed to send reply:", error)
     } finally {
       setIsSending(false)
     }
@@ -207,43 +205,8 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     }).length
   }, [directReplies, event.id])
 
-  // Get conversation ID from the event's e tag or use the event ID itself
-  const conversationId = useMemo(() => {
-    // For kind 11 (thread/chat events), use the event ID itself as conversation ID
-    if (event.kind === EVENT_KINDS.CHAT) {
-      logger.debug("[MessageWithReplies] Using thread event ID as conversationId:", {
-        eventId: event.id,
-        eventKind: event.kind,
-      })
-      return event.id
-    }
-    
-    // For replies, try to find the root conversation
-    let eTag = event.tagValue('e')
-    if (!eTag) {
-      eTag = event.tagValue('E')
-    }
-    const result = eTag || event.id
-    logger.debug("[MessageWithReplies] Calculated conversationId for reply:", {
-      eventId: event.id,
-      eTag,
-      conversationId: result,
-      eventKind: event.kind,
-    })
-    return result
-  }, [event])
-
-  // Subscribe to streaming responses if we have a conversationId
-  const { streamingResponses } = useStreamingResponses(conversationId)
-  
-  // Check if this event has a streaming response
-  const streamingResponse = useMemo(() => {
-    if (!streamingResponses || streamingResponses.size === 0) return null
-    return streamingResponses.get(event.pubkey)
-  }, [streamingResponses, event.pubkey])
-  
-  // Check if we should show streaming content
-  const shouldShowStreaming = streamingResponse && (!event.content || event.content.trim() === "")
+  // Streaming is now handled by temporary messages in ChatInterface
+  // MessageWithReplies only handles real events (kind 1111)
 
   const isCurrentUser = event.pubkey === user?.pubkey
 
@@ -359,33 +322,45 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   }
 
   return (
-    <div className="group">
-      {/* Message */}
-      <div className={cn(
-        'flex gap-3 mb-2',
-        isCurrentUser && 'flex-row-reverse',
-        isNested && 'pl-11'
-      )}>
-        <div className="w-8" /> {/* Spacer for avatar alignment */}
+    <div className={cn(
+      "group hover:bg-muted/30 transition-colors px-4 py-1",
+      isNested && "ml-10"
+    )}>
+      {/* Message - Slack style layout */}
+      <div className="flex gap-3">
+        {/* Avatar column - fixed width */}
+        <div className="flex-shrink-0 pt-0.5">
+          <Link 
+            to="/p/$pubkey" 
+            params={{ pubkey: event.pubkey }}
+            className="block hover:opacity-80 transition-opacity"
+          >
+            <ProfileDisplay 
+              pubkey={event.pubkey} 
+              size="md" 
+              showName={false}
+              showAvatar={true}
+              avatarClassName="h-9 w-9 rounded-md"
+            />
+          </Link>
+        </div>
         
-        <div className={cn(
-          'flex flex-col flex-1',
-          isCurrentUser && 'items-end'
-        )}>
-          <div className="flex items-start justify-between gap-2 mb-1 max-w-[70%]">
-            <div className="flex items-center gap-2">
+        {/* Content column */}
+        <div className="flex-1 min-w-0">
+          {/* Header row with name, time, and actions */}
+          <div className="flex items-start justify-between gap-2 mb-0.5">
+            <div className="flex items-baseline gap-2 flex-wrap">
               <Link 
                 to="/p/$pubkey" 
                 params={{ pubkey: event.pubkey }}
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                className="hover:underline"
               >
                 <ProfileDisplay 
                   pubkey={event.pubkey} 
                   size="md" 
                   showName={true}
-                  showAvatar={true}
-                  avatarClassName="h-8 w-8"
-                  nameClassName="text-sm font-medium"
+                  showAvatar={false}
+                  nameClassName="text-sm font-semibold text-foreground"
                 />
               </Link>
               <span className="text-xs text-muted-foreground">
@@ -393,19 +368,19 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               </span>
             </div>
             
-            {/* Action buttons - aligned to top right of message */}
-            <div className="flex items-center gap-1">
-              {/* Phase indicator - small badge style */}
+            {/* Action buttons - only visible on hover */}
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* Phase indicator - inline with hover buttons */}
               {getPhase() && (
                 <Badge 
                   variant="secondary"
                   className={cn(
-                    "text-[10px] h-4 px-1.5 gap-0.5",
-                    getPhase()?.toLowerCase() === 'chat' && "bg-blue-500 text-white border-blue-600",
-                    getPhase()?.toLowerCase() === 'plan' && "bg-purple-500 text-white border-purple-600",
-                    getPhase()?.toLowerCase() === 'execute' && "bg-green-500 text-white border-green-600",
-                    getPhase()?.toLowerCase() === 'review' && "bg-orange-500 text-white border-orange-600",
-                    getPhase()?.toLowerCase() === 'chores' && "bg-gray-500 text-white border-gray-600"
+                    "text-[10px] h-5 px-1.5 gap-0.5",
+                    getPhase()?.toLowerCase() === 'chat' && "bg-blue-500/90 text-white border-blue-600",
+                    getPhase()?.toLowerCase() === 'plan' && "bg-purple-500/90 text-white border-purple-600",
+                    getPhase()?.toLowerCase() === 'execute' && "bg-green-500/90 text-white border-green-600",
+                    getPhase()?.toLowerCase() === 'review' && "bg-orange-500/90 text-white border-orange-600",
+                    getPhase()?.toLowerCase() === 'chores' && "bg-gray-500/90 text-white border-gray-600"
                   )}
                   title={getPhaseFrom() ? `Phase: ${getPhaseFrom()} → ${getPhase()}` : `Phase: ${getPhase()}`}
                 >
@@ -429,13 +404,13 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                       }
                     }
                   }}
-                  className="h-6 w-6 p-0"
+                  className="h-7 w-7 p-0 hover:bg-muted"
                   title={tts.isPlaying ? `Stop reading (Voice: ${voiceName})` : `Read aloud (Voice: ${voiceName})`}
                 >
                   {tts.isPlaying ? (
-                    <Square className="h-3 w-3" />
+                    <Square className="h-3.5 w-3.5" />
                   ) : (
-                    <Volume2 className="h-3 w-3" />
+                    <Volume2 className="h-3.5 w-3.5" />
                   )}
                 </Button>
               )}
@@ -445,10 +420,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleReply(event)}
-                className="h-6 w-6 p-0"
+                className="h-7 w-7 p-0 hover:bg-muted"
                 title="Reply to this message"
               >
-                <Reply className="h-3 w-3" />
+                <Reply className="h-3.5 w-3.5" />
               </Button>
               
               {/* LLM Metadata Icon */}
@@ -457,10 +432,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowMetadataDialog(true)}
-                  className="h-6 w-6 p-0"
+                  className="h-7 w-7 p-0 hover:bg-muted"
                   title="View LLM metadata"
                 >
-                  <Cpu className="h-3 w-3" />
+                  <Cpu className="h-3.5 w-3.5" />
                 </Button>
               )}
               
@@ -470,10 +445,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0"
+                    className="h-7 w-7 p-0 hover:bg-muted"
                     title="Message options"
                   >
-                    <MoreVertical className="h-3 w-3" />
+                    <MoreVertical className="h-3.5 w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
@@ -511,7 +486,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               {(getLLMMetadata()?.["llm-cost-usd"] || getLLMMetadata()?.["llm-cost"]) && (
                 <Badge
                   variant="outline"
-                  className="text-xs h-5 px-2 text-green-600 border-green-600"
+                  className="text-[10px] h-5 px-1.5 text-green-600 border-green-600"
                 >
                   <DollarSign className="w-3 h-3 mr-0.5" />
                   {getLLMMetadata()?.["llm-cost-usd"] || getLLMMetadata()?.["llm-cost"]}
@@ -520,24 +495,11 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             </div>
           </div>
           
-          <div className={cn(
-            'rounded-lg px-3 py-2 max-w-[70%] markdown-content',
-            isCurrentUser
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted'
-          )}>
-            <div className="text-sm break-words">
-              {shouldShowStreaming ? (
-                // Show streaming content if available
-                <>
-                  <div className="whitespace-pre-wrap">
-                    {streamingResponse.content}
-                    <span className="inline-block w-2 h-4 bg-foreground/60 animate-pulse ml-1" />
-                  </div>
-                </>
-              ) : (
-                // Show final content with markdown
-                <>
+          {/* Message content - no background, just text */}
+          <div className="markdown-content">
+            <div className="text-sm break-words text-foreground">
+              {/* Show final content with markdown */}
+              <>
                   <ReactMarkdown 
                     remarkPlugins={[remarkGfm]}
                     components={{
@@ -605,100 +567,88 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                 >
                   {cleanContent}
                 </ReactMarkdown>
-                {/* Show cursor if streaming but event has content (transitioning state) */}
-                {streamingResponse && event.content && (
-                  <span className="inline-block w-2 h-4 bg-foreground/60 animate-pulse ml-1" />
-                )}
               </>
-            )}
             </div>
           </div>
-        </div>
-      </div>
-      
-      {/* Thinking blocks - collapsed by default */}
-      {thinkingBlocks.length > 0 && (
-        <div className={cn('mt-2', isNested ? 'pl-11' : 'pl-11')}>
-          <button
-            type="button"
-            onClick={() => setShowThinking(!showThinking)}
-            className="flex items-start gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group"
-          >
-            {showThinking ? (
-              <ChevronDown className="w-3 h-3 mt-0.5 flex-shrink-0" />
-            ) : (
-              <ChevronRight className="w-3 h-3 mt-0.5 flex-shrink-0" />
-            )}
-            <Brain className="w-3 h-3 mt-0.5 flex-shrink-0" />
-            <span className="truncate max-w-[600px] text-left">
-              {showThinking ? 'Hide thinking' : thinkingPreview}
-            </span>
-          </button>
           
-          {showThinking && (
-            <div className="mt-2 ml-7 p-3 bg-muted/30 rounded-lg border border-muted">
-              {thinkingBlocks.map((block, index) => (
-                <div key={index} className={cn(index > 0 && "mt-3 pt-3 border-t border-muted")}>
-                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
-                    {block}
-                  </pre>
+          {/* Thinking blocks - indented under message */}
+          {thinkingBlocks.length > 0 && (
+            <div className="mt-1">
+              <button
+                type="button"
+                onClick={() => setShowThinking(!showThinking)}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showThinking ? (
+                  <ChevronDown className="w-3 h-3 flex-shrink-0" />
+                ) : (
+                  <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                )}
+                <Brain className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate max-w-[600px]">
+                  {showThinking ? 'Hide thinking' : thinkingPreview}
+                </span>
+              </button>
+              
+              {showThinking && (
+                <div className="mt-1 p-2 bg-muted/20 rounded-md border border-muted/30">
+                  {thinkingBlocks.map((block, index) => (
+                    <div key={index} className={cn(index > 0 && "mt-2 pt-2 border-t border-muted/30")}>
+                      <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
+                        {block}
+                      </pre>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+            </div>
+          )}
+          
+          {/* Reply count and toggle - Slack style */}
+          {replyCount > 0 && !showReplies && (
+            <div className="mt-1.5">
+              <button
+                type="button"
+                onClick={() => setShowReplies(!showReplies)}
+                className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 transition-colors font-medium hover:bg-blue-50 dark:hover:bg-blue-950/30 px-2 py-1 rounded">
+                <div className="flex -space-x-1.5">
+                  {/* Show up to 3 user avatars who replied */}
+                  {sortedReplies.slice(0, 3).map((reply, idx) => (
+                    <div key={reply.id} style={{ zIndex: 3 - idx }}>
+                      <ProfileDisplay pubkey={reply.pubkey} showName={false} avatarClassName="w-5 h-5 border-2 border-background rounded" />
+                    </div>
+                  ))}
+                </div>
+                <span>
+                  {replyCount} {replyCount === 1 ? "reply" : "replies"}
+                </span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
             </div>
           )}
         </div>
-      )}
-      
-      {/* Reply count and toggle - Slack style */}
-      {replyCount > 0 && (
-        <div className={cn('mt-2', isNested ? 'pl-11' : 'pl-11')}>
-          <button
-            type="button"
-            onClick={() => setShowReplies(!showReplies)}
-            className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 transition-colors font-medium"
-          >
-            <div className="flex -space-x-2">
-              {/* Show up to 3 user avatars who replied */}
-              {sortedReplies.slice(0, 3).map((reply, idx) => (
-                <div key={reply.id} style={{ zIndex: 3 - idx }}>
-                  <ProfileDisplay pubkey={reply.pubkey} showName={false} avatarClassName="w-6 h-6 border-2 border-white" />
-                </div>
-              ))}
-            </div>
-            <span>
-              {replyCount} {replyCount === 1 ? "reply" : "replies"}
-            </span>
-            {showReplies ? (
-              <ChevronDown className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )}
-          </button>
-        </div>
-      )}
+      </div>
 
-      {/* Thread replies - Slack style */}
+      {/* Thread replies - Slack style indented */}
       {showReplies && sortedReplies.length > 0 && (
-        <div className={cn('mt-2', isNested ? 'pl-11' : 'pl-11')}>
-          <div className="border-l-2 border-gray-300/50 pl-3">
-            {sortedReplies.map(reply => (
-              <div key={reply.id} className="relative -ml-3">
-                <MessageWithReplies
-                  event={reply}
-                  project={project}
-                  onReply={onReply}
-                  isNested={true}
-                />
-              </div>
-            ))}
-          </div>
+        <div className="border-l-2 border-muted ml-12 mt-2">
+          {sortedReplies.map(reply => (
+            <div key={reply.id}>
+              <MessageWithReplies
+                event={reply}
+                project={project}
+                onReply={onReply}
+                isNested={true}
+              />
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Reply input */}
+      {/* Reply input - Slack style inline */}
       {replyToEvent && (
-        <div className={cn('mt-2', isNested ? 'pl-11' : 'pl-11')}>
-          <div className="bg-muted/50 p-2 rounded mb-2">
+        <div className="ml-12 mt-2 border-l-2 border-muted pl-3">
+          <div className="bg-muted/30 p-2 rounded-md mb-2">
             <div className="text-xs text-muted-foreground flex items-center gap-1">
               <Reply className="w-3 h-3" />
               Replying to {replyToEvent.id === event.id ? "this message" : "a reply"}
@@ -710,15 +660,16 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               onChange={(e) => setReplyInput(e.target.value)}
               onKeyDown={handleKeyPress}
               placeholder="Write a reply..."
-              className="flex-1 min-h-[60px] p-2 text-sm bg-background border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              className="flex-1 min-h-[50px] p-2 text-sm bg-background border border-muted rounded-md resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
             />
             <div className="flex flex-col gap-1">
               <Button
                 size="sm"
                 onClick={handleSendReply}
                 disabled={!replyInput.trim() || isSending}
+                className="h-8"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-3.5 h-3.5" />
               </Button>
               <Button
                 size="sm"
@@ -727,6 +678,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                   setReplyToEvent(null)
                   setReplyInput("")
                 }}
+                className="h-8 text-xs"
               >
                 Cancel
               </Button>

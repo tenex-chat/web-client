@@ -4,6 +4,7 @@ import { Plus, Settings, LogOut, Search, Bot, Wrench, Home, User } from 'lucide-
 import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
+import { useProjectSubscriptions } from '@/hooks/useProjectSubscriptions'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -51,6 +52,9 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
   const location = useLocation()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
+  
+  // Initialize project subscriptions
+  useProjectSubscriptions()
   
   // Add keyboard shortcut for global search
   useGlobalSearchShortcut(() => setSearchDialogOpen(true))

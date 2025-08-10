@@ -5,6 +5,7 @@ import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { cn } from '@/lib/utils'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
+import { useProjectSubscriptions } from '@/hooks/useProjectSubscriptions'
 import { useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
@@ -64,6 +65,9 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
   const [searchQuery, setSearchQuery] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
+  
+  // Initialize project subscriptions
+  useProjectSubscriptions()
   
   // Add keyboard shortcut for global search
   useGlobalSearchShortcut(() => setSearchDialogOpen(true))

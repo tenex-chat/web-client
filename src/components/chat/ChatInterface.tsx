@@ -1,4 +1,4 @@
-import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk'
 import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { useState, useEffect, useRef, useMemo, RefObject } from 'react'
 import { Send, Loader2, Mic, Phone, PhoneOff, ArrowLeft } from 'lucide-react'
@@ -10,8 +10,8 @@ import { cn } from '@/lib/utils'
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
-import { useProjectAgents } from '@/hooks/useProjectAgents'
 import { EVENT_KINDS } from '@/lib/constants'
+import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { VoiceDialog } from '@/components/dialogs/VoiceDialog'
 import { isAudioEvent } from '@/lib/utils/audioEvents'
 import { MessageWithReplies } from './MessageWithReplies'
@@ -22,6 +22,13 @@ import { llmConfigAtom } from '@/stores/llmConfig'
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight'
 import { useStreamingResponses } from '@/hooks/useStreamingResponses'
 import { TypingIndicator } from './TypingIndicator'
+import { TaskCard } from '@/components/tasks/TaskCard'
+import { NDKTask } from '@/lib/ndk-events/NDKTask'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 interface ChatInterfaceProps {
   project: NDKProject
@@ -41,14 +48,93 @@ interface Message {
   createdAt: number
   isReply?: boolean
   replyTo?: string
-  event?: NDKEvent // Store the original event for audio messages
+  event?: NDKEvent | null // Store the original event for audio messages (null for streaming)
+  isStreaming?: boolean // Flag to indicate this is a temporary streaming message
 }
 
-interface Agent {
+interface AgentInstance {
   pubkey: string
   name: string
 }
 
+// Component for rendering streaming message content with markdown
+function StreamingMessageContent({ content }: { content: string }) {
+  const isDarkMode = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    return document.documentElement.classList.contains('dark')
+  }, [])
+
+  return (
+    <div className="markdown-content text-sm">
+      <ReactMarkdown 
+        remarkPlugins={[remarkGfm]}
+        components={{
+          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+          a: ({ href, children }) => (
+            <a 
+              href={href} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:text-blue-600 underline"
+            >
+              {children}
+            </a>
+          ),
+          strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+          em: ({ children }) => <em className="italic">{children}</em>,
+          code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) => {
+            const match = /language-(\w+)/.exec(className || '')
+            const isInline = !className || !match
+            
+            if (isInline) {
+              return (
+                <code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono text-xs" {...props}>
+                  {children}
+                </code>
+              )
+            }
+            
+            const language = match ? match[1] : 'text'
+            
+            return (
+              <SyntaxHighlighter
+                language={language}
+                style={isDarkMode ? oneDark : oneLight}
+                customStyle={{
+                  margin: '8px 0',
+                  padding: '12px',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  lineHeight: '1.5',
+                }}
+                PreTag="div"
+                {...props}
+              >
+                {String(children).replace(/\n$/, '')}
+              </SyntaxHighlighter>
+            )
+          },
+          ul: ({ children }) => <ul className="list-disc pl-6 mb-2 space-y-1">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal pl-6 mb-2 space-y-1">{children}</ol>,
+          li: ({ children }) => <li className="ml-1">{children}</li>,
+          h1: ({ children }) => <h1 className="text-xl font-bold mb-2 mt-3">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-lg font-bold mb-2 mt-3">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-base font-bold mb-1 mt-2">{children}</h3>,
+          h4: ({ children }) => <h4 className="text-sm font-bold mb-1 mt-2">{children}</h4>,
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-4 border-gray-400 dark:border-gray-600 pl-3 my-2 italic opacity-90">
+              {children}
+            </blockquote>
+          ),
+          hr: () => <hr className="my-3 border-gray-300 dark:border-gray-600" />,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+      <span className="inline-block w-2 h-4 bg-foreground/60 animate-pulse ml-1" />
+    </div>
+  )
+}
 
 export function ChatInterface({ project, threadId, className, onBack }: ChatInterfaceProps) {
   const { ndk } = useNDK()
@@ -66,16 +152,16 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
   const [llmConfig] = useAtom(llmConfigAtom)
   const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight()
 
-  // Get project agents for @mentions
-  const projectAgentTags = useProjectAgents(project.tagId())
+  // Get ONLINE agents for @mentions (not just configured agents)
+  const onlineAgents = useProjectOnlineAgents(project.tagId())
   
-  // Map agent tags to Agent interface for mention autocomplete
-  const projectAgents: Agent[] = useMemo(() => {
-    return projectAgentTags.map(tag => ({
-      pubkey: tag.pubkey,
-      name: tag.slug // Use slug as name for autocomplete
+  // Map online agents to Agent interface for mention autocomplete
+  const projectAgents: AgentInstance[] = useMemo(() => {
+    return onlineAgents.map(agent => ({
+      pubkey: agent.pubkey,
+      name: agent.name
     }))
-  }, [projectAgentTags])
+  }, [onlineAgents])
 
   // TTS configuration
   const ttsOptions = useMemo(() => {
@@ -125,20 +211,35 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
     fetchThread()
   }, [ndk, threadId])
 
-  // Subscribe to messages in the thread
-  const { events: threadReplies } = useSubscribe(
-    currentThreadEvent
-      ? [{
-          kinds: [EVENT_KINDS.THREAD_REPLY as NDKKind, NDKKind.GenericReply],
-          '#e': [currentThreadEvent.id],
-        }]
-      : false,
-    {
-      closeOnEose: false,
-      groupable: true,
-    },
-    [currentThreadEvent?.id]
-  )
+  // Subscribe to thread messages using NIP-22 threading
+		const { events: threadReplies } = useSubscribe(
+			currentThreadEvent
+				? [currentThreadEvent.nip22Filter()]
+				: false,
+			{
+				closeOnEose: false,
+				groupable: true,
+			},
+			[currentThreadEvent?.id],
+		);
+  
+  // Subscribe to tasks related to this project
+		// This ensures task cards embedded in conversations are available
+		const { events: relatedTasks } = useSubscribe(
+			currentThreadEvent
+				? [
+						{
+							kinds: [EVENT_KINDS.TASK],
+							"#e": [currentThreadEvent.id],
+						},
+					]
+				: false,
+			{
+				closeOnEose: false,
+				groupable: true,
+			},
+			[currentThreadEvent?.id],
+		);
 
   // Subscribe to streaming responses for the current thread
   const { streamingResponses } = useStreamingResponses(currentThreadEvent?.id || null)
@@ -175,12 +276,12 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
     }
   }, [messages, autoTTS, ttsOptions, lastPlayedMessageId, user?.pubkey, tts])
 
-  // Process thread replies into messages INCLUDING streaming placeholders
+  // Process thread replies into messages INCLUDING streaming placeholders AND tasks
   useEffect(() => {
     const processedMessages: Message[] = []
     
     // Add the thread root message (kind 11) as the first message
-    if (currentThreadEvent && currentThreadEvent.content) {
+    if (currentThreadEvent) {
       processedMessages.push({
         id: currentThreadEvent.id,
         content: currentThreadEvent.content,
@@ -209,34 +310,43 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
       }))
       processedMessages.push(...replies)
     }
+    
+    // Add tasks as messages in chronological order
+    if (relatedTasks && relatedTasks.length > 0) {
+      const taskMessages = relatedTasks.map(event => ({
+        id: event.id,
+        content: event.content || '',
+        author: {
+          pubkey: event.pubkey,
+        },
+        createdAt: event.created_at || 0,
+        isReply: true,
+        event: event, // Store the event for task rendering
+      }))
+      processedMessages.push(...taskMessages)
+    }
 
-    // Add placeholder messages for streaming responses that don't have a final message yet
+    // Add placeholder messages for agents that are streaming but haven't sent their final 1111 yet
     if (streamingResponses && streamingResponses.size > 0) {
       streamingResponses.forEach((response, agentPubkey) => {
-        // Check if we already have a message from this agent
+        // Check if we already have a final message from this agent
         const hasExistingMessage = processedMessages.some(
           msg => msg.author.pubkey === agentPubkey
         )
         
         // If no existing message and we have streaming content, add a placeholder
+        // This placeholder will be replaced when the final 1111 event arrives
         if (!hasExistingMessage && response.content && response.content.trim() !== '') {
-          // Create a synthetic event for the streaming message
-          const syntheticEvent = new NDKEvent(ndk)
-          syntheticEvent.pubkey = agentPubkey
-          syntheticEvent.content = '' // Empty content - streaming will show in MessageWithReplies
-          syntheticEvent.created_at = Math.floor(Date.now() / 1000)
-          syntheticEvent.id = `streaming-${agentPubkey}` // Synthetic ID
-          syntheticEvent.kind = EVENT_KINDS.THREAD_REPLY as NDKKind
-          
           processedMessages.push({
-            id: syntheticEvent.id,
-            content: '', // Empty content - streaming response will be shown
+            id: `streaming-${agentPubkey}`, // Temporary ID until real event arrives
+            content: response.content, // Use the streaming content
             author: {
               pubkey: agentPubkey,
             },
-            createdAt: syntheticEvent.created_at,
+            createdAt: Math.floor(Date.now() / 1000),
             isReply: true,
-            event: syntheticEvent,
+            event: null, // No real event yet, just streaming
+            isStreaming: true, // Flag to indicate this is a streaming message
           })
         }
       })
@@ -245,7 +355,7 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
     // Sort by timestamp
     processedMessages.sort((a, b) => a.createdAt - b.createdAt)
     setMessages(processedMessages)
-  }, [currentThreadEvent, threadReplies, streamingResponses, ndk])
+  }, [currentThreadEvent, threadReplies, relatedTasks, streamingResponses, ndk])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -283,6 +393,8 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
         mentions.forEach(agent => {
           threadEvent.tags.push(['p', agent.pubkey])
         })
+        // If no agents are mentioned in a new thread, don't p-tag anyone
+        // Let the backend routing handle agent selection
 
         // Add voice mode tag if auto-TTS is enabled
         if (autoTTS) {
@@ -308,6 +420,17 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
         mentions.forEach(agent => {
           replyEvent.tags.push(['p', agent.pubkey])
         })
+
+        // If no agents were mentioned, p-tag the most recent non-user message author
+        if (mentions.length === 0 && messages.length > 0) {
+          const mostRecentNonUserMessage = [...messages]
+            .reverse()
+            .find(msg => msg.author.pubkey !== user.pubkey)
+          
+          if (mostRecentNonUserMessage) {
+            replyEvent.tags.push(['p', mostRecentNonUserMessage.author.pubkey])
+          }
+        }
 
         // Add voice mode tag if auto-TTS is enabled
         if (autoTTS) {
@@ -411,17 +534,65 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
         </div>
       )}
       
-      {/* Messages Area */}
+      {/* Messages Area - Slack style */}
       <ScrollArea ref={scrollAreaRef} className="flex-1 overflow-hidden">
-        <div className="p-4">
+        <div className="py-2">
           {messages.length === 0 && !isNewThread ? (
             <div className="flex items-center justify-center min-h-[200px] text-muted-foreground">
               No messages yet. Start the conversation!
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="divide-y divide-transparent">
             {messages.map(message => {
-              // Always use MessageWithReplies if we have the event
+              // Check if this is a streaming message without a real event yet
+              if (message.isStreaming && !message.event) {
+                return (
+                  <div key={message.id} className="hover:bg-muted/30 transition-colors px-4 py-1">
+                    <div className="flex gap-3">
+                      <div className="flex-shrink-0 pt-0.5">
+                        <ProfileDisplay 
+                          pubkey={message.author.pubkey} 
+                          avatarClassName="h-9 w-9 rounded-md"
+                          showName={false}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2 mb-0.5">
+                          <ProfileDisplay 
+                            pubkey={message.author.pubkey} 
+                            showAvatar={false}
+                            nameClassName="text-sm font-semibold text-foreground"
+                          />
+                          <span className="text-xs text-muted-foreground">streaming...</span>
+                        </div>
+                        <div className="markdown-content">
+                          <div className="text-sm break-words text-foreground">
+                            <StreamingMessageContent content={message.content} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+              
+              // Check if this is a task event
+              if (message.event && message.event.kind === EVENT_KINDS.TASK) {
+                const task = new NDKTask(ndk, message.event.rawEvent())
+                return (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => {
+                      // TODO: Navigate to task or open task details
+                      console.log('Task clicked:', task.id)
+                    }}
+                  />
+                )
+              }
+              
+              // Use MessageWithReplies for other real events
               if (message.event) {
                 return (
                   <MessageWithReplies
@@ -455,39 +626,40 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
         </div>
       </ScrollArea>
 
-      {/* Mention Autocomplete Menu */}
-      {showAgentMenu && filteredAgents.length > 0 && (
-        <div className="absolute bottom-28 left-4 right-4 bg-popover border rounded-md shadow-lg p-2 max-h-48 overflow-y-auto z-50">
-          {filteredAgents.map((agent, index) => (
-            <button
-              key={agent.pubkey}
-              className={cn(
-                'w-full text-left px-3 py-2 rounded hover:bg-accent transition-colors',
-                index === selectedAgentIndex && 'bg-accent'
-              )}
-              onClick={() => insertMention(agent)}
-            >
-              <div className="flex items-center gap-2">
-                <ProfileDisplay pubkey={agent.pubkey} showName={false} avatarClassName="h-6 w-6" />
-                <span className="text-sm font-medium">{agent.name}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Input Area */}
       <div className="border-t p-4 flex-shrink-0">
         <div className="flex gap-2">
-          <Textarea
-            ref={textareaRef}
-            value={messageInput}
-            onChange={(e) => handleInputChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={isNewThread ? 'Start a new conversation...' : 'Type a message...'}
-            className="flex-1 min-h-[60px] resize-none"
-            disabled={isSending || isCreatingThread}
-          />
+          <div className="flex-1 relative">
+            {/* Mention Autocomplete Menu - positioned above the textarea */}
+            {showAgentMenu && filteredAgents.length > 0 && (
+              <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border rounded-md shadow-lg p-2 max-h-48 overflow-y-auto z-50">
+                {filteredAgents.map((agent, index) => (
+                  <button
+                    key={agent.pubkey}
+                    className={cn(
+                      'w-full text-left px-3 py-2 rounded hover:bg-accent transition-colors',
+                      index === selectedAgentIndex && 'bg-accent'
+                    )}
+                    onClick={() => insertMention(agent)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <ProfileDisplay pubkey={agent.pubkey} showName={false} avatarClassName="h-6 w-6" />
+                      <span className="text-sm font-medium truncate">{agent.name}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            <Textarea
+              ref={textareaRef}
+              value={messageInput}
+              onChange={(e) => handleInputChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={isNewThread ? 'Start a new conversation...' : 'Type a message...'}
+              className="min-h-[60px] resize-none"
+              disabled={isSending || isCreatingThread}
+            />
+          </div>
           <div className="flex flex-col gap-2">
             <Button
               onClick={() => setIsVoiceDialogOpen(true)}
@@ -512,11 +684,6 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
             </Button>
           </div>
         </div>
-        {isNewThread && (
-          <p className="text-xs text-muted-foreground mt-2">
-            This will create a new thread in the project
-          </p>
-        )}
       </div>
 
       {/* Voice Dialog */}

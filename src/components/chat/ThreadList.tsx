@@ -159,17 +159,6 @@ export function ThreadList({
 
   return (
     <div className={cn('flex flex-col h-full', className)}>
-      {/* Header */}
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
-          Conversations
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          {threads.length} {threads.length === 1 ? 'thread' : 'threads'}
-        </p>
-      </div>
-
       {/* Thread List */}
       <ScrollArea className="flex-1">
         {sortedThreads.length === 0 ? (

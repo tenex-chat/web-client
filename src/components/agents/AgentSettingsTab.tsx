@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NDKAgent } from "@/lib/ndk-events/NDKAgent";
+import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { Volume2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -9,7 +9,7 @@ import { useMurfVoices, getVoiceInfo } from "@/hooks/useMurfVoices";
 import { useTTSConfig } from "@/stores/llmConfig";
 
 interface AgentSettingsTabProps {
-    agent?: NDKAgent;
+    agent?: NDKAgentDefinition;
     agentSlug: string;  // This is actually the agent's pubkey for profile pages
 }
 

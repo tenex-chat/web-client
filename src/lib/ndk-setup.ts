@@ -2,7 +2,7 @@ import NDK, { registerEventClass  } from "@nostr-dev-kit/ndk-hooks";
 import NDKCacheDexie from '@nostr-dev-kit/ndk-cache-dexie'
 import { DEFAULT_RELAYS } from './constants'
 import { NDKProject } from './ndk-events/NDKProject'
-import { NDKAgent } from './ndk-events/NDKAgent'
+import { NDKAgentDefinition } from './ndk-events/NDKAgentDefinition'
 import { NDKTask } from './ndk-events/NDKTask'
 import { NDKMCPTool } from './ndk-events/NDKMCPTool'
 
@@ -21,7 +21,7 @@ export function createNDK(explicitRelayUrls?: string[]) {
 
   // Register custom event classes
   registerEventClass(NDKProject)
-  registerEventClass(NDKAgent)
+  registerEventClass(NDKAgentDefinition)
   registerEventClass(NDKTask)
   registerEventClass(NDKMCPTool)
 

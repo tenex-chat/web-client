@@ -4,7 +4,7 @@ import { Bot, Plus, Search } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { EVENT_KINDS } from "../../lib/constants";
-import { NDKAgent } from "../../lib/ndk-events/NDKAgent";
+import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -14,6 +14,7 @@ import { EmptyState } from "../common/EmptyState";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks';
+import { CreateAgentDialog } from "../dialogs/CreateAgentDialog";
 
 type TabType = "all" | "owned" | "subscribed";
 
@@ -23,6 +24,7 @@ export function AgentsPage() {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState<TabType>("all");
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
     // Fetch all agents (kind 4199)
     const { events: rawAgents } = useSubscribe(
@@ -31,9 +33,9 @@ export function AgentsPage() {
         []
     );
 
-    // Convert raw events to NDKAgent instances
+    // Convert raw events to NDKAgentDefinition instances
     const agents = useMemo(
-        () => (rawAgents || []).map((event) => new NDKAgent(ndk || undefined, event.rawEvent())),
+        () => (rawAgents || []).map((event) => new NDKAgentDefinition(ndk || undefined, event.rawEvent())),
         [rawAgents, ndk]
     );
 
@@ -62,7 +64,7 @@ export function AgentsPage() {
         return filtered;
     }, [agents, searchQuery, activeTab, user]);
 
-    const handleAgentClick = (agent: NDKAgent) => {
+    const handleAgentClick = (agent: NDKAgentDefinition) => {
         navigate({
             to: '/agents/$agentId',
             params: { agentId: agent.pubkey }
@@ -70,7 +72,7 @@ export function AgentsPage() {
     };
 
     const handleCreateAgent = () => {
-        // Agent creation dialog not yet implemented
+        setCreateDialogOpen(true);
     };
 
     const getRoleColor = (role: string) => {
@@ -200,6 +202,11 @@ export function AgentsPage() {
                     )}
                 </div>
             </ScrollArea>
+
+            <CreateAgentDialog 
+                open={createDialogOpen}
+                onOpenChange={setCreateDialogOpen}
+            />
         </div>
     );
 }

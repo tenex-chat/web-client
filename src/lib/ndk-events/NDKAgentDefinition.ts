@@ -1,13 +1,13 @@
 import { NDKEvent, type NDKKind, type NostrEvent } from '@nostr-dev-kit/ndk-hooks'
 import type NDK from '@nostr-dev-kit/ndk-hooks'
 
-export class NDKAgent extends NDKEvent {
+export class NDKAgentDefinition extends NDKEvent {
   static kind: NDKKind = 4199 as NDKKind;
   static kinds: [4199];
 
   constructor(ndk?: NDK, rawEvent?: NostrEvent) {
     super(ndk, rawEvent)
-    this.kind = NDKAgent.kind
+    this.kind = NDKAgentDefinition.kind
     if (!this.tags) {
       this.tags = []
     }
@@ -17,7 +17,7 @@ export class NDKAgent extends NDKEvent {
   }
 
   static from(event: NDKEvent) {
-    return new NDKAgent(event.ndk, event.rawEvent())
+    return new NDKAgentDefinition(event.ndk, event.rawEvent())
   }
 
   get name(): string {

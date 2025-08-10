@@ -1,38 +1,38 @@
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Bot } from "lucide-react";
-import { NDKAgent } from "@/lib/ndk-events/NDKAgent";
+import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { ItemSelector } from "../common/ItemSelector";
 import { AgentCard } from "./AgentCard";
 
 interface AgentSelectorProps {
-    selectedAgents: NDKAgent[];
-    onAgentsChange: (agents: NDKAgent[]) => void;
+    selectedAgents: NDKAgentDefinition[];
+    onAgentsChange: (agents: NDKAgentDefinition[]) => void;
     filterType?: 'all' | 'agent' | 'mcp-server';
 }
 
 export function AgentSelector({ selectedAgents, onAgentsChange }: AgentSelectorProps) {
     const { events: allEvents } = useSubscribe(
-        [{ kinds: [NDKAgent.kind], limit: 100 }],
+        [{ kinds: [NDKAgentDefinition.kind], limit: 100 }],
         {
             closeOnEose: false,
             groupable: false
         }
     );
 
-    // Convert raw events to NDKAgent instances
+    // Convert raw events to NDKAgentDefinition instances
     const agentEvents = allEvents.map(event => {
-        const agent = new NDKAgent(event.ndk);
+        const agent = new NDKAgentDefinition(event.ndk);
         Object.assign(agent, event);
         return agent;
     });
 
-    const handleAgentSelect = (agent: NDKAgent) => {
+    const handleAgentSelect = (agent: NDKAgentDefinition) => {
         if (!selectedAgents.find((a) => a.id === agent.id)) {
             onAgentsChange([...selectedAgents, agent]);
         }
     };
 
-    const handleAgentDeselect = (agent: NDKAgent) => {
+    const handleAgentDeselect = (agent: NDKAgentDefinition) => {
         onAgentsChange(selectedAgents.filter((a) => a.id !== agent.id));
     };
 

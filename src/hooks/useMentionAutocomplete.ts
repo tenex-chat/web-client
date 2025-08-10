@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, RefObject } from 'react'
 
-export interface Agent {
+export interface AgentInstance {
   pubkey: string
   name: string
   picture?: string
@@ -8,7 +8,7 @@ export interface Agent {
 }
 
 export function useMentionAutocomplete(
-  agents: Agent[],
+  agents: AgentInstance[],
   input: string,
   setInput: (value: string) => void,
   textareaRef: RefObject<HTMLTextAreaElement>
@@ -90,7 +90,7 @@ export function useMentionAutocomplete(
   }, [showAgentMenu, filteredAgents, selectedAgentIndex])
 
   // Insert selected mention
-  const insertMention = useCallback((agent: Agent) => {
+  const insertMention = useCallback((agent: AgentInstance) => {
     if (mentionStartIndex === -1) return
 
     const beforeMention = input.slice(0, mentionStartIndex)
@@ -117,11 +117,11 @@ export function useMentionAutocomplete(
   }, [input, mentionStartIndex, searchQuery, setInput, textareaRef])
 
   // Extract mentioned agents from the input
-  const extractMentions = useCallback((): Agent[] => {
+  const extractMentions = useCallback((): AgentInstance[] => {
     const mentionPattern = /@(\w+(?:\s+\w+)*)/g
     const matches = [...input.matchAll(mentionPattern)]
     
-    const mentionedAgents: Agent[] = []
+    const mentionedAgents: AgentInstance[] = []
     
     for (const match of matches) {
       const mentionName = match[1].trim()

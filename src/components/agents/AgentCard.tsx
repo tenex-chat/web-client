@@ -1,14 +1,14 @@
 import { Bot } from "lucide-react";
 import { memo } from "react";
-import type { NDKAgent } from "@/lib/ndk-events/NDKAgent";
+import type { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { ProfileDisplay } from "../common/ProfileDisplay";
 import { SelectableCard } from "../common/SelectableCard";
 
 interface AgentCardProps {
-    agent: NDKAgent;
+    agent: NDKAgentDefinition;
     isSelected: boolean;
-    onSelect: (agent: NDKAgent) => void;
-    onDeselect: (agent: NDKAgent) => void;
+    onSelect: (agent: NDKAgentDefinition) => void;
+    onDeselect: (agent: NDKAgentDefinition) => void;
 }
 
 export const AgentCard = memo(function AgentCard({

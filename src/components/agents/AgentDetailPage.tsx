@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Bot, Settings, Copy, CheckCircle2 } from "lucide-react";
 import { EVENT_KINDS } from "../../lib/constants";
-import { NDKAgent } from "../../lib/ndk-events/NDKAgent";
+import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks';
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -13,7 +13,7 @@ import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
 import { EmptyState } from "../common/EmptyState";
 
-// This component shows an NDKAgent definition (the "class" not the instance)
+// This component shows an NDKAgentDefinition definition (the "class" not the instance)
 export function AgentDetailPage() {
     const { agentId } = useParams({ from: '/agents/$agentId' });
     const { ndk } = useNDK();
@@ -33,7 +33,7 @@ export function AgentDetailPage() {
     );
 
     const agent = useMemo(
-        () => agentEvents?.[0] ? new NDKAgent(ndk || undefined, agentEvents[0].rawEvent()) : null,
+        () => agentEvents?.[0] ? new NDKAgentDefinition(ndk || undefined, agentEvents[0].rawEvent()) : null,
         [agentEvents, ndk]
     );
 

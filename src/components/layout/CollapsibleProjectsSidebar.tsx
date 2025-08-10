@@ -7,6 +7,7 @@ import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
 import { useProjectSubscriptions } from '@/hooks/useProjectSubscriptions'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ProjectAvatar } from '@/components/ui/project-avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,7 +90,8 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
       <Sidebar collapsible="icon" className="border-r">
         <SidebarHeader>
           <SidebarMenu>
-            <SidebarMenuItem>
+            {/* Header content - only visible when expanded */}
+            <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
               <div className="flex items-center justify-between">
                 <SidebarMenuButton size="lg" asChild>
                   <Link to="/projects" params={{}}>
@@ -97,62 +99,7 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                     <span className="font-bold">TENEX</span>
                   </Link>
                 </SidebarMenuButton>
-                <div className="flex items-center gap-1 group-data-[collapsible=icon]:hidden">
-                  {/* User Profile Dropdown - only visible when expanded */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                      >
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={userProfile?.image} />
-                          <AvatarFallback>
-                            {userProfile?.name?.[0]?.toUpperCase() || <User className="h-3 w-3" />}
-                          </AvatarFallback>
-                        </Avatar>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      {userProfile && (
-                        <div className="px-2 py-1.5">
-                          <p className="text-sm font-medium">
-                            {userProfile.name || userProfile.displayName || 'User'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {userProfile.nip05 || userProfile.lud16 || ''}
-                          </p>
-                        </div>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to="/agents" params={{}}>
-                          <Bot className="h-4 w-4 mr-2" />
-                          Agents
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/mcp-tools" params={{}}>
-                          <Wrench className="h-4 w-4 mr-2" />
-                          MCP Tools
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/settings" params={{}}>
-                          <Settings className="h-4 w-4 mr-2" />
-                          Settings
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout}>
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <SidebarTrigger className="h-8 w-8" />
-                </div>
+                <SidebarTrigger className="h-8 w-8" />
               </div>
             </SidebarMenuItem>
             {/* Sidebar toggle when collapsed - separate item */}
@@ -165,21 +112,7 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
         </SidebarHeader>
 
           <SidebarContent>
-            {/* Quick actions when collapsed */}
-            <SidebarGroup className="group-data-[collapsible=icon]:flex hidden">
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <SidebarMenuButton onClick={() => setSearchDialogOpen(true)}>
-                        <Search className="h-5 w-5" />
-                      </SidebarMenuButton>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Global Search (⌘K)</TooltipContent>
-                  </Tooltip>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroup>
+            {/* Remove quick actions when collapsed - no search button */}
 
             {/* Projects */}
             <SidebarGroup>
@@ -214,22 +147,10 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {/* Add new project button when collapsed */}
-                  <SidebarMenuItem className="group-data-[collapsible=icon]:flex hidden">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <SidebarMenuButton onClick={() => setCreateDialogOpen(true)}>
-                          <Plus className="h-5 w-5" />
-                        </SidebarMenuButton>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        New Project
-                      </TooltipContent>
-                    </Tooltip>
-                  </SidebarMenuItem>
+                  {/* Remove add new project button when collapsed */}
 
                   {/* Projects List */}
-                  <ScrollArea className="h-[400px]">
+                  <ScrollArea className="min-h-[400px]">
                     {sortedProjectsWithStatus.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground text-sm group-data-[collapsible=icon]:hidden">
                         No projects yet
@@ -249,12 +170,11 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                                   onClick={onProjectSelect}
                                 >
                                   <div className="relative">
-                                    <Avatar className="h-6 w-6 shrink-0 group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8">
-                                      <AvatarImage src={project.picture} />
-                                      <AvatarFallback className="text-xs group-data-[collapsible=icon]:text-sm">
-                                        {project.title.slice(0, 2).toUpperCase()}
-                                      </AvatarFallback>
-                                    </Avatar>
+                                    <ProjectAvatar 
+                                      project={project}
+                                      className="h-6 w-6 shrink-0 group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"
+                                      fallbackClassName="text-xs group-data-[collapsible=icon]:text-sm"
+                                    />
                                     {status?.isOnline && (
                                       <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 border border-background group-data-[collapsible=icon]:h-2.5 group-data-[collapsible=icon]:w-2.5" />
                                     )}
@@ -279,37 +199,35 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
             </SidebarContent>
 
             <SidebarFooter>
-              {/* Show user menu when collapsed */}
               <SidebarMenu>
-                <SidebarMenuItem className="group-data-[collapsible=icon]:flex hidden">
+                <SidebarMenuItem>
                   <DropdownMenu>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <DropdownMenuTrigger asChild>
-                          <SidebarMenuButton>
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={userProfile?.picture} />
-                              <AvatarFallback className="text-sm">
-                                {userProfile?.name?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
-                              </AvatarFallback>
-                            </Avatar>
-                          </SidebarMenuButton>
-                        </DropdownMenuTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">Profile Menu</TooltipContent>
-                    </Tooltip>
-                    <DropdownMenuContent side="right" align="end" className="w-56">
-                      {userProfile && (
-                        <div className="px-2 py-1.5">
-                          <p className="text-sm font-medium">
-                            {userProfile.name || userProfile.displayName || 'User'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {userProfile.nip05 || userProfile.lud16 || ''}
-                          </p>
+                    <DropdownMenuTrigger asChild>
+                      <SidebarMenuButton 
+                        size="lg"
+                        className="w-full justify-start group-data-[collapsible=icon]:justify-center"
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={userProfile?.image || userProfile?.picture} />
+                          <AvatarFallback className="text-sm">
+                            {userProfile?.name?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col items-start group-data-[collapsible=icon]:hidden">
+                          <span className="text-sm font-medium">
+                            {userProfile?.name || userProfile?.displayName || 'User'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {userProfile?.nip05 || currentUser?.npub}
+                          </span>
                         </div>
-                      )}
-                      <DropdownMenuSeparator />
+                      </SidebarMenuButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                      side="right" 
+                      align="end" 
+                      className="w-56"
+                    >
                       <DropdownMenuItem asChild>
                         <Link to="/agents" params={{}}>
                           <Bot className="h-4 w-4 mr-2" />

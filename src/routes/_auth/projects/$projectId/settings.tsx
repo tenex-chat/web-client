@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import {
@@ -136,12 +136,6 @@ function ProjectSettingsPage() {
     )
   }
 
-  const initials = formData.title
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
 
   return (
     <AppShell>
@@ -200,10 +194,11 @@ function ProjectSettingsPage() {
                   <CardContent className="space-y-6">
                     {/* Avatar Section */}
                     <div className="flex items-center gap-6">
-                      <Avatar className="h-24 w-24">
-                        <AvatarImage src={formData.picture} />
-                        <AvatarFallback className="text-2xl">{initials || '??'}</AvatarFallback>
-                      </Avatar>
+                      <ProjectAvatar 
+                        project={project} 
+                        className="h-24 w-24"
+                        fallbackClassName="text-2xl"
+                      />
                       <div className="space-y-2">
                         <Label htmlFor="picture">Project Image URL</Label>
                         <div className="flex gap-2">

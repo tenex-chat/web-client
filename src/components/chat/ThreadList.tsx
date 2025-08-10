@@ -2,8 +2,8 @@ import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { useState, useEffect } from 'react'
 import { MessageSquare, ChevronRight, Users } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { PhaseIndicator } from '@/components/ui/phase-indicator'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
@@ -39,6 +39,7 @@ export function ThreadList({
   className 
 }: ThreadListProps) {
   const [threads, setThreads] = useState<Thread[]>([])
+  const [threadPhases, setThreadPhases] = useState<Record<string, string>>({})
 
   // Subscribe to project threads (kind 11 - CHAT)
   // Try subscribing with just kinds filter first to see if we get any events
@@ -52,6 +53,21 @@ export function ThreadList({
       : false,
     {},
     [project?.tagId()]
+  )
+
+  // Subscribe to kind:1111 events that e-tag threads to get phase information
+  const { events: phaseEvents } = useSubscribe(
+    threadEvents && threadEvents.length > 0
+      ? [{
+          kinds: [EVENT_KINDS.THREAD_REPLY as NDKKind],
+          '#e': threadEvents.map(e => e.id),
+        }]
+      : false,
+    {
+      closeOnEose: false,
+      groupable: true,
+    },
+    [threadEvents?.length]
   )
 
   // Subscribe to all thread replies to count them
@@ -136,17 +152,44 @@ export function ThreadList({
     })))
   }, [allReplies])
 
-  const getUserInitials = (name?: string, pubkey?: string) => {
-    if (name) {
-      return name
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    }
-    return pubkey?.slice(0, 2).toUpperCase() || '??'
-  }
+  // Process phase information from kind:1111 events
+  useEffect(() => {
+    if (!phaseEvents || phaseEvents.length === 0) return
+
+    const phases: Record<string, string> = {}
+    const latestEventPerThread: Record<string, { timestamp: number; phase: string }> = {}
+
+    phaseEvents.forEach(event => {
+      // Find which thread this event belongs to
+      const rootTag = event.tags.find(t => t[0] === 'e' && t[3] === 'root')
+      const threadId = rootTag ? rootTag[1] : event.tags.find(t => t[0] === 'e')?.[1]
+
+      if (threadId && event.created_at) {
+        // Extract phase from tags
+        const phaseNewTag = event.tags.find(t => t[0] === 'new-phase')
+        const phaseTag = event.tags.find(t => t[0] === 'phase')
+        const phase = phaseNewTag ? phaseNewTag[1] : (phaseTag ? phaseTag[1] : null)
+        
+        if (phase) {
+          // Only keep the latest phase per thread
+          if (!latestEventPerThread[threadId] || event.created_at > latestEventPerThread[threadId].timestamp) {
+            latestEventPerThread[threadId] = {
+              timestamp: event.created_at,
+              phase: phase
+            }
+          }
+        }
+      }
+    })
+
+    // Extract just the phases
+    Object.entries(latestEventPerThread).forEach(([threadId, data]) => {
+      phases[threadId] = data.phase
+    })
+
+    setThreadPhases(phases)
+  }, [phaseEvents])
+
 
   const getLastActivityTime = (thread: Thread) => {
     return thread.lastReplyAt || thread.createdAt
@@ -162,7 +205,7 @@ export function ThreadList({
       {/* Thread List */}
       <ScrollArea className="flex-1">
         {sortedThreads.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">
+          <div className="p-4 text-center text-muted-foreground">
             <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p className="text-sm">No conversations yet</p>
             <p className="text-xs mt-2">Start a new thread to begin chatting</p>
@@ -178,19 +221,16 @@ export function ThreadList({
                   key={thread.id}
                   onClick={() => onThreadSelect(thread.id)}
                   className={cn(
-                    'w-full text-left p-4 hover:bg-accent/50 transition-colors',
+                    'w-full text-left p-3 hover:bg-accent/50 transition-colors',
                     isSelected && 'bg-accent',
                     hasUnread && 'font-semibold'
                   )}
                 >
-                  <div className="flex items-start gap-3">
-                    {/* Author Avatar */}
-                    <Avatar className="h-10 w-10 shrink-0">
-                      <AvatarImage src={thread.author.picture} />
-                      <AvatarFallback>
-                        {getUserInitials(thread.author.name, thread.author.pubkey)}
-                      </AvatarFallback>
-                    </Avatar>
+                  <div className="flex items-start gap-2.5">
+                    {/* Phase Indicator */}
+                    <div className="shrink-0 pt-2">
+                      <PhaseIndicator phase={threadPhases[thread.id]} className="w-2 h-2" />
+                    </div>
 
                     {/* Thread Info */}
                     <div className="flex-1 min-w-0">
@@ -211,16 +251,16 @@ export function ThreadList({
                       </p>
 
                       {/* Thread Meta */}
-                      <div className="flex items-center gap-3 mt-2">
+                      <div className="flex items-center gap-2 mt-1">
                         {thread.replyCount > 0 && (
-                          <Badge variant="secondary" className="text-xs px-2 py-0">
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0">
                             <MessageSquare className="h-3 w-3 mr-1" />
                             {thread.replyCount}
                           </Badge>
                         )}
                         
                         {thread.participants.size > 1 && (
-                          <Badge variant="secondary" className="text-xs px-2 py-0">
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0">
                             <Users className="h-3 w-3 mr-1" />
                             {thread.participants.size}
                           </Badge>
@@ -241,10 +281,10 @@ export function ThreadList({
       </ScrollArea>
 
       {/* New Thread Button */}
-      <div className="p-4 border-t">
+      <div className="p-3 border-t">
         <button
           onClick={() => onThreadSelect('new')}
-          className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
+          className="w-full py-1.5 px-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
         >
           Start New Conversation
         </button>

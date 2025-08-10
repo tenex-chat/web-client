@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNDK, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { useProject } from '@/hooks/useProject'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { Button } from '@/components/ui/button'
 import { Settings, Users, MessageSquare, Menu, ListTodo, FileText, Bot } from 'lucide-react'
 import { ChatInterface } from '@/components/chat/ChatInterface'
@@ -114,12 +114,6 @@ function ProjectDetailPage() {
     )
   }
 
-  const initials = project.title
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
 
   const handleTaskSelect = (project: NDKProject, taskId: string) => {
     // TODO: Navigate to task detail view
@@ -137,10 +131,11 @@ function ProjectDetailPage() {
         {/* Project Header with integrated tabs */}
         <div className="border-b">
           <div className="flex items-center gap-4 px-4 pt-4 pb-2">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={project.picture} />
-              <AvatarFallback>{initials || '??'}</AvatarFallback>
-            </Avatar>
+            <ProjectAvatar 
+              project={project} 
+              className="h-10 w-10"
+              fallbackClassName="text-sm"
+            />
             
             <div className="flex-1 flex items-center gap-4">
               <div className="flex items-center gap-2">

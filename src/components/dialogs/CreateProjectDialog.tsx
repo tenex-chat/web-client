@@ -28,7 +28,7 @@ import {
   Check
 } from 'lucide-react'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { NDKAgent } from '@/lib/ndk-events/NDKAgent'
+import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition'
 import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
 import { cn } from '@/lib/utils'
 import { EVENT_KINDS } from '@/lib/constants'
@@ -60,7 +60,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set())
 
   // Available items
-  const [availableAgents, setAvailableAgents] = useState<NDKAgent[]>([])
+  const [availableAgents, setAvailableAgents] = useState<NDKAgentDefinition[]>([])
   const [availableTools, setAvailableTools] = useState<NDKMCPTool[]>([])
   const [isLoadingAgents, setIsLoadingAgents] = useState(true)
   const [isLoadingTools, setIsLoadingTools] = useState(true)
@@ -78,7 +78,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
         })
 
         const agents = Array.from(events).map(event => {
-          return new NDKAgent(ndk, event.rawEvent())
+          return new NDKAgentDefinition(ndk, event.rawEvent())
         })
 
         setAvailableAgents(agents)

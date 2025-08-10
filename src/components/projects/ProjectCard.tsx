@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { Badge } from '@/components/ui/badge'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { Circle } from 'lucide-react'
@@ -18,14 +18,6 @@ export function ProjectCard({ project, isActive, isOnline = false, onClick }: Pr
     ? formatDistanceToNow(new Date(project.created_at * 1000), { addSuffix: true })
     : 'Unknown'
 
-  // Get project initials for avatar fallback
-  const initials = project.title
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-
   // Mock unread count (will be replaced with real data)
   const unreadCount = 0
 
@@ -41,12 +33,11 @@ export function ProjectCard({ project, isActive, isOnline = false, onClick }: Pr
     >
       <div className="flex items-start gap-3">
         <div className="relative">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={project.picture} />
-            <AvatarFallback className="text-xs">
-              {initials || '??'}
-            </AvatarFallback>
-          </Avatar>
+          <ProjectAvatar 
+            project={project} 
+            className="h-10 w-10"
+            fallbackClassName="text-xs"
+          />
           {/* Online indicator */}
           <Circle
             className={cn(

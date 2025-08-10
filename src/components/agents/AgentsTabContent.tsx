@@ -3,7 +3,7 @@ import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks';
 import { type NDKKind } from '@nostr-dev-kit/ndk';
 import { Bot, Plus, Settings, Volume2 } from 'lucide-react';
 import { NDKProject } from '@/lib/ndk-events/NDKProject';
-import { NDKAgent } from '@/lib/ndk-events/NDKAgent';
+import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition';
 import { EVENT_KINDS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,7 +50,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
     return project.agents || [];
   }, [project]);
 
-  // Get unique agent pubkeys to fetch their NDKAgent events
+  // Get unique agent pubkeys to fetch their NDKAgentDefinition events
   const agentPubkeys = useMemo(() => {
     const pubkeys = new Set<string>();
     // Add from project tags
@@ -69,9 +69,9 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
     [agentPubkeys.join(',')]
   );
 
-  // Convert events to NDKAgent instances
+  // Convert events to NDKAgentDefinition instances
   const ndkAgents = useMemo(() => {
-    return (agentEvents || []).map(event => new NDKAgent(ndk || undefined, event.rawEvent()));
+    return (agentEvents || []).map(event => new NDKAgentDefinition(ndk || undefined, event.rawEvent()));
   }, [agentEvents, ndk]);
 
   // Combine all sources of agent data
@@ -100,7 +100,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
       });
     });
     
-    // Add/update with NDKAgent data for full details
+    // Add/update with NDKAgentDefinition data for full details
     ndkAgents.forEach(agent => {
       const existing = agentMap.get(agent.pubkey) || {};
       agentMap.set(agent.pubkey, {

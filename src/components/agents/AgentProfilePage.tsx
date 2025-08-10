@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Bot, BookOpen, Copy, CheckCircle2 } from "lucide-react";
 import { EVENT_KINDS } from "../../lib/constants";
-import { NDKAgent } from "../../lib/ndk-events/NDKAgent";
+import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
 import type { NDKAgentLesson } from "../../lib/ndk-events/NDKAgentLesson";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -28,8 +28,8 @@ export function AgentProfilePage() {
     // The agent IS the pubkey - get their profile
     const profile = useProfileValue(pubkey);
 
-    // The pubkey parameter is the agent's pubkey (not the author of an NDKAgent event)
-    // For agent profiles, we may not have an NDKAgent event - the agent might just be in status events
+    // The pubkey parameter is the agent's pubkey (not the author of an NDKAgentDefinition event)
+    // For agent profiles, we may not have an NDKAgentDefinition event - the agent might just be in status events
     const { events: agentEvents } = useSubscribe(
         [{ 
             kinds: [EVENT_KINDS.AGENT_CONFIG as NDKKind], 
@@ -41,7 +41,7 @@ export function AgentProfilePage() {
     );
 
     const agent = useMemo(
-        () => agentEvents?.[0] ? new NDKAgent(ndk || undefined, agentEvents[0].rawEvent()) : null,
+        () => agentEvents?.[0] ? new NDKAgentDefinition(ndk || undefined, agentEvents[0].rawEvent()) : null,
         [agentEvents, ndk]
     );
 

@@ -1,5 +1,4 @@
 import { createRootRoute, Outlet } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import { Provider as JotaiProvider } from 'jotai'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Toaster } from 'sonner'
@@ -10,6 +9,7 @@ import { useRef, useEffect } from 'react'
 import { DEFAULT_RELAYS } from '@/lib/constants'
 import type { NDKCacheAdapter } from '@nostr-dev-kit/ndk-hooks'
 import { registerServiceWorker } from '@/lib/pwa/registerSW'
+import { ThemeProvider } from '@/components/providers/ThemeProvider'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -45,22 +45,21 @@ function RootComponent() {
         }}
       />
       <JotaiProvider>
-        <ErrorBoundary>
-          <div className="min-h-screen bg-background">
-            <Outlet />
-            <Toaster 
-              richColors 
-              position="top-center"
-              toastOptions={{
-                className: 'font-sans',
-              }}
-            />
-            <ShadcnToaster />
-            {process.env.NODE_ENV === 'development' && (
-              <TanStackRouterDevtools position="bottom-right" />
-            )}
-          </div>
-        </ErrorBoundary>
+        <ThemeProvider>
+          <ErrorBoundary>
+            <div className="min-h-screen bg-background">
+              <Outlet />
+              <Toaster 
+                richColors 
+                position="top-center"
+                toastOptions={{
+                  className: 'font-sans',
+                }}
+              />
+              <ShadcnToaster />
+            </div>
+          </ErrorBoundary>
+        </ThemeProvider>
       </JotaiProvider>
     </>
   )

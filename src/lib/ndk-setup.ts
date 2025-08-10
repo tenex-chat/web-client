@@ -5,6 +5,7 @@ import { NDKProject } from './ndk-events/NDKProject'
 import { NDKAgentDefinition } from './ndk-events/NDKAgentDefinition'
 import { NDKTask } from './ndk-events/NDKTask'
 import { NDKMCPTool } from './ndk-events/NDKMCPTool'
+import { NDKAgentLesson } from "./ndk-events/NDKAgentLesson";
 
 export function createNDK(explicitRelayUrls?: string[]) {
   // Setup cache
@@ -16,12 +17,13 @@ export function createNDK(explicitRelayUrls?: string[]) {
   const ndk = new NDK({
     explicitRelayUrls: explicitRelayUrls || DEFAULT_RELAYS,
     cacheAdapter: cache,
-    enableOutboxModel: false,
+    enableOutboxModel: true,
   })
 
   // Register custom event classes
   registerEventClass(NDKProject)
   registerEventClass(NDKAgentDefinition)
+  registerEventClass(NDKAgentLesson)
   registerEventClass(NDKTask)
   registerEventClass(NDKMCPTool)
 

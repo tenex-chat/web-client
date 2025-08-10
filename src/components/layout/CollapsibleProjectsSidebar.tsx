@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { Plus, Settings, LogOut, Search, Bot, Wrench, Home, User } from 'lucide-react'
 import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
 import { useProjectSubscriptions } from '@/hooks/useProjectSubscriptions'
+import { useSortedProjects } from '@/hooks/useSortedProjects'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
@@ -15,7 +16,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useProjectsStore } from '@/stores/projects'
 import {
   Sidebar,
   SidebarContent,
@@ -67,23 +67,8 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
     navigate({ to: '/login' });
   };
 
-  // Use the cached array from the store to prevent infinite loops
-  const projectsWithStatus = useProjectsStore(state => state.projectsWithStatusArray)
-  
-  // Sort projects - online first, then by title
-  const sortedProjectsWithStatus = useMemo(() => {
-    if (!projectsWithStatus || projectsWithStatus.length === 0) {
-      return []
-    }
-    
-    return [...projectsWithStatus].sort((a, b) => {
-      // Sort online projects first, then by title
-      if (a.status?.isOnline !== b.status?.isOnline) {
-        return a.status?.isOnline ? -1 : 1
-      }
-      return a.project.title.localeCompare(b.project.title)
-    })
-  }, [projectsWithStatus])
+  // Use the sorted projects hook for consistent ordering
+  const sortedProjects = useSortedProjects()
 
   return (
     <TooltipProvider>
@@ -151,12 +136,12 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
 
                   {/* Projects List */}
                   <ScrollArea className="min-h-[400px]">
-                    {sortedProjectsWithStatus.length === 0 ? (
+                    {sortedProjects.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground text-sm group-data-[collapsible=icon]:hidden">
                         No projects yet
                       </div>
                     ) : (
-                      sortedProjectsWithStatus.map(({ project, status }) => (
+                      sortedProjects.map(({ project, status }) => (
                         <SidebarMenuItem key={project.id}>
                           <Tooltip>
                             <TooltipTrigger asChild>

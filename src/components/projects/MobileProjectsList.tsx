@@ -5,6 +5,7 @@ import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
 import { useProjectSubscriptions } from '@/hooks/useProjectSubscriptions'
+import { useSortedProjects } from '@/hooks/useSortedProjects'
 import { useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +17,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useProjectsStore } from '@/stores/projects'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -32,29 +32,24 @@ export function MobileProjectsList() {
   // Add keyboard shortcut for global search
   useGlobalSearchShortcut(() => setSearchDialogOpen(true))
 
-  // Use the cached arrays from the store to prevent infinite loops
-  const projectsWithStatus = useProjectsStore(state => state.projectsWithStatusArray)
+  // Use the sorted projects hook for consistent ordering
+  const sortedProjects = useSortedProjects()
   
-  // Filter and sort projects based on search
-  const filteredProjectsWithStatus = useMemo(() => {
-    if (!projectsWithStatus || projectsWithStatus.length === 0) {
+  // Filter projects based on search
+  const filteredProjects = useMemo(() => {
+    if (!sortedProjects || sortedProjects.length === 0) {
       return []
     }
     
-    return projectsWithStatus
-      .filter(({ project }) =>
-        project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.description.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      .sort((a, b) => {
-        // Online projects come first
-        if (a.status?.isOnline !== b.status?.isOnline) {
-          return a.status?.isOnline ? -1 : 1
-        }
-        // Then sort by title
-        return a.project.title.localeCompare(b.project.title)
-      })
-  }, [projectsWithStatus, searchQuery])
+    if (!searchQuery) {
+      return sortedProjects
+    }
+    
+    return sortedProjects.filter(({ project }) =>
+      project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.description.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [sortedProjects, searchQuery])
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -140,12 +135,12 @@ export function MobileProjectsList() {
       {/* Projects List - Telegram Style */}
       <ScrollArea className="flex-1">
         <div className="divide-y">
-          {filteredProjectsWithStatus.length === 0 ? (
+          {filteredProjects.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">
               {searchQuery ? 'No projects found' : 'No projects yet'}
             </div>
           ) : (
-            filteredProjectsWithStatus.map(({ project, status }) => (
+            filteredProjects.map(({ project, status }) => (
               <Link
                 key={project.id}
                 to="/projects/$projectId"

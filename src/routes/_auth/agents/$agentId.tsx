@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { AgentDetailPage } from '../../../components/agents/AgentDetailPage';
+import { AgentDefinitionDetailPage } from '../../../components/agents/AgentDefinitionDetailPage';
 
 export const Route = createFileRoute('/_auth/agents/$agentId')({
-  component: AgentDetailPage,
+  component: AgentDefinitionDetailPage,
 });

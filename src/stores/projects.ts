@@ -4,6 +4,7 @@ import { NDKProjectStatus, type ProjectAgent, type ProjectModel } from "../lib/n
 import type { NDKEvent, NDKSubscription, NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import type NDK from "@nostr-dev-kit/ndk";
 import { useAgentsStore } from "./agents";
+import { useProjectActivityStore } from "./projectActivity";
 
 interface ProjectStatusData {
     statusEvent: NDKProjectStatus | null;
@@ -214,20 +215,13 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             }
             
             // Check for global agents and add them to the agents store
-            console.log(`[ProjectStore] Processing status event for project ${projectId}, checking for global agents`);
-            console.log(`[ProjectStore] Event tags:`, event.tags);
-            
             for (const tag of event.tags) {
                 if (tag[0] === 'agent') {
-                    console.log(`[ProjectStore] Found agent tag:`, tag);
                     if (tag.length >= 4) {
-                        console.log(`[ProjectStore] Agent tag has ${tag.length} elements, 4th element is: "${tag[3]}"`);
                         if (tag[3] === 'global') {
                             console.log(`[ProjectStore] 🌍 GLOBAL AGENT DETECTED! pubkey: ${tag[1]}, slug: ${tag[2]}`);
                             useAgentsStore.getState().addGlobalAgent(tag[1], tag[2]);
                         }
-                    } else {
-                        console.log(`[ProjectStore] Agent tag only has ${tag.length} elements (not global)`);
                     }
                 }
             }
@@ -240,6 +234,17 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                 existingStatus.models.length === status.models.length) {
                 // No change, skip update to prevent re-renders
                 return;
+            }
+            
+            // Update activity timestamp when we receive a status update
+            // Use the event's created_at timestamp for consistency
+            if (status.isOnline || status.lastSeen) {
+                // If online, use current event time; if has lastSeen, use the most recent
+                const timestamp = status.isOnline ? event.created_at : 
+                                 (status.lastSeen ? Math.floor(status.lastSeen.getTime() / 1000) : null);
+                if (timestamp) {
+                    useProjectActivityStore.getState().updateActivity(projectId, timestamp);
+                }
             }
             
             const project = projects.get(projectId);

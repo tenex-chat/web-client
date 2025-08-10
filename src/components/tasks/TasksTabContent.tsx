@@ -39,7 +39,7 @@ export function TasksTabContent({
       {tasks.map((task) => {
         const handleTaskClick = () => {
           markTaskStatusUpdatesSeen(task.id)
-          onTaskSelect(project, task.encode())
+          onTaskSelect(project, task.id)
         }
 
         const unreadCount = taskUnreadMap.get(task.id) || 0

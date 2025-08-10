@@ -14,7 +14,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { EmptyState } from "../common/EmptyState";
 
 // This component shows an NDKAgentDefinition definition (the "class" not the instance)
-export function AgentDetailPage() {
+export function AgentDefinitionDetailPage() {
     const { agentId } = useParams({ from: '/agents/$agentId' });
     const { ndk } = useNDK();
     const user = useNDKCurrentUser();
@@ -63,10 +63,10 @@ export function AgentDetailPage() {
             <div className="flex-1 flex items-center justify-center">
                 <EmptyState
                     icon={<Bot className="w-12 h-12" />}
-                    title="Agent not found"
+                    title="Agent definition not found"
                     description="This agent definition could not be found."
                     action={{
-                        label: "Back to Agents",
+                        label: "Back to Agent Definitions",
                         onClick: handleBack
                     }}
                 />
@@ -95,7 +95,7 @@ export function AgentDetailPage() {
                         </Avatar>
                         <div className="flex-1">
                             <h1 className="text-2xl font-semibold">
-                                {agent.name || "Unnamed Agent"}
+                                {agent.name || "Unnamed Agent Definition"}
                             </h1>
                             <div className="flex items-center gap-2 mt-1">
                                 {agent.role && (

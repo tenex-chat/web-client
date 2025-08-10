@@ -19,7 +19,6 @@ import { Route as AuthAgentsRouteImport } from './routes/_auth/agents'
 import { Route as AuthProjectsIndexRouteImport } from './routes/_auth/projects/index'
 import { Route as AuthAgentsIndexRouteImport } from './routes/_auth/agents/index'
 import { Route as AuthPPubkeyRouteImport } from './routes/_auth/p/$pubkey'
-import { Route as AuthLessonLessonIdRouteImport } from './routes/_auth/lesson.$lessonId'
 import { Route as AuthAgentsRequestsRouteImport } from './routes/_auth/agents/requests'
 import { Route as AuthAgentsAgentIdRouteImport } from './routes/_auth/agents/$agentId'
 import { Route as AuthProjectsProjectIdIndexRouteImport } from './routes/_auth/projects/$projectId/index'
@@ -74,11 +73,6 @@ const AuthPPubkeyRoute = AuthPPubkeyRouteImport.update({
   path: '/p/$pubkey',
   getParentRoute: () => AuthRoute,
 } as any)
-const AuthLessonLessonIdRoute = AuthLessonLessonIdRouteImport.update({
-  id: '/lesson/$lessonId',
-  path: '/lesson/$lessonId',
-  getParentRoute: () => AuthRoute,
-} as any)
 const AuthAgentsRequestsRoute = AuthAgentsRequestsRouteImport.update({
   id: '/requests',
   path: '/requests',
@@ -111,7 +105,6 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthSettingsRoute
   '/agents/$agentId': typeof AuthAgentsAgentIdRoute
   '/agents/requests': typeof AuthAgentsRequestsRoute
-  '/lesson/$lessonId': typeof AuthLessonLessonIdRoute
   '/p/$pubkey': typeof AuthPPubkeyRoute
   '/agents/': typeof AuthAgentsIndexRoute
   '/projects/': typeof AuthProjectsIndexRoute
@@ -125,7 +118,6 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthSettingsRoute
   '/agents/$agentId': typeof AuthAgentsAgentIdRoute
   '/agents/requests': typeof AuthAgentsRequestsRoute
-  '/lesson/$lessonId': typeof AuthLessonLessonIdRoute
   '/p/$pubkey': typeof AuthPPubkeyRoute
   '/agents': typeof AuthAgentsIndexRoute
   '/projects': typeof AuthProjectsIndexRoute
@@ -143,7 +135,6 @@ export interface FileRoutesById {
   '/_auth/settings': typeof AuthSettingsRoute
   '/_auth/agents/$agentId': typeof AuthAgentsAgentIdRoute
   '/_auth/agents/requests': typeof AuthAgentsRequestsRoute
-  '/_auth/lesson/$lessonId': typeof AuthLessonLessonIdRoute
   '/_auth/p/$pubkey': typeof AuthPPubkeyRoute
   '/_auth/agents/': typeof AuthAgentsIndexRoute
   '/_auth/projects/': typeof AuthProjectsIndexRoute
@@ -161,7 +152,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/agents/$agentId'
     | '/agents/requests'
-    | '/lesson/$lessonId'
     | '/p/$pubkey'
     | '/agents/'
     | '/projects/'
@@ -175,7 +165,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/agents/$agentId'
     | '/agents/requests'
-    | '/lesson/$lessonId'
     | '/p/$pubkey'
     | '/agents'
     | '/projects'
@@ -192,7 +181,6 @@ export interface FileRouteTypes {
     | '/_auth/settings'
     | '/_auth/agents/$agentId'
     | '/_auth/agents/requests'
-    | '/_auth/lesson/$lessonId'
     | '/_auth/p/$pubkey'
     | '/_auth/agents/'
     | '/_auth/projects/'
@@ -279,13 +267,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthPPubkeyRouteImport
       parentRoute: typeof AuthRoute
     }
-    '/_auth/lesson/$lessonId': {
-      id: '/_auth/lesson/$lessonId'
-      path: '/lesson/$lessonId'
-      fullPath: '/lesson/$lessonId'
-      preLoaderRoute: typeof AuthLessonLessonIdRouteImport
-      parentRoute: typeof AuthRoute
-    }
     '/_auth/agents/requests': {
       id: '/_auth/agents/requests'
       path: '/requests'
@@ -353,7 +334,6 @@ interface AuthRouteChildren {
   AuthAgentsRoute: typeof AuthAgentsRouteWithChildren
   AuthProjectsRoute: typeof AuthProjectsRouteWithChildren
   AuthSettingsRoute: typeof AuthSettingsRoute
-  AuthLessonLessonIdRoute: typeof AuthLessonLessonIdRoute
   AuthPPubkeyRoute: typeof AuthPPubkeyRoute
 }
 
@@ -361,7 +341,6 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthAgentsRoute: AuthAgentsRouteWithChildren,
   AuthProjectsRoute: AuthProjectsRouteWithChildren,
   AuthSettingsRoute: AuthSettingsRoute,
-  AuthLessonLessonIdRoute: AuthLessonLessonIdRoute,
   AuthPPubkeyRoute: AuthPPubkeyRoute,
 }
 

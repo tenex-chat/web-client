@@ -24,6 +24,7 @@ import { useProjectStatus } from '@/stores/projects'
 import { AgentsTabContent } from '@/components/agents/AgentsTabContent'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { MobileTabs } from '@/components/mobile/MobileTabs'
+import { useProjectActivityStore } from '@/stores/projectActivity'
 
 export const Route = createFileRoute('/_auth/projects/$projectId/')({
   component: ProjectDetailPage,
@@ -44,6 +45,13 @@ function ProjectDetailPage() {
   
   // Use project status from the store
   const projectStatus = useProjectStatus(project?.tagId())
+  
+  // Update activity timestamp when user visits a project
+  useEffect(() => {
+    if (project?.tagId()) {
+      useProjectActivityStore.getState().updateActivity(project.tagId())
+    }
+  }, [project])
   
   // Helper functions for backwards compatibility
   const getOverallStatus = () => projectStatus?.isOnline ? 'online' : 'offline'
@@ -117,8 +125,14 @@ function ProjectDetailPage() {
 
 
   const handleTaskSelect = (_project: NDKProject, taskId: string) => {
-    // TODO: Navigate to task detail view
-    console.log('Task selected:', taskId)
+    // Set the task as the selected thread/conversation
+    setSelectedThreadId(taskId)
+    // Switch to conversations tab to show the task
+    setActiveTab('conversations')
+    // On mobile, switch to chat view
+    if (isMobile) {
+      setMobileView('chat')
+    }
   }
 
   const markTaskStatusUpdatesSeen = (taskId: string) => {
@@ -190,6 +204,10 @@ function ProjectDetailPage() {
               threadId={selectedThreadId || 'new'}
               key={selectedThreadId || 'new'}
               className="h-full"
+              onTaskClick={(taskId) => {
+                setSelectedThreadId(taskId)
+                // Stay in chat view on mobile when clicking a task within chat
+              }}
             />
           )}
         </div>
@@ -342,6 +360,10 @@ function ProjectDetailPage() {
                     threadId={selectedThreadId || 'new'}
                     key={selectedThreadId} // Force remount on thread change
                     className="h-full"
+                    onTaskClick={(taskId) => {
+                      setSelectedThreadId(taskId)
+                      // Desktop already shows chat, just update the thread
+                    }}
                   />
                 </div>
               </div>

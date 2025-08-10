@@ -5,7 +5,7 @@ import { useParams, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Bot, BookOpen, Copy, CheckCircle2 } from "lucide-react";
 import { EVENT_KINDS } from "../../lib/constants";
 import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
-import type { NDKAgentLesson } from "../../lib/ndk-events/NDKAgentLesson";
+import { NDKAgentLesson } from "../../lib/ndk-events/NDKAgentLesson";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -15,6 +15,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { EmptyState } from "../common/EmptyState";
 import { formatRelativeTime } from "../../lib/utils/time";
 import { AgentSettingsTab } from "./AgentSettingsTab";
+// Dialog components removed - using route navigation instead
 
 type TabType = "details" | "lessons" | "settings";
 
@@ -24,6 +25,7 @@ export function AgentProfilePage() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<TabType>("details");
     const [copiedPubkey, setCopiedPubkey] = useState(false);
+    // Dialog state removed - using route navigation instead
     
     // The agent IS the pubkey - get their profile
     const profile = useProfileValue(pubkey);
@@ -47,7 +49,7 @@ export function AgentProfilePage() {
 
     // Fetch lessons for this agent (kind 4129)
     // Lessons reference the agent by pubkey in a p-tag
-    const { events: lessons } =
+    const { events } =
         useSubscribe <
         NDKAgentLesson>(
             pubkey
@@ -61,6 +63,7 @@ export function AgentProfilePage() {
             { wrap: true },
             [pubkey],
         );
+    const lessons = useMemo(() => events.map(e => NDKAgentLesson.from(e)), [events]);
 
     const handleBack = () => {
         // Check if we came from a project page by looking at the history
@@ -81,6 +84,20 @@ export function AgentProfilePage() {
             console.error("Failed to copy pubkey:", error);
         }
     };
+
+    const handleLessonClick = (lesson: NDKAgentLesson) => {
+        // Navigate to the lesson view page
+        navigate({ 
+            to: '/lesson/$lessonId', 
+            params: { 
+                lessonId: lesson.id 
+            }
+        });
+    };
+
+    // Comment handling moved to LessonView component
+
+    // Comments are fetched in the LessonView component
 
     return (
         <div className="flex-1 flex flex-col">
@@ -199,23 +216,53 @@ export function AgentProfilePage() {
                                 />
                             ) : (
                                 lessons.map((lesson) => (
-                                    <Card key={lesson.id}>
+                                    <Card 
+                                        key={lesson.id}
+                                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                        onClick={() => handleLessonClick(lesson)}
+                                    >
                                         <CardHeader>
                                             <div className="flex items-start justify-between">
-                                                <div>
+                                                <div className="flex-1">
                                                     <CardTitle className="text-lg">
                                                         {lesson.title || "Untitled Lesson"}
                                                     </CardTitle>
-                                                    <CardDescription>
-                                                        {formatRelativeTime(lesson.created_at || 0)}
-                                                    </CardDescription>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <CardDescription>
+                                                            {formatRelativeTime(lesson.created_at || 0)}
+                                                        </CardDescription>
+                                                        {lesson.category && (
+                                                            <span className="text-xs bg-muted px-2 py-1 rounded">
+                                                                {lesson.category}
+                                                            </span>
+                                                        )}
+                                                        {lesson.detailed && (
+                                                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                                                                Detailed
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {lesson.hashtags && lesson.hashtags.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mt-2">
+                                                            {lesson.hashtags.map((tag, idx) => (
+                                                                <span 
+                                                                    key={idx} 
+                                                                    className="text-xs text-muted-foreground"
+                                                                >
+                                                                    #{tag}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
                                             <div>
-                                                <h4 className="font-medium mb-2">Lesson</h4>
-                                                <p className="text-muted-foreground">
+                                                <h4 className="font-medium mb-2">
+                                                    Lesson {lesson.detailed && <span className="text-xs font-normal text-muted-foreground">(summary)</span>}
+                                                </h4>
+                                                <p className="text-muted-foreground line-clamp-3">
                                                     {lesson.lesson}
                                                 </p>
                                             </div>
@@ -223,7 +270,7 @@ export function AgentProfilePage() {
                                             {lesson.reasoning && (
                                                 <div>
                                                     <h4 className="font-medium mb-2">Reasoning</h4>
-                                                    <p className="text-muted-foreground">
+                                                    <p className="text-muted-foreground line-clamp-2">
                                                         {lesson.reasoning}
                                                     </p>
                                                 </div>
@@ -232,7 +279,7 @@ export function AgentProfilePage() {
                                             {lesson.metacognition && (
                                                 <div>
                                                     <h4 className="font-medium mb-2">Metacognition</h4>
-                                                    <p className="text-muted-foreground">
+                                                    <p className="text-muted-foreground line-clamp-2">
                                                         {lesson.metacognition}
                                                     </p>
                                                 </div>
@@ -241,7 +288,7 @@ export function AgentProfilePage() {
                                             {lesson.reflection && (
                                                 <div>
                                                     <h4 className="font-medium mb-2">Reflection</h4>
-                                                    <p className="text-muted-foreground">
+                                                    <p className="text-muted-foreground line-clamp-2">
                                                         {lesson.reflection}
                                                     </p>
                                                 </div>
@@ -254,7 +301,7 @@ export function AgentProfilePage() {
 
                         <TabsContent value="settings" className="space-y-4">
                             <AgentSettingsTab 
-                                agent={agent} 
+                                agent={agent || undefined} 
                                 agentSlug={pubkey}
                             />
                         </TabsContent>

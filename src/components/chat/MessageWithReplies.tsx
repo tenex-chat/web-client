@@ -1,12 +1,9 @@
 import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
 import { useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
-import { ChevronDown, ChevronRight, Send, Reply, MoreVertical, Cpu, DollarSign, MessageCircle, Target, Play, CheckCircle, Settings, Volume2, Square, Brain } from 'lucide-react'
+import { ChevronDown, ChevronRight, Send, Reply, MoreVertical, Cpu, DollarSign, Volume2, Square, Brain, Bot, X, MoreHorizontal } from 'lucide-react'
 import { memo, useCallback, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Button } from '@/components/ui/button'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
@@ -21,15 +18,25 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select'
 import { LLMMetadataDialog } from '@/components/dialogs/LLMMetadataDialog'
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import { Link } from '@tanstack/react-router'
 import { useMurfTTS } from '@/hooks/useMurfTTS'
 import { extractTTSContent } from '@/lib/utils/extractTTSContent'
-import { getAgentVoiceConfig } from '@/lib/voice-config'
+import { useAgentTTSConfig, getVoiceDisplayName } from '@/hooks/useAgentTTSConfig'
+import { useMarkdownComponents } from '@/lib/markdown/config'
+import { extractLLMMetadata, getEventPhase, getEventPhaseFrom, getEventLLMModel, getEventLLMProvider, getPhaseIcon } from '@/lib/utils/event-metadata'
+import { useModelSwitching } from '@/hooks/useModelSwitching'
 import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
-import { useAtom } from 'jotai'
-import { llmConfigAtom } from '@/stores/llmConfig'
+import { useProjectOnlineModels } from '@/hooks/useProjectOnlineModels'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { replaceNostrEntities } from '@/lib/utils/nostrEntityParser'
 
 interface MessageWithRepliesProps {
   event: NDKEvent
@@ -52,14 +59,9 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   const [replyInput, setReplyInput] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [showMetadataDialog, setShowMetadataDialog] = useState(false)
-  const [showThinking, setShowThinking] = useState(false)
-  const [llmConfig] = useAtom(llmConfigAtom)
-  
-  // Detect current theme for syntax highlighting
-  const isDarkMode = useMemo(() => {
-    if (typeof window === 'undefined') return false
-    return document.documentElement.classList.contains('dark')
-  }, [])
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const isMobile = useIsMobile()
   
   // Get ONLINE agents to find the agent's name from its pubkey
   const onlineAgents = useProjectOnlineAgents(project.tagId())
@@ -72,50 +74,14 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   }, [onlineAgents, event.pubkey])
   
   // TTS configuration
-  const ttsOptions = useMemo(() => {
-    const ttsConfig = llmConfig?.tts
-    if (!ttsConfig?.enabled || !ttsConfig?.apiKey || !ttsConfig?.voiceId) {
-      return null
-    }
-    
-    // Try to get agent-specific voice configuration
-    let voiceId = ttsConfig.voiceId
-    
-    if (agentSlug) {
-      const agentVoiceConfig = getAgentVoiceConfig(agentSlug)
-      if (agentVoiceConfig?.voiceId) {
-        voiceId = agentVoiceConfig.voiceId
-      }
-    }
-    
-    return {
-      apiKey: ttsConfig.apiKey,
-      voiceId: voiceId,
-      style: ttsConfig.style || 'Conversational',
-      rate: ttsConfig.rate || 1.0,
-      pitch: ttsConfig.pitch || 1.0,
-      volume: ttsConfig.volume || 1.0,
-      enabled: true
-    }
-  }, [llmConfig, agentSlug])
+  const ttsOptions = useAgentTTSConfig(agentSlug || undefined)
+  const voiceName = getVoiceDisplayName(ttsOptions)
   
-  // Get voice name for tooltip
-  const voiceName = useMemo(() => {
-    if (!ttsOptions?.voiceId) return 'Default'
-    
-    // Try to get the agent's configured voice name
-    if (agentSlug) {
-      const agentVoiceConfig = getAgentVoiceConfig(agentSlug)
-      if (agentVoiceConfig?.voiceName) {
-        return agentVoiceConfig.voiceName
-      }
-    }
-    
-    // Fall back to extracting from voice ID
-    const parts = ttsOptions.voiceId.split('-')
-    const name = parts[parts.length - 1]
-    return name ? name.charAt(0).toUpperCase() + name.slice(1) : 'Default'
-  }, [ttsOptions, agentSlug])
+  // Markdown configuration
+  const markdownComponents = useMarkdownComponents({ 
+    isMobile, 
+    onImageClick: setLightboxImage 
+  })
   
   const tts = useMurfTTS(ttsOptions || {
     apiKey: '',
@@ -210,92 +176,99 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 
   const isCurrentUser = event.pubkey === user?.pubkey
 
-  // Extract thinking blocks and clean content
-  const { thinkingBlocks, cleanContent } = useMemo(() => {
-    const content = event.content || ""
+  // Parse content with thinking blocks
+  const { contentParts, shouldTruncate } = useMemo(() => {
+    let content = event.content || ""
+    const parts: Array<{ type: 'text' | 'thinking', content: string }> = []
+    
+    // Special handling for task messages - hide the entire thinking block content
+    if (event.kind === 1934) {
+      const thinkingStart = content.indexOf('<thinking>')
+      if (thinkingStart !== -1) {
+        content = content.substring(0, thinkingStart).trim()
+      }
+      parts.push({ type: 'text', content })
+      return { contentParts: parts, shouldTruncate: false }
+    }
+    
+    // For other messages, check if thinking block is incomplete
+    const thinkingStartCount = (content.match(/<thinking>/g) || []).length
+    const thinkingEndCount = (content.match(/<\/thinking>/g) || []).length
+    
+    if (thinkingStartCount > thinkingEndCount) {
+      // Incomplete thinking block - close it
+      content = content + '</thinking>'
+    }
+    
+    // Split content by thinking blocks
     const thinkingRegex = /<thinking>([\s\S]*?)<\/thinking>/g
-    const blocks: string[] = []
+    let lastIndex = 0
     let match
     
     while ((match = thinkingRegex.exec(content)) !== null) {
-      blocks.push(match[1].trim())
+      // Add text before thinking block
+      if (match.index > lastIndex) {
+        const textBefore = content.substring(lastIndex, match.index).trim()
+        if (textBefore) {
+          parts.push({ type: 'text', content: textBefore })
+        }
+      }
+      
+      // Add thinking block
+      parts.push({ type: 'thinking', content: match[1].trim() })
+      lastIndex = match.index + match[0].length
     }
     
-    // Remove thinking blocks from content
-    const cleaned = content.replace(thinkingRegex, '').trim()
-    
-    return {
-      thinkingBlocks: blocks,
-      cleanContent: cleaned
-    }
-  }, [event.content])
-  
-  // Get first line of thinking for preview
-  const thinkingPreview = useMemo(() => {
-    if (!thinkingBlocks || thinkingBlocks.length === 0) return null
-    const firstBlock = thinkingBlocks[0]
-    const firstLine = firstBlock.split('\n')[0]
-    // Truncate if too long
-    if (firstLine.length > 100) {
-      return firstLine.substring(0, 100) + '...'
-    }
-    return firstLine
-  }, [thinkingBlocks])
-
-  // Helper functions for extracting event metadata
-  const getPhase = () => {
-    // For phase transitions, use new-phase; otherwise fall back to phase
-    return event.tagValue("new-phase") || event.tagValue("phase")
-  }
-
-  const getPhaseFrom = () => {
-    return event.tagValue("phase-from")
-  }
-
-  const getPhaseIcon = (phase: string | null) => {
-    if (!phase) return null
-
-    const phaseIcons = {
-      chat: MessageCircle,
-      plan: Target,
-      execute: Play,
-      review: CheckCircle,
-      chores: Settings,
-    }
-
-    const IconComponent = phaseIcons[phase as keyof typeof phaseIcons]
-    return IconComponent ? <IconComponent className="w-2.5 h-2.5" /> : null
-  }
-
-
-  const getLLMMetadata = () => {
-    const metadata: Record<string, string> = {}
-
-    // Extract all LLM-related tags
-    const llmTags = [
-      "llm-model",
-      "llm-provider",
-      "llm-prompt-tokens",
-      "llm-context-window",
-      "llm-completion-tokens",
-      "llm-total-tokens",
-      "llm-cache-creation-tokens",
-      "llm-cache-read-tokens",
-      "llm-confidence",
-      "llm-cost",
-      "llm-cost-usd",
-      "llm-system-prompt",
-      "llm-user-prompt",
-      "llm-raw-response",
-    ]
-
-    for (const tag of llmTags) {
-      const value = event.tagValue(tag)
-      if (value) {
-        metadata[tag] = value
+    // Add remaining text after last thinking block
+    if (lastIndex < content.length) {
+      const remainingText = content.substring(lastIndex).trim()
+      if (remainingText) {
+        parts.push({ type: 'text', content: remainingText })
       }
     }
+    
+    // If no parts found, treat entire content as text
+    if (parts.length === 0 && content.trim()) {
+      parts.push({ type: 'text', content: content.trim() })
+    }
+    
+    // Check if content should be truncated on mobile
+    const MAX_LENGTH = 280
+    const textOnlyLength = parts
+      .filter(p => p.type === 'text')
+      .reduce((sum, p) => sum + p.content.length, 0)
+    const shouldTruncate = isMobile && textOnlyLength > MAX_LENGTH && !isNested
+    
+    return {
+      contentParts: parts,
+      shouldTruncate
+    }
+  }, [event.content, event.kind, isMobile, isNested])
+  
+  // State for which thinking blocks are expanded
+  const [expandedThinkingBlocks, setExpandedThinkingBlocks] = useState<Set<number>>(new Set())
+  
+  const toggleThinkingBlock = useCallback((index: number) => {
+    setExpandedThinkingBlocks(prev => {
+      const next = new Set(prev)
+      if (next.has(index)) {
+        next.delete(index)
+      } else {
+        next.add(index)
+      }
+      return next
+    })
+  }, [])
 
+  // Extract event metadata using utilities
+  const phase = getEventPhase(event)
+  const phaseFrom = getEventPhaseFrom(event)
+  const llmModel = getEventLLMModel(event)
+  const llmProvider = getEventLLMProvider(event)
+  
+  const llmMetadata = useMemo(() => {
+    const metadata = extractLLMMetadata(event)
+    
     // Also check for system-prompt and user-prompt tags (without llm- prefix)
     const systemPromptValue = event.tagValue("system-prompt")
     if (systemPromptValue && !metadata["llm-system-prompt"]) {
@@ -319,7 +292,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     }
 
     return Object.keys(metadata).length > 0 ? metadata : null
-  }
+  }, [event])
+
+  // Get available models from project status
+  const availableModels = useProjectOnlineModels(project?.tagId())
 
   return (
     <div className={cn(
@@ -371,21 +347,21 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             {/* Action buttons - only visible on hover */}
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
               {/* Phase indicator - inline with hover buttons */}
-              {getPhase() && (
+              {phase && (
                 <Badge 
                   variant="secondary"
                   className={cn(
                     "text-[10px] h-5 px-1.5 gap-0.5",
-                    getPhase()?.toLowerCase() === 'chat' && "bg-blue-500/90 text-white border-blue-600",
-                    getPhase()?.toLowerCase() === 'plan' && "bg-purple-500/90 text-white border-purple-600",
-                    getPhase()?.toLowerCase() === 'execute' && "bg-green-500/90 text-white border-green-600",
-                    getPhase()?.toLowerCase() === 'review' && "bg-orange-500/90 text-white border-orange-600",
-                    getPhase()?.toLowerCase() === 'chores' && "bg-gray-500/90 text-white border-gray-600"
+                    phase?.toLowerCase() === 'chat' && "bg-blue-500/90 text-white border-blue-600",
+                    phase?.toLowerCase() === 'plan' && "bg-purple-500/90 text-white border-purple-600",
+                    phase?.toLowerCase() === 'execute' && "bg-green-500/90 text-white border-green-600",
+                    phase?.toLowerCase() === 'review' && "bg-orange-500/90 text-white border-orange-600",
+                    phase?.toLowerCase() === 'chores' && "bg-gray-500/90 text-white border-gray-600"
                   )}
-                  title={getPhaseFrom() ? `Phase: ${getPhaseFrom()} → ${getPhase()}` : `Phase: ${getPhase()}`}
+                  title={phaseFrom ? `Phase: ${phaseFrom} → ${phase}` : `Phase: ${phase}`}
                 >
-                  {getPhaseIcon(getPhase()?.toLowerCase() || null)}
-                  <span className="ml-0.5">{getPhase()}</span>
+                  {getPhaseIcon(phase?.toLowerCase() || null)}
+                  <span className="ml-0.5">{phase}</span>
                 </Badge>
               )}
               
@@ -427,7 +403,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               </Button>
               
               {/* LLM Metadata Icon */}
-              {getLLMMetadata() && (
+              {llmMetadata && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -483,13 +459,13 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               </DropdownMenu>
               
               {/* Cost indicator */}
-              {(getLLMMetadata()?.["llm-cost-usd"] || getLLMMetadata()?.["llm-cost"]) && (
+              {(llmMetadata?.["llm-cost-usd"] || llmMetadata?.["llm-cost"]) && (
                 <Badge
                   variant="outline"
                   className="text-[10px] h-5 px-1.5 text-green-600 border-green-600"
                 >
                   <DollarSign className="w-3 h-3 mr-0.5" />
-                  {getLLMMetadata()?.["llm-cost-usd"] || getLLMMetadata()?.["llm-cost"]}
+                  {llmMetadata?.["llm-cost-usd"] || llmMetadata?.["llm-cost"]}
                 </Badge>
               )}
             </div>
@@ -505,16 +481,23 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                     components={{
                 // Override default components for better styling
                 p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                a: ({ href, children }) => (
-                  <a 
-                    href={href} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:text-blue-600 underline"
-                  >
-                    {children}
-                  </a>
-                ),
+                a: ({ href, children }) => {
+                  // Check if this is a nostr entity that remark-gfm wrongly converted to a link
+                  if (href && href.startsWith('nostr:')) {
+                    // Just return the plain text, don't make it a link
+                    return <span>{children}</span>
+                  }
+                  return (
+                    <a 
+                      href={href} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:text-blue-600 underline"
+                    >
+                      {children}
+                    </a>
+                  )
+                },
                 strong: ({ children }) => <strong className="font-bold">{children}</strong>,
                 em: ({ children }) => <em className="italic">{children}</em>,
                 code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) => {
@@ -688,11 +671,11 @@ export const MessageWithReplies = memo(function MessageWithReplies({
       )}
       
       {/* LLM Metadata Dialog */}
-      {getLLMMetadata() && (
+      {llmMetadata && (
         <LLMMetadataDialog
           open={showMetadataDialog}
           onOpenChange={setShowMetadataDialog}
-          metadata={getLLMMetadata()!}
+          metadata={llmMetadata}
         />
       )}
     </div>

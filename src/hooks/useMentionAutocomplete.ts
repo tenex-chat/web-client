@@ -118,16 +118,23 @@ export function useMentionAutocomplete(
 
   // Extract mentioned agents from the input
   const extractMentions = useCallback((): AgentInstance[] => {
-    const mentionPattern = /@(\w+(?:\s+\w+)*)/g
+    // More flexible pattern that matches @name with various characters
+    // Matches until we hit whitespace that's not part of the name
+    const mentionPattern = /@([^\s@]+(?:\s+[^\s@]+)*)/g
     const matches = [...input.matchAll(mentionPattern)]
     
     const mentionedAgents: AgentInstance[] = []
     
     for (const match of matches) {
       const mentionName = match[1].trim()
+      // Try exact match first, then try partial match
       const agent = agents.find(a =>
         a.name.toLowerCase() === mentionName.toLowerCase()
+      ) || agents.find(a =>
+        a.name.toLowerCase().includes(mentionName.toLowerCase()) ||
+        mentionName.toLowerCase().includes(a.name.toLowerCase())
       )
+      
       if (agent && !mentionedAgents.find(a => a.pubkey === agent.pubkey)) {
         mentionedAgents.push(agent)
       }

@@ -24,6 +24,7 @@ Based on the directory structure, the application likely includes the following 
 *   **Real-time Protocol:** Nostr, as suggested by the `ndk-events` library.
 *   **State Management:** A dedicated state management library is likely used (`src/stores`).
 *   **Testing:** The project includes end-to-end tests (`e2e/`).
+*   **Blossom Protocol:** Identified as a protocol for media storage, which will influence how media assets are handled within the application.
 
 ## 4. User Interface Preferences
 

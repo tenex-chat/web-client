@@ -8,8 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LLMSettings } from '../settings/LLMSettings';
 import { AppearanceSettings } from '../settings/AppearanceSettings';
 import { NotificationSettings } from '../settings/NotificationSettings';
-import { TTSSettings } from '../settings/TTSSettings';
-;
+import { TTSSettings } from '../settings/TTSSettings'
+import { BlossomSettings } from '../settings/BlossomSettings'
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -50,12 +50,13 @@ export function SettingsPage() {
       {/* Content */}
       <div className="container max-w-6xl mx-auto px-4 py-8">
         <Tabs defaultValue="account" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-[700px]">
+          <TabsList className="grid w-full grid-cols-7 lg:w-[800px]">
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="llm">LLM</TabsTrigger>
             <TabsTrigger value="tts">TTS</TabsTrigger>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="blossom">Upload</TabsTrigger>
             <TabsTrigger value="agents">Agents</TabsTrigger>
           </TabsList>
 
@@ -134,6 +135,11 @@ export function SettingsPage() {
           {/* Notification Settings */}
           <TabsContent value="notifications">
             <NotificationSettings />
+          </TabsContent>
+
+          {/* Blossom Upload Settings */}
+          <TabsContent value="blossom">
+            <BlossomSettings />
           </TabsContent>
 
           {/* Agent Settings */}

@@ -18,7 +18,7 @@ import { CreateAgentDialog } from "../dialogs/CreateAgentDialog";
 
 type TabType = "all" | "owned" | "subscribed";
 
-export function AgentsPage() {
+export function AgentDefinitionsPage() {
     const { ndk } = useNDK();
     const user = useNDKCurrentUser();
     const navigate = useNavigate();
@@ -67,7 +67,7 @@ export function AgentsPage() {
     const handleAgentClick = (agent: NDKAgentDefinition) => {
         navigate({
             to: '/agents/$agentId',
-            params: { agentId: agent.pubkey }
+            params: { agentId: agent.id }
         });
     };
 
@@ -93,9 +93,9 @@ export function AgentsPage() {
                 <div className="max-w-6xl mx-auto px-4 py-4">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <h1 className="text-2xl font-semibold">Agents</h1>
+                            <h1 className="text-2xl font-semibold">Agent Definitions</h1>
                             <p className="text-sm text-muted-foreground mt-1">
-                                AI assistants that help you with your projects
+                                AI assistant templates that can be instantiated for your projects
                             </p>
                         </div>
                         {user && (
@@ -121,8 +121,8 @@ export function AgentsPage() {
                         {user && (
                             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
                                 <TabsList className="grid w-full grid-cols-3">
-                                    <TabsTrigger value="all">All Agents</TabsTrigger>
-                                    <TabsTrigger value="owned">My Agents</TabsTrigger>
+                                    <TabsTrigger value="all">All Definitions</TabsTrigger>
+                                    <TabsTrigger value="owned">My Definitions</TabsTrigger>
                                     <TabsTrigger value="subscribed">Subscribed</TabsTrigger>
                                 </TabsList>
                             </Tabs>
@@ -137,13 +137,13 @@ export function AgentsPage() {
                     {filteredAgents.length === 0 ? (
                         <EmptyState
                             icon={<Bot className="w-12 h-12" />}
-                            title={searchQuery ? "No agents found" : "No agents yet"}
+                            title={searchQuery ? "No agent definitions found" : "No agent definitions yet"}
                             description={
                                 searchQuery 
                                     ? "Try adjusting your search query"
                                     : user 
-                                        ? "Create your first agent to get started"
-                                        : "Sign in to create and manage agents"
+                                        ? "Create your first agent definition to get started"
+                                        : "Sign in to create and manage agent definitions"
                             }
                         />
                     ) : (

@@ -1,7 +1,7 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
 import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { useState, useEffect, useRef, useMemo, RefObject } from 'react'
-import { Send, Loader2, Mic, Phone, PhoneOff, ArrowLeft } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo, RefObject, useCallback } from 'react'
+import { Send, Loader2, Mic, Phone, PhoneOff, ArrowLeft, Paperclip, X, ArrowDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
@@ -17,39 +17,28 @@ import { isAudioEvent } from '@/lib/utils/audioEvents'
 import { MessageWithReplies } from './MessageWithReplies'
 import { useMurfTTS } from '@/hooks/useMurfTTS'
 import { extractTTSContent } from '@/lib/utils/extractTTSContent'
-import { useAtom } from 'jotai'
-import { llmConfigAtom } from '@/stores/llmConfig'
+import { useAgentTTSConfig } from '@/hooks/useAgentTTSConfig'
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight'
-import { useStreamingResponses } from '@/hooks/useStreamingResponses'
-import { TypingIndicator } from './TypingIndicator'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { NDKTask } from '@/lib/ndk-events/NDKTask'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { ChatDropZone } from './ChatDropZone'
+import { ImageUploadQueue } from '@/components/upload/ImageUploadQueue'
+import { ImagePreview } from '@/components/upload/ImagePreview'
+import { useBlossomUpload } from '@/hooks/useBlossomUpload'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface ChatInterfaceProps {
   project: NDKProject
   threadId?: string
   className?: string
   onBack?: () => void
+  onTaskClick?: (taskId: string) => void
 }
 
 interface Message {
-  id: string
-  content: string
-  author: {
-    pubkey: string
-    name?: string
-    picture?: string
-  }
-  createdAt: number
-  isReply?: boolean
-  replyTo?: string
-  event?: NDKEvent | null // Store the original event for audio messages (null for streaming)
-  isStreaming?: boolean // Flag to indicate this is a temporary streaming message
+  id: string // Either event.id or synthetic ID for streaming sessions
+  event: NDKEvent
 }
 
 interface AgentInstance {
@@ -57,86 +46,12 @@ interface AgentInstance {
   name: string
 }
 
-// Component for rendering streaming message content with markdown
-function StreamingMessageContent({ content }: { content: string }) {
-  const isDarkMode = useMemo(() => {
-    if (typeof window === 'undefined') return false
-    return document.documentElement.classList.contains('dark')
-  }, [])
-
-  return (
-    <div className="markdown-content text-sm">
-      <ReactMarkdown 
-        remarkPlugins={[remarkGfm]}
-        components={{
-          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-          a: ({ href, children }) => (
-            <a 
-              href={href} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:text-blue-600 underline"
-            >
-              {children}
-            </a>
-          ),
-          strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-          em: ({ children }) => <em className="italic">{children}</em>,
-          code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) => {
-            const match = /language-(\w+)/.exec(className || '')
-            const isInline = !className || !match
-            
-            if (isInline) {
-              return (
-                <code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono text-xs" {...props}>
-                  {children}
-                </code>
-              )
-            }
-            
-            const language = match ? match[1] : 'text'
-            
-            return (
-              <SyntaxHighlighter
-                language={language}
-                style={isDarkMode ? oneDark : oneLight}
-                customStyle={{
-                  margin: '8px 0',
-                  padding: '12px',
-                  borderRadius: '6px',
-                  fontSize: '0.75rem',
-                  lineHeight: '1.5',
-                }}
-                PreTag="div"
-                {...props}
-              >
-                {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
-            )
-          },
-          ul: ({ children }) => <ul className="list-disc pl-6 mb-2 space-y-1">{children}</ul>,
-          ol: ({ children }) => <ol className="list-decimal pl-6 mb-2 space-y-1">{children}</ol>,
-          li: ({ children }) => <li className="ml-1">{children}</li>,
-          h1: ({ children }) => <h1 className="text-xl font-bold mb-2 mt-3">{children}</h1>,
-          h2: ({ children }) => <h2 className="text-lg font-bold mb-2 mt-3">{children}</h2>,
-          h3: ({ children }) => <h3 className="text-base font-bold mb-1 mt-2">{children}</h3>,
-          h4: ({ children }) => <h4 className="text-sm font-bold mb-1 mt-2">{children}</h4>,
-          blockquote: ({ children }) => (
-            <blockquote className="border-l-4 border-gray-400 dark:border-gray-600 pl-3 my-2 italic opacity-90">
-              {children}
-            </blockquote>
-          ),
-          hr: () => <hr className="my-3 border-gray-300 dark:border-gray-600" />,
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-      <span className="inline-block w-2 h-4 bg-foreground/60 animate-pulse ml-1" />
-    </div>
-  )
+interface StreamingSession {
+  syntheticId: string  // Stable ID for React rendering
+  latestEvent: NDKEvent // The latest 21111 event
 }
 
-export function ChatInterface({ project, threadId, className, onBack }: ChatInterfaceProps) {
+export function ChatInterface({ project, threadId, className, onBack, onTaskClick }: ChatInterfaceProps) {
   const { ndk } = useNDK()
   const user = useNDKCurrentUser()
   const [messages, setMessages] = useState<Message[]>([])
@@ -149,8 +64,28 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
   const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const [llmConfig] = useAtom(llmConfigAtom)
   const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const isMobile = useIsMobile()
+  
+  // Smart scroll state
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const isNearBottomRef = useRef(true)
+  const lastMessageCountRef = useRef(0)
+  const userScrolledRef = useRef(false)
+  
+  // Upload related state with enhanced features
+  const { 
+    uploadFiles, 
+    uploadQueue,
+    handlePaste,
+    uploadStats,
+    cancelUpload,
+    retryUpload
+  } = useBlossomUpload()
+  const [pendingImageUrls, setPendingImageUrls] = useState<string[]>([])
+  const [showUploadProgress, setShowUploadProgress] = useState(false)
 
   // Get ONLINE agents for @mentions (not just configured agents)
   const onlineAgents = useProjectOnlineAgents(project.tagId())
@@ -163,22 +98,8 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
     }))
   }, [onlineAgents])
 
-  // TTS configuration
-  const ttsOptions = useMemo(() => {
-    const ttsConfig = llmConfig?.tts
-    if (!ttsConfig?.enabled || !ttsConfig?.apiKey || !ttsConfig?.voiceId) {
-      return null
-    }
-    return {
-      apiKey: ttsConfig.apiKey,
-      voiceId: ttsConfig.voiceId,
-      style: ttsConfig.style || 'Conversational',
-      rate: ttsConfig.rate || 1.0,
-      pitch: ttsConfig.pitch || 1.0,
-      volume: ttsConfig.volume || 1.0,
-      enabled: true
-    }
-  }, [llmConfig])
+  // TTS configuration (no agent-specific override in chat interface)
+  const ttsOptions = useAgentTTSConfig()
 
   const tts = useMurfTTS(ttsOptions || { apiKey: '', voiceId: '', enabled: false })
 
@@ -212,9 +133,19 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
   }, [ndk, threadId])
 
   // Subscribe to thread messages using NIP-22 threading
+  // Include both 1111 (final) and 21111 (streaming) events
 		const { events: threadReplies } = useSubscribe(
 			currentThreadEvent
-				? [currentThreadEvent.nip22Filter()]
+				? [
+						{
+							kinds: [EVENT_KINDS.THREAD_REPLY as NDKKind, EVENT_KINDS.STREAMING_RESPONSE as NDKKind],
+							"#e": [currentThreadEvent.id],
+						},
+						{
+							kinds: [EVENT_KINDS.THREAD_REPLY as NDKKind, EVENT_KINDS.STREAMING_RESPONSE as NDKKind],
+							"#E": [currentThreadEvent.id],
+						},
+					]
 				: false,
 			{
 				closeOnEose: false,
@@ -241,15 +172,6 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
 			[currentThreadEvent?.id],
 		);
 
-  // Subscribe to streaming responses for the current thread
-  const { streamingResponses } = useStreamingResponses(currentThreadEvent?.id || null)
-
-  // We no longer need a separate typing indicator since streaming messages
-  // are now shown as actual messages in the chat with placeholder events
-  const streamingAgents = useMemo(() => {
-    // Return empty array - typing indicator not needed with placeholder messages
-    return []
-  }, [])
 
   // Auto-play new messages when auto-TTS is enabled
   useEffect(() => {
@@ -258,16 +180,16 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
     const latestMessage = messages[messages.length - 1]
     
     // Don't play messages from the current user
-    if (latestMessage.author.pubkey === user?.pubkey) return
+    if (latestMessage.event.pubkey === user?.pubkey) return
     
     // Don't play the same message twice
     if (latestMessage.id === lastPlayedMessageId) return
     
     // Don't play audio messages (they have their own player)
-    if (latestMessage.event && isAudioEvent(latestMessage.event)) return
+    if (isAudioEvent(latestMessage.event)) return
     
     // Extract and play TTS content
-    const ttsContent = extractTTSContent(latestMessage.content)
+    const ttsContent = extractTTSContent(latestMessage.event.content)
     if (ttsContent && !tts.isPlaying) {
       tts.play(ttsContent).catch((error) => {
         console.error('TTS playback failed:', error)
@@ -276,105 +198,147 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
     }
   }, [messages, autoTTS, ttsOptions, lastPlayedMessageId, user?.pubkey, tts])
 
-  // Process thread replies into messages INCLUDING streaming placeholders AND tasks
+  // Process thread replies into messages with streaming session management
   useEffect(() => {
-    const processedMessages: Message[] = []
+    const finalMessages: Message[] = []
+    const streamingSessions = new Map<string, StreamingSession>()
     
     // Add the thread root message (kind 11) as the first message
     if (currentThreadEvent) {
-      processedMessages.push({
+      finalMessages.push({
         id: currentThreadEvent.id,
-        content: currentThreadEvent.content,
-        author: {
-          pubkey: currentThreadEvent.pubkey,
-          // TODO: Fetch author metadata
-        },
-        createdAt: currentThreadEvent.created_at || 0,
-        isReply: false,
         event: currentThreadEvent,
       })
     }
     
-    // Add all replies
-    if (threadReplies && threadReplies.length > 0) {
-      const replies = threadReplies.map(event => ({
-        id: event.id,
-        content: event.content || '',
-        author: {
-          pubkey: event.pubkey,
-          // TODO: Fetch author metadata
-        },
-        createdAt: event.created_at || 0,
-        isReply: true,
-        event: event, // Store the event for audio messages
-      }))
-      processedMessages.push(...replies)
+    // Combine all events and sort chronologically
+    const allEvents = [
+      ...(threadReplies || []),
+      ...(relatedTasks || [])
+    ].sort((a, b) => (a.created_at || 0) - (b.created_at || 0))
+    
+    // Process events in chronological order
+    for (const event of allEvents) {
+      if (event.kind === EVENT_KINDS.THREAD_REPLY || event.kind === EVENT_KINDS.TASK) {
+        // 1111 or task: Add as final message
+        finalMessages.push({
+          id: event.id,
+          event: event,
+        })
+        
+        // If it's a thread reply, close any streaming session for this author
+        if (event.kind === EVENT_KINDS.THREAD_REPLY) {
+          streamingSessions.delete(event.pubkey)
+        }
+        
+      } else if (event.kind === EVENT_KINDS.STREAMING_RESPONSE) {
+        // 21111: Update or create streaming session
+        let session = streamingSessions.get(event.pubkey)
+        
+        if (!session) {
+          // New streaming session - create stable synthetic ID
+          session = {
+            syntheticId: `streaming-${event.pubkey}-${Date.now()}`,
+            latestEvent: event
+          }
+          streamingSessions.set(event.pubkey, session)
+        } else {
+          // Update existing session with latest event
+          session.latestEvent = event
+        }
+      }
     }
     
-    // Add tasks as messages in chronological order
-    if (relatedTasks && relatedTasks.length > 0) {
-      const taskMessages = relatedTasks.map(event => ({
-        id: event.id,
-        content: event.content || '',
-        author: {
-          pubkey: event.pubkey,
-        },
-        createdAt: event.created_at || 0,
-        isReply: true,
-        event: event, // Store the event for task rendering
-      }))
-      processedMessages.push(...taskMessages)
-    }
-
-    // Add placeholder messages for agents that are streaming but haven't sent their final 1111 yet
-    if (streamingResponses && streamingResponses.size > 0) {
-      streamingResponses.forEach((response, agentPubkey) => {
-        // Check if we already have a final message from this agent
-        const hasExistingMessage = processedMessages.some(
-          msg => msg.author.pubkey === agentPubkey
-        )
-        
-        // If no existing message and we have streaming content, add a placeholder
-        // This placeholder will be replaced when the final 1111 event arrives
-        if (!hasExistingMessage && response.content && response.content.trim() !== '') {
-          processedMessages.push({
-            id: `streaming-${agentPubkey}`, // Temporary ID until real event arrives
-            content: response.content, // Use the streaming content
-            author: {
-              pubkey: agentPubkey,
-            },
-            createdAt: Math.floor(Date.now() / 1000),
-            isReply: true,
-            event: null, // No real event yet, just streaming
-            isStreaming: true, // Flag to indicate this is a streaming message
-          })
-        }
+    // Add active streaming sessions to final messages
+    streamingSessions.forEach(session => {
+      finalMessages.push({
+        id: session.syntheticId,  // Stable ID prevents flicker
+        event: session.latestEvent,
       })
+    })
+    
+    // Sort everything by timestamp
+    finalMessages.sort((a, b) => 
+      (a.event.created_at || 0) - (b.event.created_at || 0)
+    )
+    
+    setMessages(finalMessages)
+  }, [currentThreadEvent, threadReplies, relatedTasks])
+
+  // Helper function to check if user is near bottom
+  const checkIfNearBottom = useCallback((container: Element) => {
+    const threshold = 100 // pixels from bottom to consider "near bottom"
+    const scrollBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+    return scrollBottom <= threshold
+  }, [])
+  
+  // Helper function to scroll to bottom
+  const scrollToBottom = useCallback((smooth = true) => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
+      if (scrollContainer) {
+        scrollContainer.scrollTo({
+          top: scrollContainer.scrollHeight,
+          behavior: smooth ? 'smooth' : 'auto'
+        })
+        setShowScrollToBottom(false)
+        setUnreadCount(0)
+        isNearBottomRef.current = true
+      }
     }
-
-    // Sort by timestamp
-    processedMessages.sort((a, b) => a.createdAt - b.createdAt)
-    setMessages(processedMessages)
-  }, [currentThreadEvent, threadReplies, relatedTasks, streamingResponses, ndk])
-
-  // Auto-scroll to bottom when new messages arrive
+  }, [])
+  
+  // Smart auto-scroll when new messages arrive
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
       if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight
+        // Check if we have new messages
+        const hasNewMessages = messages.length > lastMessageCountRef.current
+        const isInitialLoad = lastMessageCountRef.current === 0 && messages.length > 0
+        
+        // Auto-scroll only if:
+        // 1. Initial load OR
+        // 2. User is near bottom and hasn't manually scrolled away OR
+        // 3. User just sent a message
+        if (isInitialLoad || (isNearBottomRef.current && !userScrolledRef.current)) {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight
+        } else if (hasNewMessages && !isNearBottomRef.current) {
+          // User is reading history and new messages arrived
+          const newMessageCount = messages.length - lastMessageCountRef.current
+          setUnreadCount(prev => prev + newMessageCount)
+          setShowScrollToBottom(true)
+        }
+        
+        lastMessageCountRef.current = messages.length
+        
+        // Reset userScrolledRef after processing
+        if (hasNewMessages) {
+          userScrolledRef.current = false
+        }
       }
     }
-  }, [messages])
+  }, [messages, checkIfNearBottom])
 
   const handleSendMessage = async () => {
-    if (!ndk || !user || !messageInput.trim()) return
+    if (!ndk || !user || (!messageInput.trim() && pendingImageUrls.length === 0)) return
 
     setIsSending(true)
 
     try {
       // Extract mentioned agents
       const mentions = extractMentions()
+      
+      // Build message content with images
+      let content = messageInput
+      
+      // Append image URLs to the message content
+      if (pendingImageUrls.length > 0) {
+        if (content) content += '\n\n'
+        pendingImageUrls.forEach(url => {
+          content += `![image](${url})\n`
+        })
+      }
 
       // If this is a new thread, create it first
       if (!currentThreadEvent) {
@@ -383,11 +347,29 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
         // Create the initial thread event (kind 11)
         const threadEvent = new NDKEvent(ndk)
         threadEvent.kind = EVENT_KINDS.CHAT
-        threadEvent.content = messageInput
+        threadEvent.content = content
         threadEvent.tags = [
-          ['title', messageInput.slice(0, 50)], // Use first 50 chars as title
+          ['title', messageInput.slice(0, 50) || 'Image'], // Use first 50 chars as title or 'Image'
           ['a', project.tagId()], // NIP-33 reference to the project
         ]
+
+        // Add image tags for each uploaded image
+        if (pendingImageUrls.length > 0) {
+          const completedUploads = uploadQueue.filter(item => 
+            item.status === 'completed' && 
+            item.url && 
+            pendingImageUrls.includes(item.url)
+          )
+          
+          completedUploads.forEach(upload => {
+            if (upload.metadata) {
+              threadEvent.tags.push(['image', upload.metadata.sha256, upload.url!, upload.metadata.mimeType, upload.metadata.size.toString()])
+              if (upload.metadata.blurhash) {
+                threadEvent.tags.push(['blurhash', upload.metadata.blurhash])
+              }
+            }
+          })
+        }
 
         // Add p-tags for mentioned agents
         mentions.forEach(agent => {
@@ -408,13 +390,31 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
         // Send a reply to the existing thread
         const replyEvent = currentThreadEvent.reply()
         replyEvent.kind = EVENT_KINDS.THREAD_REPLY
-        replyEvent.content = messageInput
+        replyEvent.content = content
 
         // Remove all p-tags that NDK's .reply() generated
         replyEvent.tags = replyEvent.tags.filter((tag) => tag[0] !== "p")
 
         // Add project tag
         replyEvent.tags.push(['a', project.tagId()])
+        
+        // Add image tags for each uploaded image
+        if (pendingImageUrls.length > 0) {
+          const completedUploads = uploadQueue.filter(item => 
+            item.status === 'completed' && 
+            item.url && 
+            pendingImageUrls.includes(item.url)
+          )
+          
+          completedUploads.forEach(upload => {
+            if (upload.metadata) {
+              replyEvent.tags.push(['image', upload.metadata.sha256, upload.url!, upload.metadata.mimeType, upload.metadata.size.toString()])
+              if (upload.metadata.blurhash) {
+                replyEvent.tags.push(['blurhash', upload.metadata.blurhash])
+              }
+            }
+          })
+        }
 
         // Add p-tags for mentioned agents
         mentions.forEach(agent => {
@@ -425,10 +425,10 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
         if (mentions.length === 0 && messages.length > 0) {
           const mostRecentNonUserMessage = [...messages]
             .reverse()
-            .find(msg => msg.author.pubkey !== user.pubkey)
+            .find(msg => msg.event.pubkey !== user.pubkey)
           
           if (mostRecentNonUserMessage) {
-            replyEvent.tags.push(['p', mostRecentNonUserMessage.author.pubkey])
+            replyEvent.tags.push(['p', mostRecentNonUserMessage.event.pubkey])
           }
         }
 
@@ -440,14 +440,53 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
         await replyEvent.publish()
       }
 
-      // Clear input
+      // Clear input and pending images
       setMessageInput('')
+      setPendingImageUrls([])
+      
+      // Auto-scroll to bottom after sending a message
+      setTimeout(() => {
+        scrollToBottom(true)
+        isNearBottomRef.current = true
+        userScrolledRef.current = false
+      }, 100)
     } catch (error) {
       console.error('Failed to send message:', error)
     } finally {
       setIsSending(false)
     }
   }
+
+  // Handle file selection from input
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      setShowUploadProgress(true)
+      await uploadFiles(Array.from(files))
+    }
+    // Clear the input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }, [uploadFiles])
+  
+  // Enhanced paste handler  
+  const handlePasteEvent = useCallback((e: React.ClipboardEvent) => {
+    handlePaste(e)
+    setShowUploadProgress(true)
+  }, [handlePaste])
+  
+  // Monitor upload queue for completed uploads
+  useEffect(() => {
+    const completedUrls = uploadQueue
+      .filter(item => item.status === 'completed' && item.url)
+      .map(item => item.url!)
+      .filter(url => !pendingImageUrls.includes(url))
+    
+    if (completedUrls.length > 0) {
+      setPendingImageUrls(prev => [...prev, ...completedUrls])
+    }
+  }, [uploadQueue, pendingImageUrls])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // First check for mention autocomplete
@@ -480,17 +519,22 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
   }, [currentThreadEvent, isNewThread])
 
   return (
-    <div 
-      className={cn('flex flex-col h-full overflow-hidden', className)}
-      style={{
-        paddingBottom: isKeyboardVisible ? keyboardHeight : 0,
-        transition: 'padding-bottom 0.3s ease-in-out'
-      }}
-    >
+    <ChatDropZone className={cn('flex flex-col h-full overflow-hidden', className)}>
+      <div 
+        className="flex flex-col h-full"
+        style={{
+          paddingBottom: isKeyboardVisible ? keyboardHeight : 0,
+          transition: 'padding-bottom 0.3s ease-in-out'
+        }}
+        onPaste={handlePasteEvent}
+      >
       {/* Header */}
       {threadId && (
         <div className="bg-card border-b border-border/60 backdrop-blur-xl bg-card/95 sticky top-0 z-50">
-          <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">
+          <div className={cn(
+            "flex items-center justify-between",
+            isMobile ? "px-3 py-2" : "px-3 sm:px-4 py-3 sm:py-4"
+          )}>
             <div className="flex items-center gap-2 sm:gap-3">
               {onBack && (
                 <Button
@@ -503,10 +547,16 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
                 </Button>
               )}
               <div className="flex-1 min-w-0">
-                <h1 className="text-lg sm:text-xl font-semibold text-foreground truncate max-w-48">
+                <h1 className={cn(
+                  "font-semibold text-foreground truncate",
+                  isMobile ? "text-base max-w-40" : "text-lg sm:text-xl max-w-48"
+                )}>
                   {threadTitle}
                 </h1>
-                <p className="text-xs text-muted-foreground mt-0.5">Thread discussion</p>
+                <p className={cn(
+                  "text-muted-foreground",
+                  isMobile ? "text-[10px] mt-0" : "text-xs mt-0.5"
+                )}>Thread discussion</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -534,9 +584,34 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
         </div>
       )}
       
-      {/* Messages Area - Slack style */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1 overflow-hidden">
-        <div className="py-2">
+      {/* Messages Area */}
+      <div className="flex-1 overflow-hidden relative">
+        <ScrollArea 
+          ref={scrollAreaRef} 
+          className="h-full pb-4"
+          onScrollCapture={(e) => {
+            const container = e.currentTarget?.querySelector('[data-radix-scroll-area-viewport]')
+            if (!container) return
+            
+            // Track if user is near bottom
+            const wasNearBottom = isNearBottomRef.current
+            isNearBottomRef.current = checkIfNearBottom(container)
+            
+            // If user scrolled away from bottom, mark as user-initiated scroll
+            if (wasNearBottom && !isNearBottomRef.current) {
+              userScrolledRef.current = true
+            }
+            
+            // Update scroll-to-bottom button visibility
+            setShowScrollToBottom(!isNearBottomRef.current)
+            
+            // If scrolled back to bottom, clear unread count
+            if (isNearBottomRef.current) {
+              setUnreadCount(0)
+            }
+          }}
+        >
+        <div className={isMobile ? "py-0 pb-20" : "py-2 pb-20"}>
           {messages.length === 0 && !isNewThread ? (
             <div className="flex items-center justify-center min-h-[200px] text-muted-foreground">
               No messages yet. Start the conversation!
@@ -544,59 +619,29 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
           ) : (
             <div className="divide-y divide-transparent">
             {messages.map(message => {
-              // Check if this is a streaming message without a real event yet
-              if (message.isStreaming && !message.event) {
+              // Check if this is a task event
+              if (message.event.kind === EVENT_KINDS.TASK) {
+                const task = new NDKTask(ndk!, message.event.rawEvent())
                 return (
-                  <div key={message.id} className="hover:bg-muted/30 transition-colors px-4 py-1">
-                    <div className="flex gap-3">
-                      <div className="flex-shrink-0 pt-0.5">
-                        <ProfileDisplay 
-                          pubkey={message.author.pubkey} 
-                          avatarClassName="h-9 w-9 rounded-md"
-                          showName={false}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2 mb-0.5">
-                          <ProfileDisplay 
-                            pubkey={message.author.pubkey} 
-                            showAvatar={false}
-                            nameClassName="text-sm font-semibold text-foreground"
-                          />
-                          <span className="text-xs text-muted-foreground">streaming...</span>
-                        </div>
-                        <div className="markdown-content">
-                          <div className="text-sm break-words text-foreground">
-                            <StreamingMessageContent content={message.content} />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                  <div key={message.id} data-message-author={message.event.pubkey}>
+                    <TaskCard
+                      task={task}
+                      className="cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => {
+                        // Open the task as a conversation
+                        if (onTaskClick) {
+                          onTaskClick(task.id)
+                        }
+                      }}
+                    />
                   </div>
                 )
               }
               
-              // Check if this is a task event
-              if (message.event && message.event.kind === EVENT_KINDS.TASK) {
-                const task = new NDKTask(ndk, message.event.rawEvent())
-                return (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {
-                      // TODO: Navigate to task or open task details
-                      console.log('Task clicked:', task.id)
-                    }}
-                  />
-                )
-              }
-              
-              // Use MessageWithReplies for other real events
-              if (message.event) {
-                return (
+              // All other events (1111, 21111, etc) go through MessageWithReplies
+              return (
+                <div key={message.id} data-message-author={message.event.pubkey}>
                   <MessageWithReplies
-                    key={message.id}
                     event={message.event}
                     project={project}
                     onReply={() => {
@@ -606,29 +651,135 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
                       }
                     }}
                   />
-                )
-              }
-              
-              // This should never happen but keep minimal fallback
-              return (
-                <div key={message.id} className="text-muted-foreground">
-                  Error: No event data for message
                 </div>
               )
             })}
-            
-            {/* Show typing indicator for agents that are streaming */}
-            {streamingAgents.length > 0 && (
-              <TypingIndicator users={streamingAgents} className="mt-4" />
-            )}
             </div>
           )}
         </div>
       </ScrollArea>
+      
+      {/* Scroll to bottom button */}
+      <AnimatePresence>
+        {showScrollToBottom && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="absolute bottom-4 right-4 z-30"
+          >
+            <Button
+              onClick={() => scrollToBottom(true)}
+              size="icon"
+              className={cn(
+                "rounded-full shadow-lg",
+                "bg-primary hover:bg-primary/90",
+                "w-10 h-10",
+                unreadCount > 0 && "animate-pulse"
+              )}
+            >
+              <div className="relative">
+                <ArrowDown className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      </div>
 
       {/* Input Area */}
-      <div className="border-t p-4 flex-shrink-0">
-        <div className="flex gap-2">
+      <div className={cn(
+        "flex-shrink-0 relative",
+        isMobile ? "p-3 pb-safe" : "p-4"
+      )}>
+        <div className={cn(
+          "relative rounded-2xl",
+          "bg-background/80 backdrop-blur-xl",
+          "border border-border/50",
+          "shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)]",
+          isMobile ? "" : "max-w-4xl mx-auto"
+        )}>
+        {/* Enhanced pending images display with animation */}
+        <AnimatePresence>
+          {pendingImageUrls.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className={cn(
+                "flex flex-wrap gap-2 border-b border-border/30",
+                isMobile ? "p-2 pb-3" : "p-3 pb-4"
+              )}>
+                {pendingImageUrls.map((url, index) => {
+                  const uploadItem = uploadQueue.find(item => item.url === url)
+                  return (
+                    <motion.div
+                      key={url}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="relative group"
+                    >
+                      <ImagePreview
+                        url={url}
+                        alt="Pending upload"
+                        className="w-16 h-16 rounded-lg border border-border/50"
+                        showLightbox={false}
+                      />
+                      
+                      {/* Upload status overlay */}
+                      {uploadItem && uploadItem.status === 'uploading' && (
+                        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                          <div className="text-white text-xs font-medium">
+                            {uploadItem.progress}%
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Actions */}
+                      <div className="absolute -top-1.5 -right-1.5 flex gap-0.5">
+                        {uploadItem?.status === 'failed' && (
+                          <button
+                            onClick={() => retryUpload(uploadItem.id)}
+                            className="bg-orange-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                            title="Retry upload"
+                          >
+                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setPendingImageUrls(prev => prev.filter((_, i) => i !== index))
+                            if (uploadItem) {
+                              cancelUpload(uploadItem.id)
+                            }
+                          }}
+                          className="bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <div className={cn(
+          "flex items-end",
+          isMobile ? "gap-1.5 p-2" : "gap-2 p-3"
+        )}>
           <div className="flex-1 relative">
             {/* Mention Autocomplete Menu - positioned above the textarea */}
             {showAgentMenu && filteredAgents.length > 0 && (
@@ -656,33 +807,90 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={isNewThread ? 'Start a new conversation...' : 'Type a message...'}
-              className="min-h-[60px] resize-none"
+              className={cn(
+                "resize-none bg-transparent border-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                "placeholder:text-muted-foreground/60",
+                "transition-all duration-200",
+                isMobile ? "min-h-[40px] text-[15px] py-2.5 px-1 leading-relaxed" : "min-h-[56px] text-base py-3 px-2"
+              )}
               disabled={isSending || isCreatingThread}
             />
           </div>
-          <div className="flex flex-col gap-2">
+          <div className={cn(
+            "flex items-center",
+            isMobile ? "gap-1" : "gap-2"
+          )}>
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
             <Button
-              onClick={() => setIsVoiceDialogOpen(true)}
+              onClick={() => fileInputRef.current?.click()}
               disabled={isSending || isCreatingThread}
               size="icon"
-              variant="outline"
-              className="self-end"
+              variant="ghost"
+              className={cn(
+                "rounded-full transition-all duration-200",
+                "hover:bg-accent/80 hover:scale-110",
+                "active:scale-95",
+                isMobile ? "h-9 w-9" : "h-10 w-10"
+              )}
+              title="Attach image"
             >
-              <Mic className="h-4 w-4" />
+              <Paperclip className={cn(
+                "transition-colors",
+                isMobile ? "h-4 w-4" : "h-4.5 w-4.5"
+              )} />
             </Button>
+            {!isMobile && (
+              <Button
+                onClick={() => setIsVoiceDialogOpen(true)}
+                disabled={isSending || isCreatingThread}
+                size="icon"
+                variant="ghost"
+                className={cn(
+                  "rounded-full transition-all duration-200",
+                  "hover:bg-accent/80 hover:scale-110",
+                  "active:scale-95",
+                  "h-10 w-10"
+                )}
+              >
+                <Mic className="h-4.5 w-4.5" />
+              </Button>
+            )}
             <Button
               onClick={handleSendMessage}
-              disabled={!messageInput.trim() || isSending || isCreatingThread}
+              disabled={(!messageInput.trim() && pendingImageUrls.length === 0) || isSending || isCreatingThread}
               size="icon"
-              className="self-end"
+              className={cn(
+                "rounded-full transition-all duration-200",
+                "bg-primary hover:bg-primary/90",
+                "hover:scale-110 active:scale-95",
+                "disabled:opacity-50 disabled:hover:scale-100",
+                "shadow-sm hover:shadow-md",
+                isMobile ? "h-9 w-9" : "h-10 w-10"
+              )}
             >
               {isSending || isCreatingThread ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className={cn(
+                  "animate-spin",
+                  isMobile ? "h-4 w-4" : "h-4.5 w-4.5"
+                )} />
               ) : (
-                <Send className="h-4 w-4" />
+                <Send className={cn(
+                  "transition-transform",
+                  (!messageInput.trim() && pendingImageUrls.length === 0) ? "" : "translate-x-0.5",
+                  isMobile ? "h-4 w-4" : "h-4.5 w-4.5"
+                )} />
               )}
             </Button>
           </div>
+        </div>
         </div>
       </div>
 
@@ -701,6 +909,20 @@ export function ChatInterface({ project, threadId, className, onBack }: ChatInte
         projectId={project.tagId()}
         publishAudioEvent={true}
       />
+      
+      {/* Enhanced Upload Queue Overlay */}
+      <AnimatePresence>
+        {showUploadProgress && uploadStats.total > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+          >
+            <ImageUploadQueue />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+    </ChatDropZone>
   )
 }

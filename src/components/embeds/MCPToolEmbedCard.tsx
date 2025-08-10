@@ -53,7 +53,9 @@ export function MCPToolEmbedCard({ event, compact, className, onClick }: MCPTool
     return <Wrench className="h-5 w-5" />
   }
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     if (onClick) {
       onClick()
     } else {
@@ -107,18 +109,146 @@ export function MCPToolEmbedCard({ event, compact, className, onClick }: MCPTool
 
   if (compact) {
     return (
-      <span
-        onClick={handleClick}
-        className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md",
-          "bg-purple-500/10 hover:bg-purple-500/20 transition-colors cursor-pointer",
-          "text-sm my-1 border border-purple-500/30",
-          className
-        )}
-      >
-        <Terminal className="w-3.5 h-3.5 text-purple-500" />
-        <span className="font-medium">MCP: {tool.name || 'Unnamed Tool'}</span>
-      </span>
+      <>
+        <span
+          onClick={handleClick}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md",
+            "bg-purple-500/10 hover:bg-purple-500/20 transition-colors cursor-pointer",
+            "text-sm my-1 border border-purple-500/30",
+            className
+          )}
+        >
+          <Terminal className="w-3.5 h-3.5 text-purple-500" />
+          <span className="font-medium">MCP: {tool.name || 'Unnamed Tool'}</span>
+        </span>
+
+        {/* MCP Tool Detail Modal - also render in compact mode */}
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {getToolIcon(tool.command)}
+                {tool.name || 'Unnamed MCP Tool'}
+              </DialogTitle>
+              <DialogDescription>
+                Model Context Protocol Tool
+              </DialogDescription>
+            </DialogHeader>
+
+            <ScrollArea className="max-h-[60vh] pr-4">
+              <div className="space-y-6">
+                {/* Description */}
+                {tool.description && (
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {tool.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Command */}
+                {tool.command && (
+                  <div className="space-y-2">
+                    <Label>Command</Label>
+                    <code className="block p-3 bg-muted rounded text-sm font-mono">
+                      {tool.command}
+                    </code>
+                  </div>
+                )}
+
+                {/* Capabilities */}
+                {tool.capabilities && tool.capabilities.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Capabilities</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {tool.capabilities.map((cap, index) => (
+                        <Badge key={index} variant="secondary">
+                          {cap}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Parameters */}
+                {tool.parameters && Object.keys(tool.parameters).length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Parameters</Label>
+                    <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
+                      {JSON.stringify(tool.parameters, null, 2)}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Metadata */}
+                <div className="space-y-2">
+                  <Label>Tool Information</Label>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <div>
+                      <span className="font-medium">Event ID:</span> {event.id.substring(0, 16)}...
+                    </div>
+                    {event.created_at && (
+                      <div>
+                        <span className="font-medium">Created:</span> {new Date(event.created_at * 1000).toLocaleString()}
+                      </div>
+                    )}
+                    <div>
+                      <span className="font-medium">Author:</span> {event.pubkey.substring(0, 16)}...
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+
+            <DialogFooter className="flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.open(`https://njump.me/${event.encode()}`, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                View on njump
+              </Button>
+              
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setModalOpen(false)}
+                >
+                  Close
+                </Button>
+                
+                {projectId && project && (
+                  <Button
+                    onClick={handleInstall}
+                    disabled={isInstalling || isInstalled || !user}
+                    className="min-w-[100px]"
+                  >
+                    {isInstalling ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Installing...
+                      </>
+                    ) : isInstalled ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Installed
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Install
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     )
   }
 

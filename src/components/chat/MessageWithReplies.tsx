@@ -181,6 +181,17 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     let content = event.content || ""
     const parts: Array<{ type: 'text' | 'thinking', content: string }> = []
     
+    // Convert plain text nostr: references to markdown links so they're handled by the markdown renderer
+    const hasMarkdownNostrLinks = /\[([^\]]+)\]\((nostr:[^)]+)\)/.test(content)
+    
+    if (!hasMarkdownNostrLinks) {
+      // Convert plain text nostr: references to markdown links
+      content = replaceNostrEntities(content, (_entity, match) => {
+        // Convert to markdown link format that will be handled by our custom link renderer
+        return `[${match}](${match})`
+      })
+    }
+    
     // Special handling for task messages - hide the entire thinking block content
     if (event.kind === 1934) {
       const thinkingStart = content.indexOf('<thinking>')
@@ -360,7 +371,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                   )}
                   title={phaseFrom ? `Phase: ${phaseFrom} → ${phase}` : `Phase: ${phase}`}
                 >
-                  {getPhaseIcon(phase?.toLowerCase() || null)}
+                  {(() => {
+                    const IconComponent = getPhaseIcon(phase?.toLowerCase() || null)
+                    return IconComponent ? <IconComponent className="w-2.5 h-2.5" /> : null
+                  })()}
                   <span className="ml-0.5">{phase}</span>
                 </Badge>
               )}
@@ -473,119 +487,80 @@ export const MessageWithReplies = memo(function MessageWithReplies({
           
           {/* Message content - no background, just text */}
           <div className="markdown-content">
-            <div className="text-sm break-words text-foreground">
-              {/* Show final content with markdown */}
-              <>
-                  <ReactMarkdown 
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                // Override default components for better styling
-                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                a: ({ href, children }) => {
-                  // Check if this is a nostr entity that remark-gfm wrongly converted to a link
-                  if (href && href.startsWith('nostr:')) {
-                    // Just return the plain text, don't make it a link
-                    return <span>{children}</span>
-                  }
-                  return (
-                    <a 
-                      href={href} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:text-blue-600 underline"
-                    >
-                      {children}
-                    </a>
-                  )
-                },
-                strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-                em: ({ children }) => <em className="italic">{children}</em>,
-                code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) => {
-                  const match = /language-(\w+)/.exec(className || '')
-                  const isInline = !className || !match
-                  
-                  if (isInline) {
-                    return (
-                      <code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono text-xs" {...props}>
-                        {children}
-                      </code>
-                    )
-                  }
-                  
-                  // Extract language from className
-                  const language = match ? match[1] : 'text'
+            <div className={cn(
+              "break-words text-foreground",
+              isMobile ? "text-[15px] leading-[1.6]" : "text-sm"
+            )}>
+              {/* Render content parts with inline thinking blocks */}
+              {contentParts.map((part, partIndex) => {
+                if (part.type === 'text') {
+                  // Render text content with markdown
+                  const textToRender = shouldTruncate && !isExpanded && partIndex === 0 
+                    ? part.content.substring(0, 280) 
+                    : part.content
                   
                   return (
-                    <SyntaxHighlighter
-                      language={language}
-                      style={isDarkMode ? oneDark : oneLight}
-                      customStyle={{
-                        margin: '8px 0',
-                        padding: '12px',
-                        borderRadius: '6px',
-                        fontSize: '0.75rem',
-                        lineHeight: '1.5',
-                      }}
-                      PreTag="div"
-                      {...props}
+                    <ReactMarkdown 
+                      key={`text-${partIndex}`}
+                      remarkPlugins={[remarkGfm]}
+                      components={markdownComponents}
                     >
-                      {String(children).replace(/\n$/, '')}
-                    </SyntaxHighlighter>
+                      {textToRender}
+                    </ReactMarkdown>
                   )
-                },
-                ul: ({ children }) => <ul className="list-disc pl-6 mb-2 space-y-1">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal pl-6 mb-2 space-y-1">{children}</ol>,
-                li: ({ children }) => <li className="ml-1">{children}</li>,
-                h1: ({ children }) => <h1 className="text-xl font-bold mb-2 mt-3">{children}</h1>,
-                h2: ({ children }) => <h2 className="text-lg font-bold mb-2 mt-3">{children}</h2>,
-                h3: ({ children }) => <h3 className="text-base font-bold mb-1 mt-2">{children}</h3>,
-                h4: ({ children }) => <h4 className="text-sm font-bold mb-1 mt-2">{children}</h4>,
-                blockquote: ({ children }) => (
-                  <blockquote className="border-l-4 border-gray-400 dark:border-gray-600 pl-3 my-2 italic opacity-90">
-                    {children}
-                  </blockquote>
-                ),
-                hr: () => <hr className="my-3 border-gray-300 dark:border-gray-600" />,
-                  }}
-                >
-                  {cleanContent}
-                </ReactMarkdown>
-              </>
-            </div>
-          </div>
-          
-          {/* Thinking blocks - indented under message */}
-          {thinkingBlocks.length > 0 && (
-            <div className="mt-1">
-              <button
-                type="button"
-                onClick={() => setShowThinking(!showThinking)}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {showThinking ? (
-                  <ChevronDown className="w-3 h-3 flex-shrink-0" />
-                ) : (
-                  <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                )}
-                <Brain className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate max-w-[600px]">
-                  {showThinking ? 'Hide thinking' : thinkingPreview}
-                </span>
-              </button>
-              
-              {showThinking && (
-                <div className="mt-1 p-2 bg-muted/20 rounded-md border border-muted/30">
-                  {thinkingBlocks.map((block, index) => (
-                    <div key={index} className={cn(index > 0 && "mt-2 pt-2 border-t border-muted/30")}>
-                      <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
-                        {block}
-                      </pre>
+                } else {
+                  // Render thinking block
+                  const isThinkingExpanded = expandedThinkingBlocks.has(partIndex)
+                  const thinkingPreview = part.content.split('\n')[0]
+                  const preview = thinkingPreview.length > 100 
+                    ? thinkingPreview.substring(0, 100) + '...' 
+                    : thinkingPreview
+                  
+                  return (
+                    <div key={`thinking-${partIndex}`} className="my-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleThinkingBlock(partIndex)}
+                        className={cn(
+                          "flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors",
+                          isMobile ? "text-[11px]" : "text-xs"
+                        )}
+                      >
+                        {isThinkingExpanded ? (
+                          <ChevronDown className="w-3 h-3 flex-shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                        )}
+                        <Brain className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate max-w-[600px]">
+                          {isThinkingExpanded ? 'Hide thinking' : preview}
+                        </span>
+                      </button>
+                      
+                      {isThinkingExpanded && (
+                        <div className="mt-1 p-2 bg-muted/20 rounded-md border border-muted/30">
+                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
+                            {part.content}
+                          </pre>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  )
+                }
+              })}
+              
+              {/* Show expand/collapse button for truncated content */}
+              {shouldTruncate && contentParts.some(p => p.type === 'text' && p.content.length > 280) && (
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="text-xs text-blue-600 hover:text-blue-700 mt-1"
+                >
+                  {isExpanded ? 'Show less' : 'Show more'}
+                </button>
               )}
             </div>
-          )}
+          </div>
           
           {/* Reply count and toggle - Slack style */}
           {replyCount > 0 && !showReplies && (

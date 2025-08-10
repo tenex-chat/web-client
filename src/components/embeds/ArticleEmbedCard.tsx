@@ -46,61 +46,65 @@ export function ArticleEmbedCard({ event, compact, className, onClick }: Article
     <Card 
       onClick={onClick}
       className={cn(
-        "my-3 overflow-hidden cursor-pointer transition-all",
+        "my-3 cursor-pointer transition-all overflow-hidden",
         "hover:shadow-md hover:border-primary/20",
         className
       )}
     >
-      {image && (
-        <div className="w-full h-48 bg-muted">
-          <img 
-            src={image} 
-            alt={title}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        </div>
-      )}
-      
-      <div className="p-4">
-        <div className="flex items-start gap-3">
-          {!image && (
-            <div className="flex-shrink-0 mt-0.5">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-blue-500" />
+      <div className="flex">
+        {/* Content section */}
+        <div className="flex-1 p-4">
+          <div className="flex items-start gap-3">
+            {!image && (
+              <div className="flex-shrink-0 mt-0.5">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-blue-500" />
+                </div>
               </div>
-            </div>
-          )}
-          
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-lg mb-2">{title}</h3>
-            
-            {summary && (
-              <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
-                {summary}
-              </p>
             )}
             
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <User className="w-3 h-3" />
-                <ProfileDisplay pubkey={event.pubkey} />
-              </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-lg mb-2">{title}</h3>
               
-              <div className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                <span>
-                  {publishedAt 
-                    ? formatRelativeTime(parseInt(publishedAt) * 1000)
-                    : event.created_at 
-                      ? formatRelativeTime(event.created_at * 1000)
-                      : 'Unknown date'
-                  }
-                </span>
+              {summary && (
+                <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
+                  {summary}
+                </p>
+              )}
+              
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <User className="w-3 h-3" />
+                  <ProfileDisplay pubkey={event.pubkey} />
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  <span>
+                    {publishedAt 
+                      ? formatRelativeTime(parseInt(publishedAt) * 1000)
+                      : event.created_at 
+                        ? formatRelativeTime(event.created_at * 1000)
+                        : 'Unknown date'
+                    }
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
+        
+        {/* Image section - on the right */}
+        {image && (
+          <div className="flex-shrink-0 w-48 h-32 bg-muted">
+            <img 
+              src={image} 
+              alt={title}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        )}
       </div>
     </Card>
   )

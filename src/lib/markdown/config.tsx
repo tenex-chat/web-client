@@ -94,7 +94,8 @@ export function getMarkdownComponents({
       if (childText && childText.startsWith('nostr:')) {
         const entities = findNostrEntities(childText)
         if (entities.length > 0) {
-          return <NostrEntityCard entity={entities[0]} compact />
+          // Don't use compact mode for standalone entity references
+          return <NostrEntityCard entity={entities[0]} compact={false} />
         }
       }
       
@@ -102,7 +103,8 @@ export function getMarkdownComponents({
       if (href && typeof href === 'string' && href.startsWith('nostr:')) {
         const entities = findNostrEntities(href)
         if (entities.length > 0) {
-          return <NostrEntityCard entity={entities[0]} compact />
+          // Don't use compact mode for standalone entity references
+          return <NostrEntityCard entity={entities[0]} compact={false} />
         }
       }
       

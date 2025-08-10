@@ -313,7 +313,7 @@ function ProjectDetailPage() {
                     onThreadSelect={(threadId) => {
                       setSelectedThreadId(threadId)
                       // On mobile, hide thread list when selecting a thread
-                      if (window.innerWidth < 1024) {
+                      if (isMobile) {
                         setShowThreadList(false)
                       }
                     }}

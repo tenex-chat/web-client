@@ -12,6 +12,7 @@ import { ProjectStatusIndicator } from '@/components/status/ProjectStatusIndicat
 import { useProjectStatus } from '@/stores/projects'
 import { ThreadList } from '@/components/chat/ThreadList'
 import type { NDKArticle } from '@nostr-dev-kit/ndk'
+import { useNavigate } from '@tanstack/react-router'
 
 interface MobileTabsProps {
   project: NDKProject
@@ -23,7 +24,7 @@ interface MobileTabsProps {
   taskUnreadMap: Map<string, number>
   handleTaskSelect: (project: NDKProject, taskId: string) => void
   markTaskStatusUpdatesSeen: (taskId: string) => void
-  navigate: any
+  navigate: ReturnType<typeof useNavigate>
   mobileView: 'tabs' | 'chat'
   setMobileView: (view: 'tabs' | 'chat') => void
   selectedThreadId: string | null
@@ -41,7 +42,6 @@ export function MobileTabs({
   handleTaskSelect,
   markTaskStatusUpdatesSeen,
   navigate,
-  mobileView,
   setMobileView,
   selectedThreadId,
   setSelectedThreadId
@@ -71,7 +71,7 @@ export function MobileTabs({
               variant="ghost" 
               size="icon"
               className="h-8 w-8"
-              onClick={() => navigate({ to: '/projects/$projectId/settings', params: { projectId: project.dTag } })}
+              onClick={() => navigate({ to: '/projects/$projectId/settings', params: { projectId: project.dTag || '' } })}
             >
               <Settings className="h-4 w-4" />
             </Button>

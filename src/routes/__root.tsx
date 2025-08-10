@@ -6,9 +6,10 @@ import { Toaster } from 'sonner'
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster'
 import { NDKHeadless, NDKSessionLocalStorage } from '@nostr-dev-kit/ndk-hooks'
 import NDKCacheDexie from '@nostr-dev-kit/ndk-cache-dexie'
-import { useRef, Suspense } from 'react'
+import { useRef, useEffect } from 'react'
 import { DEFAULT_RELAYS } from '@/lib/constants'
 import type { NDKCacheAdapter } from '@nostr-dev-kit/ndk-hooks'
+import { registerServiceWorker } from '@/lib/pwa/registerSW'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -23,6 +24,11 @@ function RootComponent() {
       dbName: 'tenex-cache',
     })
   )
+  
+  // Register service worker for PWA functionality
+  useEffect(() => {
+    registerServiceWorker()
+  }, [])
   
   return (
     <>

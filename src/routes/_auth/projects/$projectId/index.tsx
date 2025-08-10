@@ -1,15 +1,15 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '@/components/layout/AppShell'
 import { useEffect, useState, useMemo } from 'react'
-import { useNDK, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
+import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { useProject } from '@/hooks/useProject'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { Button } from '@/components/ui/button'
-import { Settings, Users, MessageSquare, Menu, ListTodo, FileText, Bot } from 'lucide-react'
+import { Settings, Users, MessageSquare, Menu, ListTodo, FileText, Bot, ArrowLeft } from 'lucide-react'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 import { ThreadList } from '@/components/chat/ThreadList'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { TasksTabContent } from '@/components/tasks/TasksTabContent'
 import { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
@@ -22,6 +22,8 @@ import { ProjectStatusIndicator } from '@/components/status/ProjectStatusIndicat
 import { ProjectStatusPanel } from '@/components/status/ProjectStatusPanel'
 import { useProjectStatus } from '@/stores/projects'
 import { AgentsTabContent } from '@/components/agents/AgentsTabContent'
+import { useIsMobile } from '@/hooks/useMediaQuery'
+import { MobileTabs } from '@/components/mobile/MobileTabs'
 
 export const Route = createFileRoute('/_auth/projects/$projectId/')({
   component: ProjectDetailPage,
@@ -32,20 +34,19 @@ function ProjectDetailPage() {
   const navigate = useNavigate()
   const { ndk } = useNDK()
   const { project, isLoading } = useProject(projectId)
-  const [selectedThreadId, setSelectedThreadId] = useState<string>('new')
+  const isMobile = useIsMobile()
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(isMobile ? null : 'new')
   const [showThreadList, setShowThreadList] = useState(true)
   const [activeTab, setActiveTab] = useState<'conversations' | 'tasks' | 'docs' | 'agents' | 'status'>('conversations')
   const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null)
   const [taskUnreadMap] = useState(new Map<string, number>())
+  const [mobileView, setMobileView] = useState<'tabs' | 'chat'>('tabs')
   
   // Use project status from the store
   const projectStatus = useProjectStatus(project?.tagId())
   
   // Helper functions for backwards compatibility
   const getOverallStatus = () => projectStatus?.isOnline ? 'online' : 'offline'
-  const getAgentCount = () => projectStatus?.agents.length || 0
-  const getModelCount = () => projectStatus?.models.length || 0
-  const isOnline = () => projectStatus?.isOnline || false
   
   // Debug logging for status
   useEffect(() => {
@@ -73,7 +74,7 @@ function ProjectDetailPage() {
   // Subscribe to tasks for this project
   const { events: taskEvents } = useSubscribe(
     taskFilter ? [taskFilter] : [],
-    { disable: !ndk || !project || !taskFilter }
+    { disabled: !ndk || !project || !taskFilter }
   )
 
   // Debug logging
@@ -115,7 +116,7 @@ function ProjectDetailPage() {
   }
 
 
-  const handleTaskSelect = (project: NDKProject, taskId: string) => {
+  const handleTaskSelect = (_project: NDKProject, taskId: string) => {
     // TODO: Navigate to task detail view
     console.log('Task selected:', taskId)
   }
@@ -125,6 +126,78 @@ function ProjectDetailPage() {
     console.log('Marking task updates as seen:', taskId)
   }
 
+  // Mobile view - show one view at a time
+  if (isMobile) {
+    return (
+      <AppShell>
+        <div className="flex flex-col h-full">
+          {/* Mobile Header with Back Navigation */}
+          {mobileView !== 'tabs' && (
+            <div className="border-b px-4 py-3 flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 -ml-2"
+                onClick={() => {
+                  if (mobileView === 'chat') {
+                    setMobileView('tabs')
+                    setSelectedThreadId(null)
+                  }
+                }}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-2 flex-1">
+                <ProjectAvatar 
+                  project={project} 
+                  className="h-8 w-8"
+                  fallbackClassName="text-xs"
+                />
+                <div>
+                  <h1 className="text-sm font-semibold">{project.title || 'Untitled Project'}</h1>
+                  {mobileView === 'chat' && (
+                    <p className="text-xs text-muted-foreground">Conversation</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile Content */}
+          {mobileView === 'tabs' && (
+            <MobileTabs
+              project={project}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              tasks={tasks}
+              selectedArticle={selectedArticle}
+              setSelectedArticle={setSelectedArticle}
+              taskUnreadMap={taskUnreadMap}
+              handleTaskSelect={handleTaskSelect}
+              markTaskStatusUpdatesSeen={markTaskStatusUpdatesSeen}
+              navigate={navigate}
+              mobileView={mobileView}
+              setMobileView={setMobileView}
+              selectedThreadId={selectedThreadId}
+              setSelectedThreadId={setSelectedThreadId}
+            />
+          )}
+
+
+          {mobileView === 'chat' && (
+            <ChatInterface 
+              project={project} 
+              threadId={selectedThreadId || 'new'}
+              key={selectedThreadId || 'new'}
+              className="h-full"
+            />
+          )}
+        </div>
+      </AppShell>
+    )
+  }
+
+  // Desktop view - keep existing layout
   return (
     <AppShell>
       <div className="flex flex-col h-full">
@@ -236,7 +309,7 @@ function ProjectDetailPage() {
                 {showThreadList && (
                   <ThreadList
                     project={project}
-                    selectedThreadId={selectedThreadId}
+                    selectedThreadId={selectedThreadId || undefined}
                     onThreadSelect={(threadId) => {
                       setSelectedThreadId(threadId)
                       // On mobile, hide thread list when selecting a thread
@@ -266,13 +339,9 @@ function ProjectDetailPage() {
                 <div className="flex-1 overflow-hidden">
                   <ChatInterface 
                     project={project} 
-                    threadId={selectedThreadId}
+                    threadId={selectedThreadId || 'new'}
                     key={selectedThreadId} // Force remount on thread change
                     className="h-full"
-                    onBack={selectedThreadId && window.innerWidth < 1024 ? () => {
-                      setSelectedThreadId(null)
-                      setShowThreadList(true)
-                    } : undefined}
                   />
                 </div>
               </div>

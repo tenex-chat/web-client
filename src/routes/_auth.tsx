@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
+import { AppShell } from '@/components/layout/AppShell'
 
 export const Route = createFileRoute('/_auth')({
   component: AuthLayout,
@@ -21,5 +21,9 @@ function AuthLayout() {
     return null
   }
 
-  return <Outlet />
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  )
 }

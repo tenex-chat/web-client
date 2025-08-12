@@ -18,7 +18,7 @@ export interface ProjectModel {
 export class NDKProjectStatus extends NDKEvent {
   static kind: NDKKind = EVENT_KINDS.PROJECT_STATUS as NDKKind
 
-  constructor(ndk?: NDK, rawEvent?: NostrEvent) {
+  constructor(ndk?: NDK, rawEvent?: NostrEvent | NDKEvent) {
     super(ndk, rawEvent)
     this.kind = NDKProjectStatus.kind
     if (!this.tags) {

@@ -36,7 +36,7 @@ function GlobalAgentItem({ pubkey, slug }: { pubkey: string; slug: string }) {
   const avatarUrl = profile?.image || profile?.picture
   
   const handleClick = () => {
-    navigate({ to: '/agents/$agentId', params: { agentId: pubkey } })
+    navigate({ to: '/p/$pubkey', params: { pubkey } })
   }
   
   return (

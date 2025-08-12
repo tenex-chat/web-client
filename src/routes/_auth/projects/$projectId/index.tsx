@@ -1,5 +1,4 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { AppShell } from '@/components/layout/AppShell'
 import { useEffect, useState, useMemo } from 'react'
 import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
@@ -34,7 +33,7 @@ function ProjectDetailPage() {
   const { projectId } = Route.useParams()
   const navigate = useNavigate()
   const { ndk } = useNDK()
-  const { project, isLoading } = useProject(projectId)
+  const project = useProject(projectId)
   const isMobile = useIsMobile()
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(isMobile ? null : 'new')
   const [showThreadList, setShowThreadList] = useState(true)
@@ -103,23 +102,11 @@ function ProjectDetailPage() {
     return taskEvents?.map(event => NDKTask.from(event)) || []
   }, [taskEvents])
 
-  if (isLoading) {
-    return (
-      <AppShell>
-        <div className="flex h-full items-center justify-center">
-          <p className="text-muted-foreground">Loading project...</p>
-        </div>
-      </AppShell>
-    )
-  }
-
   if (!project) {
     return (
-      <AppShell>
-        <div className="flex h-full items-center justify-center">
-          <p className="text-muted-foreground">Project not found</p>
-        </div>
-      </AppShell>
+      <div className="flex h-full items-center justify-center">
+        <p className="text-muted-foreground">Project not found</p>
+      </div>
     )
   }
 
@@ -143,7 +130,6 @@ function ProjectDetailPage() {
   // Mobile view - show one view at a time
   if (isMobile) {
     return (
-      <AppShell>
         <div className="flex flex-col h-full">
           {/* Mobile Header with Back Navigation */}
           {mobileView !== 'tabs' && (
@@ -211,13 +197,11 @@ function ProjectDetailPage() {
             />
           )}
         </div>
-      </AppShell>
     )
   }
 
   // Desktop view - keep existing layout
   return (
-    <AppShell>
       <div className="flex flex-col h-full">
         {/* Project Header with integrated tabs */}
         <div className="border-b">
@@ -439,6 +423,5 @@ function ProjectDetailPage() {
         </Tabs>
 
       </div>
-    </AppShell>
   )
 }

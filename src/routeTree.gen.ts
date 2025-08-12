@@ -21,7 +21,7 @@ import { Route as AuthAgentsIndexRouteImport } from './routes/_auth/agents/index
 import { Route as AuthPPubkeyRouteImport } from './routes/_auth/p/$pubkey'
 import { Route as AuthLessonLessonIdRouteImport } from './routes/_auth/lesson.$lessonId'
 import { Route as AuthAgentsRequestsRouteImport } from './routes/_auth/agents/requests'
-import { Route as AuthAgentDefinitionAgentIdRouteImport } from './routes/_auth/agent-definition/$agentId'
+import { Route as AuthAgentDefinitionAgentDefinitionEventIdRouteImport } from './routes/_auth/agent-definition/$agentDefinitionEventId'
 import { Route as AuthProjectsProjectIdIndexRouteImport } from './routes/_auth/projects/$projectId/index'
 import { Route as AuthProjectsProjectIdSettingsRouteImport } from './routes/_auth/projects/$projectId/settings'
 
@@ -84,10 +84,10 @@ const AuthAgentsRequestsRoute = AuthAgentsRequestsRouteImport.update({
   path: '/requests',
   getParentRoute: () => AuthAgentsRoute,
 } as any)
-const AuthAgentDefinitionAgentIdRoute =
-  AuthAgentDefinitionAgentIdRouteImport.update({
-    id: '/agent-definition/$agentId',
-    path: '/agent-definition/$agentId',
+const AuthAgentDefinitionAgentDefinitionEventIdRoute =
+  AuthAgentDefinitionAgentDefinitionEventIdRouteImport.update({
+    id: '/agent-definition/$agentDefinitionEventId',
+    path: '/agent-definition/$agentDefinitionEventId',
     getParentRoute: () => AuthRoute,
   } as any)
 const AuthProjectsProjectIdIndexRoute =
@@ -110,7 +110,7 @@ export interface FileRoutesByFullPath {
   '/agents': typeof AuthAgentsRouteWithChildren
   '/projects': typeof AuthProjectsRouteWithChildren
   '/settings': typeof AuthSettingsRoute
-  '/agent-definition/$agentId': typeof AuthAgentDefinitionAgentIdRoute
+  '/agent-definition/$agentDefinitionEventId': typeof AuthAgentDefinitionAgentDefinitionEventIdRoute
   '/agents/requests': typeof AuthAgentsRequestsRoute
   '/lesson/$lessonId': typeof AuthLessonLessonIdRoute
   '/p/$pubkey': typeof AuthPPubkeyRoute
@@ -124,7 +124,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/mcp-tools': typeof McpToolsRoute
   '/settings': typeof AuthSettingsRoute
-  '/agent-definition/$agentId': typeof AuthAgentDefinitionAgentIdRoute
+  '/agent-definition/$agentDefinitionEventId': typeof AuthAgentDefinitionAgentDefinitionEventIdRoute
   '/agents/requests': typeof AuthAgentsRequestsRoute
   '/lesson/$lessonId': typeof AuthLessonLessonIdRoute
   '/p/$pubkey': typeof AuthPPubkeyRoute
@@ -142,7 +142,7 @@ export interface FileRoutesById {
   '/_auth/agents': typeof AuthAgentsRouteWithChildren
   '/_auth/projects': typeof AuthProjectsRouteWithChildren
   '/_auth/settings': typeof AuthSettingsRoute
-  '/_auth/agent-definition/$agentId': typeof AuthAgentDefinitionAgentIdRoute
+  '/_auth/agent-definition/$agentDefinitionEventId': typeof AuthAgentDefinitionAgentDefinitionEventIdRoute
   '/_auth/agents/requests': typeof AuthAgentsRequestsRoute
   '/_auth/lesson/$lessonId': typeof AuthLessonLessonIdRoute
   '/_auth/p/$pubkey': typeof AuthPPubkeyRoute
@@ -160,7 +160,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/projects'
     | '/settings'
-    | '/agent-definition/$agentId'
+    | '/agent-definition/$agentDefinitionEventId'
     | '/agents/requests'
     | '/lesson/$lessonId'
     | '/p/$pubkey'
@@ -174,7 +174,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp-tools'
     | '/settings'
-    | '/agent-definition/$agentId'
+    | '/agent-definition/$agentDefinitionEventId'
     | '/agents/requests'
     | '/lesson/$lessonId'
     | '/p/$pubkey'
@@ -191,7 +191,7 @@ export interface FileRouteTypes {
     | '/_auth/agents'
     | '/_auth/projects'
     | '/_auth/settings'
-    | '/_auth/agent-definition/$agentId'
+    | '/_auth/agent-definition/$agentDefinitionEventId'
     | '/_auth/agents/requests'
     | '/_auth/lesson/$lessonId'
     | '/_auth/p/$pubkey'
@@ -294,11 +294,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthAgentsRequestsRouteImport
       parentRoute: typeof AuthAgentsRoute
     }
-    '/_auth/agent-definition/$agentId': {
-      id: '/_auth/agent-definition/$agentId'
-      path: '/agent-definition/$agentId'
-      fullPath: '/agent-definition/$agentId'
-      preLoaderRoute: typeof AuthAgentDefinitionAgentIdRouteImport
+    '/_auth/agent-definition/$agentDefinitionEventId': {
+      id: '/_auth/agent-definition/$agentDefinitionEventId'
+      path: '/agent-definition/$agentDefinitionEventId'
+      fullPath: '/agent-definition/$agentDefinitionEventId'
+      preLoaderRoute: typeof AuthAgentDefinitionAgentDefinitionEventIdRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/projects/$projectId/': {
@@ -352,7 +352,7 @@ interface AuthRouteChildren {
   AuthAgentsRoute: typeof AuthAgentsRouteWithChildren
   AuthProjectsRoute: typeof AuthProjectsRouteWithChildren
   AuthSettingsRoute: typeof AuthSettingsRoute
-  AuthAgentDefinitionAgentIdRoute: typeof AuthAgentDefinitionAgentIdRoute
+  AuthAgentDefinitionAgentDefinitionEventIdRoute: typeof AuthAgentDefinitionAgentDefinitionEventIdRoute
   AuthLessonLessonIdRoute: typeof AuthLessonLessonIdRoute
   AuthPPubkeyRoute: typeof AuthPPubkeyRoute
 }
@@ -361,7 +361,8 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthAgentsRoute: AuthAgentsRouteWithChildren,
   AuthProjectsRoute: AuthProjectsRouteWithChildren,
   AuthSettingsRoute: AuthSettingsRoute,
-  AuthAgentDefinitionAgentIdRoute: AuthAgentDefinitionAgentIdRoute,
+  AuthAgentDefinitionAgentDefinitionEventIdRoute:
+    AuthAgentDefinitionAgentDefinitionEventIdRoute,
   AuthLessonLessonIdRoute: AuthLessonLessonIdRoute,
   AuthPPubkeyRoute: AuthPPubkeyRoute,
 }

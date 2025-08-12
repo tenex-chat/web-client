@@ -149,25 +149,21 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         
         // Initialize global status subscription for all projects
         initializeStatusSubscription: (ndk: NDK) => {
-            console.log('[ProjectStore] initializeStatusSubscription called with ndk:', !!ndk);
             const { statusSubscription } = get();
             
             // Don't re-initialize if already subscribed
             if (statusSubscription) {
-                console.log('[ProjectStore] Status subscription already exists, skipping initialization');
                 return;
             }
             
             // Get the current user's pubkey
             const user = ndk.signer?.user();
             if (!user) {
-                console.log('[ProjectStore] No user found, cannot initialize status subscription');
                 return;
             }
             
             user.then((userInfo) => {
                 if (!userInfo) {
-                    console.log('[ProjectStore] No user info found');
                     return;
                 }
                 
@@ -175,34 +171,26 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                     kinds: [24010], // PROJECT_STATUS event kind
                     "#p": [userInfo.pubkey] // Status events for the current user's projects
                 };
-                console.log('[ProjectStore] Creating subscription with filter:', filter);
                 
                 // Subscribe to all project status events for this user
                 const sub = ndk.subscribe(
                     filter,
-                    { closeOnEose: false, groupable: true, subId: 'status' }
+                    { closeOnEose: false, groupable: true, subId: 'status' },
+                    {
+                        onEvent: (event: NDKEvent) => get().updateProjectStatus(event),
+                    }
                 );
                 
-                console.log('[ProjectStore] Subscription created:', !!sub);
-                
-                sub.on('event', (event: NDKEvent) => {
-                    get().updateProjectStatus(event);
-                });
-                
-                sub.on('eose', () => {
-                    console.log('[ProjectStore] End of stored events reached');
-                    // After getting status events, fetch global agents
-                });
-                
                 set({ statusSubscription: sub });
-                console.log('[ProjectStore] Status subscription initialized');
             });
         },
         
         
         updateProjectStatus: (event: NDKEvent) => {
+            if (!event.ndk) return;
+
             const { projects, projectStatus } = get();
-            const status = new NDKProjectStatus(event.ndk!, event.rawEvent());
+            const status = new NDKProjectStatus(event.ndk, event);
             const projectId = status.projectId;
             
             if (!projectId) {
@@ -219,7 +207,6 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                 if (tag[0] === 'agent') {
                     if (tag.length >= 4) {
                         if (tag[3] === 'global') {
-                            console.log(`[ProjectStore] 🌍 GLOBAL AGENT DETECTED! pubkey: ${tag[1]}, slug: ${tag[2]}`);
                             useAgentsStore.getState().addGlobalAgent(tag[1], tag[2]);
                         }
                     }
@@ -275,12 +262,10 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         
         // Initialize all subscriptions when user logs in
         initializeSubscriptions: (ndk: NDK, userPubkey: string) => {
-            console.log('[ProjectStore] Initializing subscriptions for user:', userPubkey);
             const { projectsSubscription, statusSubscription } = get();
             
             // Clean up any existing subscriptions first
             if (projectsSubscription || statusSubscription) {
-                console.log('[ProjectStore] Cleaning up existing subscriptions');
                 get().cleanupSubscriptions();
             }
             
@@ -307,9 +292,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                     }
                 },
                 onEose: () => {
-                    console.log('[ProjectStore] End of stored events for projects');
                     // Initialize status subscription after initial projects have loaded
-                    console.log('[ProjectStore] Initializing status subscription');
                     get().initializeStatusSubscription(ndk);
                 }
             });

@@ -18,6 +18,12 @@ import {
   SelectItem,
   SelectTrigger,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { LLMMetadataDialog } from '@/components/dialogs/LLMMetadataDialog'
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import { Link } from '@tanstack/react-router'

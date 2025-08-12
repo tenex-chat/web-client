@@ -1,8 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { AppShell } from '@/components/layout/AppShell'
 import { useEffect, useState } from 'react'
-import { useNDK, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
-import { NDKProject } from '@/lib/ndk-events/NDKProject'
+import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { useProject } from '@/hooks/useProject'
 import { ArrowLeft, Camera, Trash2, Save, Settings as SettingsIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -34,7 +32,7 @@ function ProjectSettingsPage() {
   const { projectId } = Route.useParams()
   const navigate = useNavigate()
   const { ndk } = useNDK()
-  const { project, isLoading } = useProject(projectId)
+  const project = useProject(projectId)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
@@ -116,30 +114,17 @@ function ProjectSettingsPage() {
     handleInputChange('hashtags', hashtags)
   }
 
-  if (isLoading) {
-    return (
-      <AppShell>
-        <div className="flex h-full items-center justify-center">
-          <p className="text-muted-foreground">Loading project settings...</p>
-        </div>
-      </AppShell>
-    )
-  }
-
   if (!project) {
     return (
-      <AppShell>
-        <div className="flex h-full items-center justify-center">
-          <p className="text-muted-foreground">Project not found</p>
-        </div>
-      </AppShell>
+      <div className="flex h-full items-center justify-center">
+        <p className="text-muted-foreground">Project not found</p>
+      </div>
     )
   }
 
 
   return (
-    <AppShell>
-      <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full">
         {/* Header */}
         <div className="border-b p-4">
           <div className="flex items-center justify-between">
@@ -397,6 +382,5 @@ function ProjectSettingsPage() {
           </div>
         </div>
       </div>
-    </AppShell>
   )
 }

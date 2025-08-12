@@ -20,7 +20,7 @@ import { AgentInstances } from "./AgentInstances";
 
 // This component shows an NDKAgentDefinition definition (the "class" not the instance)
 export function AgentDefinitionDetailPage() {
-    const { agentId } = useParams({ from: '/_auth/agent-definition/$agentId' });
+    const { agentDefinitionEventId } = useParams({ from: '/_auth/agent-definition/$agentDefinitionEventId' });
     const user = useNDKCurrentUser();
     const navigate = useNavigate();
     const [copiedId, setCopiedId] = useState(false);
@@ -29,7 +29,7 @@ export function AgentDefinitionDetailPage() {
 
     // Fetch the agent event by ID
     // Fetch the agent event by ID
-    const _agent = useEvent(agentId);
+    const _agent = useEvent(agentDefinitionEventId);
     const agent = useMemo(() => _agent && NDKAgentDefinition.from(_agent), [_agent])
 
     const handleBack = () => {

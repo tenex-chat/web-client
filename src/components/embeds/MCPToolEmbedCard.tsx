@@ -41,7 +41,7 @@ export function MCPToolEmbedCard({ event, compact, className, onClick }: MCPTool
   const location = useLocation()
   const pathMatch = location.pathname.match(/\/projects\/([^\/]+)/)
   const projectId = pathMatch?.[1] || null
-  const { project } = useProject(projectId || '')
+  const project = useProject(projectId || '')
 
   // Convert event to NDKMCPTool
   const tool = NDKMCPTool.from(event)

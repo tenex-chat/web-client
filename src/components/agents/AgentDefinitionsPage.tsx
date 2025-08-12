@@ -64,8 +64,8 @@ export function AgentDefinitionsPage() {
 
     const handleAgentClick = (agent: NDKAgentDefinition) => {
         navigate({
-            to: '/agent-definition/$agentId',
-            params: { agentId: agent.id }
+            to: '/agent-definition/$agentDefinitionEventId',
+            params: { agentDefinitionEventId: agent.id }
         });
     };
 

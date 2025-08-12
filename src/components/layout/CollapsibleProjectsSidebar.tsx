@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { Plus, Settings, LogOut, Search, Bot, Wrench, Home, User } from 'lucide-react'
+import { Plus, Settings, LogOut, Search, Bot, Wrench, Home, User, Sun, Moon, Monitor } from 'lucide-react'
 import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
 import { useProjectSubscriptions } from '@/hooks/useProjectSubscriptions'
 import { useSortedProjects } from '@/hooks/useSortedProjects'
+import { useTheme } from '@/hooks/useTheme'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
@@ -15,6 +16,11 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu'
 import {
   Sidebar,
@@ -53,6 +59,7 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
   const location = useLocation()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
+  const { theme, setTheme } = useTheme()
   
   // Initialize project subscriptions
   useProjectSubscriptions()
@@ -213,6 +220,11 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                       align="end" 
                       className="w-56"
                     >
+                      <DropdownMenuItem onClick={() => setCreateDialogOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        New project
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
                         <Link to="/agents" params={{}}>
                           <Bot className="h-4 w-4 mr-2" />
@@ -231,6 +243,35 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                           Settings
                         </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          {theme === 'light' ? (
+                            <Sun className="h-4 w-4 mr-2" />
+                          ) : theme === 'dark' ? (
+                            <Moon className="h-4 w-4 mr-2" />
+                          ) : (
+                            <Monitor className="h-4 w-4 mr-2" />
+                          )}
+                          <span>Theme</span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as 'light' | 'dark' | 'system')}>
+                            <DropdownMenuRadioItem value="light">
+                              <Sun className="h-4 w-4 mr-2" />
+                              Light
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="dark">
+                              <Moon className="h-4 w-4 mr-2" />
+                              Dark
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="system">
+                              <Monitor className="h-4 w-4 mr-2" />
+                              System
+                            </DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="h-4 w-4 mr-2" />

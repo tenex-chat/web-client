@@ -1,8 +1,8 @@
 import { type NDKKind } from "@nostr-dev-kit/ndk";
-import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useEvent, useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Bot, Settings, Copy, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Bot, GitFork, Copy, CheckCircle2 } from "lucide-react";
 import { EVENT_KINDS } from "../../lib/constants";
 import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks';
@@ -12,37 +12,28 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
 import { EmptyState } from "../common/EmptyState";
+import { CreateAgentDialog } from "../dialogs/CreateAgentDialog";
+import ReactMarkdown from 'react-markdown';
 
 // This component shows an NDKAgentDefinition definition (the "class" not the instance)
 export function AgentDefinitionDetailPage() {
-    const { agentId } = useParams({ from: '/agents/$agentId' });
-    const { ndk } = useNDK();
+    const { agentId } = useParams({ from: '/_auth/agent-definition/$agentId' });
     const user = useNDKCurrentUser();
     const navigate = useNavigate();
     const [copiedId, setCopiedId] = useState(false);
+    const [forkDialogOpen, setForkDialogOpen] = useState(false);
 
     // Fetch the agent event by ID
-    const { events: agentEvents } = useSubscribe(
-        [{ 
-            kinds: [EVENT_KINDS.AGENT_CONFIG as NDKKind], 
-            ids: [agentId],
-            limit: 1
-        }],
-        {},
-        [agentId]
-    );
-
-    const agent = useMemo(
-        () => agentEvents?.[0] ? new NDKAgentDefinition(ndk || undefined, agentEvents[0].rawEvent()) : null,
-        [agentEvents, ndk]
-    );
+    // Fetch the agent event by ID
+    const _agent = useEvent(agentId);
+    const agent = useMemo(() => _agent && NDKAgentDefinition.from(_agent), [_agent])
 
     const handleBack = () => {
         navigate({ to: '/agents' });
     };
 
-    const handleEdit = () => {
-        // Edit functionality not yet implemented
+    const handleFork = () => {
+        setForkDialogOpen(true);
     };
 
     const handleCopyId = async () => {
@@ -56,7 +47,7 @@ export function AgentDefinitionDetailPage() {
         }
     };
 
-    const isOwner = user && agent && user.pubkey === agent.pubkey;
+    // Remove isOwner check - forking is allowed for everyone
 
     if (!agent) {
         return (
@@ -116,12 +107,10 @@ export function AgentDefinitionDetailPage() {
                                 </button>
                             </div>
                         </div>
-                        {isOwner && (
-                            <Button onClick={handleEdit}>
-                                <Settings className="w-4 h-4 mr-2" />
-                                Edit Definition
-                            </Button>
-                        )}
+                        <Button onClick={handleFork}>
+                            <GitFork className="w-4 h-4 mr-2" />
+                            Fork
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -151,9 +140,9 @@ export function AgentDefinitionDetailPage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <pre className="whitespace-pre-wrap text-sm font-mono bg-muted p-4 rounded">
-                                    {agent.instructions}
-                                </pre>
+                                <div className="prose prose-sm dark:prose-invert max-w-none">
+                                    <ReactMarkdown>{agent.instructions}</ReactMarkdown>
+                                </div>
                             </CardContent>
                         </Card>
                     )}
@@ -202,6 +191,13 @@ export function AgentDefinitionDetailPage() {
                     </Card>
                 </div>
             </ScrollArea>
+
+            {/* Fork Dialog */}
+            <CreateAgentDialog
+                open={forkDialogOpen}
+                onOpenChange={setForkDialogOpen}
+                forkFromAgent={agent}
+            />
         </div>
     );
 }

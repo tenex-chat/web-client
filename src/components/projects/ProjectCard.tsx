@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelativeTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +15,7 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, isActive, isOnline = false, onClick }: ProjectCardProps) {
   const lastActivity = project.created_at 
-    ? formatDistanceToNow(new Date(project.created_at * 1000), { addSuffix: true })
+    ? formatRelativeTime(project.created_at)
     : 'Unknown'
 
   // Mock unread count (will be replaced with real data)

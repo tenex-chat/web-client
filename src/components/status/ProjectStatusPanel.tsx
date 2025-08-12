@@ -5,7 +5,7 @@ import { AgentStatusList } from './AgentStatusList'
 import { ModelStatusList } from './ModelStatusList'
 import { useProjectStatus } from '../../stores/projects'
 import type { NDKProject } from '../../lib/ndk-events/NDKProject'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelativeTime } from '@/lib/utils/time'
 import { Users, Cpu, Activity } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Skeleton } from '../ui/skeleton'
@@ -67,7 +67,7 @@ export function ProjectStatusPanel({
 
         {lastSeen && (
           <span className="text-xs text-muted-foreground">
-            {formatDistanceToNow(lastSeen, { addSuffix: true })}
+            {formatRelativeTime(Math.floor(lastSeen.getTime() / 1000))}
           </span>
         )}
       </div>
@@ -98,7 +98,7 @@ export function ProjectStatusPanel({
           </div>
           <div className="space-y-1">
             <p className="text-sm font-medium">
-              {lastSeen ? formatDistanceToNow(lastSeen, { addSuffix: true }) : 'Never'}
+              {lastSeen ? formatRelativeTime(Math.floor(lastSeen.getTime() / 1000)) : 'Never'}
             </p>
             <p className="text-xs text-muted-foreground">Last Update</p>
           </div>

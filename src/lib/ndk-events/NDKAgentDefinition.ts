@@ -55,14 +55,11 @@ export class NDKAgentDefinition extends NDKEvent {
   }
 
   get instructions(): string {
-    return this.tagValue('instructions') || ''
+    return this.content;
   }
 
   set instructions(value: string) {
-    this.removeTag('instructions')
-    if (value) {
-      this.tags.push(['instructions', value])
-    }
+      this.content = value;
   }
 
   get useCriteria(): string[] {

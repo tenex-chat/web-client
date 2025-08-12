@@ -36,7 +36,7 @@ interface UseDraftPersistenceProps {
  * Hook to persist message drafts in localStorage
  * Automatically saves and restores drafts per thread/task
  */
-export function useDraftPersistence({
+function useDraftPersistence({
   threadId,
   taskId,
   enabled = true,

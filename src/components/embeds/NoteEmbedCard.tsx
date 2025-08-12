@@ -7,6 +7,7 @@ import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { BaseEmbedCard } from './BaseEmbedCard'
 
 interface NoteEmbedCardProps {
   event: NDKEvent
@@ -16,13 +17,10 @@ interface NoteEmbedCardProps {
 }
 
 export function NoteEmbedCard({ event, compact, className, onClick }: NoteEmbedCardProps) {
-  // Check for media attachments
   const getImageUrl = () => {
-    // Check for image URL in tags (NIP-92)
     const urlTag = event.tags?.find(tag => tag[0] === 'url' || tag[0] === 'image')
     if (urlTag) return urlTag[1]
     
-    // Check for image URLs in content
     const imageMatch = event.content?.match(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/i)
     return imageMatch?.[0]
   }
@@ -34,20 +32,14 @@ export function NoteEmbedCard({ event, compact, className, onClick }: NoteEmbedC
 
   if (compact) {
     return (
-      <span
+      <BaseEmbedCard
+        event={event}
+        compact={true}
+        className={className}
         onClick={onClick}
-        className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md",
-          "bg-muted/50 hover:bg-muted transition-colors cursor-pointer",
-          "text-sm my-1",
-          className
-        )}
-      >
-        <MessageSquare className="w-3.5 h-3.5" />
-        <span className="font-medium">
-          Note by <ProfileDisplay pubkey={event.pubkey} />
-        </span>
-      </span>
+        icon={<MessageSquare className="w-3.5 h-3.5" />}
+        title={`Note by ${event.pubkey.slice(0, 8)}...`}
+      />
     )
   }
 

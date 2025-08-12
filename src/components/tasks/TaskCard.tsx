@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Code2, Square } from 'lucide-react'
 import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { NDKKind, NDKEvent } from '@nostr-dev-kit/ndk'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelativeTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
 import type { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { EVENT_KINDS } from '@/lib/constants'
@@ -122,7 +122,7 @@ export const TaskCard = memo(
                   {latestUpdate.content}
                 </p>
                 <p className="text-xs text-muted-foreground/60 mt-1">
-                  {formatDistanceToNow(new Date(latestUpdate.created_at! * 1000), { addSuffix: true })}
+                  {formatRelativeTime(latestUpdate.created_at!)}
                 </p>
               </div>
             ) : contentPreview ? (

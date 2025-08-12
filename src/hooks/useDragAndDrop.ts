@@ -26,7 +26,7 @@ export interface UseDragAndDropReturn {
   }
 }
 
-export function useDragAndDrop(options: UseDragAndDropOptions = {}): UseDragAndDropReturn {
+function useDragAndDrop(options: UseDragAndDropOptions = {}): UseDragAndDropReturn {
   const {
     onDrop,
     onPaste,

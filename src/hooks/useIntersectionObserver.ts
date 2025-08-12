@@ -7,7 +7,7 @@ interface UseIntersectionObserverOptions {
   freezeOnceVisible?: boolean
 }
 
-export function useIntersectionObserver(
+function useIntersectionObserver(
   options: UseIntersectionObserverOptions = {}
 ): [React.RefObject<HTMLDivElement>, boolean] {
   const { threshold = 0, root = null, rootMargin = '0px', freezeOnceVisible = false } = options

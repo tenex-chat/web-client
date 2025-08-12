@@ -1,6 +1,6 @@
 import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
 import { useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
-import { ChevronDown, ChevronRight, Send, Reply, MoreVertical, Cpu, DollarSign, Volume2, Square, Brain, Bot, X, MoreHorizontal } from 'lucide-react'
+import { ChevronDown, ChevronRight, Send, Reply, MoreVertical, Cpu, DollarSign, Volume2, Square, Brain } from 'lucide-react'
 import { memo, useCallback, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -12,12 +12,6 @@ import { EVENT_KINDS } from '@/lib/constants'
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
@@ -32,10 +26,9 @@ import { extractTTSContent } from '@/lib/utils/extractTTSContent'
 import { useAgentTTSConfig, getVoiceDisplayName } from '@/hooks/useAgentTTSConfig'
 import { useMarkdownComponents } from '@/lib/markdown/config'
 import { extractLLMMetadata, getEventPhase, getEventPhaseFrom, getEventLLMModel, getEventLLMProvider, getPhaseIcon } from '@/lib/utils/event-metadata'
-import { useModelSwitching } from '@/hooks/useModelSwitching'
 import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { useProjectOnlineModels } from '@/hooks/useProjectOnlineModels'
-import { useIsMobile } from '@/hooks/use-mobile'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import { replaceNostrEntities } from '@/lib/utils/nostrEntityParser'
 
 interface MessageWithRepliesProps {

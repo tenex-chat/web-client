@@ -109,13 +109,3 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-export function withErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
-  fallback?: ReactNode
-) {
-  return (props: P) => (
-    <ErrorBoundary fallback={fallback}>
-      <Component {...props} />
-    </ErrorBoundary>
-  )
-}

@@ -5,7 +5,7 @@ import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { useProject } from '@/hooks/useProject'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { Button } from '@/components/ui/button'
-import { Settings, Users, MessageSquare, Menu, ListTodo, FileText, Bot, ArrowLeft } from 'lucide-react'
+import { Settings, Users, MessageSquare, Menu, ListTodo, FileText, Bot, ArrowLeft, Plus } from 'lucide-react'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 import { ThreadList } from '@/components/chat/ThreadList'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
@@ -16,7 +16,7 @@ import { EVENT_KINDS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { DocumentationList } from '@/components/documentation/DocumentationList'
 import { DocumentationViewer } from '@/components/documentation/DocumentationViewer'
-import type { NDKArticle } from '@nostr-dev-kit/ndk'
+import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk'
 import { ProjectStatusIndicator } from '@/components/status/ProjectStatusIndicator'
 import { ProjectStatusPanel } from '@/components/status/ProjectStatusPanel'
 import { useProjectStatus } from '@/stores/projects'
@@ -24,6 +24,8 @@ import { AgentsTabContent } from '@/components/agents/AgentsTabContent'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { MobileTabs } from '@/components/mobile/MobileTabs'
 import { useProjectActivityStore } from '@/stores/projectActivity'
+import { FAB } from '@/components/ui/fab'
+import { toast } from 'sonner'
 
 export const Route = createFileRoute('/_auth/projects/$projectId/')({
   component: ProjectDetailPage,
@@ -35,20 +37,28 @@ function ProjectDetailPage() {
   const { ndk } = useNDK()
   const project = useProject(projectId)
   const isMobile = useIsMobile()
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(isMobile ? null : 'new')
+  const [selectedThreadEvent, setSelectedThreadEvent] = useState<NDKEvent | undefined>(undefined)
   const [showThreadList, setShowThreadList] = useState(true)
   const [activeTab, setActiveTab] = useState<'conversations' | 'tasks' | 'docs' | 'agents' | 'status'>('conversations')
   const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null)
   const [taskUnreadMap] = useState(new Map<string, number>())
   const [mobileView, setMobileView] = useState<'tabs' | 'chat'>('tabs')
   
+  // Reset selected thread when project changes
+  useEffect(() => {
+    setSelectedThreadEvent(undefined)
+    setMobileView('tabs')
+    setActiveTab('conversations')
+    setSelectedArticle(null)
+  }, [projectId, isMobile])
+  
   // Use project status from the store
-  const projectStatus = useProjectStatus(project?.tagId())
+  const projectStatus = useProjectStatus(project?.dTag)
   
   // Update activity timestamp when user visits a project
   useEffect(() => {
-    if (project?.tagId()) {
-      useProjectActivityStore.getState().updateActivity(project.tagId())
+    if (project?.dTag) {
+      useProjectActivityStore.getState().updateActivity(project.dTag)
     }
   }, [project])
   
@@ -111,14 +121,19 @@ function ProjectDetailPage() {
   }
 
 
-  const handleTaskSelect = (_project: NDKProject, taskId: string) => {
-    // Set the task as the selected thread/conversation
-    setSelectedThreadId(taskId)
-    // Switch to conversations tab to show the task
-    setActiveTab('conversations')
-    // On mobile, switch to chat view
-    if (isMobile) {
-      setMobileView('chat')
+  const handleTaskSelect = async (_project: NDKProject, taskId: string) => {
+    // Fetch the task event and set it as the selected thread
+    if (ndk) {
+      const taskEvent = await ndk.fetchEvent(taskId)
+      if (taskEvent) {
+        setSelectedThreadEvent(taskEvent)
+        // Switch to conversations tab to show the task
+        setActiveTab('conversations')
+        // On mobile, switch to chat view
+        if (isMobile) {
+          setMobileView('chat')
+        }
+      }
     }
   }
 
@@ -126,11 +141,45 @@ function ProjectDetailPage() {
     // TODO: Mark task updates as seen
     console.log('Marking task updates as seen:', taskId)
   }
+  
+  const handleThreadSelect = async (threadId: string) => {
+    if (threadId === 'new') {
+      setSelectedThreadEvent(undefined)
+    } else if (ndk) {
+      const threadEvent = await ndk.fetchEvent(threadId)
+      if (threadEvent) {
+        setSelectedThreadEvent(threadEvent)
+      }
+    }
+  }
+
+  const handleStartProject = async () => {
+    if (!ndk || !project) return
+    
+    try {
+      // Create a 24000 event to start the project
+      const event = new NDKEvent(ndk)
+      event.kind = EVENT_KINDS.PROJECT_START
+      event.content = ''
+      
+      // Tag the project using its NIP-33 reference
+      const projectTag = project.tagId()
+      event.tags = [['a', projectTag]]
+      
+      // Publish the event
+      await event.publish()
+      
+      toast.success('Starting project...')
+    } catch (error) {
+      console.error('Failed to start project:', error)
+      toast.error('Failed to start project')
+    }
+  }
 
   // Mobile view - show one view at a time
   if (isMobile) {
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full relative">
           {/* Mobile Header with Back Navigation */}
           {mobileView !== 'tabs' && (
             <div className="border-b px-4 py-3 flex items-center gap-3">
@@ -141,7 +190,7 @@ function ProjectDetailPage() {
                 onClick={() => {
                   if (mobileView === 'chat') {
                     setMobileView('tabs')
-                    setSelectedThreadId(null)
+                    setSelectedThreadEvent(undefined)
                   }
                 }}
               >
@@ -178,8 +227,10 @@ function ProjectDetailPage() {
               navigate={navigate}
               mobileView={mobileView}
               setMobileView={setMobileView}
-              selectedThreadId={selectedThreadId}
-              setSelectedThreadId={setSelectedThreadId}
+              selectedThreadEvent={selectedThreadEvent}
+              setSelectedThreadEvent={setSelectedThreadEvent}
+              handleThreadSelect={handleThreadSelect}
+              handleStartProject={handleStartProject}
             />
           )}
 
@@ -187,14 +238,44 @@ function ProjectDetailPage() {
           {mobileView === 'chat' && (
             <ChatInterface 
               project={project} 
-              threadId={selectedThreadId || 'new'}
-              key={selectedThreadId || 'new'}
+              rootEvent={selectedThreadEvent}
+              key={selectedThreadEvent?.id || 'new'}
               className="h-full"
-              onTaskClick={(taskId) => {
-                setSelectedThreadId(taskId)
+              onTaskClick={async (taskId) => {
+                if (ndk) {
+                  const taskEvent = await ndk.fetchEvent(taskId)
+                  if (taskEvent) {
+                    setSelectedThreadEvent(taskEvent)
+                  }
+                }
                 // Stay in chat view on mobile when clicking a task within chat
               }}
+              onThreadCreated={async (newThreadId) => {
+                if (ndk) {
+                  const newEvent = await ndk.fetchEvent(newThreadId)
+                  if (newEvent) {
+                    setSelectedThreadEvent(newEvent)
+                  }
+                }
+                // Stay in chat view after creating thread
+              }}
             />
+          )}
+          
+          {/* FAB for mobile - show when in tabs view */}
+          {mobileView === 'tabs' && activeTab === 'conversations' && (
+            <FAB
+              onClick={() => {
+                setSelectedThreadEvent(undefined)
+                setMobileView('chat')
+              }}
+              label="New Chat"
+              showLabel={false}
+              position="bottom-right"
+              offset={{ bottom: '80px' }} // Offset to account for tab bar
+            >
+              <Plus />
+            </FAB>
           )}
         </div>
     )
@@ -202,7 +283,7 @@ function ProjectDetailPage() {
 
   // Desktop view - keep existing layout
   return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full relative">
         {/* Project Header with integrated tabs */}
         <div className="border-b">
           <div className="flex items-center gap-4 px-4 pt-4 pb-2">
@@ -215,7 +296,11 @@ function ProjectDetailPage() {
             <div className="flex-1 flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-semibold">{project.title || 'Untitled Project'}</h1>
-                <ProjectStatusIndicator status={getOverallStatus()} size="sm" />
+                <ProjectStatusIndicator 
+                  status={getOverallStatus()} 
+                  size="sm" 
+                  onClick={handleStartProject}
+                />
               </div>
               
               {/* Inline tabs */}
@@ -281,7 +366,7 @@ function ProjectDetailPage() {
                 variant="ghost" 
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => navigate({ to: '/projects/$projectId/settings', params: { projectId } })}
+                onClick={() => navigate({ to: '/projects/$projectId/settings', params: { projectId: project.dTag || projectId } })}
               >
                 <Settings className="h-4 w-4" />
               </Button>
@@ -303,23 +388,51 @@ function ProjectDetailPage() {
               {/* Thread List - Collapsible on mobile */}
               <div
                 className={cn(
-                  'border-r bg-muted/10 transition-all duration-300 overflow-hidden',
+                  'border-r bg-muted/10 transition-all duration-300 overflow-hidden relative',
                   showThreadList ? 'w-80' : 'w-0',
                   'lg:w-80' // Always show on large screens
                 )}
               >
                 {showThreadList && (
-                  <ThreadList
-                    project={project}
-                    selectedThreadId={selectedThreadId || undefined}
-                    onThreadSelect={(threadId) => {
-                      setSelectedThreadId(threadId)
-                      // On mobile, hide thread list when selecting a thread
-                      if (isMobile) {
-                        setShowThreadList(false)
-                      }
-                    }}
-                  />
+                  <>
+                    <ThreadList
+                      project={project}
+                      selectedThreadId={selectedThreadEvent?.id}
+                      onThreadSelect={async (threadId) => {
+                        if (ndk) {
+                          const threadEvent = await ndk.fetchEvent(threadId)
+                          if (threadEvent) {
+                            setSelectedThreadEvent(threadEvent)
+                          }
+                        }
+                        // On mobile, hide thread list when selecting a thread
+                        if (isMobile) {
+                          setShowThreadList(false)
+                        }
+                      }}
+                    />
+                    {/* FAB for desktop - positioned within the thread list column */}
+                    {!isMobile && (
+                      <FAB
+                        onClick={() => {
+                          setSelectedThreadEvent(undefined)
+                        }}
+                        label="New Chat"
+                        showLabel={false}
+                        position="bottom-right"
+                        size="default"
+                        style={{
+                          position: 'absolute',
+                          bottom: '16px',
+                          right: '16px',
+                          left: 'auto',
+                          top: 'auto'
+                        }}
+                      >
+                        <Plus />
+                      </FAB>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -341,12 +454,26 @@ function ProjectDetailPage() {
                 <div className="flex-1 overflow-hidden">
                   <ChatInterface 
                     project={project} 
-                    threadId={selectedThreadId || 'new'}
-                    key={selectedThreadId} // Force remount on thread change
+                    rootEvent={selectedThreadEvent}
+                    key={selectedThreadEvent?.id} // Force remount on thread change
                     className="h-full"
-                    onTaskClick={(taskId) => {
-                      setSelectedThreadId(taskId)
+                    onTaskClick={async (taskId) => {
+                      if (ndk) {
+                        const taskEvent = await ndk.fetchEvent(taskId)
+                        if (taskEvent) {
+                          setSelectedThreadEvent(taskEvent)
+                        }
+                      }
                       // Desktop already shows chat, just update the thread
+                    }}
+                    onThreadCreated={async (newThreadId) => {
+                      if (ndk) {
+                        const newEvent = await ndk.fetchEvent(newThreadId)
+                        if (newEvent) {
+                          setSelectedThreadEvent(newEvent)
+                        }
+                      }
+                      // Update thread list and stay in current view
                     }}
                   />
                 </div>
@@ -356,7 +483,7 @@ function ProjectDetailPage() {
 
           {/* Tasks Tab */}
           <TabsContent value="tasks" className="flex-1 overflow-auto">
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full relative">
               {/* Tasks Header */}
               <div className="border-b p-4">
                 <div className="flex items-center justify-between">
@@ -379,6 +506,27 @@ function ProjectDetailPage() {
                   markTaskStatusUpdatesSeen={markTaskStatusUpdatesSeen}
                 />
               </div>
+              
+              {/* FAB for creating tasks */}
+              {!isMobile && (
+                <FAB
+                  onClick={() => {
+                    // TODO: Implement task creation
+                    console.log('Create new task')
+                  }}
+                  label="New Task"
+                  showLabel={true}
+                  size="default"
+                  className="!absolute"
+                  style={{
+                    position: 'absolute',
+                    bottom: '16px',
+                    right: '16px'
+                  }}
+                >
+                  <Plus />
+                </FAB>
+              )}
             </div>
           </TabsContent>
 
@@ -396,6 +544,7 @@ function ProjectDetailPage() {
                 <DocumentationViewer
                   article={selectedArticle}
                   projectTitle={project.title}
+                  project={project}
                   onBack={() => setSelectedArticle(null)}
                 />
               )}
@@ -421,7 +570,6 @@ function ProjectDetailPage() {
             </div>
           </TabsContent>
         </Tabs>
-
       </div>
   )
 }

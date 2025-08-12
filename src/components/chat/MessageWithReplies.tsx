@@ -1,6 +1,7 @@
 import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
 import { useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { ChevronDown, ChevronRight, Send, Reply, MoreVertical, Cpu, DollarSign, Volume2, Square, Brain } from 'lucide-react'
+import { TypingIndicator } from './TypingIndicator'
 import { memo, useCallback, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -63,7 +64,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   const isMobile = useIsMobile()
   
   // Get ONLINE agents to find the agent's name from its pubkey
-  const onlineAgents = useProjectOnlineAgents(project.tagId())
+  const onlineAgents = useProjectOnlineAgents(project.dTag)
   
   // Get the agent's name from the online agents
   const agentSlug = useMemo(() => {
@@ -170,13 +171,19 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     }).length
   }, [directReplies, event.id])
 
-  // Streaming is now handled by temporary messages in ChatInterface
-  // MessageWithReplies only handles real events (kind 1111)
-
-  const isCurrentUser = event.pubkey === user?.pubkey
+  // Check if this is a typing indicator event
+  const isTypingEvent = event.kind === EVENT_KINDS.TYPING_INDICATOR || event.kind === EVENT_KINDS.STREAMING_RESPONSE
+  
+  // For typing events, check if content contains "is typing"
+  const showTypingIndicator = isTypingEvent && event.content?.includes('is typing')
 
   // Parse content with thinking blocks
   const { contentParts, shouldTruncate } = useMemo(() => {
+    // Skip parsing if this is a typing indicator
+    if (showTypingIndicator) {
+      return { contentParts: [], shouldTruncate: false }
+    }
+    
     let content = event.content || ""
     const parts: Array<{ type: 'text' | 'thinking', content: string }> = []
     
@@ -354,8 +361,9 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               </span>
             </div>
             
-            {/* Action buttons - only visible on hover */}
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Action buttons - only visible on hover, hide for typing indicators */}
+            {!showTypingIndicator && (
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
               {/* Phase indicator - inline with hover buttons */}
               {phase && (
                 <Badge 
@@ -481,7 +489,8 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                   {llmMetadata?.["llm-cost-usd"] || llmMetadata?.["llm-cost"]}
                 </Badge>
               )}
-            </div>
+              </div>
+            )}
           </div>
           
           {/* Message content - no background, just text */}
@@ -490,8 +499,13 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               "break-words text-foreground",
               isMobile ? "text-[15px] leading-[1.6]" : "text-sm"
             )}>
-              {/* Render content parts with inline thinking blocks */}
-              {contentParts.map((part, partIndex) => {
+              {/* Show typing indicator for typing events */}
+              {showTypingIndicator ? (
+                <TypingIndicator users={[{ pubkey: event.pubkey, name: agentSlug || undefined }]} />
+              ) : (
+                <>
+                  {/* Render content parts with inline thinking blocks */}
+                  {contentParts.map((part, partIndex) => {
                 if (part.type === 'text') {
                   // Render text content with markdown
                   const textToRender = shouldTruncate && !isExpanded && partIndex === 0 
@@ -548,21 +562,23 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                 }
               })}
               
-              {/* Show expand/collapse button for truncated content */}
-              {shouldTruncate && contentParts.some(p => p.type === 'text' && p.content.length > 280) && (
-                <button
-                  type="button"
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-xs text-blue-600 hover:text-blue-700 mt-1"
-                >
-                  {isExpanded ? 'Show less' : 'Show more'}
-                </button>
+                  {/* Show expand/collapse button for truncated content */}
+                  {shouldTruncate && contentParts.some(p => p.type === 'text' && p.content.length > 280) && (
+                    <button
+                      type="button"
+                      onClick={() => setIsExpanded(!isExpanded)}
+                      className="text-xs text-blue-600 hover:text-blue-700 mt-1"
+                    >
+                      {isExpanded ? 'Show less' : 'Show more'}
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
           
-          {/* Reply count and toggle - Slack style */}
-          {replyCount > 0 && !showReplies && (
+          {/* Reply count and toggle - Slack style - hide for typing indicators */}
+          {!showTypingIndicator && replyCount > 0 && !showReplies && (
             <div className="mt-1.5">
               <button
                 type="button"

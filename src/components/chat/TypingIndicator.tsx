@@ -30,19 +30,12 @@ export const TypingIndicator = memo(function TypingIndicator({
   }
 
   return (
-    <div className={cn('flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground', className)}>
-      <div className="flex -space-x-2">
-        {users.slice(0, 3).map((user) => (
-          <ProfileDisplay key={user.pubkey} pubkey={user.pubkey} showName={false} avatarClassName="h-6 w-6 border-2 border-background" />
-        ))}
-      </div>
-      <div className="flex items-center gap-1">
-        <span>{getTypingText()}</span>
-        <div className="flex gap-1">
-          <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
-          <span className="animate-bounce" style={{ animationDelay: '200ms' }}>.</span>
-          <span className="animate-bounce" style={{ animationDelay: '400ms' }}>.</span>
-        </div>
+    <div className={cn('flex items-center gap-1.5 text-sm text-muted-foreground', className)}>
+      <span className="text-xs">is typing</span>
+      <div className="flex gap-1">
+        <span className="inline-block w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.3s]" />
+        <span className="inline-block w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.15s]" />
+        <span className="inline-block w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" />
       </div>
     </div>
   )

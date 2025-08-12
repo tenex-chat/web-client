@@ -11,7 +11,7 @@ import { ProjectStatusPanel } from '@/components/status/ProjectStatusPanel'
 import { ProjectStatusIndicator } from '@/components/status/ProjectStatusIndicator'
 import { useProjectStatus } from '@/stores/projects'
 import { ThreadList } from '@/components/chat/ThreadList'
-import type { NDKArticle } from '@nostr-dev-kit/ndk'
+import type { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk'
 import { useNavigate } from '@tanstack/react-router'
 
 interface MobileTabsProps {
@@ -27,8 +27,10 @@ interface MobileTabsProps {
   navigate: ReturnType<typeof useNavigate>
   mobileView: 'tabs' | 'chat'
   setMobileView: (view: 'tabs' | 'chat') => void
-  selectedThreadId: string | null
-  setSelectedThreadId: (threadId: string | null) => void
+  selectedThreadEvent: NDKEvent | undefined
+  setSelectedThreadEvent: (event: NDKEvent | undefined) => void
+  handleThreadSelect: (threadId: string) => Promise<void>
+  handleStartProject?: () => void
 }
 
 export function MobileTabs({
@@ -43,10 +45,12 @@ export function MobileTabs({
   markTaskStatusUpdatesSeen,
   navigate,
   setMobileView,
-  selectedThreadId,
-  setSelectedThreadId
+  selectedThreadEvent,
+  setSelectedThreadEvent,
+  handleThreadSelect,
+  handleStartProject
 }: MobileTabsProps) {
-  const projectStatus = useProjectStatus(project?.tagId())
+  const projectStatus = useProjectStatus(project?.dTag)
   const getOverallStatus = () => projectStatus?.isOnline ? 'online' : 'offline'
 
   return (
@@ -64,7 +68,11 @@ export function MobileTabs({
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-semibold">{project.title || 'Untitled Project'}</h1>
-                <ProjectStatusIndicator status={getOverallStatus()} size="sm" />
+                <ProjectStatusIndicator 
+                  status={getOverallStatus()} 
+                  size="sm" 
+                  onClick={handleStartProject}
+                />
               </div>
             </div>
             <Button 
@@ -133,9 +141,9 @@ export function MobileTabs({
         {activeTab === 'conversations' && (
           <ThreadList
             project={project}
-            selectedThreadId={selectedThreadId || undefined}
-            onThreadSelect={(threadId) => {
-              setSelectedThreadId(threadId)
+            selectedThreadId={selectedThreadEvent?.id}
+            onThreadSelect={async (threadId) => {
+              await handleThreadSelect(threadId)
               setMobileView('chat')
             }}
           />

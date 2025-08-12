@@ -7,14 +7,12 @@ import { EVENT_KINDS } from "../../lib/constants";
 import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Badge } from "../ui/badge";
 import { EmptyState } from "../common/EmptyState";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks';
 import { CreateAgentDialog } from "../dialogs/CreateAgentDialog";
+import { AgentDefinitionCard } from "./AgentDefinitionCard";
 
 type TabType = "all" | "owned" | "subscribed";
 
@@ -149,54 +147,12 @@ export function AgentDefinitionsPage() {
                     ) : (
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                             {filteredAgents.map((agent) => (
-                                <Card 
+                                <AgentDefinitionCard
                                     key={agent.id}
-                                    className="cursor-pointer hover:shadow-lg transition-shadow"
+                                    agent={agent}
                                     onClick={() => handleAgentClick(agent)}
-                                >
-                                    <CardHeader>
-                                        <div className="flex items-start gap-3">
-                                            <Avatar className="w-12 h-12">
-                                                <AvatarImage src={agent.picture} />
-                                                <AvatarFallback>
-                                                    <Bot className="w-6 h-6" />
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1 min-w-0">
-                                                <CardTitle className="text-lg truncate">
-                                                    {agent.name || "Unnamed Agent"}
-                                                </CardTitle>
-                                                {agent.role && (
-                                                    <Badge 
-                                                        variant="secondary" 
-                                                        className={`mt-1 ${getRoleColor(agent.role)}`}
-                                                    >
-                                                        {agent.role}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <CardDescription className="line-clamp-3">
-                                            {agent.description || "No description provided"}
-                                        </CardDescription>
-                                        {agent.useCriteria && agent.useCriteria.length > 0 && (
-                                            <div className="mt-3 flex flex-wrap gap-1">
-                                                {agent.useCriteria.slice(0, 3).map((criteria, idx) => (
-                                                    <Badge key={idx} variant="outline" className="text-xs">
-                                                        {criteria}
-                                                    </Badge>
-                                                ))}
-                                                {agent.useCriteria.length > 3 && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        +{agent.useCriteria.length - 3} more
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                                    getRoleColor={getRoleColor}
+                                />
                             ))}
                         </div>
                     )}

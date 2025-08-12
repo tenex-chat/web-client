@@ -23,7 +23,7 @@ interface CreateAgentDialogProps {
   forkFromAgent?: NDKAgentDefinition
 }
 
-type WizardStep = 'basics' | 'prompt' | 'criteria'
+type WizardStep = 'basics' | 'prompt' | 'preview' | 'criteria'
 
 export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateAgentDialogProps) {
   const { ndk } = useNDK()
@@ -88,6 +88,12 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
       return
     }
 
+    if (!agentData.instructions.trim()) {
+      toast.error('System prompt is required')
+      setCurrentStep('prompt')
+      return
+    }
+
     setIsCreating(true)
     try {
       // Always create a new agent (forking creates a new event)
@@ -131,9 +137,11 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
       case 'basics':
         return agentData.name.trim() && agentData.description.trim()
       case 'prompt':
-        return true // Instructions are optional
+        return agentData.instructions.trim().length > 0
+      case 'preview':
+        return true
       case 'criteria':
-        return true // Criteria are optional
+        return true
       default:
         return false
     }
@@ -147,6 +155,9 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         setCurrentStep('prompt')
         break
       case 'prompt':
+        setCurrentStep('preview')
+        break
+      case 'preview':
         setCurrentStep('criteria')
         break
       case 'criteria':
@@ -160,8 +171,11 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
       case 'prompt':
         setCurrentStep('basics')
         break
-      case 'criteria':
+      case 'preview':
         setCurrentStep('prompt')
+        break
+      case 'criteria':
+        setCurrentStep('preview')
         break
     }
   }
@@ -172,6 +186,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         return 'Basic Information'
       case 'prompt':
         return 'System Prompt'
+      case 'preview':
+        return 'Preview System Prompt'
       case 'criteria':
         return 'Use Criteria & Version'
       default:
@@ -184,7 +200,9 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
       case 'basics':
         return 'Define the basic properties of your agent definition'
       case 'prompt':
-        return 'Write the system prompt that will guide this agent\'s behavior'
+        return 'Write the system prompt that defines this agent\'s behavior and capabilities'
+      case 'preview':
+        return 'Review how your system prompt will be displayed'
       case 'criteria':
         return 'Define when this agent should be used and set version'
       default:
@@ -192,9 +210,20 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
     }
   }
 
+  const getDialogWidth = () => {
+    switch (currentStep) {
+      case 'prompt':
+        return 'max-w-3xl'
+      case 'preview':
+        return 'max-w-4xl'
+      default:
+        return 'max-w-2xl'
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className={`${getDialogWidth()} max-h-[90vh] flex flex-col`}>
         <DialogHeader>
           <DialogTitle>
             {forkFromAgent ? 'Fork Agent Definition' : 'Create Agent Definition'}
@@ -243,40 +272,56 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
           {currentStep === 'prompt' && (
             <div className="space-y-4">
               <div className="grid gap-2">
-                <Label htmlFor="instructions">System Prompt (optional)</Label>
+                <Label htmlFor="instructions">System Prompt *</Label>
                 <div className="text-sm text-muted-foreground mb-2">
-                  Write instructions that will guide this agent's behavior. You can use Markdown formatting.
+                  Define the agent's behavior, capabilities, and constraints. Use Markdown for formatting.
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Textarea
-                      id="instructions"
-                      value={agentData.instructions}
-                      onChange={(e) => setAgentData({ ...agentData, instructions: e.target.value })}
-                      placeholder="You are a helpful AI assistant that...
+                <Textarea
+                  id="instructions"
+                  value={agentData.instructions}
+                  onChange={(e) => setAgentData({ ...agentData, instructions: e.target.value })}
+                  placeholder="You are a helpful AI assistant specialized in...
 
-## Your responsibilities:
-- Help users with...
-- Provide accurate...
+## Core Responsibilities
+- Assist users with...
+- Provide accurate information about...
+- Help solve problems related to...
 
-## Guidelines:
-1. Always be...
-2. Never..."
-                      rows={20}
-                      className="font-mono text-sm"
-                    />
-                  </div>
-                  <div className="border rounded-lg p-4 bg-muted/50">
-                    <div className="text-sm font-medium mb-2">Preview</div>
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      {agentData.instructions ? (
-                        <ReactMarkdown>{agentData.instructions}</ReactMarkdown>
-                      ) : (
-                        <p className="text-muted-foreground italic">Your formatted prompt will appear here...</p>
-                      )}
-                    </div>
-                  </div>
+## Guidelines
+1. Always maintain a professional tone
+2. Provide clear and concise explanations
+3. Ask for clarification when needed
+
+## Constraints
+- Do not provide medical or legal advice
+- Respect user privacy
+- Stay within your area of expertise"
+                  rows={20}
+                  className="font-mono text-sm"
+                />
+              </div>
+            </div>
+          )}
+
+          {currentStep === 'preview' && (
+            <div className="space-y-4">
+              <div className="border rounded-lg p-6 bg-muted/30">
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  {agentData.instructions ? (
+                    <ReactMarkdown>{agentData.instructions}</ReactMarkdown>
+                  ) : (
+                    <p className="text-muted-foreground italic">No system prompt provided</p>
+                  )}
                 </div>
+              </div>
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentStep('prompt')}
+                >
+                  Edit System Prompt
+                </Button>
               </div>
             </div>
           )}

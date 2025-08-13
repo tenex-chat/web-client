@@ -1,4 +1,4 @@
-import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
+import NDK, { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
 import NDKBlossom from '@nostr-dev-kit/ndk-blossom'
 import imageCompression from 'browser-image-compression'
 import { encode } from 'blurhash'
@@ -67,7 +67,7 @@ export class BlossomService {
     return BlossomService.instance
   }
 
-  async initialize(ndk: any): Promise<void> {
+  async initialize(ndk: NDK): Promise<void> {
     if (this.blossomClient) return
     
     const signer = ndk.signer
@@ -363,7 +363,7 @@ export class BlossomService {
   ): Promise<NDKEvent | null> {
     if (!this.blossomClient) return null
 
-    const ndk = (this.blossomClient as any).ndk
+    const ndk = this.blossomClient.ndk
     if (!ndk) return null
 
     // Create NIP-94 file metadata event

@@ -1,5 +1,5 @@
 import { atom } from 'jotai'
-import type { BlossomServer } from '../services/blossom/BlossomService'
+import type { BlossomServerInfo } from '../services/blossom/BlossomServerRegistry'
 
 export interface UploadQueueItem {
   id: string
@@ -47,7 +47,7 @@ export const dragStateAtom = atom<DragState>({
 })
 
 // Server configurations atom
-export const blossomServersAtom = atom<BlossomServer[]>([])
+export const blossomServersAtom = atom<BlossomServerInfo[]>([])
 
 // Server health status atom
 export const serverHealthAtom = atom<Map<string, ServerHealth>>(new Map())

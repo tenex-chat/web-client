@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { DEFAULT_MODELS } from "@/services/llm-models";
 
 export function useLLM() {
     const cleanupText = useCallback(async (text: string): Promise<string> => {
@@ -20,7 +21,7 @@ export function useLLM() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    model: "gpt-3.5-turbo",
+                    model: DEFAULT_MODELS.openai,
                     messages: [
                         {
                             role: "system",

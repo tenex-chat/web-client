@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Check, X, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Check, X, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { atom, useAtom } from 'jotai';
+import { useAtom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { useToast } from '@/hooks/use-toast';
+import { fetchProviderModels, DEFAULT_MODELS } from '@/services/llm-models';
 
 type LLMProvider = 'openai' | 'anthropic' | 'google' | 'openrouter' | 'groq' | 'ollama';
 
@@ -26,69 +27,101 @@ interface LLMProviderSettings {
 const PROVIDER_INFO = {
   openai: {
     name: 'OpenAI',
-    models: ['gpt-4-turbo-preview', 'gpt-4', 'gpt-3.5-turbo'],
     description: 'GPT models with advanced capabilities',
+    requiresApiKey: true,
   },
   anthropic: {
     name: 'Anthropic',
-    models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'],
     description: 'Claude models known for safety and reasoning',
+    requiresApiKey: true,
   },
   google: {
     name: 'Google',
-    models: ['gemini-pro', 'gemini-pro-vision'],
     description: 'Gemini models with multimodal capabilities',
+    requiresApiKey: true,
   },
   openrouter: {
     name: 'OpenRouter',
-    models: ['auto'],
     description: 'Access multiple providers through one API',
+    requiresApiKey: true,
   },
   groq: {
     name: 'Groq',
-    models: ['mixtral-8x7b-32768', 'llama2-70b-4096'],
     description: 'Ultra-fast inference for open models',
+    requiresApiKey: true,
   },
   ollama: {
     name: 'Ollama',
-    models: ['llama2', 'mistral', 'codellama'],
     description: 'Run models locally on your machine',
+    requiresApiKey: false,
   },
 };
 
+// Define atom outside component to prevent recreation on every render
+const llmConfigsAtom = atomWithStorage<LLMProviderSettings[]>('llm-configs', []);
+
 export function LLMSettings() {
-  // Temporary local atom for LLM configs until properly integrated
-  const llmConfigsAtom = atomWithStorage<LLMProviderSettings[]>('llm-configs', []);
   const [configs, setConfigs] = useAtom(llmConfigsAtom);
   const [isAdding, setIsAdding] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
   const { toast } = useToast();
 
   // Form state
   const [formData, setFormData] = useState<Partial<LLMProviderSettings>>({
     provider: 'openai',
-    model: 'gpt-3.5-turbo',
+    model: '',
     enabled: true,
   });
 
-  // Load saved configs from localStorage on mount
+  // Fetch models when provider changes
   useEffect(() => {
-    const saved = localStorage.getItem('llm-configs');
-    if (saved) {
-      try {
-        setConfigs(JSON.parse(saved));
-      } catch (error) {
-        console.error('Failed to load LLM configs:', error);
-      }
+    if (formData.provider) {
+      setLoadingModels(true);
+      setFormData(prev => ({ ...prev, model: '' }));
+      
+      fetchProviderModels(formData.provider, formData.apiKey)
+        .then(models => {
+          setAvailableModels(models);
+          if (models.length > 0) {
+            setFormData(prev => ({ ...prev, model: models[0] }));
+          }
+        })
+        .catch(error => {
+          console.error('Failed to fetch models:', error);
+          setAvailableModels([]);
+        })
+        .finally(() => {
+          setLoadingModels(false);
+        });
     }
-  }, [setConfigs]);
+  }, [formData.provider]);
 
-  // Save configs to localStorage whenever they change
-  useEffect(() => {
-    if (configs.length > 0) {
-      localStorage.setItem('llm-configs', JSON.stringify(configs));
+  const handleRefreshModels = async () => {
+    if (!formData.provider) return;
+    
+    setLoadingModels(true);
+    try {
+      const models = await fetchProviderModels(formData.provider, formData.apiKey);
+      setAvailableModels(models);
+      if (!models.includes(formData.model || '') && models.length > 0) {
+        setFormData(prev => ({ ...prev, model: models[0] }));
+      }
+      toast({
+        title: 'Success',
+        description: `Found ${models.length} models`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch models',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingModels(false);
     }
-  }, [configs]);
+  };
 
   const handleAddConfig = () => {
     if (!formData.provider || !formData.apiKey || !formData.model) {
@@ -113,7 +146,7 @@ export function LLMSettings() {
 
     setConfigs([...configs, newConfig]);
     setIsAdding(false);
-    setFormData({ provider: 'openai', model: 'gpt-3.5-turbo', enabled: true });
+    setFormData({ provider: 'openai', model: DEFAULT_MODELS.openai, enabled: true });
     
     toast({
       title: 'Success',
@@ -133,13 +166,82 @@ export function LLMSettings() {
     setTestingId(config.id);
     
     try {
-      // TODO: Implement actual API test
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      let isValid = false;
       
-      toast({
-        title: 'Success',
-        description: 'API key is valid and model is accessible',
-      });
+      switch (config.provider) {
+        case 'openai':
+          if (config.apiKey) {
+            const response = await fetch('https://api.openai.com/v1/models', {
+              headers: {
+                'Authorization': `Bearer ${config.apiKey}`,
+              },
+            });
+            isValid = response.ok;
+          }
+          break;
+          
+        case 'anthropic':
+          if (config.apiKey) {
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'x-api-key': config.apiKey,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: config.model,
+                messages: [{role: 'user', content: 'test'}],
+                max_tokens: 1,
+              }),
+            });
+            isValid = response.status !== 401;
+          }
+          break;
+          
+        case 'openrouter':
+          if (config.apiKey) {
+            const response = await fetch('https://openrouter.ai/api/v1/models', {
+              headers: {
+                'Authorization': `Bearer ${config.apiKey}`,
+              },
+            });
+            isValid = response.ok;
+          }
+          break;
+          
+        case 'groq':
+          if (config.apiKey) {
+            const response = await fetch('https://api.groq.com/openai/v1/models', {
+              headers: {
+                'Authorization': `Bearer ${config.apiKey}`,
+              },
+            });
+            isValid = response.ok;
+          }
+          break;
+          
+        case 'ollama':
+          const response = await fetch('http://localhost:11434/api/tags');
+          isValid = response.ok;
+          break;
+          
+        case 'google':
+          isValid = !!config.apiKey;
+          break;
+          
+        default:
+          isValid = false;
+      }
+      
+      if (isValid) {
+        toast({
+          title: 'Success',
+          description: 'API key is valid and model is accessible',
+        });
+      } else {
+        throw new Error('Invalid API key or configuration');
+      }
     } catch (error) {
       toast({
         title: 'Error',
@@ -206,16 +308,29 @@ export function LLMSettings() {
                 </div>
                 
                 <div>
-                  <Label>Model</Label>
+                  <Label className="flex items-center justify-between">
+                    Model
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={handleRefreshModels}
+                      disabled={loadingModels || !formData.provider}
+                    >
+                      <RefreshCw className={`h-3 w-3 ${loadingModels ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </Label>
                   <Select
                     value={formData.model}
                     onValueChange={(value) => setFormData({ ...formData, model: value })}
+                    disabled={loadingModels || availableModels.length === 0}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder={loadingModels ? "Loading models..." : "Select a model"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {(formData.provider && PROVIDER_INFO[formData.provider]?.models || []).map(model => (
+                      {availableModels.map(model => (
                         <SelectItem key={model} value={model}>
                           {model}
                         </SelectItem>
@@ -225,15 +340,30 @@ export function LLMSettings() {
                 </div>
               </div>
 
-              <div>
-                <Label>API Key</Label>
-                <Input
-                  type="password"
-                  placeholder="sk-..."
-                  value={formData.apiKey || ''}
-                  onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                />
-              </div>
+              {formData.provider && PROVIDER_INFO[formData.provider]?.requiresApiKey && (
+                <div>
+                  <Label>API Key</Label>
+                  <Input
+                    type="password"
+                    placeholder="sk-..."
+                    value={formData.apiKey || ''}
+                    onChange={(e) => {
+                      const newApiKey = e.target.value;
+                      setFormData({ ...formData, apiKey: newApiKey });
+                      // Re-fetch models if API key is provided for OpenAI
+                      if (formData.provider === 'openai' && newApiKey) {
+                        fetchProviderModels('openai', newApiKey)
+                          .then(models => {
+                            setAvailableModels(models);
+                            if (!models.includes(formData.model || '') && models.length > 0) {
+                              setFormData(prev => ({ ...prev, model: models[0] }));
+                            }
+                          });
+                      }
+                    }}
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -276,7 +406,8 @@ export function LLMSettings() {
                     size="sm"
                     onClick={() => {
                       setIsAdding(false);
-                      setFormData({ provider: 'openai', model: 'gpt-3.5-turbo', enabled: true });
+                      setFormData({ provider: 'openai', model: '', enabled: true });
+                      setAvailableModels([]);
                     }}
                   >
                     <X className="h-4 w-4 mr-1" />

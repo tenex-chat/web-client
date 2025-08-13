@@ -4,6 +4,7 @@ import { useAtom, useSetAtom } from 'jotai'
 import { toast } from 'sonner'
 import { BlossomService } from '@/services/blossom/BlossomService'
 import { BlossomServerRegistry } from '@/services/blossom/BlossomServerRegistry'
+import { validateFiles } from '@/lib/utils/fileValidation'
 import {
   uploadQueueAtom,
   updateUploadItemAtom,
@@ -188,28 +189,14 @@ export function useBlossomUpload(): UseBlossomUploadReturn {
     processQueue()
   }, [uploadQueue, isInitialized, updateItem, addToHistory, updateServerHealth])
 
-  const validateFiles = useCallback((files: File[]): File[] => {
-    const validFiles: File[] = []
-    const errors: string[] = []
-
-    for (const file of files) {
-      // Check file size (max 100MB)
-      if (file.size > 100 * 1024 * 1024) {
-        errors.push(`${file.name} is too large (max 100MB)`)
-        continue
-      }
-
-      // Check if it's an image
-      if (!file.type.startsWith('image/')) {
-        errors.push(`${file.name} is not an image`)
-        continue
-      }
-
-      validFiles.push(file)
-    }
+  const validateFilesWithToast = useCallback((files: File[]): File[] => {
+    const { validFiles, errors } = validateFiles(files, {
+      maxSizeMB: 100,
+      imageOnly: true
+    })
 
     if (errors.length > 0) {
-      errors.forEach(error => toast.error(error))
+      errors.forEach(e => toast.error(`${e.file}: ${e.error}`))
     }
 
     return validFiles
@@ -221,7 +208,7 @@ export function useBlossomUpload(): UseBlossomUploadReturn {
       return
     }
 
-    const validFiles = validateFiles(files)
+    const validFiles = validateFilesWithToast(files)
     if (validFiles.length === 0) {
       return
     }

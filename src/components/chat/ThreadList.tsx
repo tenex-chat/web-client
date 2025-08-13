@@ -222,7 +222,6 @@ export function ThreadList({
           <div className="divide-y">
             {sortedThreads.map(thread => {
               const isSelected = thread.id === selectedThreadId
-              const hasUnread = false // TODO: Track read status
 
               return (
                 <button
@@ -230,8 +229,7 @@ export function ThreadList({
                   onClick={() => onThreadSelect(thread.id)}
                   className={cn(
                     'w-full text-left p-3 hover:bg-accent/50 transition-colors',
-                    isSelected && 'bg-accent',
-                    hasUnread && 'font-semibold'
+                    isSelected && 'bg-accent'
                   )}
                 >
                   <div className="flex items-start gap-2.5">
@@ -243,10 +241,7 @@ export function ThreadList({
                     {/* Thread Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className={cn(
-                          'text-sm font-medium truncate',
-                          !hasUnread && 'font-normal'
-                        )}>
+                        <h3 className="text-sm font-normal truncate">
                           {thread.title}
                         </h3>
                         <span className="text-xs text-muted-foreground shrink-0">

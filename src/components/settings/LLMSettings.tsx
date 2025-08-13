@@ -6,16 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useAtom } from 'jotai';
-import { llmConfigAtom } from '@/stores/llm';
+import { atom, useAtom } from 'jotai';
+import { atomWithStorage } from 'jotai/utils';
 import { useToast } from '@/hooks/use-toast';
 
-export type LLMProvider = 'openai' | 'anthropic' | 'google' | 'openrouter' | 'groq' | 'ollama';
-
-interface LLMConfig {
+interface LLMProviderSettings {
   id: string;
-  provider: LLMProvider;
-  apiKey: string;
+  provider: 'openai' | 'anthropic' | 'google' | 'local';
+  apiKey?: string;
   model: string;
   enabled: boolean;
   temperature?: number;
@@ -57,7 +55,9 @@ const PROVIDER_INFO = {
 };
 
 export function LLMSettings() {
-  const [configs, setConfigs] = useAtom(llmConfigAtom);
+  // Temporary local atom for LLM configs until properly integrated
+  const llmConfigsAtom = atomWithStorage<LLMProviderSettings[]>('llm-configs', []);
+  const [configs, setConfigs] = useAtom(llmConfigsAtom);
   const [isAdding, setIsAdding] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
   const { toast } = useToast();

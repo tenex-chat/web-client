@@ -21,8 +21,6 @@ export function ProjectCard({ project, isActive, isOnline = false, onClick }: Pr
     ? formatRelativeTime(project.created_at)
     : 'Unknown'
 
-  // Mock unread count (will be replaced with real data)
-  const unreadCount = 0
 
   return (
     <Link
@@ -85,11 +83,6 @@ export function ProjectCard({ project, isActive, isOnline = false, onClick }: Pr
                 #{tag}
               </span>
             ))}
-            {unreadCount > 0 && (
-              <Badge variant="default" className="ml-auto">
-                {unreadCount}
-              </Badge>
-            )}
           </div>
         </div>
       </div>

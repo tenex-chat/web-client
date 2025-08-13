@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Plus, Search, Settings, Bot, Wrench, User } from 'lucide-react'
+import { Plus, Settings, Bot, Wrench, User } from 'lucide-react'
+import { SearchBar } from '@/components/common/SearchBar'
 import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
@@ -118,15 +119,11 @@ export function MobileProjectsList() {
 
       {/* Search Bar */}
       <div className="px-4 py-3 border-b">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search projects..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search projects..."
+        />
       </div>
 
       {/* Projects List - Telegram Style */}

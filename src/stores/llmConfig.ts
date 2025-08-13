@@ -81,6 +81,9 @@ export const ttsConfigAtom = atom(
   }
 )
 
+// Atom for auto-TTS in chat (voice mode)
+export const autoTTSAtom = atomWithStorage<boolean>('chatAutoTTS', false)
+
 // Hook for accessing LLM config
 export function useLLMConfig() {
   const [config, setConfig] = useAtom(llmConfigAtom)

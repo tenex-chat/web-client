@@ -85,25 +85,19 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
     };
 }
 
-// Utility function to fetch Murf voices
+// Utility function to fetch Murf voices using the service
 export async function fetchMurfVoices(apiKey: string) {
+    const service = new MurfTTSService({ 
+        apiKey, 
+        voiceId: '', 
+        enabled: true 
+    });
     try {
-        const response = await fetch('https://api.murf.ai/v1/speech/voices', {
-            method: 'GET',
-            headers: {
-                'api-key': apiKey,
-                'Accept': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch voices: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data;
+        return await service.getVoices();
     } catch (error) {
         logger.error('Error fetching Murf voices:', error);
         throw error;
+    } finally {
+        service.dispose();
     }
 }

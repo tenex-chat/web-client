@@ -2,6 +2,7 @@ import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
 import NDKBlossom from '@nostr-dev-kit/ndk-blossom'
 import imageCompression from 'browser-image-compression'
 import { encode } from 'blurhash'
+import { isImageFile, validateFile } from '@/lib/utils/fileValidation'
 
 export interface BlobDescriptor {
   sha256: string
@@ -149,7 +150,7 @@ export class BlossomService {
 
       // Compress image if needed
       let processedFile = file
-      if (compress && this.isImage(file) && file.size > this.compressionThreshold) {
+      if (compress && isImageFile(file) && file.size > this.compressionThreshold) {
         onProgress?.(5) // Show initial progress for compression
         processedFile = await this.compressImage(file, maxSizeMB, maxWidthOrHeight)
       }
@@ -295,17 +296,15 @@ export class BlossomService {
   }
 
   private validateFile(file: File): void {
-    if (file.size > this.maxUploadSize) {
-      throw new Error(`File size exceeds maximum of ${this.maxUploadSize / 1024 / 1024}MB`)
+    const result = validateFile(file, {
+      maxSizeMB: this.maxUploadSize / 1024 / 1024,
+      allowedTypes: this.supportedImageTypes,
+      imageOnly: false
+    })
+    
+    if (!result.valid) {
+      throw new Error(result.error || 'Invalid file')
     }
-
-    if (this.isImage(file) && !this.supportedImageTypes.includes(file.type)) {
-      throw new Error(`Unsupported image type: ${file.type}`)
-    }
-  }
-
-  private isImage(file: File): boolean {
-    return file.type.startsWith('image/')
   }
 
   private async compressImage(
@@ -337,7 +336,7 @@ export class BlossomService {
       originalName: file.name
     }
 
-    if (this.isImage(file)) {
+    if (isImageFile(file)) {
       const dimensions = await this.getImageDimensions(file)
       if (dimensions) {
         metadata.width = dimensions.width

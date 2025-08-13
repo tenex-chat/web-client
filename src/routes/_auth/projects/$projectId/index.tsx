@@ -507,26 +507,6 @@ function ProjectDetailPage() {
                 />
               </div>
               
-              {/* FAB for creating tasks */}
-              {!isMobile && (
-                <FAB
-                  onClick={() => {
-                    // TODO: Implement task creation
-                    console.log('Create new task')
-                  }}
-                  label="New Task"
-                  showLabel={true}
-                  size="default"
-                  className="!absolute"
-                  style={{
-                    position: 'absolute',
-                    bottom: '16px',
-                    right: '16px'
-                  }}
-                >
-                  <Plus />
-                </FAB>
-              )}
             </div>
           </TabsContent>
 

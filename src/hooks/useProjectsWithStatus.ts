@@ -18,11 +18,14 @@ export function useProjectsWithStatus(projects: NDKProject[]) {
   // Get all project tag IDs
   const projectTagIds = projects.map(p => p.tagId())
 
-  // Subscribe to status events for all projects
-  // Note: We fetch ALL recent status events and filter client-side
-  // because NDK might not handle multiple #a tags correctly
-  const filter = projects.length > 0 ? {
+  // Get current user's pubkey for filtering status events
+  const userPubkey = ndk?.signer?.user()?.pubkey
+
+  // Subscribe to status events published by the current user (their projects)
+  // This is much more efficient than fetching all status events
+  const filter = projects.length > 0 && userPubkey ? {
     kinds: [EVENT_KINDS.PROJECT_STATUS as number],
+    '#p': [userPubkey], // Only fetch status events that reference the current user
     since: Math.floor(Date.now() / 1000) - 600 // Last 10 minutes
   } : undefined
 

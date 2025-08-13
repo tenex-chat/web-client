@@ -1,6 +1,7 @@
 import { type NDKKind } from "@nostr-dev-kit/ndk";
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { Bot, Plus, Search } from "lucide-react";
+import { Bot, Plus } from "lucide-react";
+import { SearchBar } from '@/components/common/SearchBar';
 import { useState, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { EVENT_KINDS } from "../../lib/constants";
@@ -106,15 +107,11 @@ export function AgentDefinitionsPage() {
 
                     {/* Search and Tabs */}
                     <div className="space-y-4">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search agents by name, description, or role..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
+                        <SearchBar
+                            value={searchQuery}
+                            onChange={setSearchQuery}
+                            placeholder="Search agents by name, description, or role..."
+                        />
 
                         {user && (
                             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>

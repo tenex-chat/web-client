@@ -1,5 +1,4 @@
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { type NDKUser } from "@nostr-dev-kit/ndk";
 import { useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Bot } from "lucide-react";

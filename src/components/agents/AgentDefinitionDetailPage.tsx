@@ -1,9 +1,7 @@
-import { type NDKKind } from "@nostr-dev-kit/ndk";
-import { useEvent, useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Bot, GitFork, Copy, CheckCircle2, Info, Users } from "lucide-react";
-import { EVENT_KINDS } from "../../lib/constants";
 import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks';
 import { Button } from "../ui/button";
@@ -21,7 +19,7 @@ import { AgentInstances } from "./AgentInstances";
 // This component shows an NDKAgentDefinition definition (the "class" not the instance)
 export function AgentDefinitionDetailPage() {
     const { agentDefinitionEventId } = useParams({ from: '/_auth/agent-definition/$agentDefinitionEventId' });
-    const user = useNDKCurrentUser();
+    useNDKCurrentUser();
     const navigate = useNavigate();
     const [copiedId, setCopiedId] = useState(false);
     const [forkDialogOpen, setForkDialogOpen] = useState(false);

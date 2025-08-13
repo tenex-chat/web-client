@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent, NDKUser } from '@nostr-dev-kit/ndk'
 import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { toast } from 'sonner'
 import { EVENT_KINDS } from '@/lib/constants'
@@ -8,7 +8,7 @@ import { NDKProject } from '@/lib/ndk-events/NDKProject'
 interface UseModelSwitchingOptions {
   event: NDKEvent
   project: NDKProject
-  user?: any // NDKUser type
+  user?: NDKUser
 }
 
 /**

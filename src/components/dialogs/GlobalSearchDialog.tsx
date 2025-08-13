@@ -1,15 +1,14 @@
 import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { useNavigate } from "@tanstack/react-router";
-import { FileText, FolderOpen, MessageCircle, Search, X } from "lucide-react";
+import { FileText, FolderOpen, MessageCircle } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useProjectsStore } from "../../stores/projects";
 import { useTimeFormat } from "../../hooks/useTimeFormat";
 import type { NDKProject } from "../../lib/ndk-events/NDKProject";
 import { NDKTask } from "../../lib/ndk-events/NDKTask";
 import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Input } from "../ui/input";
+import { SearchBar } from "../common/SearchBar";
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 
 interface GlobalSearchDialogProps {
@@ -141,26 +140,11 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
                 </DialogHeader>
                 <div className="space-y-4">
                     {/* Search Input */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                        <Input
-                            placeholder="Search projects, tasks, and threads..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 pr-10"
-                            autoFocus
-                        />
-                        {searchQuery && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute right-1 top-1/2 transform -translate-y-1/2 w-6 h-6"
-                                onClick={() => setSearchQuery("")}
-                            >
-                                <X className="w-3 h-3" />
-                            </Button>
-                        )}
-                    </div>
+                    <SearchBar
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        placeholder="Search projects, tasks, and threads..."
+                    />
                     
                     {/* Search Results */}
                     {searchQuery.trim() && (

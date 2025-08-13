@@ -6,7 +6,6 @@ import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { useProjectOnlineModels } from '@/hooks/useProjectOnlineModels'
 import { useNDK, useNDKCurrentUser, useProfile } from '@nostr-dev-kit/ndk-hooks'
 import { toast } from 'sonner'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import type { Message } from '../hooks/useChatMessages'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 
@@ -26,7 +25,7 @@ interface AgentInfo {
 export function ConversationAgents({ messages, project, rootEvent }: ConversationAgentsProps) {
   const { ndk } = useNDK()
   const user = useNDKCurrentUser()
-  const userProfile = useProfile(user?.pubkey || '')
+  useProfile(user?.pubkey || '')
   const onlineAgents = useProjectOnlineAgents(project.dTag)
   const availableModels = useProjectOnlineModels(project.dTag)
   const [sendingModelChange, setSendingModelChange] = useState<string | null>(null)

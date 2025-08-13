@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { Plus, Settings, LogOut, Search, Bot, Wrench, User, ChevronDown, Globe } from 'lucide-react'
+import { Plus, Settings, LogOut, Bot, Wrench, User, ChevronDown, Globe, Search } from 'lucide-react'
 import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { cn } from '@/lib/utils'
@@ -8,7 +8,7 @@ import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
 import { useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { SearchBar } from '@/components/common/SearchBar'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -163,15 +163,11 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
 
         {/* Search */}
         <div className="space-y-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search projects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-9"
-            />
-          </div>
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search projects..."
+          />
           <Button
             variant="outline"
             className="w-full justify-start text-xs"

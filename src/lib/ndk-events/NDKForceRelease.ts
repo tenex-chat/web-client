@@ -1,8 +1,8 @@
-import { NDKEvent, NDKKind, NostrEvent } from '@nostr-dev-kit/ndk'
+import NDK, { NDKEvent, NDKKind, NostrEvent } from '@nostr-dev-kit/ndk'
 import { EVENT_KINDS } from '../constants'
 
 export class NDKForceRelease extends NDKEvent {
-  constructor(ndk?: any, rawEvent?: NostrEvent) {
+  constructor(ndk?: NDK, rawEvent?: NostrEvent) {
     super(ndk, rawEvent)
     this.kind = EVENT_KINDS.FORCE_RELEASE as NDKKind
   }

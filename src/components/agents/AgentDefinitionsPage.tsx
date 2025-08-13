@@ -7,7 +7,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { EVENT_KINDS } from "../../lib/constants";
 import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 import { EmptyState } from "../common/EmptyState";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";

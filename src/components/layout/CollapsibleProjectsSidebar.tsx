@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { Plus, Settings, LogOut, Search, Bot, Wrench, Home, User, Sun, Moon, Monitor } from 'lucide-react'
+import { Plus, Settings, LogOut, Search, Bot, Wrench, Home, User, Sun, Moon, Monitor, Globe } from 'lucide-react'
 import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
-import { useProjectSubscriptions } from '@/hooks/useProjectSubscriptions'
 import { useSortedProjects } from '@/hooks/useSortedProjects'
 import { useTheme } from '@/hooks/useTheme'
+import { useGlobalAgents } from '@/stores/agents'
+import { useProfile } from '@nostr-dev-kit/ndk-hooks'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
@@ -50,6 +51,43 @@ interface CollapsibleProjectsSidebarProps {
   onProjectSelect?: () => void
 }
 
+function GlobalAgentItem({ pubkey, slug }: { pubkey: string; slug: string }) {
+  const profile = useProfile(pubkey)
+  const navigate = useNavigate()
+  
+  const displayName = profile?.displayName || profile?.name || slug
+  const avatarUrl = profile?.image || profile?.picture
+  
+  const handleClick = () => {
+    navigate({ to: '/p/$pubkey', params: { pubkey } })
+  }
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={handleClick}>
+              <Avatar className="h-6 w-6 shrink-0 group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8">
+                <AvatarImage src={avatarUrl} />
+                <AvatarFallback className="text-xs group-data-[collapsible=icon]:text-sm">
+                  {displayName[0]?.toUpperCase() || 'A'}
+                </AvatarFallback>
+              </Avatar>
+              <span className="group-data-[collapsible=icon]:hidden truncate">
+                {displayName}
+              </span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="group-data-[collapsible=icon]:flex hidden">
+          {displayName}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
 export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProjectsSidebarProps) {
   const currentPubkey = useNDKCurrentPubkey();
   const currentUser = useNDKCurrentUser();
@@ -60,9 +98,6 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
   const { theme, setTheme } = useTheme()
-  
-  // Initialize project subscriptions
-  useProjectSubscriptions()
   
   // Add keyboard shortcut for global search
   useGlobalSearchShortcut(() => setSearchDialogOpen(true))
@@ -76,6 +111,7 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
 
   // Use the sorted projects hook for consistent ordering
   const sortedProjects = useSortedProjects()
+  const globalAgents = useGlobalAgents()
 
   return (
     <TooltipProvider>
@@ -148,19 +184,21 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                         No projects yet
                       </div>
                     ) : (
-                      sortedProjects.map(({ project, status }) => (
-                        <SidebarMenuItem key={project.id}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <SidebarMenuButton
-                                asChild
-                                isActive={location.pathname.includes(project.id)}
-                              >
-                                <Link 
-                                  to="/projects/$projectId" 
-                                  params={{ projectId: project.id }}
-                                  onClick={onProjectSelect}
+                      sortedProjects.map(({ project, status }) => {
+                        const projectIdentifier = project.dTag || project.encode()
+                        return (
+                          <SidebarMenuItem key={projectIdentifier}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <SidebarMenuButton
+                                  asChild
+                                  isActive={location.pathname.includes(projectIdentifier)}
                                 >
+                                  <Link 
+                                    to="/projects/$projectId" 
+                                    params={{ projectId: projectIdentifier }}
+                                    onClick={onProjectSelect}
+                                  >
                                   <div className="relative">
                                     <ProjectAvatar 
                                       project={project}
@@ -182,12 +220,33 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                               </TooltipContent>
                             </Tooltip>
                           </SidebarMenuItem>
-                        ))
+                        )
+                      })
                       )}
                     </ScrollArea>
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
+              
+              {/* Agents */}
+              {globalAgents.length > 0 && (
+                <SidebarGroup>
+                  <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+                    Agents
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {globalAgents.map((agent) => (
+                        <GlobalAgentItem
+                          key={agent.pubkey}
+                          pubkey={agent.pubkey}
+                          slug={agent.slug}
+                        />
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
             </SidebarContent>
 
             <SidebarFooter>

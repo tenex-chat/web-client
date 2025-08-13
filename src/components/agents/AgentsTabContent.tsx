@@ -41,7 +41,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
   const { apiKey: murfApiKey } = useTTSConfig();
   
   // Get agents from project status (same as Status tab)
-  const projectStatus = useProjectStatus(project?.tagId());
+  const projectStatus = useProjectStatus(project?.dTag);
   const statusAgents = projectStatus?.agents || [];
   const isLoading = !projectStatus;
 

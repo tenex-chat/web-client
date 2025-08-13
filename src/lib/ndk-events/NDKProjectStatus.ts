@@ -15,6 +15,18 @@ export interface ProjectModel {
   name: string      // e.g., "sonnet"
 }
 
+export interface ExecutionQueueItem {
+  conversationId: string
+  startTime?: number
+  position?: number
+}
+
+export interface ExecutionQueue {
+  active: ExecutionQueueItem | null
+  waiting: ExecutionQueueItem[]
+  totalWaiting: number
+}
+
 export class NDKProjectStatus extends NDKEvent {
   static kind: NDKKind = EVENT_KINDS.PROJECT_STATUS as NDKKind
 
@@ -113,6 +125,59 @@ export class NDKProjectStatus extends NDKEvent {
     }
   }
 
+  get executionQueue(): ExecutionQueue {
+    const queue: ExecutionQueue = {
+      active: null,
+      waiting: [],
+      totalWaiting: 0
+    }
+
+    const queueTags = this.tags.filter(tag => tag[0] === 'execution-queue')
+    let waitingPosition = 1
+
+    for (const tag of queueTags) {
+      if (tag[1]) {
+        const conversationId = tag[1]
+        const status = tag[2]
+
+        if (status === 'active') {
+          // Active conversation with optional start time
+          queue.active = {
+            conversationId,
+            startTime: tag[3] ? parseInt(tag[3]) : undefined
+          }
+        } else {
+          // Waiting conversation
+          queue.waiting.push({
+            conversationId,
+            position: waitingPosition++
+          })
+        }
+      }
+    }
+
+    queue.totalWaiting = queue.waiting.length
+    return queue
+  }
+
+  set executionQueue(queue: ExecutionQueue) {
+    // Remove existing execution-queue tags
+    this.tags = this.tags.filter(tag => tag[0] !== 'execution-queue')
+
+    // Add active conversation if exists
+    if (queue.active) {
+      const tag: string[] = ['execution-queue', queue.active.conversationId, 'active']
+      if (queue.active.startTime) {
+        tag.push(queue.active.startTime.toString())
+      }
+      this.tags.push(tag)
+    }
+
+    // Add waiting conversations
+    for (const item of queue.waiting) {
+      this.tags.push(['execution-queue', item.conversationId])
+    }
+  }
 
   static from(ndk: NDK, projectId: string, agents: ProjectAgent[], models: ProjectModel[]): NDKProjectStatus {
     const event = new NDKProjectStatus(ndk)

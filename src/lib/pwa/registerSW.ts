@@ -9,8 +9,6 @@ export async function registerServiceWorker() {
       scope: '/',
     });
 
-    console.log('Service Worker registered successfully:', registration);
-
     // Check for updates periodically
     setInterval(() => {
       registration.update();

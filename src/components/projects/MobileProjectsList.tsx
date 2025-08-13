@@ -4,7 +4,6 @@ import { Plus, Search, Settings, Bot, Wrench, User } from 'lucide-react'
 import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
-import { useProjectSubscriptions } from '@/hooks/useProjectSubscriptions'
 import { useSortedProjects } from '@/hooks/useSortedProjects'
 import { useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks'
 import { Button } from '@/components/ui/button'
@@ -19,15 +18,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { FAB } from '@/components/ui/fab'
 
 export function MobileProjectsList() {
   const userProfile = useCurrentUserProfile()
   const [searchQuery, setSearchQuery] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
-  
-  // Initialize project subscriptions
-  useProjectSubscriptions()
   
   // Add keyboard shortcut for global search
   useGlobalSearchShortcut(() => setSearchDialogOpen(true))
@@ -140,13 +137,15 @@ export function MobileProjectsList() {
               {searchQuery ? 'No projects found' : 'No projects yet'}
             </div>
           ) : (
-            filteredProjects.map(({ project, status }) => (
-              <Link
-                key={project.id}
-                to="/projects/$projectId"
-                params={{ projectId: project.id }}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
-              >
+            filteredProjects.map(({ project, status }) => {
+              const projectIdentifier = project.dTag || project.encode()
+              return (
+                <Link
+                  key={projectIdentifier}
+                  to="/projects/$projectId"
+                  params={{ projectId: projectIdentifier }}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
+                >
                 {/* Avatar with online indicator */}
                 <div className="relative flex-shrink-0">
                   <ProjectAvatar 
@@ -172,7 +171,8 @@ export function MobileProjectsList() {
                   </p>
                 </div>
               </Link>
-            ))
+              )
+            })
           )}
         </div>
       </ScrollArea>
@@ -187,6 +187,17 @@ export function MobileProjectsList() {
         open={searchDialogOpen}
         onOpenChange={setSearchDialogOpen}
       />
+      
+      {/* FAB for creating new project */}
+      <FAB
+        onClick={() => setCreateDialogOpen(true)}
+        label="New Project"
+        showLabel={false}
+        position="bottom-right"
+        size="default"
+      >
+        <Plus />
+      </FAB>
     </div>
   )
 }

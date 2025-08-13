@@ -1,14 +1,17 @@
+import { useState } from 'react'
 import { Card } from '../ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 import { ProjectStatusIndicator } from './ProjectStatusIndicator'
 import { AgentStatusList } from './AgentStatusList'
 import { ModelStatusList } from './ModelStatusList'
+import { ExecutionQueueCard } from './ExecutionQueueCard'
+import { ForceReleaseDialog } from './ForceReleaseDialog'
 import { useProjectStatus } from '../../stores/projects'
 import type { NDKProject } from '../../lib/ndk-events/NDKProject'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { Users, Cpu, Activity } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { Skeleton } from '../ui/skeleton'
+import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 
 interface ProjectStatusPanelProps {
   project: NDKProject
@@ -21,30 +24,24 @@ export function ProjectStatusPanel({
   className,
   compact = false 
 }: ProjectStatusPanelProps) {
-  const projectStatus = useProjectStatus(project.tagId())
+  const projectStatus = useProjectStatus(project.dTag)
+  const { ndk } = useNDK()
+  const [showForceReleaseDialog, setShowForceReleaseDialog] = useState(false)
   
   // Extract data from status
   const statusEvent = projectStatus?.statusEvent
-  const isLoading = false // Status is loaded from the store
   const getOverallStatus = () => projectStatus?.isOnline ? 'online' : 'offline'
   const getAgentCount = () => projectStatus?.agents.length || 0
   const getModelCount = () => projectStatus?.models.length || 0
   const agents = projectStatus?.agents || []
   const models = projectStatus?.models || []
+  const executionQueue = projectStatus?.executionQueue || null
   const lastSeen = projectStatus?.lastSeen
+  
+  // Check if current user can force release (is project owner)
+  const userPubkey = ndk?.activeUser?.pubkey
+  const canForceRelease = userPubkey === project.pubkey
 
-
-  if (isLoading) {
-    return (
-      <Card className={cn('p-4', className)}>
-        <div className="space-y-3">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
-        </div>
-      </Card>
-    )
-  }
 
   const overallStatus = getOverallStatus()
   const agentCount = getAgentCount()
@@ -105,14 +102,17 @@ export function ProjectStatusPanel({
         </div>
 
         {/* Tabs for detailed view */}
-        {(agents.length > 0 || models.length > 0) && (
+        {(agents.length > 0 || models.length > 0 || executionQueue) && (
           <Tabs defaultValue="agents" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="agents">
                 Agents ({agents.length})
               </TabsTrigger>
               <TabsTrigger value="models">
                 Models ({models.length})
+              </TabsTrigger>
+              <TabsTrigger value="queue">
+                Queue {executionQueue?.totalWaiting ? `(${executionQueue.totalWaiting})` : ''}
               </TabsTrigger>
             </TabsList>
             
@@ -122,6 +122,14 @@ export function ProjectStatusPanel({
             
             <TabsContent value="models">
               <ModelStatusList models={models} />
+            </TabsContent>
+            
+            <TabsContent value="queue">
+              <ExecutionQueueCard 
+                queue={executionQueue}
+                onForceRelease={() => setShowForceReleaseDialog(true)}
+                canForceRelease={canForceRelease}
+              />
             </TabsContent>
           </Tabs>
         )}
@@ -138,6 +146,14 @@ export function ProjectStatusPanel({
           </div>
         )}
       </div>
+      
+      {/* Force Release Dialog */}
+      <ForceReleaseDialog
+        open={showForceReleaseDialog}
+        onOpenChange={setShowForceReleaseDialog}
+        project={project}
+        conversationId={executionQueue?.active?.conversationId}
+      />
     </Card>
   )
 }

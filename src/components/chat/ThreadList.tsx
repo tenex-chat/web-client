@@ -21,6 +21,7 @@ interface Thread {
   id: string
   title: string
   content: string
+  lastMessage?: string
   author: {
     pubkey: string
     name?: string
@@ -52,7 +53,7 @@ export function ThreadList({
         }]
       : false,
     {},
-    [project?.tagId()]
+    [project?.dTag]
   )
 
   // Subscribe to kind:1111 events that e-tag threads to get phase information
@@ -119,8 +120,12 @@ export function ThreadList({
 
     const counts: Record<string, number> = {}
     const lastReplyTimes: Record<string, number> = {}
+    const lastMessages: Record<string, string> = {}
     const participants: Record<string, Set<string>> = {}
 
+    // Group replies by thread and find the latest one
+    const repliesByThread: Record<string, typeof allReplies> = {}
+    
     allReplies.forEach(reply => {
       // Find which thread this reply belongs to
       const rootTag = reply.tags.find(t => t[0] === 'e' && t[3] === 'root')
@@ -128,10 +133,12 @@ export function ThreadList({
 
       if (threadId) {
         counts[threadId] = (counts[threadId] || 0) + 1
-        lastReplyTimes[threadId] = Math.max(
-          lastReplyTimes[threadId] || 0,
-          reply.created_at || 0
-        )
+        
+        // Track the latest reply time and content
+        if (!lastReplyTimes[threadId] || (reply.created_at || 0) > lastReplyTimes[threadId]) {
+          lastReplyTimes[threadId] = reply.created_at || 0
+          lastMessages[threadId] = reply.content
+        }
         
         if (!participants[threadId]) {
           participants[threadId] = new Set()
@@ -140,11 +147,12 @@ export function ThreadList({
       }
     })
 
-    // Update threads with reply counts and participants
+    // Update threads with reply counts, last message, and participants
     setThreads(prev => prev.map(thread => ({
       ...thread,
       replyCount: counts[thread.id] || 0,
       lastReplyAt: lastReplyTimes[thread.id],
+      lastMessage: lastMessages[thread.id],
       participants: new Set([
         ...thread.participants,
         ...(participants[thread.id] || [])
@@ -247,7 +255,7 @@ export function ThreadList({
                       </div>
 
                       <p className="text-sm text-muted-foreground truncate mt-1">
-                        {thread.content}
+                        {thread.lastMessage || thread.content}
                       </p>
 
                       {/* Thread Meta */}
@@ -279,16 +287,6 @@ export function ThreadList({
           </div>
         )}
       </ScrollArea>
-
-      {/* New Thread Button */}
-      <div className="p-3 border-t">
-        <button
-          onClick={() => onThreadSelect('new')}
-          className="w-full py-1.5 px-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
-        >
-          Start New Conversation
-        </button>
-      </div>
     </div>
   )
 }

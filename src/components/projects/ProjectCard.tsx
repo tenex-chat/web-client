@@ -4,7 +4,8 @@ import { cn } from '@/lib/utils'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { Badge } from '@/components/ui/badge'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { Circle } from 'lucide-react'
+import { Circle, Users2 } from 'lucide-react'
+import { useProjectStatus } from '@/stores/projects'
 
 interface ProjectCardProps {
   project: NDKProject
@@ -14,6 +15,8 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, isActive, isOnline = false, onClick }: ProjectCardProps) {
+  const projectStatus = useProjectStatus(project.dTag)
+  const executionQueue = projectStatus?.executionQueue
   const lastActivity = project.created_at 
     ? formatRelativeTime(project.created_at)
     : 'Unknown'
@@ -24,7 +27,7 @@ export function ProjectCard({ project, isActive, isOnline = false, onClick }: Pr
   return (
     <Link
       to="/projects/$projectId"
-      params={{ projectId: project.id }}
+      params={{ projectId: project.dTag || project.encode() }}
       onClick={onClick}
       className={cn(
         "block p-3 rounded-lg hover:bg-accent transition-colors",
@@ -65,6 +68,18 @@ export function ProjectCard({ project, isActive, isOnline = false, onClick }: Pr
             <span className="text-xs text-muted-foreground">
               {project.agents.length} agents
             </span>
+            
+            {/* Execution Queue Indicator */}
+            {executionQueue && (executionQueue.active || executionQueue.totalWaiting > 0) && (
+              <div className="flex items-center gap-1">
+                <Users2 className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
+                  {executionQueue.active && 'Active'}
+                  {executionQueue.totalWaiting > 0 && ` (${executionQueue.totalWaiting} waiting)`}
+                </span>
+              </div>
+            )}
+            
             {project.hashtags.slice(0, 2).map(tag => (
               <span key={tag} className="text-xs text-muted-foreground">
                 #{tag}

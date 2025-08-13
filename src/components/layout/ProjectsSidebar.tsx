@@ -5,7 +5,6 @@ import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { cn } from '@/lib/utils'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
-import { useProjectSubscriptions } from '@/hooks/useProjectSubscriptions'
 import { useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
@@ -65,9 +64,6 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
   const [searchQuery, setSearchQuery] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
-  
-  // Initialize project subscriptions
-  useProjectSubscriptions()
   
   // Add keyboard shortcut for global search
   useGlobalSearchShortcut(() => setSearchDialogOpen(true))
@@ -211,23 +207,26 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
                 {searchQuery ? 'No projects found' : 'No projects yet'}
               </div>
             ) : (
-              filteredProjectsWithStatus.map(({ project, status }) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  isOnline={status?.isOnline || false}
-                  isActive={location.pathname.includes(project.id)}
-                  onClick={onProjectSelect}
-                />
-              ))
+              filteredProjectsWithStatus.map(({ project, status }) => {
+                const projectIdentifier = project.dTag || project.encode()
+                return (
+                  <ProjectCard
+                    key={projectIdentifier}
+                    project={project}
+                    isOnline={status?.isOnline || false}
+                    isActive={location.pathname.includes(projectIdentifier)}
+                    onClick={onProjectSelect}
+                  />
+                )
+              })
             )}
           </div>
           
-          {/* Global Agents */}
+          {/* Agents */}
           {globalAgents.length > 0 && !searchQuery && (
             <div className="mt-4 pt-4 border-t">
               <h3 className="text-xs font-semibold text-muted-foreground px-2 mb-2">
-                GLOBAL AGENTS
+                AGENTS
               </h3>
               <div className="space-y-1">
                 {globalAgents.map((agent) => (

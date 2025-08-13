@@ -13,7 +13,17 @@ Based on the directory structure, the application likely includes the following 
 *   **User Authentication:** A system for users to sign in and manage their accounts (`src/components/auth`).
 *   **Chat:** Real-time chat functionality (`src/components/chat`). Conversations are displayed as a list of threads. Each conversation in the list displays an indicator for the current phase of the conversation, derived from `kind:1111` events.
 *   **Project and Task Management:** Features to create, track, and manage projects and tasks (`src/components/projects`, `src/components/tasks`). Project data is loaded via real-time subscriptions, initiated by the `initializeSubscriptions` function in the `projects` store. This process is triggered by the `useProjectSubscriptions` hook within the user interface components.
+*   **New Feature: Start Project on Offline Click**
+    *   When a project is offline, clicking the offline indicator next to its title will now trigger the "start project" action.
+    *   This action involves sending a Nostr event of kind `24000` to the backend, which tags the respective project.
+    *   This functionality has been implemented in the `ProjectStatusIndicator` component and handled in the project detail page and mobile view.
+    *   Toast notifications are displayed for success and error handling.
 *   **Real-time Updates:** Integration with the Nostr protocol for real-time data synchronization and events (`src/lib/ndk-events`). The application uses a hook-based approach (e.g., `useProjectSubscriptions`) to manage these subscriptions.
+*   **Agent Definition Rendering**: Support for rendering NDKAgentDefinition events (kind:4199) in content. This includes:
+    *   A new component, `AgentDefinitionEmbedCard`, which displays agent name, role, description, use criteria, and author.
+    *   The ability to open a modal for viewing full agent details and installing the agent.
+    *   Installation is achieved by adding an "agent" tag with the NCKAgentDefinition event ID to the project.
+    *   Reusability of existing components (e.g., `NostrEntityCard`) for consistent rendering.
 *   **Responsive Design:** Support for both desktop and mobile devices. The application uses a responsive `CollapsibleProjectsSidebar` component to display the project list on both desktop and mobile layouts, ensuring a consistent experience across devices. It is critical to ensure that new features and fixes are applied to this component.
 *   **Progressive Web App (PWA):** The application may be installable as a PWA (`src/lib/pwa`).
 
@@ -40,5 +50,6 @@ Based on the directory structure, the application likely includes the following 
 
 *   The project is a client-side application that interacts with a Nostr relay network.
 *   The name "TENEX" may refer to a specific set of features or a larger platform.
+*   **Note on Event Publishing:** An issue was encountered during the `complete()` call (Nostr publishing error), indicating potential problems with event propagation that need further investigation by the Executor or relevant team.
 
 This document will be updated as more information becomes available.

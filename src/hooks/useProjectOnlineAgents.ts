@@ -17,8 +17,8 @@ export interface ProjectOnlineAgent {
  * This should be used in chat interfaces, agent selectors, and anywhere you need
  * to interact with agents that are actually available.
  */
-export function useProjectOnlineAgents(projectTagId?: string): ProjectOnlineAgent[] {
-  const projectStatus = useProjectStatus(projectTagId)
+export function useProjectOnlineAgents(projectDTag?: string): ProjectOnlineAgent[] {
+  const projectStatus = useProjectStatus(projectDTag)
   
   const onlineAgents = useMemo(() => {
     if (!projectStatus?.agents) return []

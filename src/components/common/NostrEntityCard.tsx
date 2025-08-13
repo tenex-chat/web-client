@@ -27,6 +27,7 @@ import { TaskEmbedCard } from '@/components/embeds/TaskEmbedCard'
 import { ArticleEmbedCard } from '@/components/embeds/ArticleEmbedCard'
 import { NoteEmbedCard } from '@/components/embeds/NoteEmbedCard'
 import { MCPToolEmbedCard } from '@/components/embeds/MCPToolEmbedCard'
+import { AgentDefinitionEmbedCard } from '@/components/embeds/AgentDefinitionEmbedCard'
 import { DefaultEmbedCard } from '@/components/embeds/DefaultEmbedCard'
 
 interface NostrEntityCardProps {
@@ -194,8 +195,16 @@ export function NostrEntityCard({
       )
 
     case EVENT_KINDS.AGENT_CONFIG: // 4199
+      return (
+        <AgentDefinitionEmbedCard 
+          event={event} 
+          compact={compact} 
+          className={className}
+        />
+      )
+
     case EVENT_KINDS.AGENT_LESSON: // 4129
-      // These might need specialized cards in the future
+      // This might need a specialized card in the future
       return (
         <>
           <DefaultEmbedCard 

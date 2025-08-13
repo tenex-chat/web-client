@@ -1,17 +1,22 @@
 import { cn } from '../../lib/utils'
+import type { ExecutionQueue } from '@/lib/ndk-events/NDKProjectStatus'
 
 interface ProjectStatusIndicatorProps {
   status: 'online' | 'offline' | 'busy'
   size?: 'sm' | 'md' | 'lg'
   showLabel?: boolean
   className?: string
+  onClick?: () => void
+  executionQueue?: ExecutionQueue | null
 }
 
 export function ProjectStatusIndicator({ 
   status, 
   size = 'md', 
   showLabel = false,
-  className 
+  className,
+  onClick,
+  executionQueue
 }: ProjectStatusIndicatorProps) {
   const sizeClasses = {
     sm: 'w-2 h-2',
@@ -31,8 +36,33 @@ export function ProjectStatusIndicator({
     busy: 'Busy'
   }
 
+  const isClickable = onClick && status === 'offline'
+  
+  const getTooltipTitle = () => {
+    if (isClickable) return 'Click to start project';
+    
+    let tooltip = statusLabels[status];
+    if (executionQueue) {
+      if (executionQueue.active) {
+        tooltip += ' - Execution active';
+      }
+      if (executionQueue.totalWaiting > 0) {
+        tooltip += ` (${executionQueue.totalWaiting} waiting)`;
+      }
+    }
+    return tooltip;
+  }
+
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div 
+      className={cn(
+        'flex items-center gap-2', 
+        isClickable && 'cursor-pointer hover:opacity-80 transition-opacity',
+        className
+      )}
+      onClick={isClickable ? onClick : undefined}
+      title={getTooltipTitle()}
+    >
       <div className="relative">
         <div 
           className={cn(

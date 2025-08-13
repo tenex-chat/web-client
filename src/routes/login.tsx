@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Loader2, Key, AlertCircle } from 'lucide-react'
+import { TEST_CREDENTIALS } from '@/lib/constants'
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
@@ -53,9 +54,8 @@ function LoginPage() {
 
   // For development, prefill with test nsec
   const handleUseTestKey = () => {
-    const testNsec = 'nsec1q9kaf583ud7f9jm4xtmj8052uvym9jasy502xnvwxqmsq8lxtmfsvgqa8v'
-    if (testNsec) {
-      setNsec(testNsec)
+    if (TEST_CREDENTIALS.NSEC) {
+      setNsec(TEST_CREDENTIALS.NSEC)
     }
   }
 

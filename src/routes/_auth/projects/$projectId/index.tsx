@@ -65,19 +65,6 @@ function ProjectDetailPage() {
   // Helper functions for backwards compatibility
   const getOverallStatus = () => projectStatus?.isOnline ? 'online' : 'offline'
   
-  // Debug logging for status
-  useEffect(() => {
-    if (project && projectStatus) {
-      console.log(`Project ${project.title} status:`, {
-        hasProject: !!project,
-        hasStatus: !!projectStatus,
-        isOnline: projectStatus.isOnline,
-        overallStatus: getOverallStatus(),
-        agents: projectStatus.agents.length,
-        models: projectStatus.models.length
-      })
-    }
-  }, [project, projectStatus])
 
   // Create task subscription filter
   const taskFilter = useMemo(
@@ -94,18 +81,6 @@ function ProjectDetailPage() {
     { disabled: !ndk || !project || !taskFilter }
   )
 
-  // Debug logging
-  useEffect(() => {
-    if (taskFilter) {
-      console.log('Task subscription filter:', taskFilter)
-    }
-    if (taskEvents) {
-      console.log('Task events received:', taskEvents.length)
-      taskEvents.forEach(event => {
-        console.log('Task event:', event.id, event.tags)
-      })
-    }
-  }, [taskFilter, taskEvents])
 
   // Convert task events to NDKTask instances
   const tasks = useMemo(() => {
@@ -139,7 +114,6 @@ function ProjectDetailPage() {
 
   const markTaskStatusUpdatesSeen = (taskId: string) => {
     // TODO: Mark task updates as seen
-    console.log('Marking task updates as seen:', taskId)
   }
   
   const handleThreadSelect = async (threadId: string) => {

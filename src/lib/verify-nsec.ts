@@ -4,8 +4,9 @@
  */
 
 import { nip19, getPublicKey } from 'nostr-tools'
+import { TEST_CREDENTIALS } from './constants'
 
-const TEST_NSEC = 'nsec1q9kaf583ud7f9jm4xtmj8052uvym9jasy502xnvwxqmsq8lxtmfsvgqa8v'
+const TEST_NSEC = TEST_CREDENTIALS.NSEC
 
 try {
   console.log('🔐 Verifying nsec...')

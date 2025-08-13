@@ -6,7 +6,7 @@ import { useAllProjectsOnlineAgentsGrouped } from '@/hooks/useAllProjectsOnlineA
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import type { AgentInstance, ProjectGroup } from '@/types/agent'
-import { getProjectDisplayName, transformAgentData } from '@/lib/utils/agentUtils'
+import { getProjectDisplayName } from '@/lib/utils/agentUtils'
 
 /**
  * Hook for managing chat input state

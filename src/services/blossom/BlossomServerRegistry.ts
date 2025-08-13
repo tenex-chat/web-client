@@ -169,9 +169,9 @@ export class BlossomServerRegistry {
 
   async selectBestServer(
     fileSize: number,
-    mimeType: string
+    mimeType?: string
   ): Promise<BlossomServerInfo | null> {
-    const availableServers = this.getAvailableServers(fileSize, mimeType)
+    const availableServers = this.getAvailableServers(fileSize, mimeType || '*/*')
 
     if (availableServers.length === 0) {
       return null

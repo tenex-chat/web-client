@@ -10,9 +10,11 @@ import { atom, useAtom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { useToast } from '@/hooks/use-toast';
 
+type LLMProvider = 'openai' | 'anthropic' | 'google' | 'openrouter' | 'groq' | 'ollama';
+
 interface LLMProviderSettings {
   id: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'local';
+  provider: LLMProvider;
   apiKey?: string;
   model: string;
   enabled: boolean;
@@ -63,7 +65,7 @@ export function LLMSettings() {
   const { toast } = useToast();
 
   // Form state
-  const [formData, setFormData] = useState<Partial<LLMConfig>>({
+  const [formData, setFormData] = useState<Partial<LLMProviderSettings>>({
     provider: 'openai',
     model: 'gpt-3.5-turbo',
     enabled: true,
@@ -98,11 +100,11 @@ export function LLMSettings() {
       return;
     }
 
-    const newConfig: LLMConfig = {
+    const newConfig: LLMProviderSettings = {
       id: Date.now().toString(),
-      provider: formData.provider as LLMProvider,
+      provider: formData.provider!,
       apiKey: formData.apiKey,
-      model: formData.model,
+      model: formData.model!,
       enabled: formData.enabled ?? true,
       temperature: formData.temperature,
       maxTokens: formData.maxTokens,
@@ -127,7 +129,7 @@ export function LLMSettings() {
     });
   };
 
-  const handleTestConfig = async (config: LLMConfig) => {
+  const handleTestConfig = async (config: LLMProviderSettings) => {
     setTestingId(config.id);
     
     try {
@@ -213,7 +215,7 @@ export function LLMSettings() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {PROVIDER_INFO[formData.provider as LLMProvider]?.models.map(model => (
+                      {(formData.provider && PROVIDER_INFO[formData.provider]?.models || []).map(model => (
                         <SelectItem key={model} value={model}>
                           {model}
                         </SelectItem>

@@ -48,32 +48,23 @@ export function useAllProjectsOnlineAgents(): AgentInstance[] {
 /**
  * Get agents grouped by project for UI display
  */
-export function useAllProjectsOnlineAgentsGrouped() {
+export function useAllProjectsOnlineAgentsGrouped(): ProjectGroup[] {
   const projectStatusMap = useProjectStatusMap()
   const projectsMap = useProjectsMap()
   
   const groupedAgents = useMemo(() => {
-    const groups = new Map<string, {
-      projectName: string
-      projectDTag: string
-      agents: CrossProjectAgent[]
-    }>()
+    const groups = new Map<string, ProjectGroup>()
     
     projectStatusMap.forEach((status, projectDTag) => {
       const project = projectsMap.get(projectDTag)
       if (!project || !status?.agents || status.agents.length === 0) return
       
-      const projectAgents = status.agents.map(agent => ({
-        pubkey: agent.pubkey,
-        name: agent.name || agent.pubkey.slice(0, 8),
-        projectName: project.title || project.dTag || 'Unknown Project',
-        projectDTag: project.dTag || '',
-        status: agent.status,
-        lastSeen: agent.lastSeen
-      }))
+      const projectAgents = status.agents.map(agent => 
+        transformAgentData(agent, project)
+      )
       
       groups.set(projectDTag, {
-        projectName: project.title || project.dTag || 'Unknown Project',
+        projectName: getProjectDisplayName(project),
         projectDTag: project.dTag || '',
         agents: projectAgents
       })

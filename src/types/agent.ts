@@ -32,7 +32,7 @@ export interface ProjectGroup {
 export interface AgentData extends AgentInstance {
   id?: string // Event ID for navigation
   role?: string
-  useCriteria?: string
+  useCriteria?: string[]
   fromStatus?: boolean
   fromNDK?: boolean
   fromProject?: boolean

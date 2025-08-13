@@ -16,21 +16,8 @@ import { useTTSConfig } from '@/stores/llmConfig';
 import { useNavigate } from '@tanstack/react-router';
 import { useProjectStatus } from '@/stores/projects';
 import { AddAgentsToProjectDialog } from '@/components/dialogs/AddAgentsToProjectDialog';
-
-interface AgentData {
-  id?: string;
-  pubkey: string;
-  name?: string;
-  description?: string;
-  picture?: string;
-  role?: string;
-  status?: string;
-  lastSeen?: number;
-  useCriteria?: string[];
-  fromStatus?: boolean;
-  fromProject?: boolean;
-  fromNDK?: boolean;
-}
+import type { AgentData } from '@/types/agent';
+import { isAgentOnline } from '@/lib/utils/agentUtils';
 
 interface AgentsTabContentProps {
   project: NDKProject;
@@ -111,7 +98,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
         ...existing,
         id: agent.id, // Event ID for navigation
         pubkey: agent.pubkey,
-        name: agent.name || existing?.name,
+        name: agent.name || existing?.name || agent.pubkey.slice(0, 8),
         description: agent.description,
         picture: agent.picture,
         role: agent.role,
@@ -190,7 +177,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {allAgents.map((agent) => {
             const voiceConfig = getVoiceStatus(agent);
-            const isOnline = agent.fromStatus && agent.status === 'online';
+            const isOnline = isAgentOnline(agent);
             
             return (
               <Card 

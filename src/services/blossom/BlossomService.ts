@@ -3,6 +3,7 @@ import NDKBlossom from '@nostr-dev-kit/ndk-blossom'
 import imageCompression from 'browser-image-compression'
 import { encode } from 'blurhash'
 import { isImageFile, validateFile } from '@/lib/utils/fileValidation'
+import { BlossomServerRegistry } from './BlossomServerRegistry'
 
 export interface BlobDescriptor {
   sha256: string
@@ -32,12 +33,6 @@ export interface FileMetadata {
   originalName: string
 }
 
-export interface BlossomServer {
-  url: string
-  name: string
-  supportsAuth: boolean
-  maxFileSize?: number
-}
 
 export interface BatchUploadOptions {
   files: File[]
@@ -55,39 +50,15 @@ export class BlossomService {
   private static instance: BlossomService | null = null
   private blossomClient: NDKBlossom | null = null
   private uploadAbortControllers = new Map<string, AbortController>()
+  private serverRegistry: BlossomServerRegistry
   
-  private defaultServers: BlossomServer[] = [
-    {
-      url: 'https://blossom.primal.net',
-      name: 'Primal Blossom',
-      supportsAuth: true,
-      maxFileSize: 10 * 1024 * 1024 // 10MB
-    },
-    {
-      url: 'https://nostr.build',
-      name: 'nostr.build',
-      supportsAuth: true,
-      maxFileSize: 100 * 1024 * 1024 // 100MB
-    },
-    {
-      url: 'https://files.satellite.earth',
-      name: 'Satellite Files',
-      supportsAuth: true,
-      maxFileSize: 20 * 1024 * 1024 // 20MB
-    },
-    {
-      url: 'https://blossom.oxtr.dev',
-      name: 'Oxtr Blossom',
-      supportsAuth: true,
-      maxFileSize: 50 * 1024 * 1024 // 50MB
-    }
-  ]
-
   private supportedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-  private maxUploadSize = 10 * 1024 * 1024 // 10MB default
+  private maxUploadSize = 50 * 1024 * 1024 // 50MB default (largest Blossom server)
   private compressionThreshold = 2 * 1024 * 1024 // 2MB
 
-  private constructor() {}
+  private constructor() {
+    this.serverRegistry = BlossomServerRegistry.getInstance()
+  }
 
   static getInstance(): BlossomService {
     if (!BlossomService.instance) {
@@ -165,8 +136,8 @@ export class BlossomService {
       const sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
       metadata.sha256 = sha256
 
-      // Find a suitable server
-      const server = await this.selectServer(processedFile.size)
+      // Find a suitable server using the registry
+      const server = await this.serverRegistry.selectBestServer(processedFile.size)
       if (!server) {
         throw new Error('No suitable Blossom server available')
       }
@@ -280,20 +251,6 @@ export class BlossomService {
     this.uploadAbortControllers.clear()
   }
 
-  async selectServer(fileSize: number): Promise<BlossomServer | null> {
-    // Filter servers that can handle the file size
-    const suitableServers = this.defaultServers.filter(
-      server => !server.maxFileSize || fileSize <= server.maxFileSize
-    )
-
-    if (suitableServers.length === 0) {
-      return null
-    }
-
-    // For now, return the first suitable server
-    // TODO: Implement server health checks and selection algorithm
-    return suitableServers[0]
-  }
 
   private validateFile(file: File): void {
     const result = validateFile(file, {
@@ -450,17 +407,33 @@ export class BlossomService {
     })
   }
 
-  getServers(): BlossomServer[] {
-    return this.defaultServers
+  getServers() {
+    return this.serverRegistry.getServers()
   }
 
-  addServer(server: BlossomServer): void {
-    if (!this.defaultServers.find(s => s.url === server.url)) {
-      this.defaultServers.push(server)
-    }
+  addServer(url: string, name: string, maxFileSize?: number): void {
+    this.serverRegistry.addServer({
+      url,
+      name,
+      priority: 10, // Low priority for user-added servers
+      metrics: {
+        url,
+        lastChecked: 0,
+        isAvailable: true,
+        averageLatency: 0,
+        successRate: 1,
+        totalUploads: 0,
+        failedUploads: 0,
+      },
+      capabilities: {
+        maxFileSize: maxFileSize || 10 * 1024 * 1024,
+        requiresAuth: true,
+        supportedFeatures: [],
+      },
+    })
   }
 
   removeServer(url: string): void {
-    this.defaultServers = this.defaultServers.filter(s => s.url !== url)
+    this.serverRegistry.removeServer(url)
   }
 }

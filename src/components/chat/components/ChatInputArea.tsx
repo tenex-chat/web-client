@@ -7,9 +7,9 @@ import { useIsMobile } from '@/hooks/useMediaQuery'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ImagePreview } from '@/components/upload/ImagePreview'
 import { ChatMentionMenu } from './ChatMentionMenu'
-import type { RefObject } from 'react'
 
 interface ChatInputAreaProps {
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>
   messageInput: string
   setMessageInput: (value: string) => void  // Used by mentionProps
   pendingImageUrls: string[]
@@ -33,6 +33,7 @@ interface ChatInputAreaProps {
  * Handles message input, file attachments, and mentions
  */
 export function ChatInputArea({
+  textareaRef,
   messageInput,
   setMessageInput,
   pendingImageUrls,
@@ -51,13 +52,12 @@ export function ChatInputArea({
   showVoiceButton = true
 }: ChatInputAreaProps) {
   const isMobile = useIsMobile()
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Update mention props with the textarea ref and setMessageInput
   const mentionPropsWithRef = {
     ...mentionProps,
-    textareaRef: textareaRef as RefObject<HTMLTextAreaElement>,
+    textareaRef,
     handleInputChange: (value: string) => {
       setMessageInput(value)
       mentionProps.handleInputChange(value)
@@ -215,6 +215,7 @@ export function ChatInputArea({
             <ChatMentionMenu
               showAgentMenu={mentionPropsWithRef.showAgentMenu}
               filteredAgents={mentionPropsWithRef.filteredAgents}
+              filteredProjectGroups={mentionPropsWithRef.filteredProjectGroups}
               selectedAgentIndex={mentionPropsWithRef.selectedAgentIndex}
               insertMention={mentionPropsWithRef.insertMention}
             />

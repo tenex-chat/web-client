@@ -124,7 +124,6 @@ src/
       SearchBar.tsx
       SelectableCard.tsx
     dialogs/
-      AddAgentsToProjectDialog.tsx
       CreateAgentDialog.tsx
       CreateProjectDialog.tsx
       GlobalSearchDialog.tsx
@@ -1113,6 +1112,7 @@ self.addEventListener('notificationclick', (event) => {
 import { Bot } from "lucide-react";
 import { memo } from "react";
 import type { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
+import { ProfileDisplay } from "../common/ProfileDisplay";
 import { SelectableCard } from "../common/SelectableCard";
 interface AgentCardProps {
     agent: NDKAgentDefinition;
@@ -1142,6 +1142,11 @@ export const AgentCard = memo(function AgentCard({
             )}
             renderMeta={(agent) => (
                 <div className="flex items-center gap-4">
+                    <ProfileDisplay
+                        pubkey={agent.pubkey || ""}
+                        size="sm"
+                        nameClassName="text-muted-foreground"
+                    />
                     {agent.version && <span>v{agent.version}</span>}
                 </div>
             )}
@@ -1501,7 +1506,6 @@ import { Bot } from "lucide-react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { ItemSelector } from "../common/ItemSelector";
 import { AgentCard } from "./AgentCard";
-import { useMemo } from "react";
 interface AgentSelectorProps {
     selectedAgents: NDKAgentDefinition[];
     onAgentsChange: (agents: NDKAgentDefinition[]) => void;
@@ -1515,47 +1519,12 @@ export function AgentSelector({ selectedAgents, onAgentsChange }: AgentSelectorP
             groupable: false
         }
     );
-    // Convert raw events to NDKAgentDefinition instances and deduplicate
-    const agentEvents = useMemo(() => {
-        const allAgents = allEvents.map(event => {
-            const agent = new NDKAgentDefinition(event.ndk);
-            Object.assign(agent, event);
-            return agent;
-        });
-        // Group agents by slug (d tag) or name if no slug
-        const agentGroups = new Map<string, NDKAgentDefinition[]>();
-        allAgents.forEach(agent => {
-            // Use slug as primary grouping key, fall back to name
-            const groupKey = agent.slug || agent.name || agent.id;
-            if (!agentGroups.has(groupKey)) {
-                agentGroups.set(groupKey, []);
-            }
-            agentGroups.get(groupKey)!.push(agent);
-        });
-        // For each group, keep only the latest version
-        const latestAgents: NDKAgentDefinition[] = [];
-        agentGroups.forEach((groupAgents) => {
-            if (groupAgents.length === 1) {
-                latestAgents.push(groupAgents[0]);
-            } else {
-                // Sort by created_at timestamp (newest first) and version number
-                const sorted = groupAgents.sort((a, b) => {
-                    // First try to compare by created_at timestamp
-                    const timeA = a.created_at || 0;
-                    const timeB = b.created_at || 0;
-                    if (timeA !== timeB) {
-                        return timeB - timeA; // Newer timestamp first
-                    }
-                    // If timestamps are equal, compare by version number
-                    const versionA = parseInt(a.version || '0');
-                    const versionB = parseInt(b.version || '0');
-                    return versionB - versionA; // Higher version first
-                });
-                latestAgents.push(sorted[0]);
-            }
-        });
-        return latestAgents;
-    }, [allEvents]);
+    // Convert raw events to NDKAgentDefinition instances
+    const agentEvents = allEvents.map(event => {
+        const agent = new NDKAgentDefinition(event.ndk);
+        Object.assign(agent, event);
+        return agent;
+    });
     const handleAgentSelect = (agent: NDKAgentDefinition) => {
         if (!selectedAgents.find((a) => a.id === agent.id)) {
             onAgentsChange([...selectedAgents, agent]);
@@ -2020,13 +1989,20 @@ interface ChangelogTabContentProps {
   article: NDKArticle
 }
 export function ChangelogTabContent({ article }: ChangelogTabContentProps) {
+  // Create subscription filter for kind:1111 events with #A tag for this article
+  const changelogFilter = useMemo(() => {
+    if (!article) return null
+    // Get the article's tagReference for the #A tag
+    const articleTagId = article.tagReference()
+    return {
+      kinds: [EVENT_KINDS.THREAD_REPLY], // kind:1111
+      '#A': [articleTagId], // Uppercase #A tag referencing the article
+    }
+  }, [article])
   // Subscribe to changelog events
   const { events: changelogEvents } = useSubscribe(
-    article ? [{
-        kinds: [EVENT_KINDS.THREAD_REPLY], // kind:1111
-        '#A': [article.tagId()], // Uppercase #A tag referencing the article
-    }] : false
-  , undefined, [ article.id ])
+    changelogFilter ? [changelogFilter] : []
+  )
   // Sort events by created_at timestamp (newest first)
   const sortedEvents = useMemo(() => {
     if (!changelogEvents) return []
@@ -2039,6 +2015,9 @@ export function ChangelogTabContent({ article }: ChangelogTabContentProps) {
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground mb-2">No changelog entries yet</p>
+          <p className="text-sm text-muted-foreground">
+            Changelog entries are kind:1111 events that tag this document with #A
+          </p>
         </div>
       </div>
     )
@@ -2119,11 +2098,11 @@ import { useMemo, useState } from 'react'
 import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { useProjectOnlineModels } from '@/hooks/useProjectOnlineModels'
-import { useNDK, useNDKCurrentUser, useProfile } from '@nostr-dev-kit/ndk-hooks'
+import { useNDK, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { toast } from 'sonner'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import type { Message } from '../hooks/useChatMessages'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 interface ConversationAgentsProps {
@@ -2140,7 +2119,6 @@ interface AgentInfo {
 export function ConversationAgents({ messages, project, rootEvent }: ConversationAgentsProps) {
   const { ndk } = useNDK()
   const user = useNDKCurrentUser()
-  const userProfile = useProfile(user?.pubkey || '')
   const onlineAgents = useProjectOnlineAgents(project.dTag)
   const availableModels = useProjectOnlineModels(project.dTag)
   const [sendingModelChange, setSendingModelChange] = useState<string | null>(null)
@@ -2150,10 +2128,8 @@ export function ConversationAgents({ messages, project, rootEvent }: Conversatio
     // Go through messages to find unique agents
     messages.forEach(message => {
       const pubkey = message.event.pubkey
-      // Skip if it's the user
-      if (pubkey === user?.pubkey) {
-        return
-      }
+      // Skip user messages
+      if (pubkey === user?.pubkey) return
       // Find agent info from online agents
       const agentInfo = onlineAgents.find(a => a.pubkey === pubkey)
       if (agentInfo) {
@@ -2196,28 +2172,38 @@ export function ConversationAgents({ messages, project, rootEvent }: Conversatio
       setSendingModelChange(null)
     }
   }
+  if (conversationAgents.length === 0) return null
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      {/* Show agents with popover for model selection */}
+    <div className="flex items-center gap-1">
       {conversationAgents.map(agent => (
         <Popover key={agent.pubkey}>
           <PopoverTrigger asChild>
-            <button className="flex items-center gap-1 group text-sm hover:bg-accent/50 px-2 py-1 rounded-md transition-colors">
-              <span className="font-medium transition-all group-hover:underline">
-                {project.title || project.dTag} / {agent.name}
-              </span>
+            <button className="relative group hover:opacity-80 transition-opacity">
+              <ProfileDisplay
+                pubkey={agent.pubkey}
+                size="sm"
+                showName={false}
+                showAvatar={true}
+                avatarClassName="ring-2 ring-transparent hover:ring-primary transition-all cursor-pointer"
+              />
             </button>
           </PopoverTrigger>
-            <PopoverContent className="w-80">
+          <PopoverContent className="w-80">
             <div className="space-y-3">
-              <div>
-                <h4 className="text-sm font-semibold">
-                  {project.title || project.dTag} / {agent.name}
-                </h4>
-                <p className="text-xs text-muted-foreground truncate">
-                  {agent.pubkey}
-                </p>
-              </div>
+              <div className="flex items-center gap-3">
+                <ProfileDisplay
+                  pubkey={agent.pubkey}
+                  size="md"
+                  showName={false}
+                  showAvatar={true}
+                />
+                <div>
+                    <h4 className="text-sm font-semibold">{agent.name}</h4>
+                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                      {agent.pubkey}
+                    </p>
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground">
                     Model
@@ -2250,7 +2236,7 @@ export function ConversationAgents({ messages, project, rootEvent }: Conversatio
               </div>
             </PopoverContent>
           </Popover>
-      ))}
+        ))}
     </div>
   )
 }
@@ -2989,100 +2975,6 @@ export function SelectableCard<T>({
 }
 </file>
 
-<file path="src/components/dialogs/AddAgentsToProjectDialog.tsx">
-import { useState } from 'react';
-import { useNDK } from '@nostr-dev-kit/ndk-hooks';
-import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
-import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition';
-import { NDKProject } from '@/lib/ndk-events/NDKProject';
-import { AgentSelector } from '@/components/agents/AgentSelector';
-interface AddAgentsToProjectDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  project: NDKProject;
-  existingAgentIds?: string[];
-}
-export function AddAgentsToProjectDialog({ 
-  open, 
-  onOpenChange, 
-  project,
-  existingAgentIds = []
-}: AddAgentsToProjectDialogProps) {
-  const { ndk } = useNDK();
-  const [selectedAgents, setSelectedAgents] = useState<NDKAgentDefinition[]>([]);
-  const [isAdding, setIsAdding] = useState(false);
-  const handleAddAgents = async () => {
-    if (!ndk || selectedAgents.length === 0) return;
-    setIsAdding(true);
-    try {
-      // Add each selected agent to the project
-      selectedAgents.forEach(agent => {
-        if (agent.id && !existingAgentIds.includes(agent.id)) {
-          project.addAgent(agent.id);
-        }
-      });
-      // Publish the updated project event
-      await project.publish();
-      toast.success(`Added ${selectedAgents.length} agent${selectedAgents.length > 1 ? 's' : ''} to the project`);
-      // Reset and close
-      setSelectedAgents([]);
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to add agents to project:', error);
-      toast.error('Failed to add agents to project');
-    } finally {
-      setIsAdding(false);
-    }
-  };
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Add Agents to Project</DialogTitle>
-          <DialogDescription>
-            Select agents to add to {project.title || 'this project'}. 
-            These agents will be available for use in this project's context.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex-1 overflow-hidden">
-          <AgentSelector
-            selectedAgents={selectedAgents}
-            onAgentsChange={setSelectedAgents}
-            filterType="agent"
-          />
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isAdding}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleAddAgents}
-            disabled={isAdding || selectedAgents.length === 0}
-          >
-            {isAdding && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Add {selectedAgents.length > 0 ? `${selectedAgents.length} ` : ''}Agent{selectedAgents.length !== 1 ? 's' : ''}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-</file>
-
 <file path="src/components/dialogs/CreateProjectDialog.tsx">
 import { useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
@@ -3154,42 +3046,10 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
           kinds: [EVENT_KINDS.AGENT_CONFIG],
           limit: 100,
         })
-        const allAgents = Array.from(events).map(event => {
+        const agents = Array.from(events).map(event => {
           return new NDKAgentDefinition(ndk, event.rawEvent())
         })
-        // Group agents by slug (d tag) or name if no slug
-        const agentGroups = new Map<string, NDKAgentDefinition[]>()
-        allAgents.forEach(agent => {
-          // Use slug as primary grouping key, fall back to name
-          const groupKey = agent.slug || agent.name || agent.id
-          if (!agentGroups.has(groupKey)) {
-            agentGroups.set(groupKey, [])
-          }
-          agentGroups.get(groupKey)!.push(agent)
-        })
-        // For each group, keep only the latest version
-        const latestAgents: NDKAgentDefinition[] = []
-        agentGroups.forEach((groupAgents) => {
-          if (groupAgents.length === 1) {
-            latestAgents.push(groupAgents[0])
-          } else {
-            // Sort by created_at timestamp (newest first) and version number
-            const sorted = groupAgents.sort((a, b) => {
-              // First try to compare by created_at timestamp
-              const timeA = a.created_at || 0
-              const timeB = b.created_at || 0
-              if (timeA !== timeB) {
-                return timeB - timeA // Newer timestamp first
-              }
-              // If timestamps are equal, compare by version number
-              const versionA = parseInt(a.version || '0')
-              const versionB = parseInt(b.version || '0')
-              return versionB - versionA // Higher version first
-            })
-            latestAgents.push(sorted[0])
-          }
-        })
-        setAvailableAgents(latestAgents)
+        setAvailableAgents(agents)
       } catch (error) {
         console.error('Failed to fetch agents:', error)
         toast.error('Failed to load agents')
@@ -10331,9 +10191,6 @@ export class NDKProject extends NDKEvent {
 		addAgent(eventId: string) {
 			const tag = ["agent", eventId];
 			this.tags.push(tag);
-		}
-		removeAgent(eventId: string) {
-			this.tags = this.tags.filter(tag => !(tag[0] === "agent" && tag[1] === eventId));
 		}
 		get mcpTools(): string[] {
 			return this.tags.filter((tag) => tag[0] === "mcp").map((tag) => tag[1]);
@@ -17675,7 +17532,7 @@ export function AgentProfilePage() {
 </file>
 
 <file path="src/components/agents/AgentsTabContent.tsx">
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks';
 import { type NDKKind } from '@nostr-dev-kit/ndk';
 import { Bot, Plus, Settings, Volume2 } from 'lucide-react';
@@ -17692,7 +17549,6 @@ import { getAgentVoiceConfig } from '@/lib/voice-config';
 import { useTTSConfig } from '@/stores/llmConfig';
 import { useNavigate } from '@tanstack/react-router';
 import { useProjectStatus } from '@/stores/projects';
-import { AddAgentsToProjectDialog } from '@/components/dialogs/AddAgentsToProjectDialog';
 interface AgentData {
   id?: string;
   pubkey: string;
@@ -17714,44 +17570,34 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
   const { ndk } = useNDK();
   const navigate = useNavigate();
   const { apiKey: murfApiKey } = useTTSConfig();
-  const [addAgentsDialogOpen, setAddAgentsDialogOpen] = useState(false);
   // Get agents from project status (same as Status tab)
   const projectStatus = useProjectStatus(project?.dTag);
   const statusAgents = projectStatus?.agents || [];
   const isLoading = !projectStatus;
-  // Get agent event IDs from project tags
-  const projectAgentEventIds = useMemo(() => {
+  // Get agents from project tags as well (for additional metadata)
+  const projectAgents = useMemo(() => {
     return project.agents || [];
   }, [project]);
-  // Get unique agent pubkeys from status to fetch their NDKAgentDefinition events
+  // Get unique agent pubkeys to fetch their NDKAgentDefinition events
   const agentPubkeys = useMemo(() => {
     const pubkeys = new Set<string>();
+    // Add from project tags
+    projectAgents.forEach(agent => pubkeys.add(agent.pubkey));
     // Add from status
     statusAgents.forEach(agent => pubkeys.add(agent.pubkey));
     return Array.from(pubkeys);
-  }, [statusAgents]);
+  }, [projectAgents, statusAgents]);
   // Subscribe to agent events for more detailed information
   const { events: agentEvents } = useSubscribe(
     agentPubkeys.length > 0
       ? [{ kinds: [EVENT_KINDS.AGENT_CONFIG as NDKKind], authors: agentPubkeys }]
-      : false,
+      : null,
     {},
     [agentPubkeys.join(',')]
   );
-  // Convert events to NDKAgentDefinition instances and filter to latest versions only
+  // Convert events to NDKAgentDefinition instances
   const ndkAgents = useMemo(() => {
-    const agents = (agentEvents || []).map(event => new NDKAgentDefinition(ndk || undefined, event.rawEvent()));
-    // Group agents by d-tag (slug) and keep only the latest version
-    const latestAgentsMap = new Map<string, NDKAgentDefinition>();
-    agents.forEach(agent => {
-      const dTag = agent.dTag || agent.name || agent.pubkey;
-      const existing = latestAgentsMap.get(dTag);
-      // Keep the agent with the most recent created_at timestamp
-      if (!existing || (agent.created_at && existing.created_at && agent.created_at > existing.created_at)) {
-        latestAgentsMap.set(dTag, agent);
-      }
-    });
-    return Array.from(latestAgentsMap.values());
+    return (agentEvents || []).map(event => new NDKAgentDefinition(ndk || undefined, event.rawEvent()));
   }, [agentEvents, ndk]);
   // Combine all sources of agent data
   const allAgents = useMemo(() => {
@@ -17766,27 +17612,33 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
         fromStatus: true
       });
     });
+    // Add/update with project agent info
+    projectAgents.forEach(pa => {
+      const existing = agentMap.get(pa.pubkey) || {};
+      agentMap.set(pa.pubkey, {
+        ...existing,
+        pubkey: pa.pubkey,
+        name: existing.name || pa.slug,
+        fromProject: true
+      });
+    });
     // Add/update with NDKAgentDefinition data for full details
     ndkAgents.forEach(agent => {
-      const existing = agentMap.get(agent.pubkey);
+      const existing = agentMap.get(agent.pubkey) || {};
       agentMap.set(agent.pubkey, {
         ...existing,
         id: agent.id, // Event ID for navigation
         pubkey: agent.pubkey,
-        name: agent.name || existing?.name,
+        name: agent.name || existing.name,
         description: agent.description,
         picture: agent.picture,
         role: agent.role,
         useCriteria: agent.useCriteria,
-        fromNDK: true,
-        fromProject: projectAgentEventIds.some(pa => pa.ndkAgentEventId === agent.id),
-        status: existing?.status,
-        lastSeen: existing?.lastSeen,
-        fromStatus: existing?.fromStatus
+        fromNDK: true
       });
     });
     return Array.from(agentMap.values());
-  }, [statusAgents, projectAgentEventIds, ndkAgents]);
+  }, [statusAgents, projectAgents, ndkAgents]);
   const handleAgentClick = (agent: AgentData) => {
     // Navigate to agent profile page using pubkey as the identifier
     navigate({ 
@@ -17818,7 +17670,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
           description="No agents are currently online for this project. Agents will appear here when they come online."
           action={{
             label: "Add Agents",
-            onClick: () => setAddAgentsDialogOpen(true)
+            onClick: () => {}
           }}
         />
       </div>
@@ -17835,7 +17687,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
               {allAgents.length} {allAgents.length === 1 ? 'agent' : 'agents'} assigned to this project
             </p>
           </div>
-          <Button size="sm" onClick={() => setAddAgentsDialogOpen(true)}>
+          <Button size="sm">
             <Plus className="w-4 h-4 mr-2" />
             Add Agent
           </Button>
@@ -17940,12 +17792,6 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
           })}
         </div>
       </div>
-      <AddAgentsToProjectDialog 
-        open={addAgentsDialogOpen}
-        onOpenChange={setAddAgentsDialogOpen}
-        project={project}
-        existingAgentIds={projectAgentEventIds.map(a => a.ndkAgentEventId)}
-      />
     </div>
   );
 }
@@ -18284,7 +18130,6 @@ export function ChatInputArea({
             <ChatMentionMenu
               showAgentMenu={mentionPropsWithRef.showAgentMenu}
               filteredAgents={mentionPropsWithRef.filteredAgents}
-              filteredProjectGroups={mentionPropsWithRef.filteredProjectGroups}
               selectedAgentIndex={mentionPropsWithRef.selectedAgentIndex}
               insertMention={mentionPropsWithRef.insertMention}
             />
@@ -18392,126 +18237,29 @@ export function ChatInputArea({
 <file path="src/components/chat/components/ChatMentionMenu.tsx">
 import { cn } from '@/lib/utils'
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'
-import { ChevronRight, ChevronDown } from 'lucide-react'
 interface AgentInstance {
   pubkey: string
   name: string
   projectName?: string
   projectDTag?: string
 }
-interface ProjectGroup {
-  projectName: string
-  projectDTag: string
-  agents: AgentInstance[]
-  isCurrentProject?: boolean
-}
 interface ChatMentionMenuProps {
   showAgentMenu: boolean
-  filteredAgents?: AgentInstance[]
-  filteredProjectGroups?: ProjectGroup[]
+  filteredAgents: AgentInstance[]
   selectedAgentIndex: number
   insertMention: (agent: AgentInstance) => void
-  expandedProjects?: Set<string>
-  toggleProjectExpansion?: (projectDTag: string) => void
 }
 /**
  * Mention menu component
- * Displays agent suggestions for @mentions in a hierarchical project structure
+ * Displays agent suggestions for @mentions
  */
 export function ChatMentionMenu({
   showAgentMenu,
   filteredAgents,
-  filteredProjectGroups,
   selectedAgentIndex,
-  insertMention,
-  expandedProjects = new Set(),
-  toggleProjectExpansion
+  insertMention
 }: ChatMentionMenuProps) {
-  if (!showAgentMenu) return null
-  // If we have project groups, use hierarchical display
-  if (filteredProjectGroups && filteredProjectGroups.length > 0) {
-    return (
-      <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border rounded-md shadow-lg p-2 max-h-64 overflow-y-auto z-50">
-        {filteredProjectGroups.map((group) => {
-          const isExpanded = group.isCurrentProject || expandedProjects.has(group.projectDTag)
-          return (
-            <div key={group.projectDTag} className="mb-1">
-              {/* Current project agents - no header, always visible, no prefix */}
-              {group.isCurrentProject ? (
-                <div>
-                  {group.agents.map((agent) => (
-                    <button
-                      key={agent.pubkey}
-                      className={cn(
-                        "w-full text-left px-2 py-1.5 rounded hover:bg-accent transition-colors",
-                        "flex items-center gap-2"
-                      )}
-                      onClick={() => insertMention(agent)}
-                    >
-                      <ProfileDisplay
-                        pubkey={agent.pubkey}
-                        showName={false}
-                        avatarClassName="h-5 w-5"
-                      />
-                      <span className="text-sm truncate">
-                        {agent.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <>
-                  {/* Other projects - collapsible headers */}
-                  <button
-                    className="w-full text-left px-2 py-1.5 rounded hover:bg-accent/50 transition-colors flex items-center gap-1"
-                    onClick={() => toggleProjectExpansion?.(group.projectDTag)}
-                  >
-                    {isExpanded ? (
-                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                    )}
-                    <span className="text-sm font-medium text-muted-foreground">
-                      {group.projectName}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      ({group.agents.length})
-                    </span>
-                  </button>
-                  {/* Agents list - only visible when expanded */}
-                  {isExpanded && (
-                    <div className="ml-4">
-                      {group.agents.map((agent) => (
-                        <button
-                          key={agent.pubkey}
-                          className={cn(
-                            "w-full text-left px-2 py-1.5 rounded hover:bg-accent transition-colors",
-                            "flex items-center gap-2"
-                          )}
-                          onClick={() => insertMention(agent)}
-                        >
-                          <ProfileDisplay
-                            pubkey={agent.pubkey}
-                            showName={false}
-                            avatarClassName="h-5 w-5"
-                          />
-                          <span className="text-sm truncate">
-                            {agent.name}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )
-        })}
-      </div>
-    )
-  }
-  // Fallback to simple list display (if no project groups provided)
-  if (!filteredAgents || filteredAgents.length === 0) {
+  if (!showAgentMenu || filteredAgents.length === 0) {
     return null
   }
   return (
@@ -18531,9 +18279,16 @@ export function ChatMentionMenu({
               showName={false}
               avatarClassName="h-6 w-6"
             />
-            <span className="text-sm font-medium truncate">
-              {agent.name}
-            </span>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium truncate block">
+                {agent.name}
+              </span>
+              {agent.projectName && (
+                <span className="text-xs text-muted-foreground truncate block">
+                  from {agent.projectName}
+                </span>
+              )}
+            </div>
           </div>
         </button>
       ))}
@@ -18684,10 +18439,11 @@ export function ChatMessageList({
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useDraftMessages } from '@/stores/draftMessages'
 import { useBlossomUpload } from '@/hooks/useBlossomUpload'
-import { useMentionAutocomplete, type ProjectGroup } from '@/hooks/useMentionAutocomplete'
-import { useAllProjectsOnlineAgentsGrouped } from '@/hooks/useAllProjectsOnlineAgents'
+import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
+import { useAllProjectsOnlineAgents } from '@/hooks/useAllProjectsOnlineAgents'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
+import { nip19 } from 'nostr-tools'
 interface AgentInstance {
   pubkey: string
   name: string
@@ -18749,56 +18505,33 @@ export function useChatInput(
       .map(item => item.url!)
       .filter(url => !removedImageUrls.includes(url))
   }, [uploadQueue, removedImageUrls])
-  // Get all project agents grouped by project
-  const allProjectGroups = useAllProjectsOnlineAgentsGrouped()
-  // Create project groups for hierarchical display
-  const projectGroups = useMemo((): ProjectGroup[] => {
-    if (!includeAllProjects) return []
-    const groups: ProjectGroup[] = []
-    // Add current project group (always expanded, no project prefix)
-    if (agents.length > 0) {
-      groups.push({
-        projectName: project.title || project.dTag || 'Current Project',
-        projectDTag: project.dTag || '',
-        agents: agents.map(a => ({
-          pubkey: a.pubkey,
-          name: a.name
-        })),
-        isCurrentProject: true
-      })
-    }
-    // Add other project groups
-    allProjectGroups.forEach(group => {
-      // Skip current project (already added above)
-      if (group.projectDTag === project.dTag) return
-      groups.push({
-        projectName: group.projectName,
-        projectDTag: group.projectDTag,
-        agents: group.agents.map(a => ({
+  // Get all project agents if needed
+  const allProjectAgents = useAllProjectsOnlineAgents()
+  // Use appropriate agent list based on includeAllProjects flag
+  const agentsForMentions = useMemo(() => {
+    if (includeAllProjects) {
+      // Merge current project agents with all project agents
+      // Current project agents take priority (no project badge)
+      const currentProjectPubkeys = new Set(agents.map(a => a.pubkey))
+      const otherProjectAgents = allProjectAgents
+        .filter(a => !currentProjectPubkeys.has(a.pubkey))
+        .map(a => ({
           pubkey: a.pubkey,
           name: a.name,
-          projectName: group.projectName,
-          projectDTag: group.projectDTag
+          projectName: a.projectName,
+          projectDTag: a.projectDTag
         }))
-      })
-    })
-    return groups
-  }, [agents, allProjectGroups, includeAllProjects, project])
-  // Flatten agents for simple display (backwards compatibility)
-  const agentsForMentions = useMemo(() => {
-    if (projectGroups.length > 0) {
-      // Flatten all agents from all groups
-      return projectGroups.flatMap(g => g.agents)
+      // Current project agents first (no project badge), then other projects
+      return [...agents, ...otherProjectAgents]
     }
     return agents
-  }, [agents, projectGroups])
-  // Mention autocomplete with project groups
+  }, [agents, allProjectAgents, includeAllProjects])
+  // Mention autocomplete
   const mentionProps = useMentionAutocomplete(
     agentsForMentions,
     messageInput,
     setMessageInput,
-    textareaRef,
-    projectGroups
+    textareaRef
   )
   // Clear input after sending
   const clearInput = useCallback(() => {
@@ -18806,11 +18539,17 @@ export function useChatInput(
     setRemovedImageUrls([])
     clearDraft(conversationId)
   }, [conversationId, clearDraft])
-  // Build message content with images
+  // Build message content with images and replace mentions with nostr:npub format
   const buildMessageContent = useCallback(() => {
     let content = messageInput
-    // Keep @mentions as-is (don't replace with nostr:npub format)
-    // The mentions are already in the correct @agentname format
+    // Replace @mentions with nostr:npub format
+    const mentions = mentionProps.extractMentions()
+    mentions.forEach(agent => {
+      // Create a regex to find all occurrences of @agentname
+      const mentionRegex = new RegExp(`@${agent.name}\\b`, 'gi')
+      const npub = nip19.npubEncode(agent.pubkey)
+      content = content.replace(mentionRegex, `nostr:${npub}`)
+    })
     // Append image URLs to the message content
     if (pendingImageUrls.length > 0) {
       if (content) content += '\n\n'
@@ -18819,7 +18558,7 @@ export function useChatInput(
       })
     }
     return content
-  }, [messageInput, pendingImageUrls])
+  }, [messageInput, pendingImageUrls, mentionProps])
   // Get completed uploads for tagging
   const getCompletedUploads = useCallback(() => {
     return uploadQueue.filter(item => 
@@ -19590,7 +19329,7 @@ export function DocumentationViewer({ article, onBack, projectTitle, project }: 
     return "w-full" // 100% width when no sidebars
   }
   return (
-    <div className="h-full flex w-full">
+    <div className="h-full flex">
       {/* Main Content Area */}
       <div className={cn(
         "flex flex-col transition-all duration-300",
@@ -24500,18 +24239,11 @@ export interface AgentInstance {
   projectName?: string
   projectDTag?: string
 }
-export interface ProjectGroup {
-  projectName: string
-  projectDTag: string
-  agents: AgentInstance[]
-  isCurrentProject?: boolean
-}
 export function useMentionAutocomplete(
   agents: AgentInstance[],
   input: string,
   setInput: (value: string) => void,
-  textareaRef: RefObject<HTMLTextAreaElement | null>,
-  projectGroups?: ProjectGroup[]
+  textareaRef: RefObject<HTMLTextAreaElement | null>
 ) {
   const [showAgentMenu, setShowAgentMenu] = useState(false)
   const [selectedAgentIndex, setSelectedAgentIndex] = useState(0)
@@ -24525,22 +24257,6 @@ export function useMentionAutocomplete(
       agent.name.toLowerCase().includes(query)
     )
   }, [agents, searchQuery])
-  // Filter project groups based on search query
-  const filteredProjectGroups = useMemo(() => {
-    if (!projectGroups) return []
-    if (!searchQuery) return projectGroups
-    const query = searchQuery.toLowerCase()
-    return projectGroups.map(group => ({
-      ...group,
-      agents: group.agents.filter(agent =>
-        agent.name.toLowerCase().includes(query) ||
-        group.projectName.toLowerCase().includes(query)
-      )
-    })).filter(group => 
-      group.agents.length > 0 || 
-      group.projectName.toLowerCase().includes(query)
-    )
-  }, [projectGroups, searchQuery])
   // Detect @mentions in input
   const handleInputChange = useCallback((value: string) => {
     setInput(value)
@@ -24638,12 +24354,11 @@ export function useMentionAutocomplete(
   return {
     showAgentMenu,
     filteredAgents,
-    filteredProjectGroups,
     selectedAgentIndex,
     handleInputChange,
     handleKeyDown,
     insertMention,
-    extractMentions
+    extractMentions,
   }
 }
 </file>
@@ -32433,6 +32148,15 @@ export function ChatInterface({
   const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false)
   const [autoTTS, setAutoTTS] = useAtom(autoTTSAtom)
   const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(null)
+  // Cross-project mentions preference
+  const [includeAllProjects, setIncludeAllProjects] = useState(() => {
+    const stored = localStorage.getItem('chat.includeAllProjectAgents')
+    return stored === 'true'
+  })
+  // Save preference when it changes
+  useEffect(() => {
+    localStorage.setItem('chat.includeAllProjectAgents', includeAllProjects.toString())
+  }, [includeAllProjects])
   // Thread management
   const threadManagement = useThreadManagement(project, rootEvent || null, extraTags, onThreadCreated)
   const { localRootEvent, sendMessage } = threadManagement
@@ -32448,8 +32172,8 @@ export function ChatInterface({
       name: agent.name
     }))
   }, [onlineAgents])
-  // Input management - always include all projects
-  const inputProps = useChatInput(project, localRootEvent, projectAgents, textareaRef, true)
+  // Input management
+  const inputProps = useChatInput(project, localRootEvent, projectAgents, textareaRef, includeAllProjects)
   // TTS configuration
   const ttsOptions = useAgentTTSConfig()
   const tts = useMurfTTS(ttsOptions || { apiKey: '', voiceId: '', enabled: false })
@@ -32537,6 +32261,8 @@ export function ChatInterface({
           ttsEnabled={!!ttsOptions}
           messages={messages}
           project={project}
+          includeAllProjects={includeAllProjects}
+          onIncludeAllProjectsChange={setIncludeAllProjects}
         />
         {/* Messages Area */}
         <ChatMessageList
@@ -33146,44 +32872,11 @@ export function AgentDefinitionsPage() {
         {},
         []
     );
-    // Convert raw events to NDKAgentDefinition instances and filter to latest versions only
-    const agents = useMemo(() => {
-        const allAgents = (rawAgents || []).map((event) => new NDKAgentDefinition(ndk || undefined, event.rawEvent()));
-        // Group agents by slug/d-tag/name (without author) to show only latest version across all authors
-        const agentGroups = new Map<string, NDKAgentDefinition[]>();
-        allAgents.forEach(agent => {
-            // Priority: d-tag/slug > name > id
-            const identifier = agent.slug || agent.dTag || agent.name || agent.id;
-            const groupKey = identifier;
-            if (!agentGroups.has(groupKey)) {
-                agentGroups.set(groupKey, []);
-            }
-            agentGroups.get(groupKey)!.push(agent);
-        });
-        // For each group, keep only the latest version
-        const latestAgents: NDKAgentDefinition[] = [];
-        agentGroups.forEach((groupAgents) => {
-            if (groupAgents.length === 1) {
-                latestAgents.push(groupAgents[0]);
-            } else {
-                // Sort by created_at timestamp (newest first) and version number
-                const sorted = groupAgents.sort((a, b) => {
-                    // First try to compare by created_at timestamp
-                    const timeA = a.created_at || 0;
-                    const timeB = b.created_at || 0;
-                    if (timeA !== timeB) {
-                        return timeB - timeA; // Newer timestamp first
-                    }
-                    // If timestamps are equal, compare by version number
-                    const versionA = parseInt(a.version || '0');
-                    const versionB = parseInt(b.version || '0');
-                    return versionB - versionA; // Higher version first
-                });
-                latestAgents.push(sorted[0]);
-            }
-        });
-        return latestAgents;
-    }, [rawAgents, ndk]);
+    // Convert raw events to NDKAgentDefinition instances
+    const agents = useMemo(
+        () => (rawAgents || []).map((event) => new NDKAgentDefinition(ndk || undefined, event.rawEvent())),
+        [rawAgents, ndk]
+    );
     // Filter agents based on search query and tab
     const filteredAgents = useMemo(() => {
         let filtered = agents;

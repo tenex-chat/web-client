@@ -77,11 +77,50 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
           limit: 100,
         })
 
-        const agents = Array.from(events).map(event => {
+        const allAgents = Array.from(events).map(event => {
           return new NDKAgentDefinition(ndk, event.rawEvent())
         })
 
-        setAvailableAgents(agents)
+        // Group agents by slug (d tag) or name if no slug
+        const agentGroups = new Map<string, NDKAgentDefinition[]>()
+        
+        allAgents.forEach(agent => {
+          // Use slug as primary grouping key, fall back to name
+          const groupKey = agent.slug || agent.name || agent.id
+          
+          if (!agentGroups.has(groupKey)) {
+            agentGroups.set(groupKey, [])
+          }
+          agentGroups.get(groupKey)!.push(agent)
+        })
+        
+        // For each group, keep only the latest version
+        const latestAgents: NDKAgentDefinition[] = []
+        
+        agentGroups.forEach((groupAgents) => {
+          if (groupAgents.length === 1) {
+            latestAgents.push(groupAgents[0])
+          } else {
+            // Sort by created_at timestamp (newest first) and version number
+            const sorted = groupAgents.sort((a, b) => {
+              // First try to compare by created_at timestamp
+              const timeA = a.created_at || 0
+              const timeB = b.created_at || 0
+              if (timeA !== timeB) {
+                return timeB - timeA // Newer timestamp first
+              }
+              
+              // If timestamps are equal, compare by version number
+              const versionA = parseInt(a.version || '0')
+              const versionB = parseInt(b.version || '0')
+              return versionB - versionA // Higher version first
+            })
+            
+            latestAgents.push(sorted[0])
+          }
+        })
+
+        setAvailableAgents(latestAgents)
       } catch (error) {
         console.error('Failed to fetch agents:', error)
         toast.error('Failed to load agents')

@@ -3,7 +3,10 @@ import { ArrowLeft, Phone, PhoneOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/useMediaQuery'
+import { ConversationAgents } from './ConversationAgents'
 import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
+import type { Message } from '../hooks/useChatMessages'
+import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 
 interface ChatHeaderProps {
   rootEvent: NDKEvent | null
@@ -11,6 +14,8 @@ interface ChatHeaderProps {
   autoTTS: boolean
   onAutoTTSChange: (enabled: boolean) => void
   ttsEnabled: boolean
+  messages?: Message[]
+  project?: NDKProject
 }
 
 /**
@@ -22,7 +27,9 @@ export function ChatHeader({
   onBack, 
   autoTTS, 
   onAutoTTSChange,
-  ttsEnabled 
+  ttsEnabled,
+  messages,
+  project
 }: ChatHeaderProps) {
   const isMobile = useIsMobile()
   const isNewThread = !rootEvent
@@ -84,6 +91,14 @@ export function ChatHeader({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Conversation Agents */}
+          {messages && project && messages.length > 0 && (
+            <ConversationAgents
+              messages={messages}
+              project={project}
+              rootEvent={rootEvent}
+            />
+          )}
           {/* Auto-TTS toggle */}
           {ttsEnabled && (
             <Button

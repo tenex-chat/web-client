@@ -29,6 +29,7 @@ import { autoTTSAtom } from '@/stores/llmConfig'
 interface ChatInterfaceProps {
   project: NDKProject
   rootEvent?: NDKEvent
+  extraTags?: string[][]
   className?: string
   onBack?: () => void
   onTaskClick?: (taskId: string) => void
@@ -43,7 +44,8 @@ type AgentInstance = AgentMention
  */
 export function ChatInterface({ 
   project, 
-  rootEvent, 
+  rootEvent,
+  extraTags, 
   className, 
   onBack, 
   onTaskClick, 
@@ -61,7 +63,7 @@ export function ChatInterface({
   const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(null)
 
   // Thread management
-  const threadManagement = useThreadManagement(project, rootEvent || null, onThreadCreated)
+  const threadManagement = useThreadManagement(project, rootEvent || null, extraTags, onThreadCreated)
   const { localRootEvent, sendMessage } = threadManagement
 
   // Message management
@@ -79,8 +81,8 @@ export function ChatInterface({
     }))
   }, [onlineAgents])
 
-  // Input management
-  const inputProps = useChatInput(project, localRootEvent, projectAgents)
+  // Input management - always include all projects
+  const inputProps = useChatInput(project, localRootEvent, projectAgents, textareaRef, true)
 
   // TTS configuration
   const ttsOptions = useAgentTTSConfig()
@@ -184,6 +186,8 @@ export function ChatInterface({
           autoTTS={autoTTS}
           onAutoTTSChange={setAutoTTS}
           ttsEnabled={!!ttsOptions}
+          messages={messages}
+          project={project}
         />
 
         {/* Messages Area */}
@@ -203,6 +207,7 @@ export function ChatInterface({
 
         {/* Input Area */}
         <ChatInputArea
+          textareaRef={textareaRef}
           messageInput={inputProps.messageInput}
           setMessageInput={inputProps.setMessageInput}
           pendingImageUrls={inputProps.pendingImageUrls}

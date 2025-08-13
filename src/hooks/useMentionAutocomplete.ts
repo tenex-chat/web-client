@@ -1,17 +1,14 @@
 import { useState, useCallback, useMemo, RefObject } from 'react'
+import type { AgentInstance, ProjectGroup } from '@/types/agent'
 
-export interface AgentInstance {
-  pubkey: string
-  name: string
-  picture?: string
-  description?: string
-}
+export { type AgentInstance, type ProjectGroup } from '@/types/agent'
 
 export function useMentionAutocomplete(
   agents: AgentInstance[],
   input: string,
   setInput: (value: string) => void,
-  textareaRef: RefObject<HTMLTextAreaElement>
+  textareaRef: RefObject<HTMLTextAreaElement | null>,
+  projectGroups?: ProjectGroup[]
 ) {
   const [showAgentMenu, setShowAgentMenu] = useState(false)
   const [selectedAgentIndex, setSelectedAgentIndex] = useState(0)
@@ -27,6 +24,25 @@ export function useMentionAutocomplete(
       agent.name.toLowerCase().includes(query)
     )
   }, [agents, searchQuery])
+  
+  // Filter project groups based on search query
+  const filteredProjectGroups = useMemo(() => {
+    if (!projectGroups) return []
+    
+    if (!searchQuery) return projectGroups
+    
+    const query = searchQuery.toLowerCase()
+    return projectGroups.map(group => ({
+      ...group,
+      agents: group.agents.filter(agent =>
+        agent.name.toLowerCase().includes(query) ||
+        group.projectName.toLowerCase().includes(query)
+      )
+    })).filter(group => 
+      group.agents.length > 0 || 
+      group.projectName.toLowerCase().includes(query)
+    )
+  }, [projectGroups, searchQuery])
 
   // Detect @mentions in input
   const handleInputChange = useCallback((value: string) => {
@@ -146,10 +162,11 @@ export function useMentionAutocomplete(
   return {
     showAgentMenu,
     filteredAgents,
+    filteredProjectGroups,
     selectedAgentIndex,
     handleInputChange,
     handleKeyDown,
     insertMention,
-    extractMentions,
+    extractMentions
   }
 }

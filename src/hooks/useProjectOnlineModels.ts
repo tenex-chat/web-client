@@ -14,8 +14,8 @@ export interface ModelOption {
  * This should be used in chat interfaces, model selectors, and anywhere you need
  * to interact with models that are actually available.
  */
-export function useProjectOnlineModels(projectTagId?: string): ModelOption[] {
-  const projectStatus = useProjectStatus(projectTagId)
+export function useProjectOnlineModels(projectDTag?: string): ModelOption[] {
+  const projectStatus = useProjectStatus(projectDTag)
   
   const onlineModels = useMemo(() => {
     if (!projectStatus?.models || projectStatus.models.length === 0) {

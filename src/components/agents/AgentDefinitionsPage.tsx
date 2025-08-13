@@ -32,11 +32,52 @@ export function AgentDefinitionsPage() {
         []
     );
 
-    // Convert raw events to NDKAgentDefinition instances
-    const agents = useMemo(
-        () => (rawAgents || []).map((event) => new NDKAgentDefinition(ndk || undefined, event.rawEvent())),
-        [rawAgents, ndk]
-    );
+    // Convert raw events to NDKAgentDefinition instances and filter to latest versions only
+    const agents = useMemo(() => {
+        const allAgents = (rawAgents || []).map((event) => new NDKAgentDefinition(ndk || undefined, event.rawEvent()));
+        
+        // Group agents by slug/d-tag/name (without author) to show only latest version across all authors
+        const agentGroups = new Map<string, NDKAgentDefinition[]>();
+        
+        allAgents.forEach(agent => {
+            // Priority: d-tag/slug > name > id
+            const identifier = agent.slug || agent.dTag || agent.name || agent.id;
+            const groupKey = identifier;
+            
+            if (!agentGroups.has(groupKey)) {
+                agentGroups.set(groupKey, []);
+            }
+            agentGroups.get(groupKey)!.push(agent);
+        });
+        
+        // For each group, keep only the latest version
+        const latestAgents: NDKAgentDefinition[] = [];
+        
+        agentGroups.forEach((groupAgents) => {
+            if (groupAgents.length === 1) {
+                latestAgents.push(groupAgents[0]);
+            } else {
+                // Sort by created_at timestamp (newest first) and version number
+                const sorted = groupAgents.sort((a, b) => {
+                    // First try to compare by created_at timestamp
+                    const timeA = a.created_at || 0;
+                    const timeB = b.created_at || 0;
+                    if (timeA !== timeB) {
+                        return timeB - timeA; // Newer timestamp first
+                    }
+                    
+                    // If timestamps are equal, compare by version number
+                    const versionA = parseInt(a.version || '0');
+                    const versionB = parseInt(b.version || '0');
+                    return versionB - versionA; // Higher version first
+                });
+                
+                latestAgents.push(sorted[0]);
+            }
+        });
+        
+        return latestAgents;
+    }, [rawAgents, ndk]);
 
     // Filter agents based on search query and tab
     const filteredAgents = useMemo(() => {

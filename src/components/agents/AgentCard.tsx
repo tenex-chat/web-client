@@ -1,7 +1,6 @@
 import { Bot } from "lucide-react";
 import { memo } from "react";
 import type { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
-import { ProfileDisplay } from "../common/ProfileDisplay";
 import { SelectableCard } from "../common/SelectableCard";
 
 interface AgentCardProps {
@@ -33,11 +32,6 @@ export const AgentCard = memo(function AgentCard({
             )}
             renderMeta={(agent) => (
                 <div className="flex items-center gap-4">
-                    <ProfileDisplay
-                        pubkey={agent.pubkey || ""}
-                        size="sm"
-                        nameClassName="text-muted-foreground"
-                    />
                     {agent.version && <span>v{agent.version}</span>}
                 </div>
             )}

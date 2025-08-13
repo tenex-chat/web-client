@@ -1,5 +1,5 @@
 import { NDKKind } from '@nostr-dev-kit/ndk'
-import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
+import { useEvent, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { ExternalLink, User } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Card } from '@/components/ui/card'
@@ -71,12 +71,10 @@ export function NostrEntityCard({
   }, [entity])
 
   // Subscribe to the event if we have a filter
-  const { events } = useSubscribe(
+  const event = useEvent(
     subscriptionFilter || false,
     {}
   )
-
-  const event = events?.[0]
 
   // Handle profile types (npub, nprofile)
   if (entity.type === 'npub' || entity.type === 'nprofile') {
@@ -91,11 +89,9 @@ export function NostrEntityCard({
     if (pubkey) {
       return (
         <Card className={cn(
-          "inline-flex items-center gap-2 px-3 py-2 my-2",
-          "bg-card/50 backdrop-blur border-muted",
+          "inline-flex items-center gap-2",
           className
         )}>
-          <User className="w-4 h-4 text-muted-foreground" />
           <ProfileDisplay pubkey={pubkey} />
         </Card>
       )
@@ -104,7 +100,7 @@ export function NostrEntityCard({
 
   // Handle click events
   const handleClick = () => {
-    if (event && event.content) {
+    if (event?.content) {
       setDrawerOpen(true)
     } else {
       // Open in njump if no content to display

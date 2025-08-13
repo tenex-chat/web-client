@@ -100,6 +100,10 @@ export class NDKProject extends NDKEvent {
 			this.tags.push(tag);
 		}
 
+		removeAgent(eventId: string) {
+			this.tags = this.tags.filter(tag => !(tag[0] === "agent" && tag[1] === eventId));
+		}
+
 		get mcpTools(): string[] {
 			return this.tags.filter((tag) => tag[0] === "mcp").map((tag) => tag[1]);
 		}

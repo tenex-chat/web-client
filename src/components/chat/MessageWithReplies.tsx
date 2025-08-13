@@ -37,6 +37,7 @@ import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { useProjectOnlineModels } from '@/hooks/useProjectOnlineModels'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { replaceNostrEntities } from '@/lib/utils/nostrEntityParser'
+import { getUserStatus } from '@/lib/utils/userStatus'
 
 interface MessageWithRepliesProps {
   event: NDKEvent
@@ -72,6 +73,11 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     const agent = onlineAgents.find(a => a.pubkey === event.pubkey)
     return agent?.name || null
   }, [onlineAgents, event.pubkey])
+  
+  // Get user status (external or belonging to another project)
+  const userStatus = useMemo(() => {
+    return getUserStatus(event.pubkey, user?.pubkey, project.dTag)
+  }, [event.pubkey, user?.pubkey, project.dTag])
   
   // TTS configuration
   const ttsOptions = useAgentTTSConfig(agentSlug || undefined)
@@ -194,7 +200,8 @@ export const MessageWithReplies = memo(function MessageWithReplies({
       // Convert plain text nostr: references to markdown links
       content = replaceNostrEntities(content, (_entity, match) => {
         // Convert to markdown link format that will be handled by our custom link renderer
-        return `[${match}](${match})`
+        console.log({_entity, match})
+        return `${_entity} [${_entity.bech32}](${match})`
       })
     }
     
@@ -312,7 +319,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   }, [event])
 
   // Get available models from project status
-  const availableModels = useProjectOnlineModels(project?.tagId())
+  const availableModels = useProjectOnlineModels(project?.dTag)
 
   return (
     <div className={cn(
@@ -356,6 +363,11 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                   nameClassName="text-sm font-semibold text-foreground"
                 />
               </Link>
+              {userStatus.isExternal && (
+                <span className="text-xs text-muted-foreground">
+                  ({userStatus.projectName || 'external'})
+                </span>
+              )}
               <span className="text-xs text-muted-foreground">
                 {formatRelativeTime(event.created_at || 0)}
               </span>

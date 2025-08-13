@@ -91,7 +91,8 @@ export function getMarkdownComponents({
       }
       
       // Check if the children contains a nostr link (when href is empty or missing)
-      if (childText && childText.startsWith('nostr:')) {
+      // Now also handles bare bech32 strings like npub1...
+      if (childText) {
         const entities = findNostrEntities(childText)
         if (entities.length > 0) {
           // Don't use compact mode for standalone entity references
@@ -100,7 +101,8 @@ export function getMarkdownComponents({
       }
       
       // Check if this is a Nostr entity link in href
-      if (href && typeof href === 'string' && href.startsWith('nostr:')) {
+      // Now also handles bare bech32 strings like npub1...
+      if (href && typeof href === 'string') {
         const entities = findNostrEntities(href)
         if (entities.length > 0) {
           // Don't use compact mode for standalone entity references

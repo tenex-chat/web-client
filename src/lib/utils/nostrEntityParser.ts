@@ -28,10 +28,11 @@ export interface NostrEntity {
 }
 
 /**
- * Parse text to find Nostr entity references (nostr:nevent1..., nostr:naddr1...)
+ * Parse text to find Nostr entity references (nostr:nevent1..., nostr:naddr1... or bare bech32 like npub1...)
  */
 export function findNostrEntities(text: string): NostrEntity[] {
-  const regex = /nostr:(nevent1|naddr1|note1|npub1|nprofile1)[\w]+/g
+  // Match both nostr: prefixed and bare bech32 strings
+  const regex = /(?:nostr:)?(nevent1|naddr1|note1|npub1|nprofile1)[\w]+/g
   const matches = text.match(regex) || []
 
   const entities: NostrEntity[] = []
@@ -62,7 +63,8 @@ export function replaceNostrEntities(
   text: string,
   replacer: (entity: NostrEntity, match: string) => string
 ): string {
-  const regex = /nostr:(nevent1|naddr1|note1|npub1|nprofile1)[\w]+/g
+  // Match both nostr: prefixed and bare bech32 strings
+  const regex = /(?:nostr:)?(nevent1|naddr1|note1|npub1|nprofile1)[\w]+/g
 
   return text.replace(regex, (match) => {
     const bech32 = match.replace('nostr:', '')
@@ -75,7 +77,9 @@ export function replaceNostrEntities(
         data: decoded.data,
       }
 
-      return replacer(entity, match)
+      // If the original match didn't have "nostr:" prefix, add it for consistency
+      const normalizedMatch = match.startsWith('nostr:') ? match : `nostr:${match}`
+      return replacer(entity, normalizedMatch)
     } catch {
       // If decode fails, return original match
       return match

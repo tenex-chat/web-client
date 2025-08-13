@@ -1,14 +1,12 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useDraftMessages } from '@/stores/draftMessages'
 import { useBlossomUpload } from '@/hooks/useBlossomUpload'
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete'
+import { useAllProjectsOnlineAgentsGrouped } from '@/hooks/useAllProjectsOnlineAgents'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
-
-interface AgentInstance {
-  pubkey: string
-  name: string
-}
+import type { AgentInstance, ProjectGroup } from '@/types/agent'
+import { getProjectDisplayName, transformAgentData } from '@/lib/utils/agentUtils'
 
 /**
  * Hook for managing chat input state
@@ -17,7 +15,9 @@ interface AgentInstance {
 export function useChatInput(
   project: NDKProject,
   rootEvent: NDKEvent | null,
-  agents: AgentInstance[]
+  agents: AgentInstance[],
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
+  includeAllProjects = false
 ) {
   const [messageInput, setMessageInput] = useState('')
   const { setDraft, getDraft, clearDraft } = useDraftMessages()
@@ -70,16 +70,62 @@ export function useChatInput(
       .map(item => item.url!)
       .filter(url => !removedImageUrls.includes(url))
   }, [uploadQueue, removedImageUrls])
-
-  // Create a ref that will be passed from component
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   
-  // Mention autocomplete
+  // Get all project agents grouped by project
+  const allProjectGroups = useAllProjectsOnlineAgentsGrouped()
+  
+  // Create project groups for hierarchical display
+  const projectGroups = useMemo((): ProjectGroup[] => {
+    if (!includeAllProjects) return []
+    
+    const groups: ProjectGroup[] = []
+    
+    // Add current project group (always expanded, no project prefix)
+    if (agents.length > 0) {
+      groups.push({
+        projectName: getProjectDisplayName(project),
+        projectDTag: project.dTag || '',
+        agents,
+        isCurrentProject: true
+      })
+    }
+    
+    // Add other project groups
+    allProjectGroups.forEach(group => {
+      // Skip current project (already added above)
+      if (group.projectDTag === project.dTag) return
+      
+      groups.push({
+        projectName: group.projectName,
+        projectDTag: group.projectDTag,
+        agents: group.agents.map(a => ({
+          pubkey: a.pubkey,
+          name: a.name,
+          projectName: group.projectName,
+          projectDTag: group.projectDTag
+        }))
+      })
+    })
+    
+    return groups
+  }, [agents, allProjectGroups, includeAllProjects, project])
+  
+  // Flatten agents for simple display (backwards compatibility)
+  const agentsForMentions = useMemo(() => {
+    if (projectGroups.length > 0) {
+      // Flatten all agents from all groups
+      return projectGroups.flatMap(g => g.agents)
+    }
+    return agents
+  }, [agents, projectGroups])
+  
+  // Mention autocomplete with project groups
   const mentionProps = useMentionAutocomplete(
-    agents,
+    agentsForMentions,
     messageInput,
     setMessageInput,
-    textareaRef as React.RefObject<HTMLTextAreaElement>
+    textareaRef,
+    projectGroups
   )
 
   // Clear input after sending
@@ -92,6 +138,10 @@ export function useChatInput(
   // Build message content with images
   const buildMessageContent = useCallback(() => {
     let content = messageInput
+    
+    // Keep @mentions as-is (don't replace with nostr:npub format)
+    // The mentions are already in the correct @agentname format
+    // We want to preserve the human-readable @agent-name format
     
     // Append image URLs to the message content
     if (pendingImageUrls.length > 0) {

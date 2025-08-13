@@ -26,6 +26,7 @@ export interface ImageUpload {
 export function useThreadManagement(
   project: NDKProject,
   initialRootEvent: NDKEvent | null,
+  extraTags?: string[][],
   onThreadCreated?: (threadId: string) => void
 ) {
   const { ndk } = useNDK()
@@ -47,6 +48,11 @@ export function useThreadManagement(
       ['title', content.slice(0, 50) || 'Image'], // Use first 50 chars as title
       ['a', project.tagId()], // NIP-33 reference to the project
     ]
+
+    // Add extra tags if provided
+    if (extraTags && extraTags.length > 0) {
+      newThreadEvent.tags.push(...extraTags)
+    }
 
     // Add image tags for each uploaded image
     images.forEach(upload => {
@@ -84,7 +90,7 @@ export function useThreadManagement(
     }
 
     return newThreadEvent
-  }, [ndk, user, project, onThreadCreated])
+  }, [ndk, user, project, extraTags, onThreadCreated])
 
   const sendReply = useCallback(async (
     content: string,

@@ -38,6 +38,7 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
     instructions: '',
     useCriteria: '',
     version: '1',
+    slug: '',
   })
 
   // Load fork data when agent changes
@@ -54,6 +55,7 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         instructions: forkFromAgent.instructions || '',
         useCriteria: forkFromAgent.useCriteria?.join('\n') || '',
         version: String(newVersion),
+        slug: forkFromAgent.slug || '',
       })
     } else {
       // Reset form when not forking
@@ -64,6 +66,7 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         instructions: '',
         useCriteria: '',
         version: '1',
+        slug: '',
       })
     }
     // Reset to first step when dialog opens/closes
@@ -109,6 +112,12 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         .filter(line => line.length > 0)
       agent.useCriteria = criteria
       agent.version = agentData.version || undefined
+      agent.slug = agentData.slug || undefined
+
+      // If forking, add an "e" tag to reference the previous version
+      if (forkFromAgent) {
+        agent.tags.push(['e', forkFromAgent.id])
+      }
 
       await agent.publish()
       
@@ -123,6 +132,7 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         instructions: '',
         useCriteria: '',
         version: '1',
+        slug: '',
       })
     } catch (error) {
       console.error('Failed to save agent:', error)
@@ -264,6 +274,20 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
                   value={agentData.role}
                   onChange={(e) => setAgentData({ ...agentData, role: e.target.value })}
                   placeholder="e.g., assistant, developer, researcher"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="slug">Slug (optional)</Label>
+                <div className="text-sm text-muted-foreground mb-2">
+                  A unique identifier for this agent definition (e.g., "code-assistant", "research-helper")
+                </div>
+                <Input
+                  id="slug"
+                  value={agentData.slug}
+                  onChange={(e) => setAgentData({ ...agentData, slug: e.target.value })}
+                  placeholder="e.g., my-assistant"
+                  pattern="^[a-z0-9-]+$"
                 />
               </div>
             </div>

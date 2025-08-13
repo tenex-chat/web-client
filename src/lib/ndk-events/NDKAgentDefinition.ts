@@ -109,4 +109,15 @@ export class NDKAgentDefinition extends NDKEvent {
     }
   }
 
+  get slug(): string | undefined {
+    return this.dTag
+  }
+
+  set slug(value: string | undefined) {
+    this.removeTag('d')
+    if (value) {
+      this.tags.push(['d', value])
+    }
+  }
+
 }

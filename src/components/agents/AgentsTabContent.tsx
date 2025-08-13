@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks';
 import { type NDKKind } from '@nostr-dev-kit/ndk';
 import { Bot, Plus, Settings, Volume2 } from 'lucide-react';
@@ -15,6 +15,7 @@ import { getAgentVoiceConfig } from '@/lib/voice-config';
 import { useTTSConfig } from '@/stores/llmConfig';
 import { useNavigate } from '@tanstack/react-router';
 import { useProjectStatus } from '@/stores/projects';
+import { AddAgentsToProjectDialog } from '@/components/dialogs/AddAgentsToProjectDialog';
 
 interface AgentData {
   id?: string;
@@ -39,39 +40,53 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
   const { ndk } = useNDK();
   const navigate = useNavigate();
   const { apiKey: murfApiKey } = useTTSConfig();
+  const [addAgentsDialogOpen, setAddAgentsDialogOpen] = useState(false);
   
   // Get agents from project status (same as Status tab)
   const projectStatus = useProjectStatus(project?.dTag);
   const statusAgents = projectStatus?.agents || [];
   const isLoading = !projectStatus;
 
-  // Get agents from project tags as well (for additional metadata)
-  const projectAgents = useMemo(() => {
+  // Get agent event IDs from project tags
+  const projectAgentEventIds = useMemo(() => {
     return project.agents || [];
   }, [project]);
 
-  // Get unique agent pubkeys to fetch their NDKAgentDefinition events
+  // Get unique agent pubkeys from status to fetch their NDKAgentDefinition events
   const agentPubkeys = useMemo(() => {
     const pubkeys = new Set<string>();
-    // Add from project tags
-    projectAgents.forEach(agent => pubkeys.add(agent.pubkey));
     // Add from status
     statusAgents.forEach(agent => pubkeys.add(agent.pubkey));
     return Array.from(pubkeys);
-  }, [projectAgents, statusAgents]);
+  }, [statusAgents]);
 
   // Subscribe to agent events for more detailed information
   const { events: agentEvents } = useSubscribe(
     agentPubkeys.length > 0
       ? [{ kinds: [EVENT_KINDS.AGENT_CONFIG as NDKKind], authors: agentPubkeys }]
-      : null,
+      : false,
     {},
     [agentPubkeys.join(',')]
   );
 
-  // Convert events to NDKAgentDefinition instances
+  // Convert events to NDKAgentDefinition instances and filter to latest versions only
   const ndkAgents = useMemo(() => {
-    return (agentEvents || []).map(event => new NDKAgentDefinition(ndk || undefined, event.rawEvent()));
+    const agents = (agentEvents || []).map(event => new NDKAgentDefinition(ndk || undefined, event.rawEvent()));
+    
+    // Group agents by d-tag (slug) and keep only the latest version
+    const latestAgentsMap = new Map<string, NDKAgentDefinition>();
+    
+    agents.forEach(agent => {
+      const dTag = agent.dTag || agent.name || agent.pubkey;
+      const existing = latestAgentsMap.get(dTag);
+      
+      // Keep the agent with the most recent created_at timestamp
+      if (!existing || (agent.created_at && existing.created_at && agent.created_at > existing.created_at)) {
+        latestAgentsMap.set(dTag, agent);
+      }
+    });
+    
+    return Array.from(latestAgentsMap.values());
   }, [agentEvents, ndk]);
 
   // Combine all sources of agent data
@@ -89,35 +104,28 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
       });
     });
     
-    // Add/update with project agent info
-    projectAgents.forEach(pa => {
-      const existing = agentMap.get(pa.pubkey) || {};
-      agentMap.set(pa.pubkey, {
-        ...existing,
-        pubkey: pa.pubkey,
-        name: existing.name || pa.slug,
-        fromProject: true
-      });
-    });
-    
     // Add/update with NDKAgentDefinition data for full details
     ndkAgents.forEach(agent => {
-      const existing = agentMap.get(agent.pubkey) || {};
+      const existing = agentMap.get(agent.pubkey);
       agentMap.set(agent.pubkey, {
         ...existing,
         id: agent.id, // Event ID for navigation
         pubkey: agent.pubkey,
-        name: agent.name || existing.name,
+        name: agent.name || existing?.name,
         description: agent.description,
         picture: agent.picture,
         role: agent.role,
         useCriteria: agent.useCriteria,
-        fromNDK: true
+        fromNDK: true,
+        fromProject: projectAgentEventIds.some(pa => pa.ndkAgentEventId === agent.id),
+        status: existing?.status,
+        lastSeen: existing?.lastSeen,
+        fromStatus: existing?.fromStatus
       });
     });
     
     return Array.from(agentMap.values());
-  }, [statusAgents, projectAgents, ndkAgents]);
+  }, [statusAgents, projectAgentEventIds, ndkAgents]);
 
   const handleAgentClick = (agent: AgentData) => {
     // Navigate to agent profile page using pubkey as the identifier
@@ -154,7 +162,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
           description="No agents are currently online for this project. Agents will appear here when they come online."
           action={{
             label: "Add Agents",
-            onClick: () => {}
+            onClick: () => setAddAgentsDialogOpen(true)
           }}
         />
       </div>
@@ -172,7 +180,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
               {allAgents.length} {allAgents.length === 1 ? 'agent' : 'agents'} assigned to this project
             </p>
           </div>
-          <Button size="sm">
+          <Button size="sm" onClick={() => setAddAgentsDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Agent
           </Button>
@@ -283,6 +291,13 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
           })}
         </div>
       </div>
+      
+      <AddAgentsToProjectDialog 
+        open={addAgentsDialogOpen}
+        onOpenChange={setAddAgentsDialogOpen}
+        project={project}
+        existingAgentIds={projectAgentEventIds.map(a => a.ndkAgentEventId)}
+      />
     </div>
   );
 }

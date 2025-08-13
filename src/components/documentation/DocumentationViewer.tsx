@@ -1,5 +1,5 @@
 import { NDKArticle } from '@nostr-dev-kit/ndk'
-import { ArrowLeft, Calendar, Clock, Copy, Hash, MessageSquare } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, Copy, Hash, MessageSquare, Plus, History } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
@@ -7,10 +7,13 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 import { formatRelativeTime } from '@/lib/utils/time'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
+import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
+import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { cn } from '@/lib/utils'
+import { ChangelogTabContent } from '@/components/changelog/ChangelogTabContent'
 
 interface DocumentationViewerProps {
   article: NDKArticle
@@ -20,7 +23,11 @@ interface DocumentationViewerProps {
 }
 
 export function DocumentationViewer({ article, onBack, projectTitle, project }: DocumentationViewerProps) {
-  const [showComments, setShowComments] = useState(true)
+  const { ndk } = useNDK()
+  const [showComments, setShowComments] = useState(false)
+  const [showChangelog, setShowChangelog] = useState(false)
+  const [chatThread, setChatThread] = useState<NDKEvent | undefined>(undefined)
+  
   const readingTime = useMemo(() => {
     const content = article.content || ''
     const wordsPerMinute = 200
@@ -28,6 +35,16 @@ export function DocumentationViewer({ article, onBack, projectTitle, project }: 
     const minutes = Math.ceil(words / wordsPerMinute)
     return `${minutes} min read`
   }, [article.content])
+  
+  const handleThreadCreated = useCallback(async (threadId: string) => {
+    // Fetch the newly created thread and set it as the rootEvent
+    if (ndk) {
+      const thread = await ndk.fetchEvent(threadId)
+      if (thread) {
+        setChatThread(thread)
+      }
+    }
+  }, [ndk])
 
   const handleCopyLink = async () => {
     try {
@@ -43,11 +60,20 @@ export function DocumentationViewer({ article, onBack, projectTitle, project }: 
     .filter(tag => tag[0] === 't')
     .map(tag => tag[1])
 
+  // Calculate content width based on active sidebars
+  const getContentWidth = () => {
+    if (showComments || showChangelog) {
+      return "w-2/3" // 66% width when sidebar is active
+    }
+    return "w-full" // 100% width when no sidebars
+  }
+
   return (
-    <div className="h-full flex">
+    <div className="h-full flex w-full">
+      {/* Main Content Area */}
       <div className={cn(
         "flex flex-col transition-all duration-300",
-        showComments && project ? "flex-1" : "w-full"
+        getContentWidth()
       )}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
@@ -72,12 +98,28 @@ export function DocumentationViewer({ article, onBack, projectTitle, project }: 
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setShowChangelog(!showChangelog)
+                if (!showChangelog) setShowComments(false) // Close comments when opening changelog
+              }}
+              className="h-9 w-9"
+              title="Toggle changelog"
+            >
+              <History className="h-4 w-4" />
+            </Button>
             {project && (
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowComments(!showComments)}
+                onClick={() => {
+                  setShowComments(!showComments)
+                  if (!showComments) setShowChangelog(false) // Close changelog when opening comments
+                }}
                 className="h-9 w-9"
+                title="Toggle comments"
               >
                 <MessageSquare className="h-4 w-4" />
               </Button>
@@ -138,16 +180,41 @@ export function DocumentationViewer({ article, onBack, projectTitle, project }: 
         </ScrollArea>
       </div>
 
-      {/* Comments Panel */}
+      {/* Changelog Sidebar */}
+      {showChangelog && (
+        <div className="w-1/3 border-l flex flex-col">
+          <div className="p-4 border-b flex items-center justify-between">
+            <h2 className="font-semibold">Changelog</h2>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <ChangelogTabContent article={article} />
+          </div>
+        </div>
+      )}
+
+      {/* Comments Sidebar */}
       {showComments && project && (
-        <div className="w-96 border-l flex flex-col">
-          <div className="p-4 border-b">
+        <div className="w-1/3 border-l flex flex-col">
+          <div className="p-4 border-b flex items-center justify-between">
             <h2 className="font-semibold">Comments</h2>
+            {!chatThread && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={() => {/* Start new chat - ChatInterface will handle creation */}}
+                title="Start new discussion"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            )}
           </div>
           <ChatInterface
             project={project}
-            rootEvent={article}
+            rootEvent={chatThread}
+            extraTags={[article.tagReference()]}
             className="flex-1"
+            onThreadCreated={handleThreadCreated}
           />
         </div>
       )}

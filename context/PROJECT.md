@@ -2,54 +2,60 @@
 
 ## 1. Overview
 
-**TENEX web** appears to be a web-based application with a focus on real-time communication and project management features. It is built on a modern web technology stack and seems to incorporate decentralized technologies, likely the Nostr protocol.
+TENEX web is a web-based application focused on real-time communication and project management. It is explicitly designed with decentralized technology (notably, Nostr protocol) at its core.
 
-**Note:** This document is based on initial analysis of the project's file structure. Assumptions are made where direct evidence is unavailable.
+This document only outlines what the project IS and what we've inferred, explicitly separating user-confirmed facts from assumptions. Technical implementation details like technology stack, code, and architecture do NOT belong in this file. This living document is updated as new, explicit information becomes available about product requirements or user goals.
 
-## 2. Core Functionality (Inferred)
+## 2. Confirmed Functionality
 
-Based on the directory structure, the application likely includes the following features:
+The following features and goals have been **explicitly confirmed by user requests or requirements**:
 
-*   **User Authentication:** A system for users to sign in and manage their accounts (`src/components/auth`).
-*   **Chat:** Real-time chat functionality (`src/components/chat`). Conversations are displayed as a list of threads. Each conversation in the list displays an indicator for the current phase of the conversation, derived from `kind:1111` events.
-*   **Project and Task Management:** Features to create, track, and manage projects and tasks (`src/components/projects`, `src/components/tasks`). Project data is loaded via real-time subscriptions, initiated by the `initializeSubscriptions` function in the `projects` store. This process is triggered by the `useProjectSubscriptions` hook within the user interface components.
-*   **New Feature: Start Project on Offline Click**
-    *   When a project is offline, clicking the offline indicator next to its title will now trigger the "start project" action.
-    *   This action involves sending a Nostr event of kind `24000` to the backend, which tags the respective project.
-    *   This functionality has been implemented in the `ProjectStatusIndicator` component and handled in the project detail page and mobile view.
-    *   Toast notifications are displayed for success and error handling.
-*   **Real-time Updates:** Integration with the Nostr protocol for real-time data synchronization and events (`src/lib/ndk-events`). The application uses a hook-based approach (e.g., `useProjectSubscriptions`) to manage these subscriptions.
-*   **Agent Definition Rendering**: Support for rendering NDKAgentDefinition events (kind:4199) in content. This includes:
-    *   A new component, `AgentDefinitionEmbedCard`, which displays agent name, role, description, use criteria, and author.
-    *   The ability to open a modal for viewing full agent details and installing the agent.
-    *   Installation is achieved by adding an "agent" tag with the NCKAgentDefinition event ID to the project.
-    *   Reusability of existing components (e.g., `NostrEntityCard`) for consistent rendering.
-*   **Responsive Design:** Support for both desktop and mobile devices. The application uses a responsive `CollapsibleProjectsSidebar` component to display the project list on both desktop and mobile layouts, ensuring a consistent experience across devices. It is critical to ensure that new features and fixes are applied to this component.
-*   **Progressive Web App (PWA):** The application may be installable as a PWA (`src/lib/pwa`).
+- **User Authentication:** System for account sign-in/management.
+- **Chat & Conversations:**
+  - Real-time chat with conversations displayed as a list of threads.
+  - Each thread displays a visual indicator for the current phase—requires a **small, subtle 5x5px colored circle** matching the phase color in the conversation view (not text), as a reusable component. Tooltip shows the phase name on hover. No unnecessary headers or list counts.
+  - **Message Rendering with Bech32 Support:** When rendering messages, any bare bech32 string (like `npub1...`, `nevent1...`, etc.) is automatically treated as if it had the `nostr:` prefix and rendered as an interactive nostr entity card. This allows seamless recognition of nostr identifiers without requiring explicit prefixing.
+  - **Agent Mentions in Chat:** When mentioning agents in chat input using `@agent-name` format, the system automatically replaces the mention with the agent's full `nostr:npub...` identifier when the message is sent. This ensures proper nostr protocol integration and enables agent notifications.
+- **Project and Task Management:**
+  - Projects/tasks can be created and tracked.
+  - Project data is updated live using Nostr-powered real-time subscriptions. The system uses a hook-based approach to manage these subscriptions, starting from components.
+  - **When a project is offline**, clicking its offline indicator triggers the "start project" action (implemented as Nostr event `kind:24000` and project tagging, plus success/error toast notifications). This is handled in both desktop and mobile components, specifically via the ProjectStatusIndicator.
+- **Agent Definition Management:**
+  - Supports NDKAgentDefinition events (kind:4199).
+  - Uses a reusable embed card to display agent details; a modal allows full agent inspection and installation (adds "agent" tag with agent event ID to project tags). Reuses core rendering components.
+  - **Agent Definition Forking:** When forking an existing Agent Definition, the system creates a new replaceable event with proper Nostr protocol compliance:
+    - Adds an "e" tag referencing the original agent definition being forked from (for lineage tracking)
+    - Includes a "d" tag with the agent's slug (for NIP-33 replaceable event identification)
+    - Preserves the original agent's slug to maintain identity continuity across versions
+    - Automatically increments version number when forking
+    - Provides UI fields for managing slug and other agent properties
+- **Responsive Design:**
+  - Layout adapts to both desktop and mobile devices. 
+  - The "CollapsibleProjectsSidebar" is critical for project list visibility and must be consistent across devices.
+  - All new features/fixes must ensure mobile and desktop parity.
+- **User Experience/UI Preferences:**
+  - Minimalist and uncluttered interface—avoid superfluous headings, counts, or content prefaces; prioritize direct content.
+  - Layouts must efficiently use available screen space (minimize padding, maximize content area).
+- **Project Avatars:**
+  - Each project gets a deterministic fallback color for its avatar, derived from the "d" tag (NIP-33 id). Once a custom image loads, the background should not show.
 
-## 3. Technology Stack (Inferred)
+## 3. Assumptions (Inferred Only)
 
-*   **Frontend Framework:** A modern JavaScript framework, most likely React, given the use of components and hooks (`src/components`, `src/hooks`).
-*   **Language:** TypeScript.
-*   **Real-time Protocol:** Nostr, as suggested by the `ndk-events` library.
-*   **State Management:** A dedicated state management library is likely used (`src/stores`).
-*   **Testing:** The project includes end-to-end tests (`e2e/`).
-*   **Blossom Protocol:** Identified as a protocol for media storage, which will influence how media assets are handled within the application.
+The following details are **inferred** from file structure/code, and should NOT be considered authoritative unless directly confirmed:
 
-## 4. User Interface Preferences
+- The project appears to use React (or a similar component-based frontend) and TypeScript.
+- Project state management is likely handled with a state management library.
+- End-to-end tests exist.
+- Blossom Protocol is present and likely used for media storage.
+- The project is installable as a Progressive Web App (PWA).
+- "TENEX" may refer to a larger platform or suite.
+- The project is a client-side application that interacts with the Nostr relay network.
 
-*   **Minimalism:** The user has expressed a preference for a clean and uncluttered user interface. Unnecessary UI elements that preface content, such as headers or counts for lists, should be avoided in favor of direct content presentation.
-*   **Efficient Use of Space:** The user prefers layouts that make efficient use of screen real estate. For instance, removing unnecessary padding around elements to give content more room to breathe.
-*   **Subtle Phase Indicators:** The user has a strong preference for subtle UI elements. Instead of text-based indicators, the phase of a conversation should be represented by a small, 5x5px colored circle.
-    *   The color of the circle must correspond to the phase color used in the main conversation view.
-    *   A tooltip (using the `title` attribute) should display the name of the phase on hover.
-    *   This indicator must be implemented as a reusable component to ensure consistency across the application.
-*   **Deterministic Project Avatars:** Project avatars must have a deterministic fallback color generated from the project's "d" tag (NIP-33 identifier). This ensures a consistent color for each project across all sessions and views. This is implemented in the reusable `ProjectAvatar` component. If a project has a custom image for its logo, the background color should not be visible once the image loads.
+## 4. Evolution and Issues
 
-## 5. Assumptions
+- **Nostr Event Publishing:** Noted issue when using complete()—possible event propagation problem requires further engineering investigation.
+- This document is updated as new, explicit information becomes available or user requirements evolve.
 
-*   The project is a client-side application that interacts with a Nostr relay network.
-*   The name "TENEX" may refer to a specific set of features or a larger platform.
-*   **Note on Event Publishing:** An issue was encountered during the `complete()` call (Nostr publishing error), indicating potential problems with event propagation that need further investigation by the Executor or relevant team.
+---
 
-This document will be updated as more information becomes available.
+This specification ONLY includes: (a) features and goals directly stated/confirmed by the user or task outcomes, and (b) inferred details which are clearly delineated as such.

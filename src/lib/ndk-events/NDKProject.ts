@@ -1,5 +1,6 @@
 import { NDKEvent, type NDKKind, type NostrEvent } from '@nostr-dev-kit/ndk-hooks'
 import type NDK from '@nostr-dev-kit/ndk-hooks'
+import { slugify } from '@/lib/utils/slugify'
 
 export class NDKProject extends NDKEvent {
 		static kind: NDKKind = 31933 as NDKKind;
@@ -164,6 +165,30 @@ export class NDKProject extends NDKEvent {
 			if (url) {
 				this.tags.push(["repo", url]);
 			}
+		}
+
+		/**
+		 * Get the d-tag for this project (NIP-33 replaceable event)
+		 */
+		get dTag(): string | undefined {
+			const existingDTag = this.tagValue('d')
+			if (existingDTag) return existingDTag
+			
+			// Generate from title if no d tag exists
+			if (this.title) {
+				return slugify(this.title)
+			}
+			
+			return undefined
+		}
+
+		/**
+		 * Generate a NIP-33 tag reference for this project
+		 * Format: kind:pubkey:d-tag
+		 */
+		nip33TagReference(): string | undefined {
+			if (!this.pubkey || !this.dTag) return undefined
+			return `${this.kind}:${this.pubkey}:${this.dTag}`
 		}
 
 		/**

@@ -19,7 +19,6 @@ import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useNDKCurrentUser, useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { toast } from 'sonner'
-import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { useLocation } from '@tanstack/react-router'
 import { useProject } from '@/hooks/useProject'
 

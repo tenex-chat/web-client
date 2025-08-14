@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from '@tanstack/react-router'
 import { useNDK, useSubscribe, useNDKCurrentUser, useEvent, useProfileValue } from '@nostr-dev-kit/ndk-hooks'
-import { type NDKFilter } from '@nostr-dev-kit/ndk'
 import { useState, useMemo, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'

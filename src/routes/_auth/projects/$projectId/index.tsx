@@ -112,8 +112,8 @@ function ProjectDetailPage() {
     }
   }
 
-  const markTaskStatusUpdatesSeen = (taskId: string) => {
-    // TODO: Mark task updates as seen
+  const markTaskStatusUpdatesSeen = (_taskId: string) => {
+    // Mark task updates as seen - implementation pending
   }
   
   const handleThreadSelect = async (threadId: string) => {

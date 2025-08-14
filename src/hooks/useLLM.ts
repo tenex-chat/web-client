@@ -10,7 +10,7 @@ export function useLLM() {
                 // If no API key, just return the original text with basic cleanup
                 return text.trim()
                     .replace(/\s+/g, ' ')
-                    .replace(/([.!?])\s*([a-z])/g, (match, p1, p2) => `${p1} ${p2.toUpperCase()}`);
+                    .replace(/([.!?])\s*([a-z])/g, (_, p1, p2) => `${p1} ${p2.toUpperCase()}`);
             }
 
             // Use GPT to clean up the transcription
@@ -48,7 +48,7 @@ export function useLLM() {
             // Return original text with basic cleanup on error
             return text.trim()
                 .replace(/\s+/g, ' ')
-                .replace(/([.!?])\s*([a-z])/g, (match, p1, p2) => `${p1} ${p2.toUpperCase()}`);
+                .replace(/([.!?])\s*([a-z])/g, (_, p1, p2) => `${p1} ${p2.toUpperCase()}`);
         }
     }, []);
 

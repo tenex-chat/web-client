@@ -272,7 +272,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             project = get().getProjectByTagId(identifier);
             if (project) return project;
             
-            return null;
+            return undefined;
         },
         
         // Initialize global status subscription for all projects

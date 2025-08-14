@@ -158,7 +158,7 @@ describe('NDKProject', () => {
       project.pubkey = 'test-pubkey'
       project.title = 'Test Project'
       
-      const tagRef = project.tagReference()
+      const tagRef = project.nip33TagReference()
       expect(tagRef).toMatch(/^31933:test-pubkey:/)
     })
 

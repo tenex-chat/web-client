@@ -1,5 +1,6 @@
 import { NDKEvent, type NDKKind, type NostrEvent } from '@nostr-dev-kit/ndk-hooks'
 import type NDK from '@nostr-dev-kit/ndk-hooks'
+import { slugify } from '@/lib/utils/slugify'
 
 export class NDKAgentDefinition extends NDKEvent {
   static kind: NDKKind = 4199 as NDKKind;
@@ -118,6 +119,18 @@ export class NDKAgentDefinition extends NDKEvent {
     if (value) {
       this.tags.push(['d', value])
     }
+  }
+
+  get dTag(): string | undefined {
+    const existingDTag = this.tagValue('d')
+    if (existingDTag) return existingDTag
+    
+    // Generate from name if no d tag exists
+    if (this.name) {
+      return slugify(this.name)
+    }
+    
+    return undefined
   }
 
 }

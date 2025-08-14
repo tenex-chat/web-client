@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react'
 import { useAtom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
+import { TIMING } from '@/lib/constants'
 
 // Atom to store drafts per thread/task
 // Key format: 'thread:{threadId}' or 'task:{taskId}'
@@ -92,7 +93,7 @@ export function useDraftPersistence({
     if (!enabled) return
 
     const cleanupOldDrafts = () => {
-      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+      const sevenDaysAgo = Date.now() - TIMING.DRAFT_CLEANUP_DURATION
       const draftTimestamps = localStorage.getItem('draft-timestamps')
       
       if (!draftTimestamps) return

@@ -1,5 +1,6 @@
 import { atom } from 'jotai'
 import type { BlossomServerInfo } from '../services/blossom/BlossomServerRegistry'
+import { UPLOAD_LIMITS } from '@/lib/constants'
 
 export interface UploadQueueItem {
   id: string
@@ -82,7 +83,7 @@ export const addToUploadQueueAtom = atom(
       status: 'pending',
       progress: 0,
       retryCount: 0,
-      maxRetries: 3,
+      maxRetries: UPLOAD_LIMITS.MAX_RETRY_COUNT,
       abortController: new AbortController()
     }
     
@@ -115,7 +116,7 @@ export const addBatchToUploadQueueAtom = atom(
         status: 'pending',
         progress: 0,
         retryCount: 0,
-        maxRetries: 3,
+        maxRetries: UPLOAD_LIMITS.MAX_RETRY_COUNT,
         abortController: new AbortController()
       }
       

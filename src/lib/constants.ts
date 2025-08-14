@@ -20,6 +20,22 @@ export const UPLOAD_STATUS = {
 
 export type UploadStatus = typeof UPLOAD_STATUS[keyof typeof UPLOAD_STATUS]
 
+// Timing constants
+export const TIMING = {
+  TYPING_INDICATOR_TIMEOUT: 5000, // milliseconds for typing indicator timeout
+  HEALTH_CHECK_INTERVAL: 60000, // milliseconds for health check interval  
+  LATENCY_CHECK_TIMEOUT: 5000, // milliseconds for latency check timeout
+  PROJECT_STATUS_FILTER_SECONDS: 600, // seconds for project status events filter
+  DRAFT_CLEANUP_DURATION: 7 * 24 * 60 * 60 * 1000, // 7 days for draft cleanup
+} as const
+
+// Upload limits
+export const UPLOAD_LIMITS = {
+  MAX_FILE_SIZE_MB: 100, // maximum file size in MB
+  MAX_CONCURRENT_UPLOADS: 3, // maximum concurrent uploads
+  MAX_RETRY_COUNT: 3, // maximum upload retry attempts
+} as const
+
 export const EVENT_KINDS = {
   METADATA: 0,
   SHORT_TEXT_NOTE: 1,

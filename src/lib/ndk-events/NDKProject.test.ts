@@ -63,9 +63,9 @@ describe('NDKProject', () => {
       expect(project.description).toBe('A test project description')
     })
 
-    it('should set and get image', () => {
-      project.image = 'https://example.com/image.jpg'
-      expect(project.image).toBe('https://example.com/image.jpg')
+    it('should set and get picture', () => {
+      project.picture = 'https://example.com/image.jpg'
+      expect(project.picture).toBe('https://example.com/image.jpg')
     })
 
     it('should have correct event kind', () => {
@@ -213,7 +213,7 @@ describe('NDKProject', () => {
     it('should convert to event with all properties', () => {
       project.title = 'Test Project'
       project.description = 'Test Description'
-      project.image = 'https://example.com/image.jpg'
+      project.picture = 'https://example.com/image.jpg'
       project.repository = 'https://github.com/test/repo'
       project.addAgent('agent-event-id')
       project.addMCPTool('tool-id')
@@ -224,7 +224,7 @@ describe('NDKProject', () => {
       expect(project.kind).toBe(31933)
       expect(project.content).toBe('Test Description')
       expect(project.tags).toContainEqual(['title', 'Test Project'])
-      expect(project.tags).toContainEqual(['image', 'https://example.com/image.jpg'])
+      expect(project.tags).toContainEqual(['picture', 'https://example.com/image.jpg'])
       expect(project.tags).toContainEqual(['repo', 'https://github.com/test/repo'])
       expect(project.tags).toContainEqual(['agent', 'agent-event-id'])
       expect(project.tags).toContainEqual(['mcp', 'tool-id'])
@@ -251,7 +251,7 @@ describe('NDKProject', () => {
       
       expect(project.title).toBe('My Project')
       expect(project.description).toBe('Project description')
-      expect(project.image).toBe('https://example.com/img.jpg')
+      expect(project.picture).toBe('https://example.com/img.jpg')
       expect(project.agents).toHaveLength(1)
       expect(project.mcpTools).toContain('tool1')
       expect(project.repository).toBe('https://github.com/repo')

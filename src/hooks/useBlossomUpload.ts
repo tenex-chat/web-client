@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { BlossomService } from '@/services/blossom/BlossomService'
 import { BlossomServerRegistry } from '@/services/blossom/BlossomServerRegistry'
 import { validateFiles } from '@/lib/utils/fileValidation'
+import { UPLOAD_LIMITS } from '@/lib/constants'
 import {
   uploadQueueAtom,
   updateUploadItemAtom,
@@ -94,7 +95,7 @@ export function useBlossomUpload(): UseBlossomUploadReturn {
       const registry = BlossomServerRegistry.getInstance()
 
       // Process up to 3 uploads concurrently
-      const maxConcurrent = 3
+      const maxConcurrent = UPLOAD_LIMITS.MAX_CONCURRENT_UPLOADS
       const processing = pendingItems.slice(0, maxConcurrent)
 
       await Promise.all(processing.map(async (item) => {
@@ -191,7 +192,7 @@ export function useBlossomUpload(): UseBlossomUploadReturn {
 
   const validateFilesWithToast = useCallback((files: File[]): File[] => {
     const { validFiles, errors } = validateFiles(files, {
-      maxSizeMB: 100,
+      maxSizeMB: UPLOAD_LIMITS.MAX_FILE_SIZE_MB,
       imageOnly: true
     })
 

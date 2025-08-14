@@ -5,74 +5,50 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Moon, Sun, Monitor } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useAtom } from 'jotai';
+import { fontSizeAtom, compactModeAtom, animationsEnabledAtom } from '@/stores/ui';
+import { useEffect } from 'react';
 
 export function AppearanceSettings() {
   const { theme, setTheme } = useTheme();
-  const [fontSize, setFontSize] = useState('medium');
-  const [compactMode, setCompactMode] = useState(false);
-  const [animations, setAnimations] = useState(true);
+  const [fontSize, setFontSize] = useAtom(fontSizeAtom);
+  const [compactMode, setCompactMode] = useAtom(compactModeAtom);
+  const [animations, setAnimations] = useAtom(animationsEnabledAtom);
 
-  // Load preferences from localStorage
+  // Apply settings on load and changes
   useEffect(() => {
-    const saved = localStorage.getItem('appearance-settings');
-    if (saved) {
-      try {
-        const settings = JSON.parse(saved);
-        setFontSize(settings.fontSize || 'medium');
-        setCompactMode(settings.compactMode || false);
-        setAnimations(settings.animations !== false);
-      } catch (error) {
-        console.error('Failed to load appearance settings:', error);
-      }
-    }
-  }, []);
-
-  // Save preferences to localStorage
-  const saveSettings = (updates: Partial<{ fontSize: string; compactMode: boolean; animations: boolean; }>) => {
-    const current = {
-      fontSize,
-      compactMode,
-      animations,
-      ...updates,
-    };
-    localStorage.setItem('appearance-settings', JSON.stringify(current));
-  };
-
-  const handleFontSizeChange = (value: string) => {
-    setFontSize(value);
-    saveSettings({ fontSize: value });
-    
     // Apply font size to document
     document.documentElement.style.fontSize = {
       small: '14px',
       medium: '16px',
       large: '18px',
-    }[value] || '16px';
-  };
+    }[fontSize] || '16px';
 
-  const handleCompactModeChange = (checked: boolean) => {
-    setCompactMode(checked);
-    saveSettings({ compactMode: checked });
-    
     // Apply compact mode class
-    if (checked) {
+    if (compactMode) {
       document.documentElement.classList.add('compact');
     } else {
       document.documentElement.classList.remove('compact');
     }
-  };
 
-  const handleAnimationsChange = (checked: boolean) => {
-    setAnimations(checked);
-    saveSettings({ animations: checked });
-    
     // Apply animations preference
-    if (!checked) {
+    if (!animations) {
       document.documentElement.classList.add('no-animations');
     } else {
       document.documentElement.classList.remove('no-animations');
     }
+  }, [fontSize, compactMode, animations]);
+
+  const handleFontSizeChange = (value: 'small' | 'medium' | 'large') => {
+    setFontSize(value);
+  };
+
+  const handleCompactModeChange = (checked: boolean) => {
+    setCompactMode(checked);
+  };
+
+  const handleAnimationsChange = (checked: boolean) => {
+    setAnimations(checked);
   };
 
   return (

@@ -53,15 +53,6 @@ export class NDKProject extends NDKEvent {
 			}
 		}
 
-		// Alias for picture
-		get image(): string | undefined {
-			return this.picture;
-		}
-
-		set image(url: string | undefined) {
-			this.picture = url;
-		}
-
 		get repoUrl(): string | undefined {
 			return this.tagValue("repo");
 		}

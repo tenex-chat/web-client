@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { DEFAULT_MODELS } from "@/services/llm-models";
+import { toast } from "sonner";
 
 export function useLLM() {
     const cleanupText = useCallback(async (text: string): Promise<string> => {
@@ -45,6 +46,7 @@ export function useLLM() {
             return data.choices[0]?.message?.content || text;
         } catch (error) {
             console.error("Text cleanup error:", error);
+            toast.error("Failed to clean up text");
             // Return original text with basic cleanup on error
             return text.trim()
                 .replace(/\s+/g, ' ')

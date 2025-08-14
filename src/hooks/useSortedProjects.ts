@@ -2,10 +2,11 @@ import { useMemo } from 'react'
 import { useProjectsStore } from '@/stores/projects'
 import { useProjectActivityStore } from '@/stores/projectActivity'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
+import type { ProjectStatusData } from '@/stores/projects'
 
 interface SortedProject {
   project: NDKProject
-  status: any
+  status: ProjectStatusData | null
   sortKey: number
 }
 

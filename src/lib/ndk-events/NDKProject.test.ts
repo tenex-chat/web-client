@@ -178,7 +178,7 @@ describe('NDKProject', () => {
 
     it('should handle repository tag', () => {
       project.tags = [
-        ['r', 'https://github.com/test/repo']
+        ['repo', 'https://github.com/test/repo']
       ]
       
       expect(project.repository).toBe('https://github.com/test/repo')
@@ -225,7 +225,7 @@ describe('NDKProject', () => {
       expect(project.content).toBe('Test Description')
       expect(project.tags).toContainEqual(['title', 'Test Project'])
       expect(project.tags).toContainEqual(['image', 'https://example.com/image.jpg'])
-      expect(project.tags).toContainEqual(['r', 'https://github.com/test/repo'])
+      expect(project.tags).toContainEqual(['repo', 'https://github.com/test/repo'])
       expect(project.tags).toContainEqual(['agent', 'agent-event-id'])
       expect(project.tags).toContainEqual(['mcp', 'tool-id'])
       expect(project.tags).toContainEqual(['t', 'test'])
@@ -242,7 +242,7 @@ describe('NDKProject', () => {
           ['image', 'https://example.com/img.jpg'],
           ['agent', 'event-id-1'],
           ['mcp', 'tool1'],
-          ['r', 'https://github.com/repo']
+          ['repo', 'https://github.com/repo']
         ],
         pubkey: 'author-pubkey'
       }

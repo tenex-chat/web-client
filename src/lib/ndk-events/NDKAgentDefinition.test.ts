@@ -60,7 +60,7 @@ describe('NDKAgentDefinition', () => {
   it('should set and get name', () => {
     agent.name = 'Test Agent'
     expect(agent.name).toBe('Test Agent')
-    expect(agent.tags.find(t => t[0] === 'name')?.[1]).toBe('Test Agent')
+    expect(agent.tags.find(t => t[0] === 'title')?.[1]).toBe('Test Agent')
   })
 
   it('should set and get description', () => {

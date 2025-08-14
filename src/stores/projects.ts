@@ -5,8 +5,9 @@ import type { NDKEvent, NDKSubscription } from "@nostr-dev-kit/ndk-hooks";
 import type NDK from "@nostr-dev-kit/ndk";
 import { useAgentsStore } from "./agents";
 import { useProjectActivityStore } from "./projectActivity";
+import { logger } from "../lib/logger";
 
-interface ProjectStatusData {
+export interface ProjectStatusData {
     statusEvent: NDKProjectStatus | null;
     agents: ProjectAgent[];
     models: ProjectModel[];
@@ -71,14 +72,14 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         projectsSubscription: null,
         
         addProject: (project) => set((state) => {
-            console.log('addProject', project.dTag)
+            logger.debug('addProject', project.dTag)
             // Don't add deleted projects
             if (project.hasTag('deleted')) {
                 return state;
             }
             const dTag = project.dTag;
             if (!dTag) {
-                console.warn('[ProjectStore] Project missing dTag, skipping');
+                logger.warn('[ProjectStore] Project missing dTag, skipping');
                 return state;
             }
             
@@ -95,7 +96,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                     newBech32Map.set(bech32, dTag);
                 }
             } catch (e) {
-                console.warn('[ProjectStore] Failed to encode project to bech32', e);
+                logger.warn('[ProjectStore] Failed to encode project to bech32', e);
             }
             
             // Add tagId mapping for legacy compatibility
@@ -161,7 +162,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         }),
         
         setProjects: (projects) => set((state) => {
-            console.log('[setProjects] Called with', projects.length, 'projects');
+            logger.debug('[setProjects] Called with', projects.length, 'projects');
             const newProjects = new Map();
             const newBech32Map = new Map();
             const newTagIdMap = new Map();
@@ -171,7 +172,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                 if (!project.hasTag('deleted')) {
                     const dTag = project.dTag;
                     if (!dTag) {
-                        console.warn('[ProjectStore] Project missing dTag, skipping');
+                        logger.warn('[ProjectStore] Project missing dTag, skipping');
                         return;
                     }
                     
@@ -184,7 +185,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                             newBech32Map.set(bech32, dTag);
                         }
                     } catch (e) {
-                        console.warn('[ProjectStore] Failed to encode project to bech32', e);
+                        logger.warn('[ProjectStore] Failed to encode project to bech32', e);
                     }
                     
                     // Add tagId mapping for legacy compatibility
@@ -195,11 +196,11 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                 }
             });
             const newProjectsArray = Array.from(newProjects.values());
-            console.log('[setProjects] Returning', newProjectsArray.length, 'projects after filtering');
+            logger.debug('[setProjects] Returning', newProjectsArray.length, 'projects after filtering');
             
             // Check if projects actually changed
             if (newProjectsArray.length === 0 && state.projectsArray.length === 0) {
-                console.log('[setProjects] No changes detected, returning existing state');
+                logger.debug('[setProjects] No changes detected, returning existing state');
                 return state;
             }
             
@@ -208,11 +209,11 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             
             // Only update arrays if projects actually changed
             if (!projectsChanged) {
-                console.log('[setProjects] No changes detected, returning existing state');
+                logger.debug('[setProjects] No changes detected, returning existing state');
                 return state;
             }
             
-            console.log('[setProjects] Projects changed, updating state')
+            logger.debug('[setProjects] Projects changed, updating state')
             
             // Create new arrays
             const newProjectsWithStatusArray = newProjectsArray.map(p => ({

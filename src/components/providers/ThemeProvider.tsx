@@ -1,8 +1,6 @@
-import { useTheme } from '@/hooks/useTheme';
 import { ReactNode, useEffect } from 'react';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const { theme } = useTheme();
   
   // Also apply appearance settings on mount
   useEffect(() => {
@@ -13,11 +11,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         
         // Apply font size
         if (settings.fontSize) {
-          document.documentElement.style.fontSize = {
+          const fontSizeMap: Record<string, string> = {
             small: '14px',
             medium: '16px',
             large: '18px',
-          }[settings.fontSize] || '16px';
+          };
+          document.documentElement.style.fontSize = fontSizeMap[settings.fontSize as string] || '16px';
         }
         
         // Apply compact mode

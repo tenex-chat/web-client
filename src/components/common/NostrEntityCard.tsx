@@ -1,6 +1,6 @@
 import { NDKKind } from '@nostr-dev-kit/ndk'
-import { useEvent, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { ExternalLink, User } from 'lucide-react'
+import { useEvent } from '@nostr-dev-kit/ndk-hooks'
+import { ExternalLink } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { 

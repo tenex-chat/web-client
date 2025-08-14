@@ -60,7 +60,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   const [replyInput, setReplyInput] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [showMetadataDialog, setShowMetadataDialog] = useState(false)
-  const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+  const [, setLightboxImage] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
   const isMobile = useIsMobile()
   
@@ -287,8 +287,6 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   // Extract event metadata using utilities
   const phase = getEventPhase(event)
   const phaseFrom = getEventPhaseFrom(event)
-  const llmModel = getEventLLMModel(event)
-  const llmProvider = getEventLLMProvider(event)
   
   const llmMetadata = useMemo(() => {
     const metadata = extractLLMMetadata(event)
@@ -318,8 +316,6 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     return Object.keys(metadata).length > 0 ? metadata : null
   }, [event])
 
-  // Get available models from project status
-  const availableModels = useProjectOnlineModels(project?.dTag)
 
   return (
     <div className={cn(

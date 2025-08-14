@@ -1,6 +1,5 @@
 import { memo } from 'react'
 import { cn } from '@/lib/utils'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 
 interface TypingUser {
   pubkey: string
@@ -19,15 +18,6 @@ export const TypingIndicator = memo(function TypingIndicator({
 }: TypingIndicatorProps) {
   if (users.length === 0) return null
 
-  const getTypingText = () => {
-    if (users.length === 1) {
-      return `${users[0].name || 'Someone'} is typing`
-    } else if (users.length === 2) {
-      return `${users[0].name || 'Someone'} and ${users[1].name || 'someone'} are typing`
-    } else {
-      return `${users.length} people are typing`
-    }
-  }
 
   return (
     <div className={cn('flex items-center gap-1.5 text-sm text-muted-foreground', className)}>

@@ -124,7 +124,6 @@ export function ThreadList({
     const participants: Record<string, Set<string>> = {}
 
     // Group replies by thread and find the latest one
-    const repliesByThread: Record<string, typeof allReplies> = {}
     
     allReplies.forEach(reply => {
       // Find which thread this reply belongs to

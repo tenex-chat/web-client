@@ -1,4 +1,4 @@
-import { NDKEvent, type NDKKind, type NostrEvent, type NDKTag } from '@nostr-dev-kit/ndk-hooks'
+import { NDKEvent, type NDKKind, type NostrEvent } from '@nostr-dev-kit/ndk-hooks'
 import type NDK from '@nostr-dev-kit/ndk-hooks'
 
 export class NDKProject extends NDKEvent {
@@ -170,6 +170,7 @@ export class NDKProject extends NDKEvent {
 		 * Create an NDKProject from an existing event
 		 */
 		static from(event: NDKEvent): NDKProject {
-				return new NDKProject(event.ndk, event);
+				const rawEvent = event.rawEvent() as NostrEvent & { created_at: number };
+				return new NDKProject(event.ndk, rawEvent);
 			}
 }

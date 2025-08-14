@@ -4,6 +4,7 @@ import imageCompression from 'browser-image-compression'
 import { encode } from 'blurhash'
 import { isImageFile, validateFile } from '@/lib/utils/fileValidation'
 import { BlossomServerRegistry } from './BlossomServerRegistry'
+import { logger } from '@/lib/logger'
 
 export interface BlobDescriptor {
   sha256: string
@@ -182,7 +183,7 @@ export class BlossomService {
 
       // Handle retries for non-abort errors
       if (retryCount > 0 && error instanceof Error && !error.message.includes('abort')) {
-        console.log(`Retrying upload, ${retryCount} attempts remaining...`)
+        logger.info(`Retrying upload, ${retryCount} attempts remaining...`)
         return this.uploadFile(file, { ...options, retryCount: retryCount - 1 })
       }
 
@@ -279,7 +280,7 @@ export class BlossomService {
       const compressedFile = await imageCompression(file, options)
       return new File([compressedFile], file.name, { type: compressedFile.type })
     } catch (error) {
-      console.warn('Image compression failed, using original', error)
+      logger.warn('Image compression failed, using original', error)
       return file
     }
   }
@@ -302,7 +303,7 @@ export class BlossomService {
         try {
           metadata.blurhash = await this.generateBlurhash(file, dimensions)
         } catch (error) {
-          console.warn('Blurhash generation failed', error)
+          logger.warn('Blurhash generation failed', error)
         }
       }
     }

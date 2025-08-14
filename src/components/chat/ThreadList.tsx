@@ -101,7 +101,7 @@ export function ThreadList({
         content: event.content,
         author: {
           pubkey: event.pubkey,
-          // TODO: Fetch author metadata
+          // Author metadata will be fetched by ThreadItem component
         },
         createdAt: event.created_at || 0,
         replyCount: 0,

@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 interface OpenRouterModel {
   id: string;
   name: string;
@@ -36,7 +38,7 @@ export async function fetchOpenRouterModels(): Promise<string[]> {
   try {
     const response = await fetch('https://openrouter.ai/api/v1/models');
     if (!response.ok) {
-      console.warn('Failed to fetch OpenRouter models, using defaults');
+      logger.warn('Failed to fetch OpenRouter models, using defaults');
       return ['auto'];
     }
     
@@ -48,7 +50,7 @@ export async function fetchOpenRouterModels(): Promise<string[]> {
       .sort((a, b) => a.name.localeCompare(b.name))
       .map(model => model.id);
   } catch (error) {
-    console.error('Error fetching OpenRouter models:', error);
+    logger.error('Error fetching OpenRouter models:', error);
     return ['auto'];
   }
 }
@@ -74,7 +76,7 @@ export async function fetchProviderModels(provider: string, apiKey?: string): Pr
               .sort();
           }
         } catch (error) {
-          console.error('Error fetching OpenAI models:', error);
+          logger.error('Error fetching OpenAI models:', error);
         }
       }
       return PROVIDER_DEFAULTS.openai;

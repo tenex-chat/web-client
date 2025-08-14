@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -97,14 +98,14 @@ function ProjectSettingsPage() {
       // Navigate back to projects list
       navigate({ to: '/projects' })
     } catch (error) {
-      console.error('Failed to delete project:', error)
+      logger.error('Failed to delete project:', error)
       toast.error('Failed to delete project')
     } finally {
       setIsDeleting(false)
     }
   }
 
-  const handleInputChange = (field: keyof typeof formData, value: any) => {
+  const handleInputChange = (field: keyof typeof formData, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     setHasChanges(true)
   }

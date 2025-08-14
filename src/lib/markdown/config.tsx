@@ -1,10 +1,11 @@
-import React from 'react'
+import React, { ReactNode } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { cn } from '@/lib/utils'
 import { findNostrEntities } from '@/lib/utils/nostrEntityParser'
 import { NostrEntityCard } from '@/components/common/NostrEntityCard'
+import type { Components } from 'react-markdown'
 
 interface MarkdownComponentsOptions {
   isDarkMode: boolean
@@ -22,7 +23,7 @@ export function getMarkdownComponents({
   onImageClick
 }: MarkdownComponentsOptions) {
   // Helper function to process text and replace nostr entity placeholders
-  const processNostrEntities = (child: any): any => {
+  const processNostrEntities = (child: ReactNode): ReactNode | ReactNode[] => {
     if (typeof child === 'string') {
       // Check for nostr entity placeholders
       const placeholderRegex = /__NOSTR_ENTITY_(nostr:[a-zA-Z0-9]+)__/g
@@ -60,8 +61,8 @@ export function getMarkdownComponents({
     return child
   }
   
-  return {
-    p: ({ children }: any) => {
+  const components: Components = {
+    p: ({ children }) => {
       const processedChildren = Array.isArray(children) 
         ? children.map(processNostrEntities).flat()
         : processNostrEntities(children)
@@ -76,7 +77,7 @@ export function getMarkdownComponents({
       )
     },
     
-    a: ({ href, children }: any) => {
+    a: ({ href, children }) => {
       // Check if this is a placeholder link created by our processing
       const childText = typeof children === 'string' ? children : ''
       
@@ -123,21 +124,21 @@ export function getMarkdownComponents({
       )
     },
     
-    strong: ({ children }: any) => {
+    strong: ({ children }) => {
       const processedChildren = Array.isArray(children) 
         ? children.map(processNostrEntities).flat()
         : processNostrEntities(children)
       return <strong className="font-bold">{processedChildren}</strong>
     },
     
-    em: ({ children }: any) => {
+    em: ({ children }) => {
       const processedChildren = Array.isArray(children) 
         ? children.map(processNostrEntities).flat()
         : processNostrEntities(children)
       return <em className="italic">{processedChildren}</em>
     },
     
-    img: ({ src, alt }: any) => (
+    img: ({ src, alt }) => (
       <div className="my-3">
         <img
           src={src}
@@ -183,7 +184,7 @@ export function getMarkdownComponents({
       )
     },
     
-    ul: ({ children }: any) => (
+    ul: ({ children }) => (
       <ul className={cn(
         "list-disc pl-6 space-y-1",
         isMobile ? "mb-3" : "mb-2"
@@ -192,7 +193,7 @@ export function getMarkdownComponents({
       </ul>
     ),
     
-    ol: ({ children }: any) => (
+    ol: ({ children }) => (
       <ol className={cn(
         "list-decimal pl-6 space-y-1",
         isMobile ? "mb-3" : "mb-2"
@@ -201,7 +202,7 @@ export function getMarkdownComponents({
       </ol>
     ),
     
-    li: ({ children }: any) => {
+    li: ({ children }) => {
       const processedChildren = Array.isArray(children) 
         ? children.map(processNostrEntities).flat()
         : processNostrEntities(children)
@@ -214,12 +215,12 @@ export function getMarkdownComponents({
       )
     },
     
-    h1: ({ children }: any) => <h1 className="text-xl font-bold mb-2 mt-3">{children}</h1>,
-    h2: ({ children }: any) => <h2 className="text-lg font-bold mb-2 mt-3">{children}</h2>,
-    h3: ({ children }: any) => <h3 className="text-base font-bold mb-1 mt-2">{children}</h3>,
-    h4: ({ children }: any) => <h4 className="text-sm font-bold mb-1 mt-2">{children}</h4>,
+    h1: ({ children }) => <h1 className="text-xl font-bold mb-2 mt-3">{children}</h1>,
+    h2: ({ children }) => <h2 className="text-lg font-bold mb-2 mt-3">{children}</h2>,
+    h3: ({ children }) => <h3 className="text-base font-bold mb-1 mt-2">{children}</h3>,
+    h4: ({ children }) => <h4 className="text-sm font-bold mb-1 mt-2">{children}</h4>,
     
-    blockquote: ({ children }: any) => {
+    blockquote: ({ children }) => {
       const processedChildren = Array.isArray(children) 
         ? children.map(processNostrEntities).flat()
         : processNostrEntities(children)
@@ -232,6 +233,8 @@ export function getMarkdownComponents({
     
     hr: () => <hr className="my-3 border-gray-300 dark:border-gray-600" />,
   }
+  
+  return components
 }
 
 /**

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface UseAsyncActionOptions {
   successMessage?: string;
@@ -8,7 +9,36 @@ interface UseAsyncActionOptions {
   onError?: (error: Error) => void;
 }
 
-export function useAsyncAction<T extends any[], R>(
+/**
+ * Hook for managing async actions with loading states, error handling, and toast notifications.
+ * Eliminates boilerplate code for async operations throughout the application.
+ * 
+ * @template T - The types of arguments the action accepts
+ * @template R - The return type of the action
+ * 
+ * @param action - The async function to execute
+ * @param options - Configuration options for success/error handling
+ * 
+ * @returns An object containing:
+ *   - execute: Function to trigger the async action
+ *   - isLoading: Boolean indicating if the action is in progress  
+ *   - error: Error object if the action failed, null otherwise
+ * 
+ * @example
+ * const { execute, isLoading } = useAsyncAction(
+ *   async (id: string) => api.deleteItem(id),
+ *   { 
+ *     successMessage: 'Item deleted',
+ *     errorMessage: 'Failed to delete item'
+ *   }
+ * );
+ * 
+ * // Usage in component
+ * <Button onClick={() => execute(itemId)} disabled={isLoading}>
+ *   {isLoading ? 'Deleting...' : 'Delete'}
+ * </Button>
+ */
+export function useAsyncAction<T extends unknown[], R>(
   action: (...args: T) => Promise<R>,
   options: UseAsyncActionOptions = {}
 ) {
@@ -35,7 +65,7 @@ export function useAsyncAction<T extends any[], R>(
         
         const message = options.errorMessage || `Failed: ${error.message}`;
         toast.error(message);
-        console.error(message, error);
+        logger.error(message, error);
         
         options.onError?.(error);
         return undefined;

@@ -84,14 +84,12 @@ describe('useAsyncAction', () => {
 
     expect(result.current.isLoading).toBe(false)
 
-    const executePromise = act(async () => {
-      return result.current.execute()
+    await act(async () => {
+      const executePromise = result.current.execute()
+      // Check loading state immediately after starting
+      expect(result.current.isLoading).toBe(true)
+      await executePromise
     })
-
-    // Check loading state immediately after starting
-    expect(result.current.isLoading).toBe(true)
-
-    await executePromise
 
     expect(result.current.isLoading).toBe(false)
   })

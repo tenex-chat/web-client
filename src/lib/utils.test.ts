@@ -39,8 +39,10 @@ describe('cn utility', () => {
   })
 
   it('should merge conflicting margin classes correctly', () => {
+    // tailwind-merge resolves conflicts, with later classes overriding earlier ones
     const result = cn('m-2', 'mx-4', 'mt-6')
-    expect(result).toBe('mb-2 ml-4 mr-4 mt-6')
+    // m-2 sets all margins, mx-4 overrides horizontal, mt-6 overrides top
+    expect(result).toBe('m-2 mx-4 mt-6')
   })
 
   it('should handle empty inputs', () => {

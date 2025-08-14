@@ -1,3 +1,8 @@
+/**
+ * Format a Unix timestamp as relative time (e.g., "2 hours ago")
+ * @param timestamp Unix timestamp in seconds
+ * @returns Formatted relative time string
+ */
 export function formatRelativeTime(timestamp: number): string {
   const now = Date.now()
   const date = new Date(timestamp * 1000) // Convert from Unix timestamp
@@ -20,6 +25,12 @@ export function formatRelativeTime(timestamp: number): string {
   }
 }
 
+/**
+ * Format a Unix timestamp as a human-readable date/time
+ * Shows time if today, month/day if this year, full date otherwise
+ * @param timestamp Unix timestamp in seconds
+ * @returns Formatted date/time string
+ */
 export function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp * 1000)
   const now = new Date()

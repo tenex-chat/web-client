@@ -1,6 +1,8 @@
+import { logger } from '@/lib/logger'
+
 export async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) {
-    console.log('Service Worker not supported');
+    logger.info('Service Worker not supported');
     return;
   }
 
@@ -31,7 +33,7 @@ export async function registerServiceWorker() {
 
     return registration;
   } catch (error) {
-    console.error('Service Worker registration failed:', error);
+    logger.error('Service Worker registration failed:', error);
   }
 }
 

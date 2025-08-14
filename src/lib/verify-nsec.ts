@@ -5,11 +5,12 @@
 
 import { nip19, getPublicKey } from 'nostr-tools'
 import { TEST_CREDENTIALS } from './constants'
+import { logger } from './logger'
 
 const TEST_NSEC = TEST_CREDENTIALS.NSEC
 
 try {
-  console.log('🔐 Verifying nsec...')
+  logger.info('🔐 Verifying nsec...')
   
   // Decode nsec
   const decoded = nip19.decode(TEST_NSEC)
@@ -19,21 +20,21 @@ try {
   
   const privateKeyBytes = decoded.data as Uint8Array
   const privateKeyHex = Buffer.from(privateKeyBytes).toString('hex')
-  console.log('✅ nsec decoded successfully')
-  console.log('🔑 Private key (hex):', privateKeyHex.substring(0, 8) + '...')
+  logger.info('✅ nsec decoded successfully')
+  logger.info('🔑 Private key (hex):', privateKeyHex.substring(0, 8) + '...')
   
   // Get public key
   const publicKeyHex = getPublicKey(privateKeyBytes)
-  console.log('📝 Public key (hex):', publicKeyHex)
+  logger.info('📝 Public key (hex):', publicKeyHex)
   
   // Encode as npub
   const npub = nip19.npubEncode(publicKeyHex)
-  console.log('📝 Public key (npub):', npub)
+  logger.info('📝 Public key (npub):', npub)
   
-  console.log('\n✅ nsec is valid and ready to use!')
-  console.log('You can now use this for testing with real Nostr events.')
+  logger.info('\n✅ nsec is valid and ready to use!')
+  logger.info('You can now use this for testing with real Nostr events.')
   
 } catch (error) {
-  console.error('❌ Error:', error)
+  logger.error('❌ Error:', error)
   process.exit(1)
 }

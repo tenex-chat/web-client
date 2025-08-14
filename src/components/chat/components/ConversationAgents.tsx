@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Bot } from "lucide-react";
 import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
 import { useProjectOnlineModels } from "@/hooks/useProjectOnlineModels";
 import {
@@ -34,6 +36,78 @@ interface AgentInfo {
   name: string;
   currentModel?: string;
   lastMessageId?: string;
+}
+
+function AgentAvatar({ agent, project, availableModels, onModelChange, sendingModelChange }: {
+  agent: AgentInfo;
+  project: NDKProject;
+  availableModels: any[];
+  onModelChange: (agentPubkey: string, newModel: string) => Promise<void>;
+  sendingModelChange: string | null;
+}) {
+  const profile = useProfile(agent.pubkey);
+  const avatarUrl = profile?.image || profile?.picture;
+  
+  return (
+    <Popover key={agent.pubkey}>
+      <PopoverTrigger asChild>
+        <button className="group hover:opacity-80 transition-opacity">
+          <Avatar className="h-7 w-7 ring-2 ring-transparent hover:ring-accent transition-all">
+            <AvatarImage src={avatarUrl} alt={agent.name} />
+            <AvatarFallback>
+              <Bot className="w-3.5 h-3.5" />
+            </AvatarFallback>
+          </Avatar>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80">
+        <div className="space-y-3">
+          <div>
+            <h4 className="text-sm font-semibold">
+              {project.title || project.dTag} / {agent.name}
+            </h4>
+            <p className="text-xs text-muted-foreground truncate">
+              {agent.pubkey}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">
+              Model
+            </label>
+            {availableModels.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No models available
+              </p>
+            ) : (
+              <Select
+                value={agent.currentModel}
+                onValueChange={(value) =>
+                  onModelChange(agent.pubkey, value)
+                }
+                disabled={sendingModelChange === agent.pubkey}
+              >
+                <SelectTrigger className="w-full h-8 text-xs">
+                  <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableModels.map((model) => (
+                    <SelectItem
+                      key={`${model.provider}-${model.model}`}
+                      value={model.model}
+                      className="text-xs"
+                    >
+                      {model.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export function ConversationAgents({
@@ -111,64 +185,17 @@ export function ConversationAgents({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
       {/* Show agents with popover for model selection */}
       {conversationAgents.map((agent) => (
-        <Popover key={agent.pubkey}>
-          <PopoverTrigger asChild>
-            <button className="flex items-center gap-1 group text-sm hover:bg-accent/50 px-2 py-1 rounded-md transition-colors">
-              <span className="font-medium transition-all group-hover:underline">
-                {project.title || project.dTag} / {agent.name}
-              </span>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80">
-            <div className="space-y-3">
-              <div>
-                <h4 className="text-sm font-semibold">
-                  {project.title || project.dTag} / {agent.name}
-                </h4>
-                <p className="text-xs text-muted-foreground truncate">
-                  {agent.pubkey}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Model
-                </label>
-                {availableModels.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    No models available
-                  </p>
-                ) : (
-                  <Select
-                    value={agent.currentModel}
-                    onValueChange={(value) =>
-                      handleModelChange(agent.pubkey, value)
-                    }
-                    disabled={sendingModelChange === agent.pubkey}
-                  >
-                    <SelectTrigger className="w-full h-8 text-xs">
-                      <SelectValue placeholder="Select model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableModels.map((model) => (
-                        <SelectItem
-                          key={`${model.provider}-${model.model}`}
-                          value={model.model}
-                          className="text-xs"
-                        >
-                          {model.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+        <AgentAvatar
+          key={agent.pubkey}
+          agent={agent}
+          project={project}
+          availableModels={availableModels}
+          onModelChange={handleModelChange}
+          sendingModelChange={sendingModelChange}
+        />
       ))}
     </div>
   );

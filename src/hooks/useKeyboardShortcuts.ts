@@ -39,13 +39,13 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
 export function useGlobalSearchShortcut(openSearch: () => void) {
   useKeyboardShortcuts([
     {
-      key: 'k',
-      metaKey: true, // Cmd+K on Mac
+      key: 'g',
+      metaKey: true, // Cmd+G on Mac
       handler: openSearch,
     },
     {
-      key: 'k',
-      ctrlKey: true, // Ctrl+K on Windows/Linux
+      key: 'g',
+      ctrlKey: true, // Ctrl+G on Windows/Linux
       handler: openSearch,
     },
   ]);

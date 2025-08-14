@@ -140,113 +140,110 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
         </SidebarHeader>
 
           <SidebarContent>
-            {/* Remove quick actions when collapsed - no search button */}
-
-            {/* Projects */}
-            <SidebarGroup>
-              <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden flex items-center justify-between">
-                <span>Projects</span>
-                <div className="flex items-center gap-0.5">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
+            <ScrollArea className="flex-1">
+              <div className="flex flex-col">
+                {/* Projects */}
+                <SidebarGroup>
+                  <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden flex items-center justify-between">
+                    <span>Projects</span>
+                    <div className="flex items-center gap-0.5">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={() => setSearchDialogOpen(true)}
+                          >
+                            <Search className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <span>Global Search</span>
+                          <span className="ml-2 text-muted-foreground">⌘K</span>
+                        </TooltipContent>
+                      </Tooltip>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-5 w-5"
-                        onClick={() => setSearchDialogOpen(true)}
+                        className="h-5 w-5 -mr-1"
+                        onClick={() => setCreateDialogOpen(true)}
                       >
-                        <Search className="h-3.5 w-3.5" />
+                        <Plus className="h-3.5 w-3.5" />
                       </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <span>Global Search</span>
-                      <span className="ml-2 text-muted-foreground">⌘K</span>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5 -mr-1"
-                    onClick={() => setCreateDialogOpen(true)}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {/* Remove add new project button when collapsed */}
-
-                  {/* Projects List */}
-                  <ScrollArea className="min-h-[400px]">
-                    {sortedProjects.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground text-sm group-data-[collapsible=icon]:hidden">
-                        No projects yet
-                      </div>
-                    ) : (
-                      sortedProjects.map(({ project, status }) => {
-                        const projectIdentifier = project.dTag || project.encode()
-                        return (
-                          <SidebarMenuItem key={projectIdentifier}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <SidebarMenuButton
-                                  asChild
-                                  isActive={location.pathname.includes(projectIdentifier)}
-                                >
-                                  <Link 
-                                    to="/projects/$projectId" 
-                                    params={{ projectId: projectIdentifier }}
-                                    onClick={onProjectSelect}
-                                  >
-                                  <div className="relative">
-                                    <ProjectAvatar 
-                                      project={project}
-                                      className="h-6 w-6 shrink-0 group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"
-                                      fallbackClassName="text-xs group-data-[collapsible=icon]:text-sm"
-                                    />
-                                    {status?.isOnline && (
-                                      <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 border border-background group-data-[collapsible=icon]:h-2.5 group-data-[collapsible=icon]:w-2.5" />
-                                    )}
-                                  </div>
-                                  <span className="group-data-[collapsible=icon]:hidden truncate">
-                                    {project.title}
-                                  </span>
-                                </Link>
-                              </SidebarMenuButton>
-                              </TooltipTrigger>
-                              <TooltipContent side="right" className="group-data-[collapsible=icon]:flex hidden">
-                                {project.title}
-                              </TooltipContent>
-                            </Tooltip>
-                          </SidebarMenuItem>
-                        )
-                      })
-                      )}
-                    </ScrollArea>
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-              
-              {/* Agents */}
-              {globalAgents.length > 0 && (
-                <SidebarGroup>
-                  <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
-                    Agents
+                    </div>
                   </SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {globalAgents.map((agent) => (
-                        <GlobalAgentItem
-                          key={agent.pubkey}
-                          pubkey={agent.pubkey}
-                          slug={agent.slug}
-                        />
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              )}
+                      {sortedProjects.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground text-sm group-data-[collapsible=icon]:hidden">
+                          No projects yet
+                        </div>
+                      ) : (
+                        sortedProjects.map(({ project, status }) => {
+                          const projectIdentifier = project.dTag || project.encode()
+                          return (
+                            <SidebarMenuItem key={projectIdentifier}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <SidebarMenuButton
+                                    asChild
+                                    isActive={location.pathname.includes(projectIdentifier)}
+                                  >
+                                    <Link 
+                                      to="/projects/$projectId" 
+                                      params={{ projectId: projectIdentifier }}
+                                      onClick={onProjectSelect}
+                                    >
+                                    <div className="relative">
+                                      <ProjectAvatar 
+                                        project={project}
+                                        className="h-6 w-6 shrink-0 group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"
+                                        fallbackClassName="text-xs group-data-[collapsible=icon]:text-sm"
+                                      />
+                                      {status?.isOnline && (
+                                        <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 border border-background group-data-[collapsible=icon]:h-2.5 group-data-[collapsible=icon]:w-2.5" />
+                                      )}
+                                    </div>
+                                    <span className="group-data-[collapsible=icon]:hidden truncate">
+                                      {project.title}
+                                    </span>
+                                  </Link>
+                                </SidebarMenuButton>
+                                </TooltipTrigger>
+                                <TooltipContent side="right" className="group-data-[collapsible=icon]:flex hidden">
+                                  {project.title}
+                                </TooltipContent>
+                              </Tooltip>
+                            </SidebarMenuItem>
+                          )
+                        })
+                        )}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                  
+                  {/* Agents */}
+                  {globalAgents.length > 0 && (
+                    <SidebarGroup className="pt-0">
+                      <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+                        Agents
+                      </SidebarGroupLabel>
+                      <SidebarGroupContent>
+                        <SidebarMenu>
+                          {globalAgents.map((agent) => (
+                            <GlobalAgentItem
+                              key={agent.pubkey}
+                              pubkey={agent.pubkey}
+                              slug={agent.slug}
+                            />
+                          ))}
+                        </SidebarMenu>
+                      </SidebarGroupContent>
+                    </SidebarGroup>
+                  )}
+                </div>
+              </ScrollArea>
             </SidebarContent>
 
             <SidebarFooter>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useNDK, useSubscribe, useProfile } from "@nostr-dev-kit/ndk-hooks";
 import { type NDKKind } from "@nostr-dev-kit/ndk";
 import { Bot, Plus, Settings, Volume2 } from "lucide-react";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
@@ -29,6 +29,125 @@ interface AgentsTabContentProps {
   project: NDKProject;
 }
 
+function AgentCard({ 
+  agent, 
+  onAgentClick, 
+  onVoiceSettings,
+  voiceConfig,
+  isOnline,
+  murfApiKey 
+}: {
+  agent: AgentData;
+  onAgentClick: (agent: AgentData) => void;
+  onVoiceSettings: (agent: AgentData, e: React.MouseEvent) => void;
+  voiceConfig: string | null;
+  isOnline: boolean;
+  murfApiKey?: string;
+}) {
+  const profile = useProfile(agent.pubkey);
+  const avatarUrl = profile?.image || profile?.picture || agent.picture;
+  
+  return (
+    <Card
+      className="cursor-pointer hover:shadow-lg transition-shadow relative"
+      onClick={() => onAgentClick(agent)}
+    >
+      {/* Online Status Indicator */}
+      {isOnline && (
+        <div className="absolute top-3 right-3">
+          <div className="relative">
+            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <div className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
+          </div>
+        </div>
+      )}
+
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar className="w-10 h-10">
+              <AvatarImage src={avatarUrl} alt={agent.name} />
+              <AvatarFallback>
+                <Bot className="w-5 h-5" />
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <CardTitle className="text-base">
+                {agent.name || "Unnamed Agent"}
+              </CardTitle>
+              <div className="flex items-center gap-2 mt-1">
+                {agent.role && (
+                  <Badge variant="secondary">{agent.role}</Badge>
+                )}
+                {!isOnline && agent.fromStatus && (
+                  <Badge variant="outline" className="text-xs">
+                    Offline
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => onVoiceSettings(agent, e)}
+            className="h-8 w-8"
+          >
+            <Settings className="w-4 h-4" />
+          </Button>
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        {agent.description && (
+          <CardDescription className="line-clamp-2 mb-3">
+            {agent.description}
+          </CardDescription>
+        )}
+
+        {/* Voice Configuration Status */}
+        {murfApiKey && (
+          <div className="flex items-center gap-2 text-sm">
+            <Volume2 className="w-4 h-4 text-muted-foreground" />
+            {voiceConfig ? (
+              <span className="text-green-600 dark:text-green-500">
+                Voice: {voiceConfig}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">
+                No voice configured
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Use Criteria */}
+        {agent.useCriteria && agent.useCriteria.length > 0 && (
+          <div className="mt-3 space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">
+              Use when:
+            </p>
+            <ul className="text-xs text-muted-foreground space-y-0.5">
+              {agent.useCriteria
+                .slice(0, 2)
+                .map((criteria: string, idx: number) => (
+                  <li key={idx} className="truncate">
+                    • {criteria}
+                  </li>
+                ))}
+              {agent.useCriteria.length > 2 && (
+                <li className="text-primary">
+                  +{agent.useCriteria.length - 2} more
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function AgentsTabContent({ project }: AgentsTabContentProps) {
   const { ndk } = useNDK();
   const navigate = useNavigate();
@@ -38,7 +157,6 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
   // Get agents from project status (same as Status tab)
   const projectStatus = useProjectStatus(project?.dTag);
   const statusAgents = projectStatus?.agents || [];
-  const isLoading = !projectStatus;
 
   // Get agent event IDs from project tags
   const projectAgentEventIds = useMemo(() => {
@@ -156,10 +274,6 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
     return config ? config.voiceName : null;
   };
 
-  if (isLoading) {
-    return <LoadingState text="Loading agents..." className="flex-1" />;
-  }
-
   if (allAgents.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
@@ -167,10 +281,6 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
           icon={<Bot className="w-12 h-12" />}
           title="No agents available"
           description="No agents are currently online for this project. Agents will appear here when they come online."
-          action={{
-            label: "Add Agents",
-            onClick: () => setAddAgentsDialogOpen(true),
-          }}
         />
       </div>
     );
@@ -201,104 +311,15 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
             const isOnline = isAgentOnline(agent);
 
             return (
-              <Card
+              <AgentCard
                 key={agent.pubkey}
-                className="cursor-pointer hover:shadow-lg transition-shadow relative"
-                onClick={() => handleAgentClick(agent)}
-              >
-                {/* Online Status Indicator */}
-                {isOnline && (
-                  <div className="absolute top-3 right-3">
-                    <div className="relative">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <div className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
-                    </div>
-                  </div>
-                )}
-
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={agent.picture} />
-                        <AvatarFallback>
-                          <Bot className="w-5 h-5" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle className="text-base">
-                          {agent.name || "Unnamed Agent"}
-                        </CardTitle>
-                        <div className="flex items-center gap-2 mt-1">
-                          {agent.role && (
-                            <Badge variant="secondary">{agent.role}</Badge>
-                          )}
-                          {!isOnline && agent.fromStatus && (
-                            <Badge variant="outline" className="text-xs">
-                              Offline
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => handleVoiceSettings(agent, e)}
-                      className="h-8 w-8"
-                    >
-                      <Settings className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-
-                <CardContent>
-                  {agent.description && (
-                    <CardDescription className="line-clamp-2 mb-3">
-                      {agent.description}
-                    </CardDescription>
-                  )}
-
-                  {/* Voice Configuration Status */}
-                  {murfApiKey && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Volume2 className="w-4 h-4 text-muted-foreground" />
-                      {voiceConfig ? (
-                        <span className="text-green-600 dark:text-green-500">
-                          Voice: {voiceConfig}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          No voice configured
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Use Criteria */}
-                  {agent.useCriteria && agent.useCriteria.length > 0 && (
-                    <div className="mt-3 space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        Use when:
-                      </p>
-                      <ul className="text-xs text-muted-foreground space-y-0.5">
-                        {agent.useCriteria
-                          .slice(0, 2)
-                          .map((criteria: string, idx: number) => (
-                            <li key={idx} className="truncate">
-                              • {criteria}
-                            </li>
-                          ))}
-                        {agent.useCriteria.length > 2 && (
-                          <li className="text-primary">
-                            +{agent.useCriteria.length - 2} more
-                          </li>
-                        )}
-                      </ul>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                agent={agent}
+                onAgentClick={handleAgentClick}
+                onVoiceSettings={handleVoiceSettings}
+                voiceConfig={voiceConfig}
+                isOnline={isOnline}
+                murfApiKey={murfApiKey}
+              />
             );
           })}
         </div>

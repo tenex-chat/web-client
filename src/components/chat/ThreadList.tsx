@@ -44,18 +44,19 @@ export function ThreadList({
   const [threadPhases, setThreadPhases] = useState<Record<string, string>>({})
 
   // Subscribe to project threads (kind 11 - CHAT)
-  // Try subscribing with just kinds filter first to see if we get any events
-  const { events: threadEvents } = useSubscribe(
-    project
-      ? [{
-          kinds: [EVENT_KINDS.CHAT as NDKKind],
-          ...project.filter(),
-          limit: SUBSCRIPTION_LIMITS.DEFAULT_LIMIT,
-        }]
-      : false,
-    {},
-    [project?.dTag]
-  )
+		// Try subscribing with just kinds filter first to see if we get any events
+		const { events: threadEvents } = useSubscribe(
+			project
+				? [
+						{
+							kinds: [EVENT_KINDS.THREAD as NDKKind],
+							...project.filter(),
+						},
+					]
+				: false,
+			{},
+			[project?.dTag],
+		);
 
   // Subscribe to kind:1111 events that e-tag threads to get phase information
   const { events: phaseEvents } = useSubscribe(

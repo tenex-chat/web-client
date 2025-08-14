@@ -8,13 +8,7 @@ export class NDKAgentDefinition extends NDKEvent {
 
   constructor(ndk?: NDK, rawEvent?: NostrEvent) {
     super(ndk, rawEvent)
-    this.kind = NDKAgentDefinition.kind
-    if (!this.tags) {
-      this.tags = []
-    }
-    if (!this.content) {
-      this.content = ''
-    }
+    this.kind ??= NDKAgentDefinition.kind
   }
 
   static from(event: NDKEvent) {

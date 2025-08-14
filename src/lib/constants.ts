@@ -1,9 +1,6 @@
+// DON'T CHANGE THIS!
 export const DEFAULT_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://relay.primal.net',
-  'wss://relay.nostr.band',
-  'wss://nos.lol',
-  'wss://relay.snort.social'
+  'wss://tenex.chat',
 ]
 
 export const TEST_CREDENTIALS = {
@@ -74,7 +71,7 @@ export const EVENT_KINDS = {
   AGENT_LESSON: 32045,
   AGENT_REQUEST: 32046,
   AGENT_REQUEST_LIST: 32047,
-  CHAT: 9,
+  THREAD: 11,
   THREAD_REPLY: 1111,
   STREAMING_RESPONSE: 7779,
   TYPING_INDICATOR: 7780,

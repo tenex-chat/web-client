@@ -45,6 +45,7 @@ export function DocumentationList({
     wrap: true,
     closeOnEose: false,
     groupable: true,
+    subId: 'proj-docs'
   }, [project])
 
   // Sort articles by date

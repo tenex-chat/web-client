@@ -128,7 +128,7 @@ export function useBlossomUpload(): UseBlossomUploadReturn {
             maxSizeMB: 10,
             maxWidthOrHeight: 4096,
             abortSignal: item.abortController?.signal,
-            retryCount: 2
+            retryCount: UPLOAD_LIMITS.MAX_RETRY_COUNT - 1
           })
 
           // Update item with success

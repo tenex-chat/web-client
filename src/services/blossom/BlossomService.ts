@@ -5,6 +5,7 @@ import { encode } from 'blurhash'
 import { isImageFile, validateFile } from '@/lib/utils/fileValidation'
 import { BlossomServerRegistry } from './BlossomServerRegistry'
 import { logger } from '@/lib/logger'
+import { UPLOAD_LIMITS } from '@/lib/constants'
 
 export interface BlobDescriptor {
   sha256: string
@@ -219,7 +220,7 @@ export class BlossomService {
             maxSizeMB,
             maxWidthOrHeight,
             onProgress: (progress) => onProgress?.(fileIndex, progress),
-            retryCount: 2 // Automatic retries for batch uploads
+            retryCount: UPLOAD_LIMITS.MAX_RETRY_COUNT - 1 // Automatic retries for batch uploads
           })
 
           results[fileIndex] = { url: result.url, metadata: result.metadata }

@@ -9,7 +9,7 @@ describe('ProjectAvatar', () => {
     project.tags = overrides.tags || [['d', 'test-dtag']]
     
     // Set title using the setter which adds the proper tag
-    if (overrides.title) {
+    if (overrides.title !== undefined) {
       project.title = overrides.title
     } else {
       project.title = 'Test Project'

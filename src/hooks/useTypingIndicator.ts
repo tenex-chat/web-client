@@ -1,7 +1,7 @@
 import { useCallback, useRef, useEffect } from 'react'
 import { NDKEvent } from '@nostr-dev-kit/ndk'
 import { useNDK } from '@nostr-dev-kit/ndk-hooks'
-import { EVENT_KINDS } from '@/lib/constants'
+import { EVENT_KINDS, TIMING } from '@/lib/constants'
 import { logger } from '@/lib/logger'
 
 interface UseTypingIndicatorProps {
@@ -42,9 +42,9 @@ export function useTypingIndicator({
     const targetId = threadId || taskId
     if (!targetId) return
 
-    // Don't send if we sent one recently (within 5 seconds)
+    // Don't send if we sent one recently (within timeout period)
     const now = Date.now()
-    if (now - lastSentRef.current < 5000) return
+    if (now - lastSentRef.current < TIMING.TYPING_INDICATOR_TIMEOUT) return
 
     try {
       const event = new NDKEvent(ndk)
@@ -95,12 +95,12 @@ export function useTypingIndicator({
       clearTimeout(typingTimeoutRef.current)
     }
 
-    // Set new timeout to stop typing after 5 seconds of inactivity
+    // Set new timeout to stop typing after timeout period of inactivity
     typingTimeoutRef.current = setTimeout(() => {
       if (isTypingRef.current) {
         sendTypingStop()
       }
-    }, 5000)
+    }, TIMING.TYPING_INDICATOR_TIMEOUT)
   }, [enabled, sendTypingStart, sendTypingStop])
 
   const stopTyping = useCallback(() => {

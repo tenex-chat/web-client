@@ -9,6 +9,7 @@ import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { useSpeechToText } from "../../hooks/useSpeechToText";
 import { useLLM } from "../../hooks/useLLM";
 import { toast } from "sonner";
+import { UPLOAD_LIMITS } from "@/lib/constants";
 
 interface VoiceDialogProps {
     open: boolean;
@@ -257,7 +258,7 @@ export function VoiceDialog({
             });
             const uploadPromise = blossom.upload(audioFile, {
                 server: "https://blossom.primal.net",
-                maxRetries: 3
+                maxRetries: UPLOAD_LIMITS.MAX_RETRY_COUNT
             });
 
             const [rawTranscription, uploadResult] = await Promise.all([

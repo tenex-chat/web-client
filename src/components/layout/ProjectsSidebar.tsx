@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ProjectCard } from '../projects/ProjectCard'
+import { logger } from '@/lib/logger'
 import { useProjectsStore } from '@/stores/projects'
 import { useGlobalAgents } from '@/stores/agents'
 import { useProfile } from '@nostr-dev-kit/ndk-hooks'

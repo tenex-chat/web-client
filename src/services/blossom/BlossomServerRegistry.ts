@@ -1,3 +1,5 @@
+import { TIMING } from '@/lib/constants'
+
 export interface ServerMetrics {
   url: string
   lastChecked: number
@@ -27,8 +29,8 @@ export class BlossomServerRegistry {
   private static instance: BlossomServerRegistry | null = null
   private servers: Map<string, BlossomServerInfo> = new Map()
   private healthCheckInterval: NodeJS.Timeout | null = null
-  private readonly HEALTH_CHECK_INTERVAL = 60000 // 1 minute
-  private readonly LATENCY_CHECK_TIMEOUT = 5000 // 5 seconds
+  private readonly HEALTH_CHECK_INTERVAL = TIMING.HEALTH_CHECK_INTERVAL
+  private readonly LATENCY_CHECK_TIMEOUT = TIMING.LATENCY_CHECK_TIMEOUT
 
   private defaultServers: BlossomServerInfo[] = [
     {

@@ -234,7 +234,7 @@ describe('NDKProject', () => {
 
   describe('Static Methods', () => {
     it('should create from event', () => {
-      const mockEvent = {
+      const rawEvent = {
         kind: 31933,
         content: 'Project description',
         tags: [
@@ -244,10 +244,13 @@ describe('NDKProject', () => {
           ['mcp', 'tool1'],
           ['repo', 'https://github.com/repo']
         ],
-        pubkey: 'author-pubkey'
+        pubkey: 'author-pubkey',
+        created_at: Math.floor(Date.now() / 1000),
+        id: 'test-id',
+        sig: 'test-sig'
       }
       
-      const project = NDKProject.from(mockEvent.rawEvent() as any)
+      const project = NDKProject.from(rawEvent as any)
       
       expect(project.title).toBe('My Project')
       expect(project.description).toBe('Project description')

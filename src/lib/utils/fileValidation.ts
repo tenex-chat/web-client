@@ -13,8 +13,8 @@ export interface FileValidationResult {
   error?: string
 }
 
-const DEFAULT_MAX_SIZE_MB = 100
-const SUPPORTED_IMAGE_TYPES = [
+export const DEFAULT_MAX_SIZE_MB = 50 // Standardized to 50MB across the app
+export const SUPPORTED_IMAGE_TYPES = [
   'image/jpeg',
   'image/jpg',
   'image/png',

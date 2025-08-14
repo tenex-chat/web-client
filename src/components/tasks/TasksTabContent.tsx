@@ -1,5 +1,6 @@
 import { FileText } from 'lucide-react'
 import { TaskCard } from './TaskCard'
+import { VirtualList } from '@/components/ui/virtual-list'
 import type { NDKTask } from '@/lib/ndk-events/NDKTask'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 
@@ -34,6 +35,44 @@ export function TasksTabContent({
     )
   }
 
+  const USE_VIRTUAL_LIST_THRESHOLD = 20; // Use virtual list for more than 20 tasks
+
+  const renderTask = (task: NDKTask) => {
+    const handleTaskClick = () => {
+      markTaskStatusUpdatesSeen(task.id)
+      onTaskSelect(project, task.id)
+    }
+
+    const unreadCount = taskUnreadMap.get(task.id) || 0
+
+    return (
+      <div className="px-4 py-1">
+        <TaskCard
+          key={task.id}
+          task={task}
+          onClick={handleTaskClick}
+          showUnread={true}
+          unreadCount={unreadCount}
+        />
+      </div>
+    )
+  }
+
+  if (tasks.length > USE_VIRTUAL_LIST_THRESHOLD) {
+    // Use VirtualList for large task lists
+    return (
+      <VirtualList
+        items={tasks}
+        renderItem={renderTask}
+        estimateSize={80} // Estimated average task card height
+        overscan={3}
+        containerClassName="h-full"
+        className="py-2"
+      />
+    )
+  }
+
+  // Use regular rendering for small task lists
   return (
     <div className="space-y-2 p-4">
       {tasks.map((task) => {

@@ -1,5 +1,6 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { VirtualList } from "@/components/ui/virtual-list";
 import { ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MessageWithReplies } from "../MessageWithReplies";
@@ -44,62 +45,76 @@ export function ChatMessageList({
   isNewThread,
 }: ChatMessageListProps) {
   const isMobile = useIsMobile();
+  const USE_VIRTUAL_LIST_THRESHOLD = 50; // Use virtual list for more than 50 messages
+
+  const renderMessage = (message: Message) => {
+    // Check if this is a task event
+    if (message.event.kind === EVENT_KINDS.TASK) {
+      const task = new NDKTask(ndk!, message.event.rawEvent());
+      return (
+        <div
+          key={message.id}
+          data-message-author={message.event.pubkey}
+        >
+          <TaskCard
+            task={task}
+            className="cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => {
+              // Open the task as a conversation
+              if (onTaskClick) {
+                onTaskClick(task.id);
+              }
+            }}
+          />
+        </div>
+      );
+    }
+
+    // All other events (1111, 21111, etc) go through MessageWithReplies
+    return (
+      <div
+        key={message.id}
+        data-message-author={message.event.pubkey}
+      >
+        <MessageWithReplies
+          event={message.event}
+          project={project}
+          onReply={onReplyFocus}
+        />
+      </div>
+    );
+  };
 
   return (
     <div className="flex-1 overflow-hidden relative">
-      <ScrollArea
-        ref={scrollAreaRef}
-        className="h-full pb-4"
-        onScrollCapture={onScroll}
-      >
-        <div className={isMobile ? "py-0 pb-20" : "py-2 pb-20"}>
-          {messages.length === 0 && !isNewThread ? (
-            <div className="flex items-center justify-center min-h-[200px] text-muted-foreground">
-              No messages yet. Start the conversation!
-            </div>
-          ) : (
-            <div className="divide-y divide-transparent">
-              {messages.map((message) => {
-                // Check if this is a task event
-                if (message.event.kind === EVENT_KINDS.TASK) {
-                  const task = new NDKTask(ndk!, message.event.rawEvent());
-                  return (
-                    <div
-                      key={message.id}
-                      data-message-author={message.event.pubkey}
-                    >
-                      <TaskCard
-                        task={task}
-                        className="cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() => {
-                          // Open the task as a conversation
-                          if (onTaskClick) {
-                            onTaskClick(task.id);
-                          }
-                        }}
-                      />
-                    </div>
-                  );
-                }
-
-                // All other events (1111, 21111, etc) go through MessageWithReplies
-                return (
-                  <div
-                    key={message.id}
-                    data-message-author={message.event.pubkey}
-                  >
-                    <MessageWithReplies
-                      event={message.event}
-                      project={project}
-                      onReply={onReplyFocus}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
+      {messages.length === 0 && !isNewThread ? (
+        <div className="flex items-center justify-center min-h-[200px] text-muted-foreground">
+          No messages yet. Start the conversation!
         </div>
-      </ScrollArea>
+      ) : messages.length > USE_VIRTUAL_LIST_THRESHOLD ? (
+        // Use VirtualList for large message lists
+        <VirtualList
+          items={messages}
+          renderItem={renderMessage}
+          estimateSize={120} // Estimated average message height
+          overscan={5}
+          containerClassName="h-full pb-4"
+          className={isMobile ? "py-0 pb-20" : "py-2 pb-20"}
+        />
+      ) : (
+        // Use regular ScrollArea for small message lists
+        <ScrollArea
+          ref={scrollAreaRef}
+          className="h-full pb-4"
+          onScrollCapture={onScroll}
+        >
+          <div className={isMobile ? "py-0 pb-20" : "py-2 pb-20"}>
+            <div className="divide-y divide-transparent">
+              {messages.map(renderMessage)}
+            </div>
+          </div>
+        </ScrollArea>
+      )}
 
       {/* Scroll to bottom button */}
       <AnimatePresence>

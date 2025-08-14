@@ -2,6 +2,7 @@ import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { useState, useEffect } from 'react'
 import { MessageSquare, ChevronRight, Users } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { VirtualList } from '@/components/ui/virtual-list'
 import { Badge } from '@/components/ui/badge'
 import { PhaseIndicator } from '@/components/ui/phase-indicator'
 import { cn } from '@/lib/utils'
@@ -207,80 +208,94 @@ export function ThreadList({
     getLastActivityTime(b) - getLastActivityTime(a)
   )
 
+  const USE_VIRTUAL_LIST_THRESHOLD = 30; // Use virtual list for more than 30 threads
+
+  const renderThread = (thread: Thread) => {
+    const isSelected = thread.id === selectedThreadId
+
+    return (
+      <button
+        key={thread.id}
+        onClick={() => onThreadSelect(thread.id)}
+        className={cn(
+          'w-full text-left p-3 hover:bg-accent/50 transition-colors border-b',
+          isSelected && 'bg-accent'
+        )}
+      >
+        <div className="flex items-start gap-2.5">
+          {/* Phase Indicator */}
+          <div className="shrink-0 pt-2">
+            <PhaseIndicator phase={threadPhases[thread.id]} className="w-2 h-2" />
+          </div>
+
+          {/* Thread Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="text-sm font-normal truncate">
+                {thread.title}
+              </h3>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {formatRelativeTime(getLastActivityTime(thread))}
+              </span>
+            </div>
+
+            <p className="text-sm text-muted-foreground truncate mt-1">
+              {thread.lastMessage || thread.content}
+            </p>
+
+            {/* Thread Meta */}
+            <div className="flex items-center gap-2 mt-1">
+              {thread.replyCount > 0 && (
+                <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                  <MessageSquare className="h-3 w-3 mr-1" />
+                  {thread.replyCount}
+                </Badge>
+              )}
+              
+              {thread.participants.size > 1 && (
+                <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                  <Users className="h-3 w-3 mr-1" />
+                  {thread.participants.size}
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Selection Indicator */}
+          {isSelected && (
+            <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-1" />
+          )}
+        </div>
+      </button>
+    )
+  }
+
   return (
     <div className={cn('flex flex-col h-full', className)}>
       {/* Thread List */}
-      <ScrollArea className="flex-1">
-        {sortedThreads.length === 0 ? (
-          <div className="p-4 text-center text-muted-foreground">
-            <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-sm">No conversations yet</p>
-            <p className="text-xs mt-2">Start a new thread to begin chatting</p>
-          </div>
-        ) : (
+      {sortedThreads.length === 0 ? (
+        <div className="p-4 text-center text-muted-foreground">
+          <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p className="text-sm">No conversations yet</p>
+          <p className="text-xs mt-2">Start a new thread to begin chatting</p>
+        </div>
+      ) : sortedThreads.length > USE_VIRTUAL_LIST_THRESHOLD ? (
+        // Use VirtualList for large thread lists
+        <VirtualList
+          items={sortedThreads}
+          renderItem={renderThread}
+          estimateSize={90} // Estimated average thread item height
+          overscan={3}
+          containerClassName="flex-1"
+        />
+      ) : (
+        // Use regular ScrollArea for small thread lists
+        <ScrollArea className="flex-1">
           <div className="divide-y">
-            {sortedThreads.map(thread => {
-              const isSelected = thread.id === selectedThreadId
-
-              return (
-                <button
-                  key={thread.id}
-                  onClick={() => onThreadSelect(thread.id)}
-                  className={cn(
-                    'w-full text-left p-3 hover:bg-accent/50 transition-colors',
-                    isSelected && 'bg-accent'
-                  )}
-                >
-                  <div className="flex items-start gap-2.5">
-                    {/* Phase Indicator */}
-                    <div className="shrink-0 pt-2">
-                      <PhaseIndicator phase={threadPhases[thread.id]} className="w-2 h-2" />
-                    </div>
-
-                    {/* Thread Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-sm font-normal truncate">
-                          {thread.title}
-                        </h3>
-                        <span className="text-xs text-muted-foreground shrink-0">
-                          {formatRelativeTime(getLastActivityTime(thread))}
-                        </span>
-                      </div>
-
-                      <p className="text-sm text-muted-foreground truncate mt-1">
-                        {thread.lastMessage || thread.content}
-                      </p>
-
-                      {/* Thread Meta */}
-                      <div className="flex items-center gap-2 mt-1">
-                        {thread.replyCount > 0 && (
-                          <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                            <MessageSquare className="h-3 w-3 mr-1" />
-                            {thread.replyCount}
-                          </Badge>
-                        )}
-                        
-                        {thread.participants.size > 1 && (
-                          <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                            <Users className="h-3 w-3 mr-1" />
-                            {thread.participants.size}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Selection Indicator */}
-                    {isSelected && (
-                      <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-1" />
-                    )}
-                  </div>
-                </button>
-              )
-            })}
+            {sortedThreads.map(renderThread)}
           </div>
-        )}
-      </ScrollArea>
+        </ScrollArea>
+      )}
     </div>
   )
 }

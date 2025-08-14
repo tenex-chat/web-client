@@ -36,6 +36,19 @@ export const UPLOAD_LIMITS = {
   MAX_RETRY_COUNT: 3, // maximum upload retry attempts
 } as const
 
+// Virtual list thresholds
+export const VIRTUAL_LIST_THRESHOLDS = {
+  THREAD_LIST: 30, // Use virtual list for more than 30 threads
+  CHAT_MESSAGES: 50, // Use virtual list for more than 50 messages
+  TASKS: 20, // Use virtual list for more than 20 tasks
+} as const
+
+// Subscription limits
+export const SUBSCRIPTION_LIMITS = {
+  DEFAULT_LIMIT: 50, // Default limit for event subscriptions
+  PROJECT_STATUS_MINUTES: 10, // Minutes to look back for project status events
+} as const
+
 export const EVENT_KINDS = {
   METADATA: 0,
   SHORT_TEXT_NOTE: 1,

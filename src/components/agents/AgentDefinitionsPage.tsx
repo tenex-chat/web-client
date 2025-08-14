@@ -88,7 +88,7 @@ export function AgentDefinitionsPage() {
     if (activeTab === "owned" && user) {
       filtered = filtered.filter((agent) => agent.pubkey === user.pubkey);
     } else if (activeTab === "subscribed" && user) {
-      // TODO: Implement subscription filtering when we have agent subscriptions
+      // Show agents from other users (subscribed agents would be filtered here when subscription system is ready)
       filtered = filtered.filter((agent) => agent.pubkey !== user.pubkey);
     }
 

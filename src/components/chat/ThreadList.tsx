@@ -8,7 +8,7 @@ import { PhaseIndicator } from '@/components/ui/phase-indicator'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { EVENT_KINDS } from '@/lib/constants'
+import { EVENT_KINDS, VIRTUAL_LIST_THRESHOLDS, SUBSCRIPTION_LIMITS } from '@/lib/constants'
 import type { NDKKind } from '@nostr-dev-kit/ndk'
 
 interface ThreadListProps {
@@ -50,7 +50,7 @@ export function ThreadList({
       ? [{
           kinds: [EVENT_KINDS.CHAT as NDKKind],
           ...project.filter(),
-          limit: 50,
+          limit: SUBSCRIPTION_LIMITS.DEFAULT_LIMIT,
         }]
       : false,
     {},
@@ -208,8 +208,6 @@ export function ThreadList({
     getLastActivityTime(b) - getLastActivityTime(a)
   )
 
-  const USE_VIRTUAL_LIST_THRESHOLD = 30; // Use virtual list for more than 30 threads
-
   const renderThread = (thread: Thread) => {
     const isSelected = thread.id === selectedThreadId
 
@@ -279,7 +277,7 @@ export function ThreadList({
           <p className="text-sm">No conversations yet</p>
           <p className="text-xs mt-2">Start a new thread to begin chatting</p>
         </div>
-      ) : sortedThreads.length > USE_VIRTUAL_LIST_THRESHOLD ? (
+      ) : sortedThreads.length > VIRTUAL_LIST_THRESHOLDS.THREAD_LIST ? (
         // Use VirtualList for large thread lists
         <VirtualList
           items={sortedThreads}

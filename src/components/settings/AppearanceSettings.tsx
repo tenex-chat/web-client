@@ -80,7 +80,7 @@ export function AppearanceSettings() {
       {/* Theme Settings */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Theme</h3>
-        <RadioGroup value={theme} onValueChange={setTheme}>
+        <RadioGroup value={theme} onValueChange={(value) => setTheme(value as 'light' | 'dark' | 'system')}>
           <div className="flex items-center space-x-2 mb-3">
             <RadioGroupItem value="light" id="light" />
             <Label htmlFor="light" className="flex items-center gap-2 cursor-pointer">

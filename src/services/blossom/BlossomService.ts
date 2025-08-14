@@ -154,7 +154,7 @@ export class BlossomService {
         onProgress: (progress: { loaded: number; total: number }) => {
           // Check if aborted during upload
           if (abortController.signal.aborted) {
-            return 'abort'
+            return 'cancel'
           }
           const uploadProgress = Math.round((progress.loaded / progress.total) * 90) + 10
           onProgress?.(uploadProgress)
@@ -206,7 +206,6 @@ export class BlossomService {
     } = options
 
     const results: Array<{ url: string; metadata: FileMetadata } | Error> = []
-    const uploadPromises: Array<Promise<void>> = []
 
     // Process files in batches
     for (let i = 0; i < files.length; i += maxConcurrent) {
@@ -416,15 +415,6 @@ export class BlossomService {
       url,
       name,
       priority: 10, // Low priority for user-added servers
-      metrics: {
-        url,
-        lastChecked: 0,
-        isAvailable: true,
-        averageLatency: 0,
-        successRate: 1,
-        totalUploads: 0,
-        failedUploads: 0,
-      },
       capabilities: {
         maxFileSize: maxFileSize || 10 * 1024 * 1024,
         requiresAuth: true,

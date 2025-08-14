@@ -59,7 +59,7 @@ export function useBlossomUpload(): UseBlossomUploadReturn {
   const cancelUploadAction = useSetAtom(cancelUploadAtom)
   const [isInitialized, setIsInitialized] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [dragCounter, setDragCounter] = useState(0)
+  const [, setDragCounter] = useState(0)
 
   // Initialize Blossom service
   useEffect(() => {

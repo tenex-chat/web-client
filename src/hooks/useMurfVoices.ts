@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { fetchMurfVoices } from './useMurfTTS';
 import { useLLMConfig } from '@/stores/llmConfig';
 import { MurfVoicesCache } from '@/services/murfVoicesCache';
+import { MurfTTSService } from '@/services/murfTTS';
 import { logger } from '@/lib/logger';
 import type { MurfVoice } from '@/services/murfTTS';
 
@@ -43,12 +43,20 @@ export function useMurfVoices(apiKeyOverride?: string): UseMurfVoicesReturn {
                 }
                 
                 // Fetch from API if not cached or expired
-                const data = await fetchMurfVoices(apiKey as string);
-                setVoices(data);
-                setError(null);
-                
-                // Cache the fetched voices
-                MurfVoicesCache.set(data);
+                const service = new MurfTTSService({ 
+                    apiKey: apiKey as string, 
+                    voiceId: ''
+                });
+                try {
+                    const data = await service.getVoices();
+                    setVoices(data);
+                    setError(null);
+                    
+                    // Cache the fetched voices
+                    MurfVoicesCache.set(data);
+                } finally {
+                    service.dispose();
+                }
             } catch (err) {
                 logger.error('Failed to fetch Murf voices:', err);
                 setError(err instanceof Error ? err : new Error('Failed to fetch voices'));

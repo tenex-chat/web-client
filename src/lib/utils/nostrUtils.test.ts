@@ -45,7 +45,7 @@ describe('nostrUtils', () => {
     })
 
     it('should return empty array for nonexistent tags', () => {
-      const event = { tags: [] } as NDKEvent
+      const event = { tags: [] } as unknown as NDKEvent
       expect(findAllTagValues(event, 'category')).toEqual([])
     })
   })

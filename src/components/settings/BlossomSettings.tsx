@@ -57,13 +57,11 @@ export function BlossomSettings() {
       }
     })
 
-    // Add to store
-    setServers([...servers, {
-      url: newServerUrl,
-      name: newServerName,
-      supportsAuth: true,
-      maxFileSize: 50 * 1024 * 1024
-    }])
+    // Get the newly added server from registry (which has full info)
+    const newServer = registry.getServers().find(s => s.url === newServerUrl)
+    if (newServer) {
+      setServers([...servers, newServer])
+    }
 
     toast.success(`Added ${newServerName}`)
     setNewServerUrl('')

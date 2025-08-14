@@ -39,14 +39,14 @@ export function extractLLMMetadata(event: NDKEvent): Record<string, string> {
  * Checks new-phase first for transitions, then falls back to phase
  */
 export function getEventPhase(event: NDKEvent): string | null {
-  return event.tagValue("new-phase") || event.tagValue("phase")
+  return event.tagValue("new-phase") || event.tagValue("phase") || null
 }
 
 /**
  * Gets the phase transition source
  */
 export function getEventPhaseFrom(event: NDKEvent): string | null {
-  return event.tagValue("phase-from")
+  return event.tagValue("phase-from") || null
 }
 
 /**

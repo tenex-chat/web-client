@@ -1,5 +1,4 @@
 import { UPLOAD_STATUS, type UploadStatus } from '../constants'
-import { type BlossomStore } from '../../stores/blossomStore'
 
 export const filterUploadsByStatus = <T extends { status: UploadStatus }>(
   items: T[],

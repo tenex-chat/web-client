@@ -319,7 +319,7 @@ function ProjectSettingsPage() {
                         {project.agents.map((agent, index) => (
                           <div key={index} className="flex items-center gap-2 text-sm">
                             <div className="h-2 w-2 rounded-full bg-green-500" />
-                            <span>{agent.name || agent.pubkey}</span>
+                            <span>{agent.ndkAgentEventId}</span>
                           </div>
                         ))}
                       </div>

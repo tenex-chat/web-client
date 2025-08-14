@@ -46,7 +46,7 @@ export function AgentInstances({ agentDefinitionId }: AgentInstancesProps) {
     }, [profileEvents]);
 
     const handleAgentClick = (pubkey: string) => {
-        navigate({ to: '/p/$npub', params: { npub: pubkey } });
+        navigate({ to: '/p/$pubkey', params: { pubkey } });
     };
 
     if (agentInstances.length === 0) {

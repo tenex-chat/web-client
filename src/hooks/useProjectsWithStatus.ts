@@ -14,12 +14,15 @@ export function useProjectsWithStatus(projects: NDKProject[]) {
   const { ndk } = useNDK()
   const [projectsWithStatus, setProjectsWithStatus] = useState<ProjectWithStatus[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [userPubkey, setUserPubkey] = useState<string | undefined>()
 
   // Get all project tag IDs
   const projectTagIds = projects.map(p => p.tagId())
 
   // Get current user's pubkey for filtering status events
-  const userPubkey = ndk?.signer?.user()?.pubkey
+  useEffect(() => {
+    ndk?.signer?.user?.()?.then(u => setUserPubkey(u?.pubkey))
+  }, [ndk])
 
   // Subscribe to status events published by the current user (their projects)
   // This is much more efficient than fetching all status events
@@ -29,7 +32,7 @@ export function useProjectsWithStatus(projects: NDKProject[]) {
     since: Math.floor(Date.now() / 1000) - 600 // Last 10 minutes
   } : undefined
 
-  const { events } = useSubscribe(filter ? [filter] : [], { disabled: !filter })
+  const { events } = useSubscribe(filter ? [filter] : [])
 
   useEffect(() => {
     if (projects.length === 0) {
@@ -48,7 +51,7 @@ export function useProjectsWithStatus(projects: NDKProject[]) {
       console.log(`[Sidebar] Found ${events.length} total status events, filtering for ${projects.length} projects`)
       
       events.forEach(event => {
-        const status = new NDKProjectStatus(ndk, event.rawEvent())
+        const status = new NDKProjectStatus(ndk || undefined, event.rawEvent())
         const projectId = status.projectId
         
         // Only process status events for OUR projects

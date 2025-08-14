@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ChatInterface } from './ChatInterface'
 import { useNDK, useNDKCurrentUser, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { NDKUser } from '@nostr-dev-kit/ndk'
+import type NDK from '@nostr-dev-kit/ndk'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 
 // Mock NDK modules

@@ -77,8 +77,7 @@ function ProjectDetailPage() {
 
   // Subscribe to tasks for this project
   const { events: taskEvents } = useSubscribe(
-    taskFilter ? [taskFilter] : [],
-    { disabled: !ndk || !project || !taskFilter }
+    taskFilter ? [taskFilter] : []
   )
 
 

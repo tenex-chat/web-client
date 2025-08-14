@@ -43,7 +43,7 @@ export function getUserStatus(
       if (project) {
         return {
           isExternal: true,
-          projectName: project.title || project.name || dTag
+          projectName: project.title || dTag
         }
       }
     }

@@ -84,20 +84,3 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
         error
     };
 }
-
-// Utility function to fetch Murf voices using the service
-export async function fetchMurfVoices(apiKey: string) {
-    const service = new MurfTTSService({ 
-        apiKey, 
-        voiceId: '', 
-        enabled: true 
-    });
-    try {
-        return await service.getVoices();
-    } catch (error) {
-        logger.error('Error fetching Murf voices:', error);
-        throw error;
-    } finally {
-        service.dispose();
-    }
-}

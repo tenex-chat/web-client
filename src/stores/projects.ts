@@ -265,14 +265,14 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             if (project) return project;
             
             // Try bech32 lookup
-            project = get().getProjectByBech32(identifier);
-            if (project) return project;
+            const bech32Project = get().getProjectByBech32(identifier);
+            if (bech32Project) return bech32Project;
             
             // Try tagId lookup for legacy compatibility
-            project = get().getProjectByTagId(identifier);
-            if (project) return project;
+            const tagIdProject = get().getProjectByTagId(identifier);
+            if (tagIdProject) return tagIdProject;
             
-            return undefined;
+            return null;
         },
         
         // Initialize global status subscription for all projects

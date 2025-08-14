@@ -1,4 +1,3 @@
-;
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, Bot, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,7 +15,6 @@ export function SettingsPage() {
   const user = useNDKCurrentUser();
   const ndkLogout = useNDKSessionLogout();
   const userProfile = useCurrentUserProfile();
-;
 
   const handleBack = () => {
     navigate({ to: '/' });

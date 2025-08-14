@@ -8,7 +8,6 @@ import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
 import { useSortedProjects } from '@/hooks/useSortedProjects'
 import { useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,

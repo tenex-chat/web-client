@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { Plus, Settings, LogOut, Search, Bot, Wrench, Home, User, Sun, Moon, Monitor, Globe } from 'lucide-react'
+import { Plus, Settings, LogOut, Search, Bot, Wrench, Home, User, Sun, Moon, Monitor } from 'lucide-react'
 import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'

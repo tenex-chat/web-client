@@ -375,7 +375,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             }
             
             const project = projects.get(finalDTag);
-            console.log(`[ProjectStore] Status update for ${project?.title || finalDTag}: ${status.isOnline ? 'online' : 'offline'} (${status.agents.length} agents, ${status.models.length} models)`);
+            logger.debug(`[ProjectStore] Status update for ${project?.title || finalDTag}: ${status.isOnline ? 'online' : 'offline'} (${status.agents.length} agents, ${status.models.length} models)`);
             
             set((state) => {
                 const newStatus = new Map(state.projectStatus);
@@ -403,7 +403,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         
         // Initialize all subscriptions when user logs in
         initializeSubscriptions: (ndk: NDK, userPubkey: string) => {
-            console.log("called initializeSubscriptions");
+            logger.debug("[ProjectStore] Initializing subscriptions");
             const { projectsSubscription, statusSubscription } = get();
             
             // Clean up any existing subscriptions first
@@ -424,7 +424,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                 authors: [userPubkey],
             }, { closeOnEose: false }, {
                 onEvent: (event: NDKEvent) => {
-                    console.log('received event', event.dTag)
+                    logger.debug('[ProjectStore] Received project event', event.dTag)
                     const project = new NDKProject(ndk, event.rawEvent());
                     const projectDTag = project.dTag;
 
@@ -452,12 +452,12 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             const { projectsSubscription, statusSubscription } = get();
             
             if (projectsSubscription) {
-                console.log('[ProjectStore] Cleaning up projects subscription');
+                logger.debug('[ProjectStore] Cleaning up projects subscription');
                 projectsSubscription.stop();
             }
             
             if (statusSubscription) {
-                console.log('[ProjectStore] Cleaning up status subscription');
+                logger.debug('[ProjectStore] Cleaning up status subscription');
                 statusSubscription.stop();
             }
             

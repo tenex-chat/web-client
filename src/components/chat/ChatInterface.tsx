@@ -1,177 +1,198 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { useNDK, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
-import { useAtom } from 'jotai'
-import { cn } from '@/lib/utils'
-import { useKeyboardHeight } from '@/hooks/useKeyboardHeight'
-import { useIsMobile } from '@/hooks/useMediaQuery'
-import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
-import { useMurfTTS } from '@/hooks/useMurfTTS'
-import { useAgentTTSConfig } from '@/hooks/useAgentTTSConfig'
-import { extractTTSContent } from '@/lib/utils/extractTTSContent'
-import { isAudioEvent } from '@/lib/utils/audioEvents'
-import { VoiceDialog } from '@/components/dialogs/VoiceDialog'
-import { ImageUploadQueue } from '@/components/upload/ImageUploadQueue'
-import { ChatDropZone } from './ChatDropZone'
-import { motion, AnimatePresence } from 'framer-motion'
-import type { NDKProject } from '@/lib/ndk-events/NDKProject'
-import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
+import { useAtom } from "jotai";
+import { cn } from "@/lib/utils";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
+import { useIsMobile } from "@/hooks/useMediaQuery";
+import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
+import { useMurfTTS } from "@/hooks/useMurfTTS";
+import { useAgentTTSConfig } from "@/hooks/useAgentTTSConfig";
+import { extractTTSContent } from "@/lib/utils/extractTTSContent";
+import { isAudioEvent } from "@/lib/utils/audioEvents";
+import { VoiceDialog } from "@/components/dialogs/VoiceDialog";
+import { ImageUploadQueue } from "@/components/upload/ImageUploadQueue";
+import { ChatDropZone } from "./ChatDropZone";
+import { motion, AnimatePresence } from "framer-motion";
+import type { NDKProject } from "@/lib/ndk-events/NDKProject";
+import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 
 // Import new hooks and components
-import { useChatMessages } from './hooks/useChatMessages'
-import { useChatScroll } from './hooks/useChatScroll'
-import { useChatInput } from './hooks/useChatInput'
-import { useThreadManagement, type AgentMention } from './hooks/useThreadManagement'
-import { ChatHeader } from './components/ChatHeader'
-import { ChatMessageList } from './components/ChatMessageList'
-import { ChatInputArea } from './components/ChatInputArea'
-import { autoTTSAtom } from '@/stores/llmConfig'
+import { useChatMessages } from "./hooks/useChatMessages";
+import { useChatScroll } from "./hooks/useChatScroll";
+import { useChatInput } from "./hooks/useChatInput";
+import {
+  useThreadManagement,
+  type AgentMention,
+} from "./hooks/useThreadManagement";
+import { ChatHeader } from "./components/ChatHeader";
+import { ChatMessageList } from "./components/ChatMessageList";
+import { ChatInputArea } from "./components/ChatInputArea";
+import { autoTTSAtom } from "@/stores/llmConfig";
 
 interface ChatInterfaceProps {
-  project: NDKProject
-  rootEvent?: NDKEvent
-  extraTags?: string[][]
-  className?: string
-  onBack?: () => void
-  onTaskClick?: (taskId: string) => void
-  onThreadCreated?: (threadId: string) => void
+  project: NDKProject;
+  rootEvent?: NDKEvent;
+  extraTags?: string[][];
+  className?: string;
+  onBack?: () => void;
+  onTaskClick?: (taskId: string) => void;
+  onThreadCreated?: (threadId: string) => void;
 }
 
-type AgentInstance = AgentMention
+type AgentInstance = AgentMention;
 
 /**
  * Refactored ChatInterface component
  * Now serves as an orchestrator, delegating responsibilities to specialized components and hooks
  */
-export function ChatInterface({ 
-  project, 
+export function ChatInterface({
+  project,
   rootEvent,
-  extraTags, 
-  className, 
-  onBack, 
-  onTaskClick, 
-  onThreadCreated 
+  extraTags,
+  className,
+  onBack,
+  onTaskClick,
+  onThreadCreated,
 }: ChatInterfaceProps) {
-  const { ndk } = useNDK()
-  const user = useNDKCurrentUser()
-  const isMobile = useIsMobile()
-  const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight()
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  
+  const { ndk } = useNDK();
+  const user = useNDKCurrentUser();
+  const isMobile = useIsMobile();
+  const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   // State for voice and TTS
-  const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false)
-  const [autoTTS, setAutoTTS] = useAtom(autoTTSAtom)
-  const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(null)
+  const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false);
+  const [autoTTS, setAutoTTS] = useAtom(autoTTSAtom);
+  const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(
+    null,
+  );
 
   // Thread management
-  const threadManagement = useThreadManagement(project, rootEvent || null, extraTags, onThreadCreated)
-  const { localRootEvent, sendMessage } = threadManagement
+  const threadManagement = useThreadManagement(
+    project,
+    rootEvent || null,
+    extraTags,
+    onThreadCreated,
+  );
+  const { localRootEvent, sendMessage } = threadManagement;
 
   // Message management
-  const messages = useChatMessages(project, localRootEvent)
+  const messages = useChatMessages(project, localRootEvent);
 
   // Scroll management
-  const scrollProps = useChatScroll(messages)
+  const scrollProps = useChatScroll(messages);
 
   // Get ONLINE agents for @mentions
-  const onlineAgents = useProjectOnlineAgents(project.dTag)
+  const onlineAgents = useProjectOnlineAgents(project.dTag);
   const projectAgents: AgentInstance[] = useMemo(() => {
-    return onlineAgents.map(agent => ({
+    return onlineAgents.map((agent) => ({
       pubkey: agent.pubkey,
-      name: agent.name
-    }))
-  }, [onlineAgents])
+      name: agent.name,
+    }));
+  }, [onlineAgents]);
 
   // Input management - always include all projects
-  const inputProps = useChatInput(project, localRootEvent, projectAgents, textareaRef, true)
+  const inputProps = useChatInput(
+    project,
+    localRootEvent,
+    projectAgents,
+    textareaRef,
+    true,
+  );
 
   // TTS configuration
-  const ttsOptions = useAgentTTSConfig()
-  const tts = useMurfTTS(ttsOptions || { apiKey: '', voiceId: '', enabled: false })
+  const ttsOptions = useAgentTTSConfig();
+  const tts = useMurfTTS(
+    ttsOptions || { apiKey: "", voiceId: "", enabled: false },
+  );
 
   // Update localRootEvent when rootEvent prop changes
   useEffect(() => {
-    threadManagement.setLocalRootEvent(rootEvent || null)
-  }, [rootEvent, threadManagement])
+    threadManagement.setLocalRootEvent(rootEvent || null);
+  }, [rootEvent, threadManagement]);
 
   // Auto-play new messages when auto-TTS is enabled
   useEffect(() => {
-    if (!autoTTS || !ttsOptions || messages.length === 0) return
+    if (!autoTTS || !ttsOptions || messages.length === 0) return;
 
-    const latestMessage = messages[messages.length - 1]
-    
+    const latestMessage = messages[messages.length - 1];
+
     // Don't play messages from the current user
-    if (latestMessage.event.pubkey === user?.pubkey) return
-    
+    if (latestMessage.event.pubkey === user?.pubkey) return;
+
     // Don't play the same message twice
-    if (latestMessage.id === lastPlayedMessageId) return
-    
+    if (latestMessage.id === lastPlayedMessageId) return;
+
     // Don't play audio messages (they have their own player)
-    if (isAudioEvent(latestMessage.event)) return
-    
+    if (isAudioEvent(latestMessage.event)) return;
+
     // Extract and play TTS content
-    const ttsContent = extractTTSContent(latestMessage.event.content)
+    const ttsContent = extractTTSContent(latestMessage.event.content);
     if (ttsContent && !tts.isPlaying) {
       tts.play(ttsContent).catch((error) => {
-        console.error('TTS playback failed:', error)
-      })
-      setLastPlayedMessageId(latestMessage.id)
+        console.error("TTS playback failed:", error);
+      });
+      setLastPlayedMessageId(latestMessage.id);
     }
-  }, [messages, autoTTS, ttsOptions, lastPlayedMessageId, user?.pubkey, tts])
+  }, [messages, autoTTS, ttsOptions, lastPlayedMessageId, user?.pubkey, tts]);
 
   // Handle sending messages
   const handleSendMessage = useCallback(async () => {
-    if (!ndk || !user || (!inputProps.messageInput.trim() && inputProps.pendingImageUrls.length === 0)) return
+    if (
+      !ndk ||
+      !user ||
+      (!inputProps.messageInput.trim() &&
+        inputProps.pendingImageUrls.length === 0)
+    )
+      return;
 
     try {
-      const content = inputProps.buildMessageContent()
-      const mentions = inputProps.mentionProps.extractMentions()
-      const completedUploads = inputProps.getCompletedUploads()
-      
-      const imageUploads = completedUploads.map(upload => ({
-        url: upload.url!,
-        metadata: upload.metadata
-      }))
+      const content = inputProps.buildMessageContent();
+      const mentions = inputProps.mentionProps.extractMentions();
+      const completedUploads = inputProps.getCompletedUploads();
 
-      await sendMessage(content, mentions, imageUploads, autoTTS, messages)
-      
-      inputProps.clearInput()
-      
+      const imageUploads = completedUploads.map((upload) => ({
+        url: upload.url!,
+        metadata: upload.metadata,
+      }));
+
+      await sendMessage(content, mentions, imageUploads, autoTTS, messages);
+
+      inputProps.clearInput();
+
       // Auto-scroll to bottom after sending
       setTimeout(() => {
-        scrollProps.scrollToBottom(true)
-      }, 100)
+        scrollProps.scrollToBottom(true);
+      }, 100);
     } catch (error) {
-      console.error('Failed to send message:', error)
+      console.error("Failed to send message:", error);
     }
-  }, [
-    ndk, 
-    user, 
-    inputProps, 
-    sendMessage, 
-    autoTTS, 
-    messages, 
-    scrollProps
-  ])
+  }, [ndk, user, inputProps, sendMessage, autoTTS, messages, scrollProps]);
 
   // Handle voice dialog completion
-  const handleVoiceComplete = useCallback(async (data: { transcription: string }) => {
-    if (data.transcription.trim()) {
-      inputProps.setMessageInput(data.transcription)
-      await handleSendMessage()
-    }
-  }, [inputProps, handleSendMessage])
+  const handleVoiceComplete = useCallback(
+    async (data: { transcription: string }) => {
+      if (data.transcription.trim()) {
+        inputProps.setMessageInput(data.transcription);
+        await handleSendMessage();
+      }
+    },
+    [inputProps, handleSendMessage],
+  );
 
   // Focus textarea on reply
   const handleReplyFocus = useCallback(() => {
     if (textareaRef.current) {
-      textareaRef.current.focus()
+      textareaRef.current.focus();
     }
-  }, [])
+  }, []);
 
-  const isNewThread = !localRootEvent
+  const isNewThread = !localRootEvent;
 
   return (
-    <ChatDropZone className={cn("flex flex-col h-full overflow-hidden", className)}>
+    <ChatDropZone
+      className={cn("flex flex-col h-full overflow-hidden", className)}
+    >
       <div
         className="flex flex-col h-full"
         style={{
@@ -237,17 +258,18 @@ export function ChatInterface({
 
         {/* Upload Queue Overlay */}
         <AnimatePresence>
-          {inputProps.showUploadProgress && inputProps.uploadStats.total > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-            >
-              <ImageUploadQueue />
-            </motion.div>
-          )}
+          {inputProps.showUploadProgress &&
+            inputProps.uploadStats.total > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+              >
+                <ImageUploadQueue />
+              </motion.div>
+            )}
         </AnimatePresence>
       </div>
     </ChatDropZone>
-  )
+  );
 }

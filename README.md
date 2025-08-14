@@ -21,6 +21,9 @@ bun run build
 
 # Type checking
 bun run typecheck
+
+# Code formatting
+npx prettier --write "src/**/*.{ts,tsx}"
 ```
 
 ## Project Structure

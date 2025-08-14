@@ -3,6 +3,7 @@ import { useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { NDKProjectStatus } from '../lib/ndk-events/NDKProjectStatus'
 import { EVENT_KINDS } from '../lib/constants'
 import type { NDKProject } from '../lib/ndk-events/NDKProject'
+import { logger } from '@/lib/logger'
 
 interface ProjectWithStatus {
   project: NDKProject
@@ -48,7 +49,7 @@ export function useProjectsWithStatus(projects: NDKProject[]) {
     const statusMap = new Map<string, NDKProjectStatus>()
     
     if (events && events.length > 0) {
-      console.log(`[Sidebar] Found ${events.length} total status events, filtering for ${projects.length} projects`)
+      logger.debug(`[Sidebar] Found ${events.length} total status events, filtering for ${projects.length} projects`)
       
       events.forEach(event => {
         const status = new NDKProjectStatus(ndk || undefined, event.rawEvent())
@@ -60,7 +61,7 @@ export function useProjectsWithStatus(projects: NDKProject[]) {
           if (!existing || (event.created_at || 0) > (existing.created_at || 0)) {
             statusMap.set(projectId, status)
             const projectName = projects.find(p => p.tagId() === projectId)?.title
-            console.log(`Status for project ${projectName || projectId}:`, {
+            logger.debug(`Status for project ${projectName || projectId}:`, {
               isOnline: status.isOnline,
               agents: status.agents.length,
               models: status.models.length,
@@ -70,7 +71,7 @@ export function useProjectsWithStatus(projects: NDKProject[]) {
         }
       })
       
-      console.log(`[Sidebar] Filtered to ${statusMap.size} relevant status events`)
+      logger.debug(`[Sidebar] Filtered to ${statusMap.size} relevant status events`)
     }
 
     // Map projects with their status
@@ -79,9 +80,9 @@ export function useProjectsWithStatus(projects: NDKProject[]) {
       const status = statusMap.get(tagId)
       
       if (project.title === 'Ambulando') {
-        console.log(`Ambulando tagId: ${tagId}`)
-        console.log(`Has status:`, !!status)
-        console.log(`Is online:`, status?.isOnline)
+        logger.debug(`Ambulando tagId: ${tagId}`)
+        logger.debug(`Has status:`, !!status)
+        logger.debug(`Is online:`, status?.isOnline)
       }
       
       return {

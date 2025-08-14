@@ -1,23 +1,29 @@
-import { useMemo, useState } from 'react';
-import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks';
-import { type NDKKind } from '@nostr-dev-kit/ndk';
-import { Bot, Plus, Settings, Volume2 } from 'lucide-react';
-import { NDKProject } from '@/lib/ndk-events/NDKProject';
-import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition';
-import { EVENT_KINDS } from '@/lib/constants';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/common/EmptyState';
-import { LoadingState } from '@/components/common/LoadingSpinner';
-import { getAgentVoiceConfig } from '@/lib/voice-config';
-import { useTTSConfig } from '@/stores/llmConfig';
-import { useNavigate } from '@tanstack/react-router';
-import { useProjectStatus } from '@/stores/projects';
-import { AddAgentsToProjectDialog } from '@/components/dialogs/AddAgentsToProjectDialog';
-import type { AgentData } from '@/types/agent';
-import { isAgentOnline } from '@/lib/utils/agentUtils';
+import { useMemo, useState } from "react";
+import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { type NDKKind } from "@nostr-dev-kit/ndk";
+import { Bot, Plus, Settings, Volume2 } from "lucide-react";
+import { NDKProject } from "@/lib/ndk-events/NDKProject";
+import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
+import { EVENT_KINDS } from "@/lib/constants";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/common/EmptyState";
+import { LoadingState } from "@/components/common/LoadingSpinner";
+import { getAgentVoiceConfig } from "@/lib/voice-config";
+import { useTTSConfig } from "@/stores/llmConfig";
+import { useNavigate } from "@tanstack/react-router";
+import { useProjectStatus } from "@/stores/projects";
+import { AddAgentsToProjectDialog } from "@/components/dialogs/AddAgentsToProjectDialog";
+import type { AgentData } from "@/types/agent";
+import { isAgentOnline } from "@/lib/utils/agentUtils";
 
 interface AgentsTabContentProps {
   project: NDKProject;
@@ -28,7 +34,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
   const navigate = useNavigate();
   const { apiKey: murfApiKey } = useTTSConfig();
   const [addAgentsDialogOpen, setAddAgentsDialogOpen] = useState(false);
-  
+
   // Get agents from project status (same as Status tab)
   const projectStatus = useProjectStatus(project?.dTag);
   const statusAgents = projectStatus?.agents || [];
@@ -43,56 +49,68 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
   const agentPubkeys = useMemo(() => {
     const pubkeys = new Set<string>();
     // Add from status
-    statusAgents.forEach(agent => pubkeys.add(agent.pubkey));
+    statusAgents.forEach((agent) => pubkeys.add(agent.pubkey));
     return Array.from(pubkeys);
   }, [statusAgents]);
 
   // Subscribe to agent events for more detailed information
   const { events: agentEvents } = useSubscribe(
     agentPubkeys.length > 0
-      ? [{ kinds: [EVENT_KINDS.AGENT_CONFIG as NDKKind], authors: agentPubkeys }]
+      ? [
+          {
+            kinds: [EVENT_KINDS.AGENT_CONFIG as NDKKind],
+            authors: agentPubkeys,
+          },
+        ]
       : false,
     {},
-    [agentPubkeys.join(',')]
+    [agentPubkeys.join(",")],
   );
 
   // Convert events to NDKAgentDefinition instances and filter to latest versions only
   const ndkAgents = useMemo(() => {
-    const agents = (agentEvents || []).map(event => new NDKAgentDefinition(ndk || undefined, event.rawEvent()));
-    
+    const agents = (agentEvents || []).map(
+      (event) => new NDKAgentDefinition(ndk || undefined, event.rawEvent()),
+    );
+
     // Group agents by d-tag (slug) and keep only the latest version
     const latestAgentsMap = new Map<string, NDKAgentDefinition>();
-    
-    agents.forEach(agent => {
+
+    agents.forEach((agent) => {
       const dTag = agent.dTag || agent.name || agent.pubkey;
       const existing = latestAgentsMap.get(dTag);
-      
+
       // Keep the agent with the most recent created_at timestamp
-      if (!existing || (agent.created_at && existing.created_at && agent.created_at > existing.created_at)) {
+      if (
+        !existing ||
+        (agent.created_at &&
+          existing.created_at &&
+          agent.created_at > existing.created_at)
+      ) {
         latestAgentsMap.set(dTag, agent);
       }
     });
-    
+
     return Array.from(latestAgentsMap.values());
   }, [agentEvents, ndk]);
 
   // Combine all sources of agent data
   const allAgents = useMemo(() => {
     const agentMap = new Map<string, AgentData>();
-    
+
     // Start with status agents (these are the ones that are actually online)
-    statusAgents.forEach(agent => {
+    statusAgents.forEach((agent) => {
       agentMap.set(agent.pubkey, {
         pubkey: agent.pubkey,
         name: agent.name,
-        status: agent.status || 'online',
+        status: agent.status || "online",
         lastSeen: agent.lastSeen,
-        fromStatus: true
+        fromStatus: true,
       });
     });
-    
+
     // Add/update with NDKAgentDefinition data for full details
-    ndkAgents.forEach(agent => {
+    ndkAgents.forEach((agent) => {
       const existing = agentMap.get(agent.pubkey);
       agentMap.set(agent.pubkey, {
         ...existing,
@@ -104,30 +122,32 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
         role: agent.role,
         useCriteria: agent.useCriteria,
         fromNDK: true,
-        fromProject: projectAgentEventIds.some(pa => pa.ndkAgentEventId === agent.id),
+        fromProject: projectAgentEventIds.some(
+          (pa) => pa.ndkAgentEventId === agent.id,
+        ),
         status: existing?.status,
         lastSeen: existing?.lastSeen,
-        fromStatus: existing?.fromStatus
+        fromStatus: existing?.fromStatus,
       });
     });
-    
+
     return Array.from(agentMap.values());
   }, [statusAgents, projectAgentEventIds, ndkAgents]);
 
   const handleAgentClick = (agent: AgentData) => {
     // Navigate to agent profile page using pubkey as the identifier
-    navigate({ 
-      to: '/p/$pubkey', 
-      params: { pubkey: agent.pubkey }
+    navigate({
+      to: "/p/$pubkey",
+      params: { pubkey: agent.pubkey },
     });
   };
 
   const handleVoiceSettings = (agent: AgentData, e: React.MouseEvent) => {
     e.stopPropagation();
     // Navigate directly to agent profile settings using pubkey
-    navigate({ 
-      to: '/p/$pubkey', 
-      params: { pubkey: agent.pubkey }
+    navigate({
+      to: "/p/$pubkey",
+      params: { pubkey: agent.pubkey },
     });
   };
 
@@ -149,7 +169,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
           description="No agents are currently online for this project. Agents will appear here when they come online."
           action={{
             label: "Add Agents",
-            onClick: () => setAddAgentsDialogOpen(true)
+            onClick: () => setAddAgentsDialogOpen(true),
           }}
         />
       </div>
@@ -164,7 +184,8 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
           <div>
             <h2 className="text-lg font-semibold">Project Agents</h2>
             <p className="text-sm text-muted-foreground">
-              {allAgents.length} {allAgents.length === 1 ? 'agent' : 'agents'} assigned to this project
+              {allAgents.length} {allAgents.length === 1 ? "agent" : "agents"}{" "}
+              assigned to this project
             </p>
           </div>
           <Button size="sm" onClick={() => setAddAgentsDialogOpen(true)}>
@@ -178,9 +199,9 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
           {allAgents.map((agent) => {
             const voiceConfig = getVoiceStatus(agent);
             const isOnline = isAgentOnline(agent);
-            
+
             return (
-              <Card 
+              <Card
                 key={agent.pubkey}
                 className="cursor-pointer hover:shadow-lg transition-shadow relative"
                 onClick={() => handleAgentClick(agent)}
@@ -194,7 +215,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
                     </div>
                   </div>
                 )}
-                
+
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -206,13 +227,11 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
                       </Avatar>
                       <div>
                         <CardTitle className="text-base">
-                          {agent.name || 'Unnamed Agent'}
+                          {agent.name || "Unnamed Agent"}
                         </CardTitle>
                         <div className="flex items-center gap-2 mt-1">
                           {agent.role && (
-                            <Badge variant="secondary">
-                              {agent.role}
-                            </Badge>
+                            <Badge variant="secondary">{agent.role}</Badge>
                           )}
                           {!isOnline && agent.fromStatus && (
                             <Badge variant="outline" className="text-xs">
@@ -232,14 +251,14 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
                     </Button>
                   </div>
                 </CardHeader>
-                
+
                 <CardContent>
                   {agent.description && (
                     <CardDescription className="line-clamp-2 mb-3">
                       {agent.description}
                     </CardDescription>
                   )}
-                  
+
                   {/* Voice Configuration Status */}
                   {murfApiKey && (
                     <div className="flex items-center gap-2 text-sm">
@@ -255,15 +274,21 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
                       )}
                     </div>
                   )}
-                  
+
                   {/* Use Criteria */}
                   {agent.useCriteria && agent.useCriteria.length > 0 && (
                     <div className="mt-3 space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Use when:</p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Use when:
+                      </p>
                       <ul className="text-xs text-muted-foreground space-y-0.5">
-                        {agent.useCriteria.slice(0, 2).map((criteria: string, idx: number) => (
-                          <li key={idx} className="truncate">• {criteria}</li>
-                        ))}
+                        {agent.useCriteria
+                          .slice(0, 2)
+                          .map((criteria: string, idx: number) => (
+                            <li key={idx} className="truncate">
+                              • {criteria}
+                            </li>
+                          ))}
                         {agent.useCriteria.length > 2 && (
                           <li className="text-primary">
                             +{agent.useCriteria.length - 2} more
@@ -278,12 +303,12 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
           })}
         </div>
       </div>
-      
-      <AddAgentsToProjectDialog 
+
+      <AddAgentsToProjectDialog
         open={addAgentsDialogOpen}
         onOpenChange={setAddAgentsDialogOpen}
         project={project}
-        existingAgentIds={projectAgentEventIds.map(a => a.ndkAgentEventId)}
+        existingAgentIds={projectAgentEventIds.map((a) => a.ndkAgentEventId)}
       />
     </div>
   );

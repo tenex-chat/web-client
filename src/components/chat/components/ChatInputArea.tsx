@@ -1,31 +1,31 @@
-import { useRef, useCallback } from 'react'
-import { Send, Mic, Paperclip, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
-import { useIsMobile } from '@/hooks/useMediaQuery'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ImagePreview } from '@/components/upload/ImagePreview'
-import { ChatMentionMenu } from './ChatMentionMenu'
+import { useRef, useCallback } from "react";
+import { Send, Mic, Paperclip, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useMediaQuery";
+import { motion, AnimatePresence } from "framer-motion";
+import { ImagePreview } from "@/components/upload/ImagePreview";
+import { ChatMentionMenu } from "./ChatMentionMenu";
 
 interface ChatInputAreaProps {
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>
-  messageInput: string
-  setMessageInput: (value: string) => void  // Used by mentionProps
-  pendingImageUrls: string[]
-  removeImageUrl: (url: string) => void
-  uploadQueue: any[]
-  uploadFiles: (files: File[]) => Promise<void>
-  handlePaste: (e: React.ClipboardEvent) => void
-  cancelUpload: (id: string) => void
-  retryUpload: (id: string) => void
-  setShowUploadProgress: (show: boolean) => void
-  mentionProps: any
-  onSend: () => void
-  onVoiceClick: () => void
-  isNewThread: boolean
-  disabled?: boolean
-  showVoiceButton?: boolean
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  messageInput: string;
+  setMessageInput: (value: string) => void; // Used by mentionProps
+  pendingImageUrls: string[];
+  removeImageUrl: (url: string) => void;
+  uploadQueue: any[];
+  uploadFiles: (files: File[]) => Promise<void>;
+  handlePaste: (e: React.ClipboardEvent) => void;
+  cancelUpload: (id: string) => void;
+  retryUpload: (id: string) => void;
+  setShowUploadProgress: (show: boolean) => void;
+  mentionProps: any;
+  onSend: () => void;
+  onVoiceClick: () => void;
+  isNewThread: boolean;
+  disabled?: boolean;
+  showVoiceButton?: boolean;
 }
 
 /**
@@ -49,62 +49,65 @@ export function ChatInputArea({
   onVoiceClick,
   isNewThread,
   disabled = false,
-  showVoiceButton = true
+  showVoiceButton = true,
 }: ChatInputAreaProps) {
-  const isMobile = useIsMobile()
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const isMobile = useIsMobile();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update mention props with the textarea ref and setMessageInput
   const mentionPropsWithRef = {
     ...mentionProps,
     textareaRef,
     handleInputChange: (value: string) => {
-      setMessageInput(value)
-      mentionProps.handleInputChange(value)
-    }
-  }
+      setMessageInput(value);
+      mentionProps.handleInputChange(value);
+    },
+  };
 
   // Handle file selection from input
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (files && files.length > 0) {
-      setShowUploadProgress(true)
-      await uploadFiles(Array.from(files))
-    }
-    // Clear the input so the same file can be selected again
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }, [uploadFiles, setShowUploadProgress])
+  const handleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (files && files.length > 0) {
+        setShowUploadProgress(true);
+        await uploadFiles(Array.from(files));
+      }
+      // Clear the input so the same file can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+    [uploadFiles, setShowUploadProgress],
+  );
 
-  // Enhanced paste handler  
-  const handlePasteEvent = useCallback((e: React.ClipboardEvent) => {
-    handlePaste(e)
-    setShowUploadProgress(true)
-  }, [handlePaste, setShowUploadProgress])
+  // Enhanced paste handler
+  const handlePasteEvent = useCallback(
+    (e: React.ClipboardEvent) => {
+      handlePaste(e);
+      setShowUploadProgress(true);
+    },
+    [handlePaste, setShowUploadProgress],
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // First check for mention autocomplete
     if (mentionPropsWithRef.showAgentMenu) {
-      mentionPropsWithRef.handleKeyDown(e)
-      return
+      mentionPropsWithRef.handleKeyDown(e);
+      return;
     }
 
     // Handle sending with Enter (without shift)
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      onSend()
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      onSend();
     }
-  }
+  };
 
-  const canSend = messageInput.trim() || pendingImageUrls.length > 0
+  const canSend = messageInput.trim() || pendingImageUrls.length > 0;
 
   return (
     <div
-      className={cn(
-        "flex-shrink-0 relative",
-        isMobile ? "p-3 pb-safe" : "p-4",
-      )}
+      className={cn("flex-shrink-0 relative", isMobile ? "p-3 pb-safe" : "p-4")}
       onPaste={handlePasteEvent}
     >
       <div
@@ -134,7 +137,7 @@ export function ChatInputArea({
                 {pendingImageUrls.map((url, index) => {
                   const uploadItem = uploadQueue.find(
                     (item) => item.url === url,
-                  )
+                  );
                   return (
                     <motion.div
                       key={url}
@@ -152,14 +155,13 @@ export function ChatInputArea({
                       />
 
                       {/* Upload status overlay */}
-                      {uploadItem &&
-                        uploadItem.status === "uploading" && (
-                          <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                            <div className="text-white text-xs font-medium">
-                              {uploadItem.progress}%
-                            </div>
+                      {uploadItem && uploadItem.status === "uploading" && (
+                        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                          <div className="text-white text-xs font-medium">
+                            {uploadItem.progress}%
                           </div>
-                        )}
+                        </div>
+                      )}
 
                       {/* Actions */}
                       <div className="absolute -top-1.5 -right-1.5 flex gap-0.5">
@@ -186,9 +188,9 @@ export function ChatInputArea({
                         )}
                         <button
                           onClick={() => {
-                            removeImageUrl(url)
+                            removeImageUrl(url);
                             if (uploadItem) {
-                              cancelUpload(uploadItem.id)
+                              cancelUpload(uploadItem.id);
                             }
                           }}
                           className="bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
@@ -197,7 +199,7 @@ export function ChatInputArea({
                         </button>
                       </div>
                     </motion.div>
-                  )
+                  );
                 })}
               </div>
             </motion.div>
@@ -223,7 +225,9 @@ export function ChatInputArea({
             <Textarea
               ref={textareaRef}
               value={messageInput}
-              onChange={(e) => mentionPropsWithRef.handleInputChange(e.target.value)}
+              onChange={(e) =>
+                mentionPropsWithRef.handleInputChange(e.target.value)
+              }
               onKeyDown={handleKeyDown}
               placeholder={
                 isNewThread
@@ -243,10 +247,7 @@ export function ChatInputArea({
           </div>
 
           <div
-            className={cn(
-              "flex items-center",
-              isMobile ? "gap-1" : "gap-2",
-            )}
+            className={cn("flex items-center", isMobile ? "gap-1" : "gap-2")}
           >
             {/* Hidden file input */}
             <input
@@ -257,7 +258,7 @@ export function ChatInputArea({
               onChange={handleFileSelect}
               className="hidden"
             />
-            
+
             <Button
               onClick={() => fileInputRef.current?.click()}
               size="icon"
@@ -321,5 +322,5 @@ export function ChatInputArea({
         </div>
       </div>
     </div>
-  )
+  );
 }

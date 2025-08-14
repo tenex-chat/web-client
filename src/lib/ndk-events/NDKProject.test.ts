@@ -247,7 +247,7 @@ describe('NDKProject', () => {
         pubkey: 'author-pubkey'
       }
       
-      const project = NDKProject.from(mockEvent as any)
+      const project = NDKProject.from(mockEvent.rawEvent() as any)
       
       expect(project.title).toBe('My Project')
       expect(project.description).toBe('Project description')

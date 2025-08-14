@@ -1,29 +1,29 @@
-import { cn } from '@/lib/utils'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
-import { ChevronRight, ChevronDown } from 'lucide-react'
+import { cn } from "@/lib/utils";
+import { ProfileDisplay } from "@/components/common/ProfileDisplay";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 interface AgentInstance {
-  pubkey: string
-  name: string
-  projectName?: string
-  projectDTag?: string
+  pubkey: string;
+  name: string;
+  projectName?: string;
+  projectDTag?: string;
 }
 
 interface ProjectGroup {
-  projectName: string
-  projectDTag: string
-  agents: AgentInstance[]
-  isCurrentProject?: boolean
+  projectName: string;
+  projectDTag: string;
+  agents: AgentInstance[];
+  isCurrentProject?: boolean;
 }
 
 interface ChatMentionMenuProps {
-  showAgentMenu: boolean
-  filteredAgents?: AgentInstance[]
-  filteredProjectGroups?: ProjectGroup[]
-  selectedAgentIndex: number
-  insertMention: (agent: AgentInstance) => void
-  expandedProjects?: Set<string>
-  toggleProjectExpansion?: (projectDTag: string) => void
+  showAgentMenu: boolean;
+  filteredAgents?: AgentInstance[];
+  filteredProjectGroups?: ProjectGroup[];
+  selectedAgentIndex: number;
+  insertMention: (agent: AgentInstance) => void;
+  expandedProjects?: Set<string>;
+  toggleProjectExpansion?: (projectDTag: string) => void;
 }
 
 /**
@@ -37,17 +37,18 @@ export function ChatMentionMenu({
   selectedAgentIndex,
   insertMention,
   expandedProjects = new Set(),
-  toggleProjectExpansion
+  toggleProjectExpansion,
 }: ChatMentionMenuProps) {
-  if (!showAgentMenu) return null
+  if (!showAgentMenu) return null;
 
   // If we have project groups, use hierarchical display
   if (filteredProjectGroups && filteredProjectGroups.length > 0) {
     return (
       <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border rounded-md shadow-lg p-2 max-h-64 overflow-y-auto z-50">
         {filteredProjectGroups.map((group) => {
-          const isExpanded = group.isCurrentProject || expandedProjects.has(group.projectDTag)
-          
+          const isExpanded =
+            group.isCurrentProject || expandedProjects.has(group.projectDTag);
+
           return (
             <div key={group.projectDTag} className="mb-1">
               {/* Current project agents - no header, always visible, no prefix */}
@@ -58,7 +59,7 @@ export function ChatMentionMenu({
                       key={agent.pubkey}
                       className={cn(
                         "w-full text-left px-2 py-1.5 rounded hover:bg-accent transition-colors",
-                        "flex items-center gap-2"
+                        "flex items-center gap-2",
                       )}
                       onClick={() => insertMention(agent)}
                     >
@@ -67,9 +68,7 @@ export function ChatMentionMenu({
                         showName={false}
                         avatarClassName="h-5 w-5"
                       />
-                      <span className="text-sm truncate">
-                        {agent.name}
-                      </span>
+                      <span className="text-sm truncate">{agent.name}</span>
                     </button>
                   ))}
                 </div>
@@ -92,7 +91,7 @@ export function ChatMentionMenu({
                       ({group.agents.length})
                     </span>
                   </button>
-                  
+
                   {/* Agents list - only visible when expanded */}
                   {isExpanded && (
                     <div className="ml-4">
@@ -101,7 +100,7 @@ export function ChatMentionMenu({
                           key={agent.pubkey}
                           className={cn(
                             "w-full text-left px-2 py-1.5 rounded hover:bg-accent transition-colors",
-                            "flex items-center gap-2"
+                            "flex items-center gap-2",
                           )}
                           onClick={() => insertMention(agent)}
                         >
@@ -110,9 +109,7 @@ export function ChatMentionMenu({
                             showName={false}
                             avatarClassName="h-5 w-5"
                           />
-                          <span className="text-sm truncate">
-                            {agent.name}
-                          </span>
+                          <span className="text-sm truncate">{agent.name}</span>
                         </button>
                       ))}
                     </div>
@@ -120,15 +117,15 @@ export function ChatMentionMenu({
                 </>
               )}
             </div>
-          )
+          );
         })}
       </div>
-    )
+    );
   }
-  
+
   // Fallback to simple list display (if no project groups provided)
   if (!filteredAgents || filteredAgents.length === 0) {
-    return null
+    return null;
   }
 
   return (
@@ -148,12 +145,10 @@ export function ChatMentionMenu({
               showName={false}
               avatarClassName="h-6 w-6"
             />
-            <span className="text-sm font-medium truncate">
-              {agent.name}
-            </span>
+            <span className="text-sm font-medium truncate">{agent.name}</span>
           </div>
         </button>
       ))}
     </div>
-  )
+  );
 }

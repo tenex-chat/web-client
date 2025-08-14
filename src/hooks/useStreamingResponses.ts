@@ -2,6 +2,7 @@ import { useSubscribe } from "@nostr-dev-kit/ndk-hooks"
 import type { NDKKind } from "@nostr-dev-kit/ndk-hooks"
 import { EVENT_KINDS } from "@/lib/constants"
 import { useMemo } from "react"
+import { logger } from "@/lib/logger"
 
 interface StreamingResponse {
   agentPubkey: string
@@ -14,7 +15,7 @@ interface StreamingResponse {
  * for a specific conversation/thread
  */
 export function useStreamingResponses(conversationId: string | null) {
-  console.log("useStreamingResponses", { conversationId });
+  logger.debug("useStreamingResponses", { conversationId });
   
   // Subscribe to streaming responses for this conversation
   const { events: streamingEvents } = useSubscribe(

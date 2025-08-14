@@ -2,6 +2,7 @@
 // Stores voice settings in localStorage keyed by agent slug
 
 import { logger } from './logger';
+import { Storage } from './utils/storage';
 
 export interface AgentVoiceConfig {
     voiceId: string;
@@ -20,16 +21,12 @@ const VOICE_CONFIG_PREFIX = "agent-voice-";
 export function getAgentVoiceConfig(agentSlug: string): AgentVoiceConfig | null {
     if (!agentSlug) return null;
     
-    try {
-        const stored = localStorage.getItem(`${VOICE_CONFIG_PREFIX}${agentSlug}`);
-        if (stored) {
-            return JSON.parse(stored) as AgentVoiceConfig;
-        }
-    } catch (error) {
-        logger.error("Failed to load voice config for agent:", agentSlug, error);
+    const config = Storage.getItem<AgentVoiceConfig>(`${VOICE_CONFIG_PREFIX}${agentSlug}`);
+    if (!config) {
+        return null;
     }
     
-    return null;
+    return config;
 }
 
 /**
@@ -42,11 +39,9 @@ export function saveAgentVoiceConfig(agentSlug: string, config: AgentVoiceConfig
         throw new Error("Agent slug is required to save voice configuration");
     }
     
-    try {
-        localStorage.setItem(`${VOICE_CONFIG_PREFIX}${agentSlug}`, JSON.stringify(config));
-    } catch (error) {
-        logger.error("Failed to save voice config for agent:", agentSlug, error);
-        throw error;
+    const success = Storage.setItem(`${VOICE_CONFIG_PREFIX}${agentSlug}`, config);
+    if (!success) {
+        throw new Error(`Failed to save voice config for agent: ${agentSlug}`);
     }
 }
 

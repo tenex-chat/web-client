@@ -48,14 +48,16 @@ describe('Storage', () => {
     })
 
     it('handles storage errors gracefully', () => {
-      const mockSetItem = vi.spyOn(Storage, 'setItem')
-      vi.spyOn(Storage as any, 'localStorage', 'get').mockImplementation(() => {
+      const originalSetItem = localStorage.setItem
+      localStorage.setItem = vi.fn().mockImplementation(() => {
         throw new Error('Storage full')
       })
       
       const success = Storage.setItem('test-key', { value: 'test' })
       expect(success).toBe(false)
-      mockSetItem.mockRestore()
+      expect(logger.error).toHaveBeenCalled()
+      
+      localStorage.setItem = originalSetItem
     })
   })
 

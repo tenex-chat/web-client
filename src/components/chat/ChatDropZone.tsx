@@ -1,19 +1,19 @@
-import { ReactNode } from 'react'
-import { Upload, Image, FileImage } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useBlossomUpload } from '@/hooks/useBlossomUpload'
-import { motion, AnimatePresence } from 'framer-motion'
+import { ReactNode } from "react";
+import { Upload, Image, FileImage } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useBlossomUpload } from "@/hooks/useBlossomUpload";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ChatDropZoneProps {
-  children: ReactNode
-  className?: string
-  dropZoneId?: string
+  children: ReactNode;
+  className?: string;
+  dropZoneId?: string;
 }
 
 export function ChatDropZone({
   children,
   className,
-  dropZoneId = 'chat-drop-zone'
+  dropZoneId = "chat-drop-zone",
 }: ChatDropZoneProps) {
   const {
     isDragging,
@@ -21,8 +21,8 @@ export function ChatDropZone({
     handleDragLeave,
     handleDragOver,
     handleDrop,
-    uploadStats
-  } = useBlossomUpload()
+    uploadStats,
+  } = useBlossomUpload();
 
   return (
     <div
@@ -34,7 +34,7 @@ export function ChatDropZone({
       data-drop-zone={dropZoneId}
     >
       {children}
-      
+
       {/* Enhanced Drop overlay with animation */}
       <AnimatePresence>
         {isDragging && (
@@ -47,12 +47,12 @@ export function ChatDropZone({
           >
             {/* Backdrop with blur */}
             <div className="absolute inset-0 bg-background/95 backdrop-blur-md" />
-            
+
             {/* Animated border */}
             <div className="absolute inset-4 border-2 border-dashed border-primary rounded-xl animate-pulse">
               <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-primary/5 rounded-xl" />
             </div>
-            
+
             {/* Central upload indicator */}
             <div className="absolute inset-0 flex items-center justify-center">
               <motion.div
@@ -71,12 +71,12 @@ export function ChatDropZone({
                       transition={{
                         duration: 2,
                         repeat: Infinity,
-                        ease: "easeInOut"
+                        ease: "easeInOut",
                       }}
                     >
                       <Upload className="w-16 h-16 text-primary" />
                     </motion.div>
-                    
+
                     {/* Floating image icons */}
                     <motion.div
                       className="absolute -top-4 -left-8"
@@ -87,12 +87,12 @@ export function ChatDropZone({
                       transition={{
                         duration: 3,
                         repeat: Infinity,
-                        ease: "easeInOut"
+                        ease: "easeInOut",
                       }}
                     >
                       <Image className="w-8 h-8 text-primary/60" />
                     </motion.div>
-                    
+
                     <motion.div
                       className="absolute -top-4 -right-8"
                       animate={{
@@ -103,13 +103,13 @@ export function ChatDropZone({
                         duration: 3,
                         delay: 0.5,
                         repeat: Infinity,
-                        ease: "easeInOut"
+                        ease: "easeInOut",
                       }}
                     >
                       <FileImage className="w-8 h-8 text-primary/60" />
                     </motion.div>
                   </div>
-                  
+
                   <div className="text-center">
                     <h3 className="text-xl font-semibold text-foreground mb-2">
                       Drop images to upload
@@ -118,26 +118,34 @@ export function ChatDropZone({
                       Release to upload images using the Blossom Protocol
                     </p>
                   </div>
-                  
+
                   <div className="flex flex-wrap gap-2 justify-center">
                     <div className="px-3 py-1 bg-primary/10 rounded-full">
-                      <span className="text-xs font-medium text-primary">JPEG</span>
+                      <span className="text-xs font-medium text-primary">
+                        JPEG
+                      </span>
                     </div>
                     <div className="px-3 py-1 bg-primary/10 rounded-full">
-                      <span className="text-xs font-medium text-primary">PNG</span>
+                      <span className="text-xs font-medium text-primary">
+                        PNG
+                      </span>
                     </div>
                     <div className="px-3 py-1 bg-primary/10 rounded-full">
-                      <span className="text-xs font-medium text-primary">GIF</span>
+                      <span className="text-xs font-medium text-primary">
+                        GIF
+                      </span>
                     </div>
                     <div className="px-3 py-1 bg-primary/10 rounded-full">
-                      <span className="text-xs font-medium text-primary">WebP</span>
+                      <span className="text-xs font-medium text-primary">
+                        WebP
+                      </span>
                     </div>
                   </div>
-                  
+
                   <div className="text-xs text-muted-foreground">
                     Max 100MB per file • Multiple files supported
                   </div>
-                  
+
                   {/* Show current upload stats if any */}
                   {uploadStats.total > 0 && (
                     <motion.div
@@ -152,7 +160,9 @@ export function ChatDropZone({
                         <span>{uploadStats.pending} pending • </span>
                       )}
                       {uploadStats.completed > 0 && (
-                        <span className="text-green-600">{uploadStats.completed} completed</span>
+                        <span className="text-green-600">
+                          {uploadStats.completed} completed
+                        </span>
                       )}
                     </motion.div>
                   )}
@@ -163,5 +173,5 @@ export function ChatDropZone({
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }

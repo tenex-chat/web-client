@@ -193,7 +193,6 @@ export const MessageWithReplies = memo(function MessageWithReplies({
       // Convert plain text nostr: references to markdown links
       content = replaceNostrEntities(content, (_entity, match) => {
         // Convert to markdown link format that will be handled by our custom link renderer
-        console.log({_entity, match})
         return `${_entity} [${_entity.bech32}](${match})`
       })
     }

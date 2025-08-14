@@ -1,32 +1,38 @@
-import { useMemo } from 'react'
-import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { NDKArticle } from '@nostr-dev-kit/ndk'
-import { EVENT_KINDS } from '@/lib/constants'
-import { formatRelativeTime } from '@/lib/utils/time'
-import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Calendar, User, Hash } from 'lucide-react'
+import { useMemo } from "react";
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { NDKArticle } from "@nostr-dev-kit/ndk";
+import { EVENT_KINDS } from "@/lib/constants";
+import { formatRelativeTime } from "@/lib/utils/time";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Calendar, User, Hash } from "lucide-react";
 
 interface ChangelogTabContentProps {
-  article: NDKArticle
+  article: NDKArticle;
 }
 
 export function ChangelogTabContent({ article }: ChangelogTabContentProps) {
   // Subscribe to changelog events
   const { events: changelogEvents } = useSubscribe(
-    article ? [{
-        kinds: [EVENT_KINDS.THREAD_REPLY], // kind:1111
-        '#A': [article.tagId()], // Uppercase #A tag referencing the article
-    }] : false
-  , undefined, [ article.id ])
+    article
+      ? [
+          {
+            kinds: [EVENT_KINDS.THREAD_REPLY], // kind:1111
+            "#A": [article.tagId()], // Uppercase #A tag referencing the article
+          },
+        ]
+      : false,
+    undefined,
+    [article.id],
+  );
 
   // Sort events by created_at timestamp (newest first)
   const sortedEvents = useMemo(() => {
-    if (!changelogEvents) return []
-    return [...changelogEvents].sort((a, b) => 
-      (b.created_at || 0) - (a.created_at || 0)
-    )
-  }, [changelogEvents])
+    if (!changelogEvents) return [];
+    return [...changelogEvents].sort(
+      (a, b) => (b.created_at || 0) - (a.created_at || 0),
+    );
+  }, [changelogEvents]);
 
   if (!sortedEvents.length) {
     return (
@@ -35,7 +41,7 @@ export function ChangelogTabContent({ article }: ChangelogTabContentProps) {
           <p className="text-muted-foreground mb-2">No changelog entries yet</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -53,18 +59,20 @@ export function ChangelogTabContent({ article }: ChangelogTabContentProps) {
         <div className="space-y-6">
           {sortedEvents.map((event) => {
             // Extract version tag if present (looking for #v or #version tags)
-            const versionTag = event.tags.find(tag => 
-              tag[0] === 't' && (tag[1].startsWith('v') || tag[1] === 'version')
-            )?.[1]
+            const versionTag = event.tags.find(
+              (tag) =>
+                tag[0] === "t" &&
+                (tag[1].startsWith("v") || tag[1] === "version"),
+            )?.[1];
 
             // Extract any other topic tags
             const topicTags = event.tags
-              .filter(tag => tag[0] === 't' && tag[1] !== versionTag)
-              .map(tag => tag[1])
+              .filter((tag) => tag[0] === "t" && tag[1] !== versionTag)
+              .map((tag) => tag[1]);
 
             return (
-              <div 
-                key={event.id} 
+              <div
+                key={event.id}
                 className="border rounded-lg p-6 space-y-4 hover:bg-muted/50 transition-colors"
               >
                 {/* Entry Header */}
@@ -96,7 +104,7 @@ export function ChangelogTabContent({ article }: ChangelogTabContentProps) {
                 {/* Topic Tags */}
                 {topicTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-2">
-                    {topicTags.map(tag => (
+                    {topicTags.map((tag) => (
                       <Badge key={tag} variant="secondary" className="gap-1">
                         <Hash className="h-3 w-3" />
                         {tag}
@@ -105,10 +113,10 @@ export function ChangelogTabContent({ article }: ChangelogTabContentProps) {
                   </div>
                 )}
               </div>
-            )
+            );
           })}
         </div>
       </div>
     </ScrollArea>
-  )
+  );
 }

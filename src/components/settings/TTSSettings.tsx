@@ -442,7 +442,6 @@ export function TTSSettings() {
                                 value={apiKey || ''}
                                 onChange={(e) => {
                                     const newValue = e.target.value;
-                                    console.log('API Key changed:', newValue.length, 'chars');
                                     setApiKey(newValue);
                                     setTestResult(null);
                                 }}

@@ -73,8 +73,8 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
   const globalAgents = useGlobalAgents()
   
   // Debug logging for global agents
-  console.log(`[ProjectsSidebar] Global agents in sidebar:`, globalAgents)
-  console.log(`[ProjectsSidebar] Number of global agents: ${globalAgents.length}`)
+  logger.debug(`[ProjectsSidebar] Global agents in sidebar:`, globalAgents)
+  logger.debug(`[ProjectsSidebar] Number of global agents: ${globalAgents.length}`)
   
   // Filter and sort projects based on search
   const filteredProjectsWithStatus = useMemo(() => {

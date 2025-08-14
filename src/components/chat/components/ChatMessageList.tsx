@@ -1,29 +1,29 @@
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Button } from '@/components/ui/button'
-import { ArrowDown } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { MessageWithReplies } from '../MessageWithReplies'
-import { TaskCard } from '@/components/tasks/TaskCard'
-import { NDKTask } from '@/lib/ndk-events/NDKTask'
-import { EVENT_KINDS } from '@/lib/constants'
-import { useIsMobile } from '@/hooks/useMediaQuery'
-import { motion, AnimatePresence } from 'framer-motion'
-import type { NDKProject } from '@/lib/ndk-events/NDKProject'
-import type NDK from '@nostr-dev-kit/ndk-hooks'
-import type { Message } from '../hooks/useChatMessages'
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { ArrowDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { MessageWithReplies } from "../MessageWithReplies";
+import { TaskCard } from "@/components/tasks/TaskCard";
+import { NDKTask } from "@/lib/ndk-events/NDKTask";
+import { EVENT_KINDS } from "@/lib/constants";
+import { useIsMobile } from "@/hooks/useMediaQuery";
+import { motion, AnimatePresence } from "framer-motion";
+import type { NDKProject } from "@/lib/ndk-events/NDKProject";
+import type NDK from "@nostr-dev-kit/ndk-hooks";
+import type { Message } from "../hooks/useChatMessages";
 
 interface ChatMessageListProps {
-  messages: Message[]
-  project: NDKProject
-  ndk: NDK | undefined
-  scrollAreaRef: React.RefObject<HTMLDivElement>
-  showScrollToBottom: boolean
-  unreadCount: number
-  scrollToBottom: (smooth?: boolean) => void
-  onScroll: (e: React.UIEvent<HTMLDivElement>) => void
-  onTaskClick?: (taskId: string) => void
-  onReplyFocus: () => void
-  isNewThread: boolean
+  messages: Message[];
+  project: NDKProject;
+  ndk: NDK | undefined;
+  scrollAreaRef: React.RefObject<HTMLDivElement>;
+  showScrollToBottom: boolean;
+  unreadCount: number;
+  scrollToBottom: (smooth?: boolean) => void;
+  onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
+  onTaskClick?: (taskId: string) => void;
+  onReplyFocus: () => void;
+  isNewThread: boolean;
 }
 
 /**
@@ -41,9 +41,9 @@ export function ChatMessageList({
   onScroll,
   onTaskClick,
   onReplyFocus,
-  isNewThread
+  isNewThread,
 }: ChatMessageListProps) {
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobile();
 
   return (
     <div className="flex-1 overflow-hidden relative">
@@ -62,10 +62,7 @@ export function ChatMessageList({
               {messages.map((message) => {
                 // Check if this is a task event
                 if (message.event.kind === EVENT_KINDS.TASK) {
-                  const task = new NDKTask(
-                    ndk!,
-                    message.event.rawEvent(),
-                  )
+                  const task = new NDKTask(ndk!, message.event.rawEvent());
                   return (
                     <div
                       key={message.id}
@@ -77,12 +74,12 @@ export function ChatMessageList({
                         onClick={() => {
                           // Open the task as a conversation
                           if (onTaskClick) {
-                            onTaskClick(task.id)
+                            onTaskClick(task.id);
                           }
                         }}
                       />
                     </div>
-                  )
+                  );
                 }
 
                 // All other events (1111, 21111, etc) go through MessageWithReplies
@@ -97,7 +94,7 @@ export function ChatMessageList({
                       onReply={onReplyFocus}
                     />
                   </div>
-                )
+                );
               })}
             </div>
           )}
@@ -136,5 +133,5 @@ export function ChatMessageList({
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }

@@ -1,5 +1,6 @@
 import { MurfVoice } from './murfTTS';
 import { logger } from '@/lib/logger';
+import { Storage } from '@/lib/utils/storage';
 
 interface CachedVoices {
     voices: MurfVoice[];
@@ -12,10 +13,9 @@ const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
 export class MurfVoicesCache {
     static get(): MurfVoice[] | null {
         try {
-            const cached = localStorage.getItem(CACHE_KEY);
-            if (!cached) return null;
+            const data = Storage.getItem<CachedVoices>(CACHE_KEY);
+            if (!data) return null;
 
-            const data: CachedVoices = JSON.parse(cached);
             const now = Date.now();
 
             // Check if cache is expired
@@ -37,7 +37,7 @@ export class MurfVoicesCache {
                 voices,
                 timestamp: Date.now()
             };
-            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            Storage.setItem(CACHE_KEY, data);
         } catch (error) {
             logger.error('Error saving Murf voices to cache:', error);
         }
@@ -45,7 +45,7 @@ export class MurfVoicesCache {
 
     static clear(): void {
         try {
-            localStorage.removeItem(CACHE_KEY);
+            Storage.removeItem(CACHE_KEY);
         } catch (error) {
             logger.error('Error clearing Murf voices cache:', error);
         }
@@ -53,10 +53,9 @@ export class MurfVoicesCache {
 
     static isExpired(): boolean {
         try {
-            const cached = localStorage.getItem(CACHE_KEY);
-            if (!cached) return true;
+            const data = Storage.getItem<CachedVoices>(CACHE_KEY);
+            if (!data) return true;
 
-            const data: CachedVoices = JSON.parse(cached);
             const now = Date.now();
 
             return now - data.timestamp > CACHE_DURATION;

@@ -84,11 +84,20 @@ describe('useAsyncAction', () => {
 
     expect(result.current.isLoading).toBe(false)
 
+    let executePromise: Promise<any>
+    act(() => {
+      executePromise = result.current.execute()
+    })
+
+    // Wait for state update to process
     await act(async () => {
-      const executePromise = result.current.execute()
-      // Check loading state immediately after starting
-      expect(result.current.isLoading).toBe(true)
-      await executePromise
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
+    
+    expect(result.current.isLoading).toBe(true)
+    
+    await act(async () => {
+      await executePromise!
     })
 
     expect(result.current.isLoading).toBe(false)

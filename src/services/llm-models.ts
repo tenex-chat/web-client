@@ -55,6 +55,13 @@ export async function fetchOpenRouterModels(): Promise<string[]> {
   }
 }
 
+/**
+ * Fetches available models for a given LLM provider
+ * @param provider - The LLM provider name (e.g., 'openai', 'anthropic', 'openrouter')
+ * @param apiKey - Optional API key for authenticated requests
+ * @returns Promise resolving to an array of available model names
+ * @throws Error if the fetch fails or provider is unsupported
+ */
 export async function fetchProviderModels(provider: string, apiKey?: string): Promise<string[]> {
   switch (provider) {
     case 'openrouter':

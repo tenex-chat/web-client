@@ -1,6 +1,7 @@
 import { useEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
+import { TIMING } from "@/lib/constants";
 import {
   ArrowLeft,
   Bot,
@@ -64,7 +65,7 @@ export function AgentDefinitionDetailPage() {
     try {
       await navigator.clipboard.writeText(agent.id);
       setCopiedId(true);
-      setTimeout(() => setCopiedId(false), 2000);
+      setTimeout(() => setCopiedId(false), TIMING.COPY_FEEDBACK_DURATION);
     } catch (error) {
       console.error("Failed to copy ID:", error);
     }

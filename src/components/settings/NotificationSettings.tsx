@@ -6,6 +6,7 @@ import { Bell, MessageSquare, Users, Zap, Calendar, Volume2 } from 'lucide-react
 import { useToast } from '@/hooks/use-toast';
 import { useAtom } from 'jotai';
 import { notificationSettingsAtom } from '@/stores/ui';
+import { logger } from '@/lib/logger';
 
 export function NotificationSettings() {
   const { toast } = useToast();
@@ -18,7 +19,7 @@ export function NotificationSettings() {
   const testNotification = () => {
     if (settings.soundEnabled) {
       const audio = new Audio('/notification.mp3');
-      audio.play().catch(console.error);
+      audio.play().catch((error) => logger.error('Failed to play notification sound', error));
     }
 
     toast({

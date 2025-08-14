@@ -9,6 +9,7 @@ import { formatRelativeTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
 import type { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { EVENT_KINDS } from '@/lib/constants'
+import { logger } from '@/lib/logger'
 
 interface TaskCardProps {
   task: NDKTask
@@ -69,7 +70,7 @@ export const TaskCard = memo(
       try {
         await abortEvent.publish()
       } catch (error) {
-        console.error('Failed to publish abort event:', error)
+        logger.error('Failed to publish abort event:', error)
       }
     }
 

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { NDKProject } from "../lib/ndk-events/NDKProject";
 import { NDKProjectStatus, type ProjectAgent, type ProjectModel, type ExecutionQueue } from "../lib/ndk-events/NDKProjectStatus";
-import type { NDKEvent, NDKSubscription } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKEvent, NDKSubscription } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 import { useAgentsStore } from "./agents";
 import { useProjectActivityStore } from "./projectActivity";
@@ -315,6 +315,10 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         },
         
         
+        /**
+         * Updates the status of a project based on an NDKEvent
+         * @param event - The NDKEvent containing project status information
+         */
         updateProjectStatus: (event: NDKEvent) => {
             if (!event.ndk) return;
 
@@ -475,7 +479,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             const { statusSubscription } = get();
             
             if (statusSubscription) {
-                console.log('[ProjectStore] Cleaning up status subscription');
+                logger.debug('[ProjectStore] Cleaning up status subscription');
                 statusSubscription.stop();
             }
             

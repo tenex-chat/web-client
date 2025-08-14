@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TIMING } from "@/lib/constants";
 import {
   Card,
   CardContent,
@@ -39,7 +40,7 @@ export function LoginForm() {
     checkNip07();
 
     // Check again after a short delay (some extensions load async)
-    const timer = setTimeout(checkNip07, 1000);
+    const timer = setTimeout(checkNip07, TIMING.NIP07_CHECK_DELAY);
 
     return () => clearTimeout(timer);
   }, []);

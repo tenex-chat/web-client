@@ -27,6 +27,9 @@ export const TIMING = {
   LATENCY_CHECK_TIMEOUT: 5000, // milliseconds for latency check timeout
   PROJECT_STATUS_FILTER_SECONDS: 600, // seconds for project status events filter
   DRAFT_CLEANUP_DURATION: 7 * 24 * 60 * 60 * 1000, // 7 days for draft cleanup
+  NIP07_CHECK_DELAY: 1000, // milliseconds to wait before checking for NIP-07 extension
+  COPY_FEEDBACK_DURATION: 2000, // milliseconds to show copy feedback
+  RESIZE_DEBOUNCE_DELAY: 300, // milliseconds to debounce resize events
 } as const
 
 // Upload limits

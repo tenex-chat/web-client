@@ -4,7 +4,7 @@ import {
   useNDKSessionSigners,
   useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
-import { EVENT_KINDS } from "../../lib/constants";
+import { EVENT_KINDS, TIMING } from "../../lib/constants";
 import { ArrowLeft, Bot, CheckCircle2, Copy, Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -128,7 +128,7 @@ export function AgentRequestsPage() {
     try {
       await navigator.clipboard.writeText(event.encode());
       setCopiedEvent(event.id);
-      setTimeout(() => setCopiedEvent(null), 2000);
+      setTimeout(() => setCopiedEvent(null), TIMING.COPY_FEEDBACK_DURATION);
     } catch {
       toast.error("Failed to copy event");
     }

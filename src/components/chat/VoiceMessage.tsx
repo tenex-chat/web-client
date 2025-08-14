@@ -4,6 +4,7 @@ import { Button } from "../ui/button";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { getAudioURL, getAudioDuration, getAudioWaveform } from "../../lib/utils/audioEvents";
 import { cn } from "../../lib/utils";
+import { logger } from "../../lib/logger";
 
 interface VoiceMessageProps {
     event: NDKEvent;
@@ -62,7 +63,7 @@ export function VoiceMessage({ event, isFromCurrentUser = false }: VoiceMessageP
             });
 
             audioRef.current.addEventListener("error", (e) => {
-                console.error("Audio playback error:", e);
+                logger.error("Audio playback error:", e);
                 setIsLoading(false);
                 setIsPlaying(false);
             });
@@ -77,7 +78,7 @@ export function VoiceMessage({ event, isFromCurrentUser = false }: VoiceMessageP
                 await audioRef.current.play();
                 setIsPlaying(true);
             } catch (error) {
-                console.error("Failed to play audio:", error);
+                logger.error("Failed to play audio:", error);
             } finally {
                 setIsLoading(false);
             }

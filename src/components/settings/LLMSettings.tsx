@@ -10,6 +10,7 @@ import { useAtom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { useToast } from '@/hooks/use-toast';
 import { fetchProviderModels, DEFAULT_MODELS } from '@/services/llm-models';
+import { logger } from '@/lib/logger';
 
 type LLMProvider = 'openai' | 'anthropic' | 'google' | 'openrouter' | 'groq' | 'ollama';
 
@@ -89,7 +90,7 @@ export function LLMSettings() {
           }
         })
         .catch(error => {
-          console.error('Failed to fetch models:', error);
+          logger.error('Failed to fetch models:', error);
           setAvailableModels([]);
         })
         .finally(() => {

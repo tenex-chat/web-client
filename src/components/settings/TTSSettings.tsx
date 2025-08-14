@@ -10,6 +10,7 @@ import { VoiceSelector } from "@/components/voice/VoiceSelector";
 import { MurfVoicesCache } from "@/services/murfVoicesCache";
 import type { MurfVoice } from "@/hooks/useMurfVoices";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 const LANGUAGES = [
     { code: "en-US", name: "English (US)" },
@@ -99,13 +100,13 @@ export function TTSSettings() {
                         }
                     }
                 } else {
-                    console.error("Unexpected voices data format:", data);
+                    logger.error("Unexpected voices data format:", data);
                 }
             } else {
-                console.error("Failed to fetch voices:", response.status, response.statusText);
+                logger.error("Failed to fetch voices:", response.status, response.statusText);
             }
         } catch (error) {
-            console.error("Error fetching voices:", error);
+            logger.error("Error fetching voices:", error);
         } finally {
             setIsLoadingVoices(false);
         }
@@ -189,7 +190,7 @@ export function TTSSettings() {
                 };
 
                 ws.onerror = (error) => {
-                    console.error("WebSocket error:", error);
+                    logger.error("WebSocket error:", error);
                     clearTimeout(timeout);
                     ws.close();
                     resolve(false);
@@ -198,13 +199,13 @@ export function TTSSettings() {
                 ws.onclose = (event) => {
                     // If closed with code 1006 or 1008, it's likely an auth error
                     if (event.code === 1006 || event.code === 1008) {
-                        console.error("WebSocket closed with auth error:", event.code, event.reason);
+                        logger.error("WebSocket closed with auth error:", event.code, event.reason);
                         resolve(false);
                     }
                 };
             });
         } catch (error) {
-            console.error("TTS configuration test failed:", error);
+            logger.error("TTS configuration test failed:", error);
             return false;
         }
     };
@@ -220,7 +221,7 @@ export function TTSSettings() {
             const result = await testTTSConfiguration();
             setTestResult(result);
         } catch (error) {
-            console.error("Test failed:", error);
+            logger.error("Test failed:", error);
             setTestResult(false);
         } finally {
             setIsTesting(false);
@@ -351,24 +352,24 @@ export function TTSSettings() {
                                     
                                     source.start(0);
                                 } catch (decodeError) {
-                                    console.error("Error decoding audio:", decodeError);
+                                    logger.error("Error decoding audio:", decodeError);
                                     toast.error("Failed to decode audio. The audio format may not be supported.");
                                     setIsPlayingAudio(false);
                                 }
                             } else {
-                                console.warn("No audio chunks received!");
+                                logger.warn("No audio chunks received!");
                                 toast.error("No audio data received from Murf API");
                                 setIsPlayingAudio(false);
                             }
                             ws.close();
                         } else if (data.error) {
-                            console.error("Murf API error:", data.error);
+                            logger.error("Murf API error:", data.error);
                             toast.error(`Murf API error: ${data.error}`);
                             setIsPlayingAudio(false);
                             ws.close();
                         }
                     } catch (e) {
-                        console.error("Error processing message:", e);
+                        logger.error("Error processing message:", e);
                     }
                 } else if (event.data instanceof Blob) {
                     // Handle blob data if needed
@@ -378,14 +379,14 @@ export function TTSSettings() {
             };
 
             ws.onerror = (error) => {
-                console.error("WebSocket error:", error);
+                logger.error("WebSocket error:", error);
                 toast.error("Failed to connect to Murf API. Please check your API key.");
                 setIsPlayingAudio(false);
             };
 
             ws.onclose = (event) => {
                 if (event.code !== 1000 && event.code !== 1005) {
-                    console.error("WebSocket closed unexpectedly:", event.code, event.reason);
+                    logger.error("WebSocket closed unexpectedly:", event.code, event.reason);
                     if (event.code === 1006 || event.code === 1008) {
                         toast.error("Authentication failed. Please check your API key.");
                     }
@@ -393,7 +394,7 @@ export function TTSSettings() {
                 }
             };
         } catch (error) {
-            console.error("Failed to play test audio:", error);
+            logger.error("Failed to play test audio:", error);
             toast.error("Failed to play test audio. Please check the console for details.");
             setIsPlayingAudio(false);
         }

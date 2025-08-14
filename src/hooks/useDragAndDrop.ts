@@ -26,6 +26,17 @@ export interface UseDragAndDropReturn {
   }
 }
 
+/**
+ * Custom hook for handling drag-and-drop and paste file operations
+ * @param options - Configuration options for drag-and-drop behavior
+ * @param options.onDrop - Callback when files are dropped
+ * @param options.onPaste - Callback when files are pasted
+ * @param options.accept - Array of accepted MIME types (default: ['image/*'])
+ * @param options.multiple - Whether to accept multiple files (default: true)
+ * @param options.maxSize - Maximum file size in bytes (default: 100MB)
+ * @param options.disabled - Whether drag-and-drop is disabled (default: false)
+ * @returns Object containing isDragging state and event handler props
+ */
 export function useDragAndDrop(options: UseDragAndDropOptions = {}): UseDragAndDropReturn {
   const {
     onDrop,

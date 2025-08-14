@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { TIMING } from '@/lib/constants'
 
 export function useKeyboardHeight() {
   const [keyboardHeight, setKeyboardHeight] = useState(0)
@@ -54,7 +55,7 @@ export function useKeyboardHeight() {
         if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
           // Store initial height when focusing an input
           initialHeight = window.innerHeight
-          setTimeout(handleResize, 300) // iOS keyboard animation delay
+          setTimeout(handleResize, TIMING.RESIZE_DEBOUNCE_DELAY) // iOS keyboard animation delay
         }
       }
 

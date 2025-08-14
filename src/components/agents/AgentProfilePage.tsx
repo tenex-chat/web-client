@@ -7,7 +7,7 @@ import {
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Bot, BookOpen, Copy, CheckCircle2 } from "lucide-react";
-import { EVENT_KINDS } from "../../lib/constants";
+import { EVENT_KINDS, TIMING } from "../../lib/constants";
 import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
 import { NDKAgentLesson } from "../../lib/ndk-events/NDKAgentLesson";
 import { Button } from "../ui/button";
@@ -95,7 +95,7 @@ export function AgentProfilePage() {
     try {
       await navigator.clipboard.writeText(pubkey);
       setCopiedPubkey(true);
-      setTimeout(() => setCopiedPubkey(false), 2000);
+      setTimeout(() => setCopiedPubkey(false), TIMING.COPY_FEEDBACK_DURATION);
     } catch (error) {
       console.error("Failed to copy pubkey:", error);
     }

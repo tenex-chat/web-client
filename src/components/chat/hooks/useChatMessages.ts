@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
+import { NDKEvent } from '@nostr-dev-kit/ndk'
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { processEventsToMessages } from '../utils/messageProcessor'

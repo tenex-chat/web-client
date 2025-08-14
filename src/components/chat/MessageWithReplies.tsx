@@ -14,12 +14,6 @@ import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from '@/components/ui/select'
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,

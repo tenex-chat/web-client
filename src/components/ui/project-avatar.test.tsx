@@ -2,11 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ProjectAvatar } from './project-avatar'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import type NDK from '@nostr-dev-kit/ndk-hooks'
 
 describe('ProjectAvatar', () => {
-  const createMockProject = (overrides = {}) => {
-    const project = new NDKProject()
+  const createMockProject = (overrides: any = {}) => {
+    const project = new NDKProject(undefined)
     project.tags = overrides.tags || [['d', 'test-dtag']]
     
     // Set title using the setter which adds the proper tag

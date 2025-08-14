@@ -10,7 +10,7 @@ interface UseAutoResizeTextareaProps {
  * Hook to automatically resize a textarea based on its content
  * Returns a ref to be attached to the textarea element
  */
-function useAutoResizeTextarea({
+export function useAutoResizeTextarea({
   value,
   maxHeight = 200,
   minHeight = 60,

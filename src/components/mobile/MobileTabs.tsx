@@ -28,7 +28,6 @@ interface MobileTabsProps {
   mobileView: 'tabs' | 'chat'
   setMobileView: (view: 'tabs' | 'chat') => void
   selectedThreadEvent: NDKEvent | undefined
-  setSelectedThreadEvent: (event: NDKEvent | undefined) => void
   handleThreadSelect: (threadId: string) => Promise<void>
   handleStartProject?: () => void
 }
@@ -46,7 +45,6 @@ export function MobileTabs({
   navigate,
   setMobileView,
   selectedThreadEvent,
-  setSelectedThreadEvent,
   handleThreadSelect,
   handleStartProject
 }: MobileTabsProps) {

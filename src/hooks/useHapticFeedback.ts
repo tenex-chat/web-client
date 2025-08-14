@@ -7,7 +7,7 @@ interface HapticOptions {
   intensity?: number
 }
 
-function useHapticFeedback() {
+export function useHapticFeedback() {
   const isSupported = useCallback(() => {
     return 'vibrate' in navigator
   }, [])

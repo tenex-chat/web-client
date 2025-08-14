@@ -202,7 +202,6 @@ function ProjectDetailPage() {
               mobileView={mobileView}
               setMobileView={setMobileView}
               selectedThreadEvent={selectedThreadEvent}
-              setSelectedThreadEvent={setSelectedThreadEvent}
               handleThreadSelect={handleThreadSelect}
               handleStartProject={handleStartProject}
             />

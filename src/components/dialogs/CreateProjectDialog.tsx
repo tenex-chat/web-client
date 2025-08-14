@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useNDK } from '@nostr-dev-kit/ndk-hooks'
+import { NDKKind } from '@nostr-dev-kit/ndk'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -73,7 +74,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       setIsLoadingAgents(true)
       try {
         const events = await ndk.fetchEvents({
-          kinds: [EVENT_KINDS.AGENT_CONFIG],
+          kinds: [EVENT_KINDS.AGENT_CONFIG as NDKKind],
           limit: 100,
         })
 
@@ -140,7 +141,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       setIsLoadingTools(true)
       try {
         const events = await ndk.fetchEvents({
-          kinds: [EVENT_KINDS.MCP_TOOL],
+          kinds: [EVENT_KINDS.MCP_TOOL as NDKKind],
           limit: 100,
         })
 

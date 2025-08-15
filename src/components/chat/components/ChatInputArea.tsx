@@ -107,16 +107,15 @@ export function ChatInputArea({
 
   return (
     <div
-      className={cn("flex-shrink-0 relative", isMobile ? "p-3 pb-safe" : "p-4")}
+      className={cn("flex-shrink-0 absolute bottom-0 left-0 right-0", isMobile ? "p-3 pb-safe" : "p-4")}
       onPaste={handlePasteEvent}
     >
       <div
         className={cn(
-          "relative rounded-2xl",
+          "flex flex-col w-full rounded-2xl",
           "bg-background/80 backdrop-blur-xl",
           "border border-border/50",
           "shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)]",
-          isMobile ? "" : "max-w-4xl mx-auto",
         )}
       >
         {/* Enhanced pending images display with animation */}
@@ -208,7 +207,7 @@ export function ChatInputArea({
 
         <div
           className={cn(
-            "flex items-end",
+            "flex items-end w-full",
             isMobile ? "gap-1.5 p-2" : "gap-2 p-3",
           )}
         >

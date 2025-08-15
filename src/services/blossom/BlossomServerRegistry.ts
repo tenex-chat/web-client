@@ -53,46 +53,6 @@ export class BlossomServerRegistry {
         supportedFeatures: ['resize', 'thumbnail'],
       },
     },
-    {
-      url: 'https://files.satellite.earth',
-      name: 'Satellite Files',
-      priority: 2,
-      metrics: {
-        url: 'https://files.satellite.earth',
-        lastChecked: 0,
-        isAvailable: true,
-        averageLatency: 0,
-        successRate: 1,
-        totalUploads: 0,
-        failedUploads: 0,
-      },
-      capabilities: {
-        maxFileSize: 20 * 1024 * 1024, // 20MB
-        supportedMimeTypes: ['image/*', 'video/*', 'audio/*'],
-        requiresAuth: true,
-        supportedFeatures: ['resize', 'thumbnail', 'transcode'],
-      },
-    },
-    {
-      url: 'https://blossom.oxtr.dev',
-      name: 'Oxtr Blossom',
-      priority: 3,
-      metrics: {
-        url: 'https://blossom.oxtr.dev',
-        lastChecked: 0,
-        isAvailable: true,
-        averageLatency: 0,
-        successRate: 1,
-        totalUploads: 0,
-        failedUploads: 0,
-      },
-      capabilities: {
-        maxFileSize: 50 * 1024 * 1024, // 50MB
-        supportedMimeTypes: ['*/*'],
-        requiresAuth: true,
-        supportedFeatures: ['resize', 'thumbnail'],
-      },
-    },
   ]
 
   private constructor() {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { Plus, Settings, LogOut, Search, Bot, Wrench, Home, User, Sun, Moon, Monitor } from 'lucide-react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { Plus, Settings, LogOut, Search, Bot, Wrench, Home, User, Sun, Moon, Monitor, Check } from 'lucide-react'
+import { useAtom } from 'jotai'
 import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
@@ -45,6 +46,7 @@ import {
 } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useNDKCurrentPubkey, useProfileValue, useNDKSessionLogout, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
+import { openProjectsAtom, toggleProjectAtom } from '@/stores/openProjects'
 
 interface CollapsibleProjectsSidebarProps {
   className?: string
@@ -94,10 +96,11 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
   const userProfile = useProfileValue(currentPubkey);
   const ndkLogout = useNDKSessionLogout();
   const navigate = useNavigate();
-  const location = useLocation()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
   const { theme, setTheme } = useTheme()
+  const [openProjects] = useAtom(openProjectsAtom)
+  const [, toggleProject] = useAtom(toggleProjectAtom)
   
   // Add keyboard shortcut for global search
   useGlobalSearchShortcut(() => setSearchDialogOpen(true))
@@ -182,19 +185,24 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                       ) : (
                         sortedProjects.map(({ project, status }) => {
                           const projectIdentifier = project.dTag || project.encode()
+                          const isOpen = openProjects.some(p => (p.dTag || p.encode()) === projectIdentifier)
                           return (
                             <SidebarMenuItem key={projectIdentifier}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <SidebarMenuButton
-                                    asChild
-                                    isActive={location.pathname.includes(projectIdentifier)}
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      toggleProject(project)
+                                      if (!isOpen && openProjects.length === 0) {
+                                        // If no projects open, navigate to the multi-project view
+                                        navigate({ to: '/projects' })
+                                      }
+                                      onProjectSelect?.()
+                                    }}
+                                    isActive={isOpen}
+                                    className={isOpen ? 'bg-accent' : ''}
                                   >
-                                    <Link 
-                                      to="/projects/$projectId" 
-                                      params={{ projectId: projectIdentifier }}
-                                      onClick={onProjectSelect}
-                                    >
                                     <div className="relative">
                                       <ProjectAvatar 
                                         project={project}
@@ -205,14 +213,17 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                                         <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 border border-background group-data-[collapsible=icon]:h-2.5 group-data-[collapsible=icon]:w-2.5" />
                                       )}
                                     </div>
-                                    <span className="group-data-[collapsible=icon]:hidden truncate">
+                                    <span className="group-data-[collapsible=icon]:hidden truncate flex-1 text-left">
                                       {project.title}
                                     </span>
-                                  </Link>
-                                </SidebarMenuButton>
+                                    {isOpen && (
+                                      <Check className="h-3.5 w-3.5 ml-auto group-data-[collapsible=icon]:hidden text-primary" />
+                                    )}
+                                  </SidebarMenuButton>
                                 </TooltipTrigger>
                                 <TooltipContent side="right" className="group-data-[collapsible=icon]:flex hidden">
                                   {project.title}
+                                  {isOpen && ' (Open)'}
                                 </TooltipContent>
                               </Tooltip>
                             </SidebarMenuItem>

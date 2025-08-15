@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { NDKArticle } from "@nostr-dev-kit/ndk";
+import { NDKArticle, NDKKind } from "@nostr-dev-kit/ndk";
 import { EVENT_KINDS } from "@/lib/constants";
 import { formatRelativeTime } from "@/lib/utils/time";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ export function ChangelogTabContent({ article }: ChangelogTabContentProps) {
     article
       ? [
           {
-            kinds: [EVENT_KINDS.THREAD_REPLY], // kind:1111
+            kinds: [NDKKind.GenericReply],
             "#A": [article.tagId()], // Uppercase #A tag referencing the article
           },
         ]

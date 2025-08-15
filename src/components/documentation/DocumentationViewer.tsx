@@ -36,15 +36,9 @@ export function DocumentationViewer({ article, onBack, projectTitle, project }: 
     return `${minutes} min read`
   }, [article.content])
   
-  const handleThreadCreated = useCallback(async (threadId: string) => {
-    // Fetch the newly created thread and set it as the rootEvent
-    if (ndk) {
-      const thread = await ndk.fetchEvent(threadId)
-      if (thread) {
-        setChatThread(thread)
-      }
-    }
-  }, [ndk])
+  const handleThreadCreated = useCallback(async (thread: NDKEvent) => {
+      setChatThread(thread)
+  }, [])
 
   const handleCopyLink = async () => {
     try {

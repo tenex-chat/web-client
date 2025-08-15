@@ -28,7 +28,7 @@ export interface ExecutionQueue {
 }
 
 export class NDKProjectStatus extends NDKEvent {
-  static kind: NDKKind = EVENT_KINDS.PROJECT_STATUS as NDKKind
+  static kind: NDKKind = 24010 as NDKKind
 
   constructor(ndk?: NDK, rawEvent?: NostrEvent | NDKEvent) {
     super(ndk, rawEvent)

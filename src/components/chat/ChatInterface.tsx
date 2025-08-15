@@ -14,6 +14,7 @@ import { ImageUploadQueue } from "@/components/upload/ImageUploadQueue";
 import { ChatDropZone } from "./ChatDropZone";
 import { motion, AnimatePresence } from "framer-motion";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
+import type { NDKTask } from "@/lib/ndk-events/NDKTask";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 
 // Import new hooks and components
@@ -35,8 +36,8 @@ interface ChatInterfaceProps {
   extraTags?: string[][];
   className?: string;
   onBack?: () => void;
-  onTaskClick?: (taskId: string) => void;
-  onThreadCreated?: (threadId: string) => void;
+  onTaskClick?: (task: NDKTask) => void;
+  onThreadCreated?: (thread: NDKEvent) => void;
 }
 
 type AgentInstance = AgentMention;
@@ -148,7 +149,7 @@ export function ChatInterface({
 
     try {
       const content = inputProps.buildMessageContent();
-      const mentions = inputProps.mentionProps.extractMentions();
+      const mentions = inputProps.mentionProps.extractMentions(content);
       const completedUploads = inputProps.getCompletedUploads();
 
       const imageUploads = completedUploads.map((upload) => ({
@@ -194,7 +195,7 @@ export function ChatInterface({
       className={cn("flex flex-col h-full overflow-hidden", className)}
     >
       <div
-        className="flex flex-col h-full"
+        className="flex flex-col h-full items-stretch"
         style={{
           paddingBottom: isKeyboardVisible ? keyboardHeight : 0,
           transition: "padding-bottom 0.3s ease-in-out",

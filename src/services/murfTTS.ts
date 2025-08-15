@@ -70,6 +70,7 @@ export class MurfTTSService {
                     text: text,
                     end: true
                 };
+                logger.debug('Sending TTS request:', { voiceId: this.config.voiceId, textLength: text.length });
                 ws.send(JSON.stringify(message));
             };
 
@@ -80,11 +81,31 @@ export class MurfTTSService {
                         
                         if (data.audio) {
                             const base64Clean = data.audio.replace(/^data:audio\/\w+;base64,/, '');
+                            
+                            // Check for invalid/empty audio data (all zeros)
+                            if (base64Clean.match(/^A+$/)) {
+                                logger.error('Received invalid audio data (all zeros) from Murf API');
+                                reject(new Error('Invalid audio data received from TTS service'));
+                                ws.close();
+                                return;
+                            }
+                            
                             const binaryString = atob(base64Clean);
                             const len = binaryString.length;
                             const bytes = new Uint8Array(len);
+                            let hasValidData = false;
+                            
                             for (let i = 0; i < len; i++) {
                                 bytes[i] = binaryString.charCodeAt(i);
+                                if (bytes[i] !== 0) hasValidData = true;
+                            }
+                            
+                            // Additional check for valid audio data
+                            if (!hasValidData) {
+                                logger.error('Audio data contains only null bytes');
+                                reject(new Error('Invalid audio data: contains only null bytes'));
+                                ws.close();
+                                return;
                             }
                             
                             // Skip WAV header (first 44 bytes) from the first chunk
@@ -92,7 +113,7 @@ export class MurfTTSService {
                                 const audioWithoutHeader = bytes.buffer.slice(44);
                                 audioChunks.push(audioWithoutHeader);
                                 isFirstChunk = false;
-                            } else {
+                            } else if (bytes.length > 0) {
                                 audioChunks.push(bytes.buffer);
                             }
                         }
@@ -143,6 +164,7 @@ export class MurfTTSService {
                         }
                         
                         if (data.error) {
+                            logger.error('TTS API error:', data.error);
                             reject(new Error(data.error));
                             ws.close();
                         }

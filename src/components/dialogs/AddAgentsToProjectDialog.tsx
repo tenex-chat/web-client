@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { useNDK } from '@nostr-dev-kit/ndk-hooks';
+import { useState, useMemo } from 'react';
+import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks';
 import { toast } from 'sonner';
+import { type NDKKind } from '@nostr-dev-kit/ndk';
 import {
   Dialog,
   DialogContent,
@@ -10,10 +11,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Bot } from 'lucide-react';
 import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition';
 import { NDKProject } from '@/lib/ndk-events/NDKProject';
-import { AgentSelector } from '@/components/agents/AgentSelector';
+import { AgentDefinitionCard } from '@/components/agents/AgentDefinitionCard';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { SearchBar } from '@/components/common/SearchBar';
+import { EmptyState } from '@/components/common/EmptyState';
+import { cn } from '@/lib/utils';
 
 interface AddAgentsToProjectDialogProps {
   open: boolean;
@@ -29,28 +34,95 @@ export function AddAgentsToProjectDialog({
   existingAgentIds = []
 }: AddAgentsToProjectDialogProps) {
   const { ndk } = useNDK();
-  const [selectedAgents, setSelectedAgents] = useState<NDKAgentDefinition[]>([]);
+  const [selectedAgentIds, setSelectedAgentIds] = useState<Set<string>>(new Set());
   const [isAdding, setIsAdding] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Fetch all agents (kind 4199)
+  const { events: rawAgents } = useSubscribe(
+    [{ kinds: [NDKAgentDefinition.kind as NDKKind] }],
+    {},
+    [],
+  );
+
+  // Convert raw events to NDKAgentDefinition instances and filter to latest versions only
+  const agents = useMemo(() => {
+    const allAgents = (rawAgents || []).map(
+      (event) => new NDKAgentDefinition(ndk || undefined, event.rawEvent()),
+    );
+
+    // Group agents by slug/d-tag/name to show only latest version
+    const agentGroups = new Map<string, NDKAgentDefinition[]>();
+
+    allAgents.forEach((agent) => {
+      const identifier = agent.slug || agent.dTag || agent.name || agent.id;
+      const groupKey = identifier;
+
+      if (!agentGroups.has(groupKey)) {
+        agentGroups.set(groupKey, []);
+      }
+      agentGroups.get(groupKey)!.push(agent);
+    });
+
+    // For each group, keep only the latest version
+    const latestAgents: NDKAgentDefinition[] = [];
+
+    agentGroups.forEach((groupAgents) => {
+      if (groupAgents.length === 1) {
+        latestAgents.push(groupAgents[0]);
+      } else {
+        // Sort by created_at timestamp (newest first) and version number
+        const sorted = groupAgents.sort((a, b) => {
+          const timeA = a.created_at || 0;
+          const timeB = b.created_at || 0;
+          if (timeA !== timeB) {
+            return timeB - timeA;
+          }
+          const versionA = parseInt(a.version || "0");
+          const versionB = parseInt(b.version || "0");
+          return versionB - versionA;
+        });
+        latestAgents.push(sorted[0]);
+      }
+    });
+
+    // Filter out agents that are already in the project
+    return latestAgents.filter(agent => !existingAgentIds.includes(agent.id || ''));
+  }, [rawAgents, ndk, existingAgentIds]);
+
+  // Filter agents based on search query
+  const filteredAgents = useMemo(() => {
+    if (!searchQuery) return agents;
+    
+    const query = searchQuery.toLowerCase();
+    return agents.filter(
+      (agent) =>
+        agent.name?.toLowerCase().includes(query) ||
+        agent.description?.toLowerCase().includes(query) ||
+        agent.role?.toLowerCase().includes(query),
+    );
+  }, [agents, searchQuery]);
 
   const handleAddAgents = async () => {
-    if (!ndk || selectedAgents.length === 0) return;
+    if (!ndk || selectedAgentIds.size === 0) return;
 
     setIsAdding(true);
     try {
       // Add each selected agent to the project
-      selectedAgents.forEach(agent => {
-        if (agent.id && !existingAgentIds.includes(agent.id)) {
-          project.addAgent(agent.id);
+      selectedAgentIds.forEach(agentId => {
+        if (!existingAgentIds.includes(agentId)) {
+          project.addAgent(agentId);
         }
       });
 
       // Publish the updated project event
-      await project.publish();
+      await project.publishReplaceable();
       
-      toast.success(`Added ${selectedAgents.length} agent${selectedAgents.length > 1 ? 's' : ''} to the project`);
+      toast.success(`Added ${selectedAgentIds.size} agent${selectedAgentIds.size > 1 ? 's' : ''} to the project`);
       
       // Reset and close
-      setSelectedAgents([]);
+      setSelectedAgentIds(new Set());
+      setSearchQuery('');
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to add agents to project:', error);
@@ -60,10 +132,31 @@ export function AddAgentsToProjectDialog({
     }
   };
 
+  const toggleAgentSelection = (agentId: string) => {
+    const newSelection = new Set(selectedAgentIds);
+    if (newSelection.has(agentId)) {
+      newSelection.delete(agentId);
+    } else {
+      newSelection.add(agentId);
+    }
+    setSelectedAgentIds(newSelection);
+  };
+
+  const getRoleColor = (role: string) => {
+    const roleColors: Record<string, string> = {
+      assistant: "bg-blue-500/10 text-blue-500",
+      developer: "bg-green-500/10 text-green-500",
+      researcher: "bg-purple-500/10 text-purple-500",
+      designer: "bg-pink-500/10 text-pink-500",
+      analyst: "bg-orange-500/10 text-orange-500",
+    };
+    return roleColors[role] || "bg-gray-500/10 text-gray-500";
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>Add Agents to Project</DialogTitle>
           <DialogDescription>
             Select agents to add to {project.title || 'this project'}. 
@@ -71,28 +164,91 @@ export function AddAgentsToProjectDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-hidden">
-          <AgentSelector
-            selectedAgents={selectedAgents}
-            onAgentsChange={setSelectedAgents}
-            filterType="agent"
+        {/* Search Bar */}
+        <div className="px-6 pb-4">
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search agents by name, description, or role..."
           />
         </div>
+        
+        {/* Agent Grid with proper scrolling */}
+        <ScrollArea className="flex-1 px-6">
+          <div className="pb-6">
+            {filteredAgents.length === 0 ? (
+              <EmptyState
+                icon={<Bot className="w-12 h-12" />}
+                title={
+                  searchQuery
+                    ? "No agents found"
+                    : "No available agents"
+                }
+                description={
+                  searchQuery
+                    ? "Try adjusting your search query"
+                    : existingAgentIds.length > 0
+                      ? "All available agents are already added to this project"
+                      : "No agent definitions available"
+                }
+              />
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredAgents.map((agent) => (
+                  <div
+                    key={agent.id}
+                    className={cn(
+                      "relative rounded-lg transition-all",
+                      selectedAgentIds.has(agent.id || '') && "ring-2 ring-primary"
+                    )}
+                  >
+                    <AgentDefinitionCard
+                      agent={agent}
+                      onClick={() => toggleAgentSelection(agent.id || '')}
+                      getRoleColor={getRoleColor}
+                    />
+                    {selectedAgentIds.has(agent.id || '') && (
+                      <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                        <svg
+                          className="w-4 h-4 text-primary-foreground"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 py-4 border-t">
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              setSelectedAgentIds(new Set());
+              setSearchQuery('');
+              onOpenChange(false);
+            }}
             disabled={isAdding}
           >
             Cancel
           </Button>
           <Button
             onClick={handleAddAgents}
-            disabled={isAdding || selectedAgents.length === 0}
+            disabled={isAdding || selectedAgentIds.size === 0}
           >
             {isAdding && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Add {selectedAgents.length > 0 ? `${selectedAgents.length} ` : ''}Agent{selectedAgents.length !== 1 ? 's' : ''}
+            Add {selectedAgentIds.size > 0 ? `${selectedAgentIds.size} ` : ''}Agent{selectedAgentIds.size !== 1 ? 's' : ''}
           </Button>
         </DialogFooter>
       </DialogContent>

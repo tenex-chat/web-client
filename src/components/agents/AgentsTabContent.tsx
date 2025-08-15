@@ -4,7 +4,6 @@ import { type NDKKind } from "@nostr-dev-kit/ndk";
 import { Bot, Plus, Settings, Volume2 } from "lucide-react";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
-import { EVENT_KINDS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +15,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/EmptyState";
-import { LoadingState } from "@/components/common/LoadingSpinner";
 import { getAgentVoiceConfig } from "@/lib/voice-config";
 import { useTTSConfig } from "@/stores/llmConfig";
 import { useNavigate } from "@tanstack/react-router";
@@ -176,7 +174,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
     agentPubkeys.length > 0
       ? [
           {
-            kinds: [EVENT_KINDS.AGENT_CONFIG as NDKKind],
+            kinds: [NDKAgentDefinition.kind as NDKKind],
             authors: agentPubkeys,
           },
         ]
@@ -221,7 +219,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
       agentMap.set(agent.pubkey, {
         pubkey: agent.pubkey,
         name: agent.name,
-        status: agent.status || "online",
+        status: "online", // Agents in status events are online by definition
         lastSeen: agent.lastSeen,
         fromStatus: true,
       });

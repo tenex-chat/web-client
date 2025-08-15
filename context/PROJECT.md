@@ -14,8 +14,9 @@ The following features and goals have been **explicitly confirmed by user reques
 - **Chat & Conversations:**
   - Real-time chat with conversations displayed as a list of threads.
   - Each thread displays a visual indicator for the current phase—requires a **small, subtle 5x5px colored circle** matching the phase color in the conversation view (not text), as a reusable component. Tooltip shows the phase name on hover. No unnecessary headers or list counts.
+  - **Thread Tag Display:** The ThreadItem component in the project column displays "t" tags from kind:11 thread events as small hashtag badges (e.g., "#feature", "#bug") positioned below the thread title. These tags provide quick visual categorization and topic identification for each thread discussion.
   - **Message Rendering with Bech32 Support:** When rendering messages, any bare bech32 string (like `npub1...`, `nevent1...`, etc.) is automatically treated as if it had the `nostr:` prefix and rendered as an interactive nostr entity card. This allows seamless recognition of nostr identifiers without requiring explicit prefixing.
-  - **Agent Mentions in Chat:** When mentioning agents in chat input using `@agent-name` format, the system automatically replaces the mention with the agent's full `nostr:npub...` identifier when the message is sent. This ensures proper nostr protocol integration and enables agent notifications.
+  - **Agent Mentions in Chat:** When mentioning agents in chat input using `@agent-name` format, the system preserves the `@agent-name` format in the message display (it does NOT replace mentions with `nostr:npub...` identifiers). However, the system must ensure proper p-tagging of the mentioned agent in the underlying Nostr event for notification delivery.
 - **Project and Task Management:**
   - Projects/tasks can be created and tracked.
   - Project data is updated live using Nostr-powered real-time subscriptions. The system uses a hook-based approach to manage these subscriptions, starting from components.
@@ -54,6 +55,7 @@ The following details are **inferred** from file structure/code, and should NOT 
 ## 4. Evolution and Issues
 
 - **Nostr Event Publishing:** Noted issue when using complete()—possible event propagation problem requires further engineering investigation.
+- **Agent Mention P-Tagging:** There is a known regression where agent mentions (`@agent-name`) are no longer creating proper p-tags in the underlying Nostr event, which affects agent notification delivery. This was working before a recent chat interface refactor.
 - This document is updated as new, explicit information becomes available or user requirements evolve.
 
 ---

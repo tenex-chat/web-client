@@ -1,0 +1,149 @@
+import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
+import { useState, useEffect } from 'react'
+import { MessageSquare, ChevronRight, Users } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { PhaseIndicator } from '@/components/ui/phase-indicator'
+import { cn } from '@/lib/utils'
+import { formatRelativeTime } from '@/lib/utils/time'
+import { NDKEvent } from '@nostr-dev-kit/ndk'
+
+interface ThreadItemProps {
+  thread: NDKEvent
+  isSelected: boolean
+  onSelect: () => void
+}
+
+export function ThreadItem({ thread, isSelected, onSelect }: ThreadItemProps) {
+  const [replyCount, setReplyCount] = useState(0)
+  const [lastReplyAt, setLastReplyAt] = useState<number | undefined>()
+  const [lastMessage, setLastMessage] = useState<string | undefined>()
+  const [participants, setParticipants] = useState<Set<string>>(new Set([thread.pubkey]))
+  const [currentPhase, setCurrentPhase] = useState<string | undefined>()
+
+  // Extract title from thread
+  const titleTag = thread.tags.find(t => t[0] === 'title')
+  const title = titleTag ? titleTag[1] : thread.content.split('\n')[0].slice(0, 50)
+  
+  // Extract t tags (hashtags/topics)
+  const tTags = thread.tags.filter(t => t[0] === 't').map(t => t[1])
+
+  // Subscribe to replies for this specific thread
+  const { events: replies } = useSubscribe(
+    [{ '#E': [thread.id], }],
+    {
+      closeOnEose: false,
+      groupable: true,
+    },
+    [thread.id]
+  )
+
+  // Process replies and extract phase information
+  useEffect(() => {
+    if (!replies || replies.length === 0) return
+
+    const uniqueParticipants = new Set([thread.pubkey])
+    let latestReplyTime = 0
+    let latestReplyContent = ''
+    let latestPhaseTime = 0
+    let latestPhase = ''
+
+    replies.forEach(reply => {
+      uniqueParticipants.add(reply.pubkey)
+      
+      const replyTime = reply.created_at || 0
+      if (replyTime > latestReplyTime) {
+        latestReplyTime = replyTime
+        latestReplyContent = reply.content
+      }
+
+      // Check for phase tags in this reply
+      const phaseTag = reply.tags.find(t => t[0] === 'phase')
+      if (phaseTag && phaseTag[1] && replyTime > latestPhaseTime) {
+        latestPhaseTime = replyTime
+        latestPhase = phaseTag[1]
+      }
+    })
+
+    setReplyCount(replies.length)
+    setParticipants(uniqueParticipants)
+    if (latestReplyTime > 0) {
+      setLastReplyAt(latestReplyTime)
+      setLastMessage(latestReplyContent)
+    }
+    if (latestPhase) {
+      setCurrentPhase(latestPhase)
+    }
+  }, [replies, thread.pubkey])
+
+  const lastActivityTime = lastReplyAt || thread.created_at || 0
+
+  return (
+    <button
+      onClick={onSelect}
+      className={cn(
+        'w-full text-left p-3 hover:bg-accent/50 transition-colors border-b',
+        isSelected && 'bg-accent'
+      )}
+    >
+      <div className="flex items-start gap-2.5">
+        {/* Phase Indicator */}
+        <div className="shrink-0 pt-2">
+          <PhaseIndicator phase={currentPhase} className="w-2 h-2" />
+        </div>
+
+        {/* Thread Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-sm font-normal truncate">
+              {title}
+            </h3>
+            <span className="text-xs text-muted-foreground shrink-0">
+              {formatRelativeTime(lastActivityTime)}
+            </span>
+          </div>
+
+          {/* T-tags display */}
+          {tTags.length > 0 && (
+            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+              {tTags.map((tag, index) => (
+                <Badge 
+                  key={index} 
+                  variant="outline" 
+                  className="text-xs px-1.5 py-0 h-4"
+                >
+                  #{tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          <p className="text-sm text-muted-foreground truncate mt-1">
+            {lastMessage || thread.content}
+          </p>
+
+          {/* Thread Meta */}
+          <div className="flex items-center gap-2 mt-1">
+            {replyCount > 0 && (
+              <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                <MessageSquare className="h-3 w-3 mr-1" />
+                {replyCount}
+              </Badge>
+            )}
+            
+            {participants.size > 1 && (
+              <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                <Users className="h-3 w-3 mr-1" />
+                {participants.size}
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Selection Indicator */}
+        {isSelected && (
+          <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-1" />
+        )}
+      </div>
+    </button>
+  )
+}

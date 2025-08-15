@@ -10,6 +10,10 @@ export const STORAGE_KEYS = {
   // Voice configuration
   VOICE_CONFIG_PREFIX: 'agent-voice-',
   
+  // Speech-to-text settings
+  STT_SETTINGS: 'stt-settings',
+  OPENROUTER_STT_MODEL: 'openrouter-stt-model',
+  
   // Appearance settings  
   APPEARANCE_SETTINGS: 'appearance-settings',
   COLOR_SCHEME: 'color-scheme',

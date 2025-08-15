@@ -12,8 +12,8 @@ import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { TasksTabContent } from '@/components/tasks/TasksTabContent'
 import { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { EVENT_KINDS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { bringProjectOnline } from '@/lib/utils/projectStatusUtils'
 import { DocumentationList } from '@/components/documentation/DocumentationList'
 import { DocumentationViewer } from '@/components/documentation/DocumentationViewer'
 import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk'
@@ -25,7 +25,8 @@ import { useIsMobile } from '@/hooks/useMediaQuery'
 import { MobileTabs } from '@/components/mobile/MobileTabs'
 import { useProjectActivityStore } from '@/stores/projectActivity'
 import { FAB } from '@/components/ui/fab'
-import { toast } from 'sonner'
+import { useAtom } from 'jotai'
+import { openSingleProjectAtom } from '@/stores/openProjects'
 
 export const Route = createFileRoute('/_auth/projects/$projectId/')({
   component: ProjectDetailPage,
@@ -43,6 +44,7 @@ function ProjectDetailPage() {
   const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null)
   const [taskUnreadMap] = useState(new Map<string, number>())
   const [mobileView, setMobileView] = useState<'tabs' | 'chat'>('tabs')
+  const [, openSingleProject] = useAtom(openSingleProjectAtom)
   
   // Reset selected thread when project changes
   useEffect(() => {
@@ -62,6 +64,14 @@ function ProjectDetailPage() {
     }
   }, [project])
   
+  // On desktop, open the project in multi-column view and redirect
+  useEffect(() => {
+    if (!isMobile && project) {
+      openSingleProject(project)
+      navigate({ to: '/projects' })
+    }
+  }, [project, isMobile, openSingleProject, navigate])
+  
   // Helper functions for backwards compatibility
   const getOverallStatus = () => projectStatus?.isOnline ? 'online' : 'offline'
   
@@ -69,7 +79,7 @@ function ProjectDetailPage() {
   // Create task subscription filter
   const taskFilter = useMemo(
     () => project ? {
-      kinds: [EVENT_KINDS.TASK],
+      kinds: [NDKTask.kind],
       '#a': [project.tagId()],
     } : null,
     [project]
@@ -128,25 +138,7 @@ function ProjectDetailPage() {
 
   const handleStartProject = async () => {
     if (!ndk || !project) return
-    
-    try {
-      // Create a 24000 event to start the project
-      const event = new NDKEvent(ndk)
-      event.kind = EVENT_KINDS.PROJECT_START
-      event.content = ''
-      
-      // Tag the project using its NIP-33 reference
-      const projectTag = project.tagId()
-      event.tags = [['a', projectTag]]
-      
-      // Publish the event
-      await event.publish()
-      
-      toast.success('Starting project...')
-    } catch (error) {
-      console.error('Failed to start project:', error)
-      toast.error('Failed to start project')
-    }
+    await bringProjectOnline(project, ndk)
   }
 
   // Mobile view - show one view at a time
@@ -213,23 +205,11 @@ function ProjectDetailPage() {
               rootEvent={selectedThreadEvent}
               key={selectedThreadEvent?.id || 'new'}
               className="h-full"
-              onTaskClick={async (taskId) => {
-                if (ndk) {
-                  const taskEvent = await ndk.fetchEvent(taskId)
-                  if (taskEvent) {
-                    setSelectedThreadEvent(taskEvent)
-                  }
-                }
-                // Stay in chat view on mobile when clicking a task within chat
+              onTaskClick={(task: NDKTask) => {
+                  setSelectedThreadEvent(task)
               }}
-              onThreadCreated={async (newThreadId) => {
-                if (ndk) {
-                  const newEvent = await ndk.fetchEvent(newThreadId)
-                  if (newEvent) {
-                    setSelectedThreadEvent(newEvent)
-                  }
-                }
-                // Stay in chat view after creating thread
+              onThreadCreated={(newThread: NDKEvent) => {
+                  setSelectedThreadEvent(newThread);
               }}
             />
           )}

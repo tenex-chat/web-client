@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { NDKForceRelease } from './NDKForceRelease'
-import { EVENT_KINDS } from '../constants'
 
 describe('NDKForceRelease', () => {
   let forceRelease: NDKForceRelease
@@ -10,7 +9,7 @@ describe('NDKForceRelease', () => {
   })
 
   it('should set the correct event kind', () => {
-    expect(forceRelease.kind).toBe(EVENT_KINDS.FORCE_RELEASE)
+    expect(forceRelease.kind).toBe(NDKForceRelease.kind)
   })
 
   it('should create a force release with project reference', () => {
@@ -18,7 +17,7 @@ describe('NDKForceRelease', () => {
     const event = NDKForceRelease.create(projectRef)
     
     expect(event.projectReference).toBe(projectRef)
-    expect(event.kind).toBe(EVENT_KINDS.FORCE_RELEASE)
+    expect(event.kind).toBe(NDKForceRelease.kind)
     expect(event.created_at).toBeDefined()
   })
 
@@ -29,7 +28,7 @@ describe('NDKForceRelease', () => {
     
     expect(event.projectReference).toBe(projectRef)
     expect(event.reason).toBe(reason)
-    expect(event.kind).toBe(EVENT_KINDS.FORCE_RELEASE)
+    expect(event.kind).toBe(NDKForceRelease.kind)
   })
 
   it('should handle projectReference getter and setter', () => {
@@ -57,7 +56,7 @@ describe('NDKForceRelease', () => {
         id: 'test-id',
         pubkey: 'test-pubkey',
         created_at: Math.floor(Date.now() / 1000),
-        kind: EVENT_KINDS.FORCE_RELEASE,
+        kind: NDKForceRelease.kind,
         tags: [['a', '30023:pubkey123:project-dtag']],
         content: '',
         sig: 'test-sig'
@@ -66,7 +65,7 @@ describe('NDKForceRelease', () => {
     
     const converted = NDKForceRelease.from(mockEvent as any)
     expect(converted).toBeInstanceOf(NDKForceRelease)
-    expect(converted.kind).toBe(EVENT_KINDS.FORCE_RELEASE)
+    expect(converted.kind).toBe(NDKForceRelease.kind)
     expect(converted.projectReference).toBe('30023:pubkey123:project-dtag')
   })
 })

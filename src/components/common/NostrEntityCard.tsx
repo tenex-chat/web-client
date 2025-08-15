@@ -1,4 +1,4 @@
-import { NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKArticle, NDKKind } from '@nostr-dev-kit/ndk'
 import { useEvent } from '@nostr-dev-kit/ndk-hooks'
 import { ExternalLink } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -13,6 +13,10 @@ import {
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import { cn } from '@/lib/utils'
 import { EVENT_KINDS } from '@/lib/constants'
+import { NDKTask } from '@/lib/ndk-events/NDKTask'
+import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
+import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition'
+import { NDKAgentLesson } from '@/lib/ndk-events/NDKAgentLesson'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
@@ -127,7 +131,7 @@ export function NostrEntityCard({
 
   // Route to specialized card components based on event kind
   switch (event.kind) {
-    case EVENT_KINDS.TASK: // 1934
+    case NDKTask.kind:
       return (
         <>
           <TaskEmbedCard 
@@ -145,7 +149,7 @@ export function NostrEntityCard({
         </>
       )
 
-    case EVENT_KINDS.ARTICLE: // 30023
+    case NDKArticle.kind: // 30023
       return (
         <>
           <ArticleEmbedCard 
@@ -181,7 +185,7 @@ export function NostrEntityCard({
         </>
       )
 
-    case EVENT_KINDS.MCP_TOOL: // 4200
+    case NDKMCPTool.kind: // 4200
       return (
         <MCPToolEmbedCard 
           event={event} 
@@ -190,7 +194,7 @@ export function NostrEntityCard({
         />
       )
 
-    case EVENT_KINDS.AGENT_CONFIG: // 4199
+    case NDKAgentDefinition.kind: // 4199
       return (
         <AgentDefinitionEmbedCard 
           event={event} 
@@ -199,7 +203,7 @@ export function NostrEntityCard({
         />
       )
 
-    case EVENT_KINDS.AGENT_LESSON: // 4129
+    case NDKAgentLesson.kind: // 4129
       // This might need a specialized card in the future
       return (
         <>

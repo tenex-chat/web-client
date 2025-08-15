@@ -7,7 +7,7 @@ import {
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Bot, BookOpen, Copy, CheckCircle2 } from "lucide-react";
-import { EVENT_KINDS, TIMING } from "../../lib/constants";
+import { TIMING } from "../../lib/constants";
 import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
 import { NDKAgentLesson } from "../../lib/ndk-events/NDKAgentLesson";
 import { Button } from "../ui/button";
@@ -29,8 +29,13 @@ import { AgentSettingsTab } from "./AgentSettingsTab";
 
 type TabType = "details" | "lessons" | "settings";
 
-export function AgentProfilePage() {
-  const { pubkey } = useParams({ from: "/_auth/p/$pubkey" });
+interface AgentProfilePageProps {
+  pubkey?: string;
+}
+
+export function AgentProfilePage({ pubkey: propPubkey }: AgentProfilePageProps = {}) {
+  const routeParams = useParams({ from: "/_auth/p/$pubkey" });
+  const pubkey = propPubkey || routeParams.pubkey;
   const { ndk } = useNDK();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>("details");
@@ -45,7 +50,7 @@ export function AgentProfilePage() {
   const { events: agentEvents } = useSubscribe(
     [
       {
-        kinds: [EVENT_KINDS.AGENT_CONFIG as NDKKind],
+        kinds: [NDKAgentDefinition.kind as NDKKind],
         authors: [pubkey],
         limit: 1,
       },
@@ -68,7 +73,7 @@ export function AgentProfilePage() {
     pubkey
       ? [
           {
-            kinds: [EVENT_KINDS.AGENT_LESSON as NDKKind],
+            kinds: [NDKAgentLesson.kind as NDKKind],
             authors: [pubkey],
           },
         ]

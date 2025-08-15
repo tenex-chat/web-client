@@ -136,29 +136,42 @@ export function useMentions({
   }, [showAgentMenu, filteredAgents, filteredProjectGroups, selectedAgentIndex, insertMention]);
 
   // Extract mentions from the message
-  const extractMentions = useCallback(() => {
+  const extractMentions = useCallback((content?: string) => {
     const mentions: Array<{ pubkey: string; name: string }> = [];
-    const mentionRegex = /@(\w+)/g;
+    const textToSearch = content ?? messageInput; // Use provided content or fallback to messageInput
+    const mentionRegex = /@([\w-]+)/g; // Updated to include hyphens in agent names
     let match;
 
-    while ((match = mentionRegex.exec(messageInput)) !== null) {
+    while ((match = mentionRegex.exec(textToSearch)) !== null) {
       const mentionName = match[1];
       
-      // Find matching agent
-      const agent = agents.find(a => a.name === mentionName);
+      // Debug logging to help identify matching issues
+      console.log('Extracting mention:', mentionName, 'Available agents:', agents.map(a => a.name));
+      
+      // Find matching agent - case insensitive comparison
+      const agent = agents.find(a => 
+        a.name.toLowerCase() === mentionName.toLowerCase()
+      );
       if (agent) {
         mentions.push({ pubkey: agent.pubkey, name: agent.name });
+        console.log('Found agent match:', agent.name, 'pubkey:', agent.pubkey);
+      } else {
+        console.warn('No agent found for mention:', mentionName);
       }
       
       // Find matching project group - expand to individual agents
-      const group = filteredProjectGroups.find(g => g.name === mentionName);
+      const group = filteredProjectGroups.find(g => 
+        g.name.toLowerCase() === mentionName.toLowerCase()
+      );
       if (group && group.agents) {
         group.agents.forEach(groupAgent => {
           mentions.push({ pubkey: groupAgent.pubkey, name: groupAgent.name });
         });
+        console.log('Found group match:', group.name, 'with', group.agents.length, 'agents');
       }
     }
 
+    console.log('Total mentions extracted:', mentions.length, mentions);
     return mentions;
   }, [messageInput, agents, filteredProjectGroups]);
 

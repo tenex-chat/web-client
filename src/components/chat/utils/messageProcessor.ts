@@ -1,4 +1,4 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
+import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk-hooks'
 import { EVENT_KINDS } from '@/lib/constants'
 import type { Message } from '../hooks/useChatMessages'
 
@@ -60,7 +60,7 @@ export function processEvent(
     }
   } else {
     finalMessages.push({ id: event.id, event: event })
-    if (event.kind === EVENT_KINDS.THREAD_REPLY) {
+    if (event.kind === NDKKind.GenericReply) {
       streamingSessions.delete(event.pubkey)
     }
   }

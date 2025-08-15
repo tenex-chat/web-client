@@ -43,14 +43,6 @@ export function AgentDefinitionCard({
             <CardTitle className="text-lg truncate">
               {agent.name || "Unnamed Agent Definition"}
             </CardTitle>
-            {agent.role && (
-              <Badge
-                variant="secondary"
-                className={`mt-1 ${getRoleColor(agent.role)}`}
-              >
-                {agent.role}
-              </Badge>
-            )}
           </div>
         </div>
       </CardHeader>
@@ -78,21 +70,6 @@ export function AgentDefinitionCard({
             </Badge>
           )}
         </div>
-
-        {agent.useCriteria && agent.useCriteria.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1">
-            {agent.useCriteria.slice(0, 3).map((criteria, idx) => (
-              <Badge key={idx} variant="outline" className="text-xs">
-                {criteria}
-              </Badge>
-            ))}
-            {agent.useCriteria.length > 3 && (
-              <Badge variant="outline" className="text-xs">
-                +{agent.useCriteria.length - 3} more
-              </Badge>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   );

@@ -72,23 +72,29 @@ describe('agentUtils', () => {
   })
   
   describe('isAgentOnline', () => {
-    it('returns true for online agents from status', () => {
-      const agent = { fromStatus: true, status: 'online' }
+    it('returns true for any agent from status (they are online by definition)', () => {
+      const agent = { fromStatus: true }
       expect(isAgentOnline(agent)).toBe(true)
     })
     
-    it('returns false when fromStatus is false', () => {
+    it('returns true for agent from status regardless of lastSeen', () => {
+      const oldTime = Math.floor(Date.now() / 1000) - 400 // 6+ minutes ago
+      const agent = { fromStatus: true, lastSeen: oldTime }
+      expect(isAgentOnline(agent)).toBe(true) // Still online because fromStatus=true
+    })
+    
+    it('returns true when not from status but status is online', () => {
       const agent = { fromStatus: false, status: 'online' }
-      expect(isAgentOnline(agent)).toBe(false)
+      expect(isAgentOnline(agent)).toBe(true)
     })
     
-    it('returns false when status is not online', () => {
-      const agent = { fromStatus: true, status: 'offline' }
-      expect(isAgentOnline(agent)).toBe(false)
-    })
-    
-    it('returns false when both conditions are not met', () => {
+    it('returns false when not from status and status is not online', () => {
       const agent = { fromStatus: false, status: 'offline' }
+      expect(isAgentOnline(agent)).toBe(false)
+    })
+    
+    it('returns false when not from status and no status field', () => {
+      const agent = { fromStatus: false }
       expect(isAgentOnline(agent)).toBe(false)
     })
   })

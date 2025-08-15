@@ -9,8 +9,25 @@ interface OpenRouterModel {
     completion: string;
   };
   architecture?: {
-    modality: string;
+    modality?: string;
+    input_modalities?: string[];
+    output_modalities?: string[];
   };
+}
+
+export interface OpenRouterModelWithAudio extends OpenRouterModel {
+  supportsAudio?: boolean;
+}
+
+export interface OpenAIModel {
+  id: string;
+  object: string;
+  created: number;
+  owned_by: string;
+}
+
+export interface OpenAIModelWithAudio extends OpenAIModel {
+  supportsAudio?: boolean;
 }
 
 interface ProviderModels {
@@ -52,6 +69,75 @@ export async function fetchOpenRouterModels(): Promise<string[]> {
   } catch (error) {
     logger.error('Error fetching OpenRouter models:', error);
     return ['auto'];
+  }
+}
+
+export async function fetchOpenRouterModelsWithDetails(): Promise<OpenRouterModelWithAudio[]> {
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/models');
+    if (!response.ok) {
+      logger.warn('Failed to fetch OpenRouter models, using defaults');
+      return [];
+    }
+    
+    const data = await response.json();
+    const models = data.data as OpenRouterModel[];
+    
+    // Check for audio support based on input_modalities array
+    return models.map(model => ({
+      ...model,
+      supportsAudio: model.architecture?.input_modalities?.includes('audio') || 
+                     model.architecture?.modality?.includes('audio') ||
+                     model.id.toLowerCase().includes('whisper') ||
+                     model.id.toLowerCase().includes('audio')
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  } catch (error) {
+    logger.error('Error fetching OpenRouter models:', error);
+    return [];
+  }
+}
+
+export async function fetchOpenAIModelsWithDetails(apiKey?: string): Promise<OpenAIModelWithAudio[]> {
+  const defaultModels = [
+    { id: 'whisper-1', object: 'model', created: 0, owned_by: 'openai-internal', supportsAudio: true },
+    { id: 'gpt-4o-transcribe', object: 'model', created: 0, owned_by: 'openai', supportsAudio: true }
+  ];
+  
+  if (!apiKey) {
+    return defaultModels;
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      logger.warn('Failed to fetch OpenAI models, using defaults');
+      return defaultModels;
+    }
+    
+    const data = await response.json();
+    const models = data.data as OpenAIModel[];
+    
+    // Filter for audio-capable models
+    const audioModels = models.filter(model => 
+      model.id === 'whisper-1' || 
+      model.id === 'gpt-4o-transcribe' ||
+      model.id.includes('audio') ||
+      model.id.includes('transcrib')
+    ).map(model => ({
+      ...model,
+      supportsAudio: true
+    }));
+    
+    // If no audio models found in API response, return defaults
+    return audioModels.length > 0 ? audioModels.sort((a, b) => a.id.localeCompare(b.id)) : defaultModels;
+  } catch (error) {
+    logger.error('Error fetching OpenAI models:', error);
+    return defaultModels;
   }
 }
 

@@ -47,8 +47,16 @@ export function getProjectDisplayName(project: {
 export function isAgentOnline(agent: {
   fromStatus?: boolean
   status?: string
+  lastSeen?: number
 }): boolean {
-  return Boolean(agent.fromStatus && agent.status === 'online')
+  // If agent comes from a status event, they're online by definition
+  // (status events only report currently active agents)
+  if (agent.fromStatus) {
+    return true
+  }
+  
+  // For non-status agents, fall back to explicit status field
+  return agent.status === 'online'
 }
 
 /**

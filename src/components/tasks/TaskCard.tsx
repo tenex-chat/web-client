@@ -8,7 +8,7 @@ import { NDKKind, NDKEvent } from '@nostr-dev-kit/ndk'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
 import type { NDKTask } from '@/lib/ndk-events/NDKTask'
-import { EVENT_KINDS } from '@/lib/constants'
+import { NDKProjectStatus } from '@/lib/ndk-events/NDKProjectStatus'
 import { logger } from '@/lib/logger'
 
 interface TaskCardProps {
@@ -28,7 +28,7 @@ export const TaskCard = memo(
     const { events: updates } = useSubscribe(
       useMemo(
         () => [{
-          kinds: [NDKKind.GenericReply as number, EVENT_KINDS.PROJECT_STATUS],
+          kinds: [NDKKind.GenericReply as number, NDKProjectStatus.kind],
           '#e': [task.id],
           limit: 10
         }],
@@ -74,7 +74,7 @@ export const TaskCard = memo(
       }
     }
 
-    const contentPreview = task.content?.split('\n').slice(0, 2).join(' ').slice(0, 100) || ''
+    const taskContent = task.content || ''
 
     return (
       <Card
@@ -117,20 +117,25 @@ export const TaskCard = memo(
               </div>
             </div>
 
-            {latestUpdate ? (
-              <div className="mb-3 p-2 border-l-4 border-muted-foreground/20 bg-muted/30 rounded-r">
-                <p className="text-xs text-muted-foreground line-clamp-2">
+            {/* Show original task content if available */}
+            {taskContent && (
+              <p className="text-xs text-muted-foreground mb-2 whitespace-pre-wrap">
+                {taskContent}
+              </p>
+            )}
+
+            {/* Show latest update if available */}
+            {latestUpdate && (
+              <div className="mb-3 p-2 border-l-4 border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20 rounded-r">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Latest update:</p>
+                <p className="text-xs text-muted-foreground whitespace-pre-wrap">
                   {latestUpdate.content}
                 </p>
                 <p className="text-xs text-muted-foreground/60 mt-1">
                   {formatRelativeTime(latestUpdate.created_at!)}
                 </p>
               </div>
-            ) : contentPreview ? (
-              <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
-                {contentPreview}
-              </p>
-            ) : null}
+            )}
 
             <div className="flex items-center gap-2 flex-wrap">
               {currentStatus && (

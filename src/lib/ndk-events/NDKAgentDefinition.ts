@@ -4,7 +4,7 @@ import { slugify } from '@/lib/utils/slugify'
 
 export class NDKAgentDefinition extends NDKEvent {
   static kind: NDKKind = 4199 as NDKKind;
-  static kinds: [4199];
+  static kinds = [4199];
 
   constructor(ndk?: NDK, rawEvent?: NostrEvent) {
     super(ndk, rawEvent)

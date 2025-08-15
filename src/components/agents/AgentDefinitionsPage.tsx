@@ -4,7 +4,6 @@ import { Bot, Plus } from "lucide-react";
 import { SearchBar } from "@/components/common/SearchBar";
 import { useState, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { EVENT_KINDS } from "../../lib/constants";
 import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
 import { Button } from "../ui/button";
 import { EmptyState } from "../common/EmptyState";
@@ -26,7 +25,7 @@ export function AgentDefinitionsPage() {
 
   // Fetch all agents (kind 4199)
   const { events: rawAgents } = useSubscribe(
-    [{ kinds: [EVENT_KINDS.AGENT_CONFIG as NDKKind] }],
+    [{ kinds: [NDKAgentDefinition.kind as NDKKind] }],
     {},
     [],
   );

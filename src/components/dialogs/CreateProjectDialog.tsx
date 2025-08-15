@@ -74,7 +74,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       setIsLoadingAgents(true)
       try {
         const events = await ndk.fetchEvents({
-          kinds: [EVENT_KINDS.AGENT_CONFIG as NDKKind],
+          kinds: [NDKAgentDefinition.kind as NDKKind],
           limit: 100,
         })
 
@@ -141,7 +141,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       setIsLoadingTools(true)
       try {
         const events = await ndk.fetchEvents({
-          kinds: [EVENT_KINDS.MCP_TOOL as NDKKind],
+          kinds: [NDKMCPTool.kind as NDKKind],
           limit: 100,
         })
 

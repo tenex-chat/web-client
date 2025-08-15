@@ -31,7 +31,7 @@ export function useStreamingResponses(conversationId: string | null) {
     [conversationId]
   )
 
-  // Process streaming events to accumulate content per agent
+  // Process streaming events - each event contains the FULL content (not incremental)
   const streamingResponses = useMemo(() => {
     if (!streamingEvents || streamingEvents.length === 0) return new Map<string, StreamingResponse>()
 
@@ -47,7 +47,7 @@ export function useStreamingResponses(conversationId: string | null) {
       return seqA - seqB
     })
 
-    // Process events in order, accumulating content
+    // Process events in order - each event is a FULL REPLACEMENT
     for (const event of sortedEvents) {
       // The agent pubkey is the event's pubkey (the author of the streaming response)
       const agentPubkey = event.pubkey
@@ -60,12 +60,12 @@ export function useStreamingResponses(conversationId: string | null) {
 
       const existing = responsesByAgent.get(agentPubkey)
       
-      // Only append content if this is a new sequence number we haven't seen
+      // Replace with latest content if this is a newer sequence
       if (!existing || sequence > existing.lastSequence) {
-        const accumulatedContent = (existing?.content || "") + event.content
+        // Use the full content from this event (not concatenation)
         responsesByAgent.set(agentPubkey, {
           agentPubkey,
-          content: accumulatedContent,
+          content: event.content,  // FULL REPLACEMENT
           lastSequence: sequence,
         })
       }

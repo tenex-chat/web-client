@@ -22,7 +22,7 @@ interface ChatMessageListProps {
   unreadCount: number;
   scrollToBottom: (smooth?: boolean) => void;
   onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
-  onTaskClick?: (taskId: string) => void;
+  onTaskClick?: (task: NDKTask) => void;
   onReplyFocus: () => void;
   isNewThread: boolean;
 }
@@ -49,7 +49,7 @@ export function ChatMessageList({
 
   const renderMessage = (message: Message) => {
     // Check if this is a task event
-    if (message.event.kind === EVENT_KINDS.TASK) {
+    if (message.event.kind === NDKTask.kind) {
       const task = new NDKTask(ndk!, message.event.rawEvent());
       return (
         <div
@@ -62,7 +62,7 @@ export function ChatMessageList({
             onClick={() => {
               // Open the task as a conversation
               if (onTaskClick) {
-                onTaskClick(task.id);
+                onTaskClick(task);
               }
             }}
           />
@@ -99,7 +99,7 @@ export function ChatMessageList({
           estimateSize={120} // Estimated average message height
           overscan={5}
           containerClassName="h-full pb-4"
-          className={isMobile ? "py-0 pb-20" : "py-2 pb-20"}
+          className={isMobile ? "py-0 pb-28" : "py-2 pb-28"}
         />
       ) : (
         // Use regular ScrollArea for small message lists
@@ -108,7 +108,7 @@ export function ChatMessageList({
           className="h-full pb-4"
           onScrollCapture={onScroll}
         >
-          <div className={isMobile ? "py-0 pb-20" : "py-2 pb-20"}>
+          <div className={isMobile ? "py-0 pb-28" : "py-2 pb-28"}>
             <div className="divide-y divide-transparent">
               {messages.map(renderMessage)}
             </div>

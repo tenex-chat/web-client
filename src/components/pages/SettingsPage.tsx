@@ -4,10 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNDKCurrentUser, useNDKSessionLogout, useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LLMSettings } from '../settings/LLMSettings';
+import { AISettings } from '../settings/AISettings';
 import { AppearanceSettings } from '../settings/AppearanceSettings';
 import { NotificationSettings } from '../settings/NotificationSettings';
-import { TTSSettings } from '../settings/TTSSettings'
 import { BlossomSettings } from '../settings/BlossomSettings'
 
 export function SettingsPage() {
@@ -48,10 +47,9 @@ export function SettingsPage() {
       {/* Content */}
       <div className="container max-w-6xl mx-auto px-4 py-8">
         <Tabs defaultValue="account" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7 lg:w-[800px]">
+          <TabsList className="grid w-full grid-cols-6 lg:w-[700px]">
             <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="llm">LLM</TabsTrigger>
-            <TabsTrigger value="tts">TTS</TabsTrigger>
+            <TabsTrigger value="ai">AI</TabsTrigger>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="blossom">Upload</TabsTrigger>
@@ -115,14 +113,9 @@ export function SettingsPage() {
             </Card>
           </TabsContent>
 
-          {/* LLM Settings */}
-          <TabsContent value="llm">
-            <LLMSettings />
-          </TabsContent>
-
-          {/* TTS Settings */}
-          <TabsContent value="tts">
-            <TTSSettings />
+          {/* AI Settings (LLM, TTS, STT) */}
+          <TabsContent value="ai">
+            <AISettings />
           </TabsContent>
 
           {/* Appearance Settings */}

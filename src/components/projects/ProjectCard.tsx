@@ -3,8 +3,12 @@ import { formatRelativeTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { Circle, Users2 } from 'lucide-react'
+import { Circle, Users2, WifiOff } from 'lucide-react'
 import { useProjectStatus } from '@/stores/projects'
+import { bringProjectOnline } from '@/lib/utils/projectStatusUtils'
+import { useNDK } from '@nostr-dev-kit/ndk-hooks'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface ProjectCardProps {
   project: NDKProject
@@ -16,9 +20,18 @@ interface ProjectCardProps {
 export function ProjectCard({ project, isActive, isOnline = false, onClick }: ProjectCardProps) {
   const projectStatus = useProjectStatus(project.dTag)
   const executionQueue = projectStatus?.executionQueue
+  const onlineStatus = useProjectOnlineStatus(project.tagId())
+  const { ndk } = useNDK()
   const lastActivity = project.created_at 
     ? formatRelativeTime(project.created_at)
     : 'Unknown'
+  
+  const handleBringOnline = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!ndk) return
+    await bringProjectOnline(project, ndk)
+  }
 
 
   return (
@@ -49,8 +62,27 @@ export function ProjectCard({ project, isActive, isOnline = false, onClick }: Pr
 
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between">
-            <h3 className="font-medium truncate">
+            <h3 className="font-medium truncate flex items-center gap-1.5">
               {project.title || 'Untitled Project'}
+              {onlineStatus && !onlineStatus.isOnline && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 p-0 hover:bg-transparent"
+                        onClick={handleBringOnline}
+                      >
+                        <WifiOff className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Project is offline. Click to bring online.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </h3>
             <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
               {lastActivity}

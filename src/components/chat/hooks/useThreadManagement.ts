@@ -27,7 +27,7 @@ export function useThreadManagement(
   project: NDKProject,
   initialRootEvent: NDKEvent | null,
   extraTags?: string[][],
-  onThreadCreated?: (threadId: string) => void
+  onThreadCreated?: (thread: NDKEvent) => void
 ) {
   const { ndk } = useNDK()
   const user = useNDKCurrentUser()
@@ -75,6 +75,12 @@ export function useThreadManagement(
     mentions.forEach(agent => {
       newThreadEvent.tags.push(['p', agent.pubkey])
     })
+    
+    // Log warning if there are unresolved mentions
+    const hasUnresolvedMentions = /@[\w-]+/.test(content) && mentions.length === 0
+    if (hasUnresolvedMentions) {
+      console.warn('Thread has @ mentions but no agents were resolved. Check agent names.')
+    }
 
     // Add voice mode tag if auto-TTS is enabled
     if (autoTTS) {
@@ -87,7 +93,7 @@ export function useThreadManagement(
     
     // Notify parent component about the new thread
     if (onThreadCreated) {
-      onThreadCreated(newThreadEvent.id)
+      onThreadCreated(newThreadEvent)
     }
 
     return newThreadEvent
@@ -133,8 +139,12 @@ export function useThreadManagement(
       replyEvent.tags.push(['p', agent.pubkey])
     })
 
-    // If no agents were mentioned, p-tag the most recent non-user message author
-    if (mentions.length === 0 && recentMessages.length > 0) {
+    // Check if there are @ mentions in the content that weren't resolved
+    const hasUnresolvedMentions = /@[\w-]+/.test(content) && mentions.length === 0
+    
+    // Only auto-tag the most recent non-user if there are NO @ mentions at all
+    // (resolved or unresolved) in the content
+    if (!hasUnresolvedMentions && mentions.length === 0 && recentMessages.length > 0) {
       const mostRecentNonUserMessage = [...recentMessages]
         .reverse()
         .find(msg => msg.event.pubkey !== user.pubkey)

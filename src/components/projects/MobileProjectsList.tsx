@@ -1,13 +1,15 @@
 import { useState, useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Plus, Settings, Bot, Wrench, User } from 'lucide-react'
+import { Plus, Settings, Bot, Wrench, User, WifiOff } from 'lucide-react'
 import { SearchBar } from '@/components/common/SearchBar'
 import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
 import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
 import { useSortedProjects } from '@/hooks/useSortedProjects'
-import { useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks'
+import { useCurrentUserProfile, useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { Button } from '@/components/ui/button'
+import { bringProjectOnline } from '@/lib/utils/projectStatusUtils'
+import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -22,6 +24,7 @@ import { FAB } from '@/components/ui/fab'
 
 export function MobileProjectsList() {
   const userProfile = useCurrentUserProfile()
+  const { ndk } = useNDK()
   const [searchQuery, setSearchQuery] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
@@ -157,7 +160,27 @@ export function MobileProjectsList() {
                 {/* Project info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold truncate">{project.title}</h3>
+                    <h3 className="font-semibold truncate flex items-center gap-1.5">
+                      {project.title}
+                      {status && !status.isOnline && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 p-0 hover:bg-transparent"
+                          onClick={async (e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            if (!ndk) {
+                              toast.error('NDK not initialized')
+                              return
+                            }
+                            await bringProjectOnline(project, ndk)
+                          }}
+                        >
+                          <WifiOff className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+                        </Button>
+                      )}
+                    </h3>
                     {status?.isOnline && (
                       <span className="text-xs text-muted-foreground">online</span>
                     )}

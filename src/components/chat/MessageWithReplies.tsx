@@ -89,20 +89,22 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   })
 
   // Subscribe to replies that e-tag this event (NIP-10/NIP-22 threading)
-  // Don't subscribe for kind 11 (CHAT) events as their replies are shown inline in the thread
-  const { events: directReplies } = useSubscribe(
-    event.kind === EVENT_KINDS.THREAD_REPLY
-      ? [{
-          kinds: [EVENT_KINDS.THREAD_REPLY as NDKKind],
-          '#e': [event.id],
-        }]
-      : false,
-    {
-      closeOnEose: false,
-      groupable: true,
-    },
-    [event.id]
-  )
+		// Don't subscribe for kind 11 (CHAT) events as their replies are shown inline in the thread
+		const { events: directReplies } = useSubscribe(
+			event.kind === NDKKind.GenericReply
+				? [
+						{
+							kinds: [NDKKind.GenericReply],
+							"#e": [event.id],
+						},
+					]
+				: false,
+			{
+				closeOnEose: false,
+				groupable: true,
+			},
+			[event.id],
+		);
 
   // Sort replies by timestamp
   const sortedReplies = useMemo(() => {
@@ -129,7 +131,6 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     setIsSending(true)
     try {
       const replyEvent = replyToEvent.reply()
-      replyEvent.kind = EVENT_KINDS.THREAD_REPLY
       replyEvent.content = replyInput.trim()
       
       // Remove all p-tags that NDK's .reply() generated

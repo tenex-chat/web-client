@@ -11,6 +11,7 @@ import {
   isProfilePointer 
 } from '@/lib/utils/nostrEntityParser'
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { InlineProfileMention } from '@/components/common/InlineProfileMention'
 import { cn } from '@/lib/utils'
 import { EVENT_KINDS } from '@/lib/constants'
 import { NDKTask } from '@/lib/ndk-events/NDKTask'
@@ -91,6 +92,11 @@ export function NostrEntityCard({
     }
 
     if (pubkey) {
+      // Use inline mention for compact mode, card for full mode
+      if (compact) {
+        return <InlineProfileMention pubkey={pubkey} className={className} />
+      }
+      
       return (
         <Card className={cn(
           "inline-flex items-center gap-2",

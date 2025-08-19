@@ -131,8 +131,8 @@ export function STTSettings() {
         toast.info('Converting audio to WAV format...');
         
         try {
-          // Convert WebM to WAV
-          const wavBlob = await getWaveBlob(webmBlob, {
+          // Convert WebM to WAV (second param is for 32-bit float, false = 16-bit)
+          const wavBlob = await getWaveBlob(webmBlob, false, {
             sampleRate: 16000  // 16kHz is good for speech
           });
           

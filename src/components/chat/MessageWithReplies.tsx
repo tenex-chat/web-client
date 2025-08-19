@@ -2,6 +2,7 @@ import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
 import { useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { ChevronDown, ChevronRight, Send, Reply, MoreVertical, Cpu, DollarSign, Volume2, Square, Brain } from 'lucide-react'
 import { TypingIndicator } from './TypingIndicator'
+import { StreamingCaret } from './StreamingCaret'
 import { memo, useCallback, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -21,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { LLMMetadataDialog } from '@/components/dialogs/LLMMetadataDialog'
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { RecipientAvatars } from '@/components/common/RecipientAvatars'
 import { Link } from '@tanstack/react-router'
 import { useMurfTTS } from '@/hooks/useMurfTTS'
 import { extractTTSContent } from '@/lib/utils/extractTTSContent'
@@ -71,6 +73,15 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   const userStatus = useMemo(() => {
     return getUserStatus(event.pubkey, user?.pubkey, project.dTag)
   }, [event.pubkey, user?.pubkey, project.dTag])
+  
+  // Extract p-tags (recipients) from the event
+  const recipientPubkeys = useMemo(() => {
+    if (!event.tags) return []
+    return event.tags
+      .filter(tag => tag[0] === 'p' && tag[1])
+      .map(tag => tag[1])
+      .filter((pubkey, index, self) => self.indexOf(pubkey) === index) // Remove duplicates
+  }, [event.tags])
   
   // TTS configuration
   const ttsOptions = useAgentTTSConfig(agentSlug || undefined)
@@ -176,6 +187,9 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   
   // For typing events, check if content contains "is typing"
   const showTypingIndicator = isTypingEvent && event.content?.includes('is typing')
+  
+  // Check if this is a streaming response event (kind 21111) and not a typing indicator
+  const isStreamingResponse = event.kind === EVENT_KINDS.STREAMING_RESPONSE && !showTypingIndicator
 
   // Parse content with thinking blocks
   const { contentParts, shouldTruncate } = useMemo(() => {
@@ -190,13 +204,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     // Convert plain text nostr: references to markdown links so they're handled by the markdown renderer
     const hasMarkdownNostrLinks = /\[([^\]]+)\]\((nostr:[^)]+)\)/.test(content)
     
-    if (!hasMarkdownNostrLinks) {
-      // Convert plain text nostr: references to markdown links
-      content = replaceNostrEntities(content, (_entity, match) => {
-        // Convert to markdown link format that will be handled by our custom link renderer
-        return `${_entity} [${_entity.bech32}](${match})`
-      })
-    }
+    // Don't do any replacement here - let the markdown renderer handle it directly
     
     // Special handling for task messages - hide the entire thinking block content
     if (event.kind === 1934) {
@@ -360,6 +368,15 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               <span className="text-xs text-muted-foreground">
                 {formatRelativeTime(event.created_at || 0)}
               </span>
+              {recipientPubkeys.length > 0 && (
+                <>
+                  <span className="text-xs text-muted-foreground">→</span>
+                  <RecipientAvatars 
+                    pubkeys={recipientPubkeys}
+                    className="ml-1"
+                  />
+                </>
+              )}
             </div>
             
             {/* Action buttons - only visible on hover, hide for typing indicators */}
@@ -453,7 +470,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                   <DropdownMenuItem 
                     className="cursor-pointer"
                     onClick={() => {
-                      navigator.clipboard.writeText(event.id)
+                      navigator.clipboard.writeText(event.encode())
                     }}
                   >
                     Copy ID
@@ -514,13 +531,18 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                     : part.content
                   
                   return (
-                    <ReactMarkdown 
-                      key={`text-${partIndex}`}
-                      remarkPlugins={[remarkGfm]}
-                      components={markdownComponents}
-                    >
-                      {textToRender}
-                    </ReactMarkdown>
+                    <span key={`text-${partIndex}`}>
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={markdownComponents}
+                      >
+                        {textToRender}
+                      </ReactMarkdown>
+                      {/* Show streaming caret only on the last text part when streaming */}
+                      {isStreamingResponse && partIndex === contentParts.filter(p => p.type === 'text').length - 1 && (
+                        <StreamingCaret className="ml-0.5" />
+                      )}
+                    </span>
                   )
                 } else {
                   // Render thinking block

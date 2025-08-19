@@ -20,7 +20,6 @@ interface ProjectCardProps {
 export function ProjectCard({ project, isActive, isOnline = false, onClick }: ProjectCardProps) {
   const projectStatus = useProjectStatus(project.dTag)
   const executionQueue = projectStatus?.executionQueue
-  const onlineStatus = useProjectOnlineStatus(project.tagId())
   const { ndk } = useNDK()
   const lastActivity = project.created_at 
     ? formatRelativeTime(project.created_at)
@@ -64,7 +63,7 @@ export function ProjectCard({ project, isActive, isOnline = false, onClick }: Pr
           <div className="flex items-baseline justify-between">
             <h3 className="font-medium truncate flex items-center gap-1.5">
               {project.title || 'Untitled Project'}
-              {onlineStatus && !onlineStatus.isOnline && (
+              {(!projectStatus || !projectStatus.isOnline) && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>

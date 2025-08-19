@@ -318,7 +318,7 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
           />
           <h3 className="font-medium text-sm truncate flex-1 flex items-center gap-1.5">
             {project.title || 'Untitled Project'}
-            {projectStatus && !projectStatus.isOnline && (
+            {(!projectStatus || !projectStatus.isOnline) && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>

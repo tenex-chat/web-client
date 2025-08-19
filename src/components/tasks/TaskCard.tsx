@@ -25,17 +25,16 @@ export const TaskCard = memo(
     const { ndk } = useNDK()
 
     // Subscribe to task updates
-    const { events: updates } = useSubscribe(
-      useMemo(
-        () => [{
-          kinds: [NDKKind.GenericReply as number, NDKProjectStatus.kind],
-          '#e': [task.id],
-          limit: 10
-        }],
-        [task.id]
-      ),
-      { closeOnEose: false, groupable: true }
-    )
+				const { events: updates } = useSubscribe(
+					[
+						{
+							kinds: [NDKKind.GenericReply as number, NDKProjectStatus.kind],
+							"#e": [task.id],
+						},
+					],
+					{ closeOnEose: false, groupable: true },
+					[task.id],
+				);
 
     // Get the latest status update
     const latestUpdate = useMemo(() => {
@@ -43,14 +42,23 @@ export const TaskCard = memo(
       return updates.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0]
     }, [updates])
 
-    // Get current status from latest update
+    // Get current status from the latest update that has a status tag
     const currentStatus = useMemo(() => {
-      if (latestUpdate) {
-        const statusTag = latestUpdate.tags?.find(tag => tag[0] === 'status')
-        if (statusTag) return statusTag[1]
+      if (!updates || updates.length === 0) return 'pending'
+      
+      // Sort updates by timestamp and find the latest one with a status tag
+      const sortedUpdates = [...updates].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
+      
+      for (const update of sortedUpdates) {
+        const statusTag = update.tags?.find(tag => tag[0] === 'status')
+        if (statusTag && statusTag[1]) {
+          return statusTag[1]
+        }
       }
+      
+      // Default to pending if no status found in any update
       return 'pending'
-    }, [latestUpdate])
+    }, [updates])
 
     const isCodeTask = task.tags?.some(tag => tag[0] === 'tool' && tag[1] === 'claude_code')
 

@@ -162,7 +162,7 @@ export function MobileProjectsList() {
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold truncate flex items-center gap-1.5">
                       {project.title}
-                      {status && !status.isOnline && (
+                      {(!status || !status.isOnline) && (
                         <Button
                           variant="ghost"
                           size="icon"

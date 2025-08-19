@@ -250,7 +250,12 @@ export function VoiceDialog({
         setIsProcessing(true);
 
         try {
-            const transcriptionPromise = transcribe(audioBlob);
+            // Run transcription and upload in parallel but handle failures independently
+            const transcriptionPromise = transcribe(audioBlob).catch(error => {
+                console.error("Transcription failed:", error);
+                // Return null to allow upload to continue even if transcription fails
+                return null;
+            });
 
             const blossom = new NDKBlossom(ndk!);
             const audioFile = new File([audioBlob], `voice-recording-${Date.now()}.webm`, {
@@ -259,6 +264,10 @@ export function VoiceDialog({
             const uploadPromise = blossom.upload(audioFile, {
                 server: "https://blossom.primal.net",
                 maxRetries: UPLOAD_LIMITS.MAX_RETRY_COUNT
+            }).catch(error => {
+                console.error("Audio upload failed:", error);
+                toast.warning("Audio upload failed, but transcription may still work");
+                return null;
             });
 
             const [rawTranscription, uploadResult] = await Promise.all([
@@ -266,10 +275,18 @@ export function VoiceDialog({
                 uploadPromise,
             ]);
 
+            // Check if we got at least transcription
+            if (!rawTranscription && !uploadResult?.url) {
+                throw new Error("Both transcription and upload failed");
+            }
+
             if (rawTranscription) {
                 const cleanedText = await cleanupText(rawTranscription);
                 setTranscription(cleanedText);
                 setEditedTranscription(cleanedText);
+            } else {
+                // If transcription failed but upload succeeded, inform user
+                toast.warning("Transcription failed, but audio was uploaded successfully");
             }
 
             if (uploadResult?.url) {
@@ -279,7 +296,11 @@ export function VoiceDialog({
             setIsProcessing(false);
         } catch (error) {
             console.error("Error during processing:", error);
-            toast.error("Failed to process recording");
+            const errorMessage = error instanceof Error ? error.message : "Failed to process recording";
+            toast.error(errorMessage, { 
+                duration: 5000,
+                description: "Please check your API key settings and try again"
+            });
             setIsProcessing(false);
         }
     };

@@ -14,7 +14,7 @@ import { ImageUploadQueue } from "@/components/upload/ImageUploadQueue";
 import { ChatDropZone } from "./ChatDropZone";
 import { motion, AnimatePresence } from "framer-motion";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
-import type { NDKTask } from "@/lib/ndk-events/NDKTask";
+import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 
 // Import new hooks and components
@@ -79,6 +79,9 @@ export function ChatInterface({
 
   // Message management
   const messages = useChatMessages(project, localRootEvent);
+
+  // Check if the root event is a task
+  const isRootEventTask = localRootEvent?.kind === NDKTask.kind;
 
   // Scroll management
   const scrollProps = useChatScroll(messages);
@@ -225,6 +228,7 @@ export function ChatInterface({
           onTaskClick={onTaskClick}
           onReplyFocus={handleReplyFocus}
           isNewThread={isNewThread}
+          isRootEventTask={isRootEventTask}
         />
 
         {/* Input Area */}

@@ -235,9 +235,9 @@ export function ChatInputArea({
               }
               disabled={disabled}
               className={cn(
-                "resize-none bg-transparent border-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                "resize-none bg-transparent border-0 !focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
                 "placeholder:text-muted-foreground/60",
-                "transition-all duration-200",
+                "transition-all duration-200 !shadow-none",
                 isMobile
                   ? "min-h-[40px] text-[15px] py-2.5 px-1 leading-relaxed"
                   : "min-h-[56px] text-base py-3 px-2",

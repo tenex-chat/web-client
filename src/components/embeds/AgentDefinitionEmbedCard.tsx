@@ -1,5 +1,5 @@
 import { NDKEvent } from '@nostr-dev-kit/ndk'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Bot, Brain, Plus, Check, Loader2, ExternalLink, Sparkles } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,6 +21,14 @@ import { useNDKCurrentUser, useNDK, useProfile } from '@nostr-dev-kit/ndk-hooks'
 import { toast } from 'sonner'
 import { useLocation } from '@tanstack/react-router'
 import { useProject } from '@/hooks/useProject'
+import { useProjectsStore } from '@/stores/projects'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { generateAgentColor } from '@/lib/utils/agent-colors'
 import ReactMarkdown from 'react-markdown'
@@ -37,6 +45,7 @@ export function AgentDefinitionEmbedCard({ event, compact, className, onClick }:
   const [modalOpen, setModalOpen] = useState(false)
   const [isInstalling, setIsInstalling] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const { ndk } = useNDK()
   const user = useNDKCurrentUser()
   const authorProfile = useProfile(event.pubkey)
@@ -44,12 +53,30 @@ export function AgentDefinitionEmbedCard({ event, compact, className, onClick }:
   // Try to extract project ID from the current path
   const location = useLocation()
   const pathMatch = location.pathname.match(/\/projects\/([^\/]+)/)
-  const projectId = pathMatch?.[1] || null
-  const project = useProject(projectId || '')
+  const projectIdFromUrl = pathMatch?.[1] || null
+  
+  // Get all projects for dropdown when not on a project page
+  const allProjects = useProjectsStore(state => state.projectsArray || [])
+  
+  // Use URL project if available, otherwise use selected project
+  const projectId = projectIdFromUrl || selectedProjectId
+  const project = useProject(projectId || undefined)
+  
+  // Ensure we re-fetch projects when modal opens
+  React.useEffect(() => {
+    if (modalOpen && !project && projectId) {
+      // Force a re-render to try fetching the project again
+      const timer = setTimeout(() => {
+        setSelectedProjectId(prev => prev); // Trigger re-render
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [modalOpen, project, projectId])
 
   // Convert event to NDKAgentDefinition
   const agent = NDKAgentDefinition.from(event)
   const agentColor = generateAgentColor(agent.name || agent.id)
+  
 
   const getRoleIcon = (role?: string) => {
     switch(role?.toLowerCase()) {
@@ -89,7 +116,11 @@ export function AgentDefinitionEmbedCard({ event, compact, className, onClick }:
 
   const handleInstall = async () => {
     if (!project || !ndk || !user) {
-      toast.error('Unable to install: Not authenticated or no project selected')
+      if (!user) {
+        toast.error('Please sign in to install agents')
+      } else if (!project) {
+        toast.error('Please select a project to install the agent to')
+      }
       return
     }
 
@@ -124,16 +155,56 @@ export function AgentDefinitionEmbedCard({ event, compact, className, onClick }:
   const checkIfInstalled = () => {
     if (project) {
       const existingAgents = project.agents.map(a => a.ndkAgentEventId)
-      if (existingAgents.includes(event.id)) {
-        setIsInstalled(true)
-      }
+      setIsInstalled(existingAgents.includes(event.id))
+    } else {
+      setIsInstalled(false)
     }
   }
+  
+  // Debug logging
+  React.useEffect(() => {
+    if (modalOpen) {
+      console.log('[AgentDefinitionEmbedCard] Modal opened:', {
+        hasUser: !!user,
+        userId: user?.pubkey,
+        hasProjectFromUrl: !!projectIdFromUrl,
+        projectIdFromUrl,
+        hasSelectedProject: !!selectedProjectId,
+        selectedProjectId,
+        hasProject: !!project,
+        projectId,
+        projectTitle: project?.title,
+        projectAgents: project?.agents,
+        projectCount: allProjects.length,
+        filteredProjectCount: allProjects.filter(p => p.dTag).length,
+        willShowInstallButton: !!(user && (projectIdFromUrl || selectedProjectId) && project),
+        willShowProjectSelector: !!(user && !project && allProjects.filter(p => p.dTag).length > 0),
+        agentName: agent.name,
+        eventId: event.id,
+        // Detailed install button condition breakdown
+        installButtonConditions: {
+          hasUser: !!user,
+          hasProjectIdFromUrlOrSelected: !!(projectIdFromUrl || selectedProjectId),
+          hasProject: !!project,
+          combined: !!(user && (projectIdFromUrl || selectedProjectId) && project)
+        },
+        // Detailed selector condition breakdown
+        selectorConditions: {
+          hasUser: !!user,
+          noProject: !project,
+          hasProjectsWithDTag: allProjects.filter(p => p.dTag).length > 0,
+          combined: !!(user && !project && allProjects.filter(p => p.dTag).length > 0)
+        }
+      })
+    }
+  }, [modalOpen, user, projectIdFromUrl, selectedProjectId, project, projectId, allProjects.length, agent.name, event.id])
 
   // Check installation status when project loads
-  if (project && !isInstalled) {
-    checkIfInstalled()
-  }
+  React.useEffect(() => {
+    if (project) {
+      checkIfInstalled()
+    }
+  }, [project, event.id])
 
   if (compact) {
     return (
@@ -282,12 +353,30 @@ export function AgentDefinitionEmbedCard({ event, compact, className, onClick }:
                   Close
                 </Button>
                 
-                {projectId && project && (
-                  <Button
-                    onClick={handleInstall}
-                    disabled={isInstalling || isInstalled || !user}
-                    className="min-w-[100px]"
-                  >
+                {/* Show project selector when user is logged in and has projects */}
+                {user && !project && allProjects.filter(p => p.dTag).length > 0 && (
+                  <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Select a project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allProjects.filter(p => p.dTag).map((p) => (
+                        <SelectItem key={p.dTag} value={p.dTag!}>
+                          {p.title || 'Untitled Project'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
+                {/* Show install button when project is available (from URL or selection) */}
+                {user ? (
+                  (projectIdFromUrl || selectedProjectId) && project ? (
+                    <Button
+                      onClick={handleInstall}
+                      disabled={isInstalling || isInstalled}
+                      className="min-w-[100px]"
+                    >
                     {isInstalling ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -304,7 +393,16 @@ export function AgentDefinitionEmbedCard({ event, compact, className, onClick }:
                         Install
                       </>
                     )}
-                  </Button>
+                    </Button>
+                  ) : !projectIdFromUrl && allProjects.filter(p => p.dTag).length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                      No projects available
+                    </div>
+                  ) : null
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    Sign in to install
+                  </div>
                 )}
               </div>
             </DialogFooter>
@@ -530,12 +628,30 @@ export function AgentDefinitionEmbedCard({ event, compact, className, onClick }:
                 Close
               </Button>
               
-              {projectId && project && (
-                <Button
-                  onClick={handleInstall}
-                  disabled={isInstalling || isInstalled || !user}
-                  className="min-w-[100px]"
-                >
+              {/* Show project selector when user is logged in and has projects */}
+              {user && !project && allProjects.filter(p => p.dTag).length > 0 && (
+                <Select value={selectedProjectId || ''} onValueChange={setSelectedProjectId}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select a project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allProjects.filter(p => p.dTag).map((p) => (
+                      <SelectItem key={p.dTag} value={p.dTag!}>
+                        {p.title || 'Untitled Project'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
+              {/* Show install button when project is available (from URL or selection) */}
+              {user ? (
+                (projectIdFromUrl || selectedProjectId) && project ? (
+                  <Button
+                    onClick={handleInstall}
+                    disabled={isInstalling || isInstalled}
+                    className="min-w-[100px]"
+                  >
                   {isInstalling ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -552,7 +668,16 @@ export function AgentDefinitionEmbedCard({ event, compact, className, onClick }:
                       Install
                     </>
                   )}
-                </Button>
+                  </Button>
+                ) : !projectIdFromUrl && allProjects.filter(p => p.dTag).length === 0 ? (
+                  <div className="text-sm text-muted-foreground">
+                    No projects available
+                  </div>
+                ) : null
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  Sign in to install
+                </div>
               )}
             </div>
           </DialogFooter>

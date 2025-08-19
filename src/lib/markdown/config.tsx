@@ -22,28 +22,36 @@ export function getMarkdownComponents({
   isMobile = false,
   onImageClick
 }: MarkdownComponentsOptions) {
-  // Helper function to process text and replace nostr entity placeholders
+  // Helper function to process text and replace nostr entities
   const processNostrEntities = (child: ReactNode): ReactNode | ReactNode[] => {
     if (typeof child === 'string') {
-      // Check for nostr entity placeholders
-      const placeholderRegex = /__NOSTR_ENTITY_(nostr:[a-zA-Z0-9]+)__/g
+      // Look for nostr: references in the text
+      const nostrRegex = /(?:nostr:)?(npub1|nprofile1|nevent1|naddr1|note1)[a-zA-Z0-9]+/g
       const parts = []
       let lastIndex = 0
       let match
       
-      while ((match = placeholderRegex.exec(child)) !== null) {
-        // Add text before placeholder
+      while ((match = nostrRegex.exec(child)) !== null) {
+        // Add text before the nostr entity
         if (match.index > lastIndex) {
           parts.push(child.substring(lastIndex, match.index))
         }
         
-        // Extract the original nostr entity
-        const nostrEntity = match[1]
-        const entities = findNostrEntities(nostrEntity)
+        // Parse the nostr entity
+        const fullMatch = match[0]
+        const bech32 = fullMatch.startsWith('nostr:') ? fullMatch.substring(6) : fullMatch
+        const entities = findNostrEntities(bech32)
+        
         if (entities.length > 0) {
-          parts.push(<NostrEntityCard key={`${match.index}-${nostrEntity}`} entity={entities[0]} compact />)
+          parts.push(
+            <NostrEntityCard 
+              key={`${match.index}-${bech32}`} 
+              entity={entities[0]} 
+              compact 
+            />
+          )
         } else {
-          parts.push(nostrEntity)
+          parts.push(fullMatch)
         }
         
         lastIndex = match.index + match[0].length

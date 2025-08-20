@@ -34,13 +34,29 @@ interface AgentProfilePageProps {
 }
 
 export function AgentProfilePage({ pubkey: propPubkey }: AgentProfilePageProps = {}) {
-  const routeParams = useParams({ from: "/_auth/p/$pubkey" });
-  const pubkey = propPubkey || routeParams.pubkey;
+  // Try to get params, but handle the case where we're not in a route context
+  let routePubkey: string | undefined;
+  try {
+    const params = useParams({ strict: false });
+    routePubkey = params?.pubkey;
+  } catch (e) {
+    // Not in a route context, that's okay
+  }
+  const pubkey = propPubkey || routePubkey;
   const { ndk } = useNDK();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>("details");
   const [copiedPubkey, setCopiedPubkey] = useState(false);
   // Dialog state removed - using route navigation instead
+
+  // Early return if no pubkey is available
+  if (!pubkey) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-muted-foreground">No agent pubkey provided</p>
+      </div>
+    );
+  }
 
   // The agent IS the pubkey - get their profile
   const profile = useProfileValue(pubkey);
@@ -98,7 +114,7 @@ export function AgentProfilePage({ pubkey: propPubkey }: AgentProfilePageProps =
 
   const handleCopyPubkey = async () => {
     try {
-      await navigator.clipboard.writeText(pubkey);
+      await navigator.clipboard.writeText(pubkey || "");
       setCopiedPubkey(true);
       setTimeout(() => setCopiedPubkey(false), TIMING.COPY_FEEDBACK_DURATION);
     } catch (error) {

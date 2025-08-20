@@ -23,16 +23,11 @@ export function useProjectOnlineModels(projectDTag?: string): ModelOption[] {
     }
     
     return projectStatus.models.map(model => {
-      // Extract provider name from the provider string (e.g., "anthropic/claude-sonnet-4" -> "anthropic")
-      const providerName = model.provider.split('/')[0]
-      
-      // Create a human-readable label
-      const label = formatModelLabel(providerName, model.name)
-      
+      // Just use the slug directly - no formatting
       return {
-        provider: providerName,
-        model: model.name,
-        label
+        provider: model.name,  // slug
+        model: model.name,     // slug
+        label: model.name      // slug - show it as-is
       }
     })
   }, [projectStatus])
@@ -40,24 +35,3 @@ export function useProjectOnlineModels(projectDTag?: string): ModelOption[] {
   return onlineModels
 }
 
-/**
- * Formats a model name into a human-readable label
- */
-function formatModelLabel(provider: string, modelName: string): string {
-  // Provider-specific formatting
-  const providerLabel = provider.charAt(0).toUpperCase() + provider.slice(1)
-  
-  // Common model name transformations
-  const formattedModel = modelName
-    .replace(/-/g, ' ')
-    .replace(/\b\w/g, char => char.toUpperCase())
-    .replace(/Gpt/g, 'GPT')
-    .replace(/Llama/g, 'Llama')
-    .replace(/Claude/g, 'Claude')
-    .replace(/Gemini/g, 'Gemini')
-    .replace(/\d+(\.\d+)?/g, match => ` ${match}`)
-    .replace(/\s+/g, ' ')
-    .trim()
-  
-  return `${providerLabel} ${formattedModel}`
-}

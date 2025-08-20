@@ -1,15 +1,16 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { ProjectColumn } from './ProjectColumn'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 import { DocumentationViewer } from '@/components/documentation/DocumentationViewer'
+import { DocumentationEditorDrawer } from '@/components/documentation/DocumentationEditorDrawer'
 import { AgentProfilePage } from '@/components/agents/AgentProfilePage'
 import { ProjectGeneralSettings } from '@/components/settings/ProjectGeneralSettings'
 import { ProjectAdvancedSettings } from '@/components/settings/ProjectAdvancedSettings'
 import { ProjectDangerZone } from '@/components/settings/ProjectDangerZone'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { NDKEvent, NDKArticle, NDKTask } from '@nostr-dev-kit/ndk'
-import { useNDK } from '@nostr-dev-kit/ndk-hooks'
+import { NDKEvent, NDKArticle, NDKTask, NDKKind } from '@nostr-dev-kit/ndk'
+import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -31,7 +32,36 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
   const [drawerContent, setDrawerContent] = useState<DrawerContent | null>(null)
   const [selectedThreadEvent, setSelectedThreadEvent] = useState<NDKEvent | undefined>()
   const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null)
-  const { ndk } = useNDK()
+  const [isCreatingDoc, setIsCreatingDoc] = useState(false)
+  const [editingArticle, setEditingArticle] = useState<NDKArticle | null>(null)
+  
+  // Collect existing hashtags from documentation for suggestions
+  const currentProject = drawerContent?.project
+  const filter = useMemo(() => {
+    if (!currentProject) return null
+    return {
+      kinds: [NDKKind.Article],
+      '#a': [currentProject.tagId()]
+    }
+  }, [currentProject])
+  
+  const { events: articles } = useSubscribe<NDKArticle>(filter ? [filter] : false, {
+    wrap: true,
+    closeOnEose: false,
+    groupable: true,
+    subId: 'hashtag-suggestions'
+  }, [currentProject])
+  
+  const existingHashtags = useMemo(() => {
+    if (!articles) return []
+    const tagSet = new Set<string>()
+    articles.forEach(article => {
+      article.tags
+        .filter(tag => tag[0] === 't')
+        .forEach(tag => tagSet.add(tag[1]))
+    })
+    return Array.from(tagSet).sort()
+  }, [articles])
 
   // Handle item clicks from project columns
   const handleItemClick = async (project: NDKProject, itemType: TabType, item?: string | NDKEvent) => {
@@ -47,9 +77,16 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
         setSelectedThreadEvent(threadEvent)
         setDrawerContent({ project, type: itemType, item, data: threadEvent })
       }
+    } else if (itemType === 'docs' && item === 'new') {
+      // New documentation - open in drawer
+      setIsCreatingDoc(true)
+      setEditingArticle(null)
+      setSelectedArticle(null)
+      setDrawerContent({ project, type: itemType, item: 'new' })
     } else if (itemType === 'docs' && item instanceof NDKEvent) {
-      // For docs, we'd need to fetch the article
-      // This is simplified - you'd need actual article fetching logic
+      // Existing documentation
+      setIsCreatingDoc(false)
+      setEditingArticle(null)
       setDrawerContent({ project, type: itemType, item })
       setSelectedArticle(NDKArticle.from(item))
     } else {
@@ -61,6 +98,8 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
     setDrawerContent(null)
     setSelectedThreadEvent(undefined)
     setSelectedArticle(null)
+    setIsCreatingDoc(false)
+    setEditingArticle(null)
   }
 
   const renderDrawerContent = () => {
@@ -75,7 +114,7 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
             project={project}
             rootEvent={selectedThreadEvent}
             className="h-full"
-            onTaskClick={async (task: NDKTask) => {
+            onTaskClick={(task: NDKTask) => {
                 if (task) {
                   setSelectedThreadEvent(task)
                   setDrawerContent({ ...drawerContent, data: task })
@@ -91,6 +130,19 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
         )
 
       case 'docs':
+        // Creating new document or editing
+        if (isCreatingDoc || editingArticle) {
+          return (
+            <DocumentationEditorDrawer
+              project={project}
+              projectTitle={project.title}
+              existingArticle={editingArticle}
+              existingHashtags={existingHashtags}
+              onBack={handleDrawerClose}
+            />
+          )
+        }
+        // Viewing existing document
         if (selectedArticle) {
           return (
             <DocumentationViewer
@@ -98,6 +150,10 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
               projectTitle={project.title}
               project={project}
               onBack={handleDrawerClose}
+              onEdit={() => {
+                setEditingArticle(selectedArticle)
+                setIsCreatingDoc(false)
+              }}
             />
           )
         }

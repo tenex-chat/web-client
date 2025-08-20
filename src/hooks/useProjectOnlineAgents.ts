@@ -4,8 +4,11 @@ import { useProjectStatus } from '@/stores/projects'
 export interface ProjectOnlineAgent {
   pubkey: string
   name: string
+  model?: string      // Model slug from the 24010 event
   status?: string
   lastSeen?: number
+  tools?: string[]
+  isGlobal?: boolean
 }
 
 /**
@@ -26,8 +29,11 @@ export function useProjectOnlineAgents(projectDTag?: string): ProjectOnlineAgent
     return projectStatus.agents.map(agent => ({
       pubkey: agent.pubkey,
       name: agent.name || agent.pubkey.slice(0, 8),
+      model: agent.model,
       status: agent.status,
-      lastSeen: agent.lastSeen
+      lastSeen: agent.lastSeen,
+      tools: agent.tools,
+      isGlobal: agent.isGlobal
     }))
   }, [projectStatus])
   

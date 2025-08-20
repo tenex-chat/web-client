@@ -1,13 +1,14 @@
 import { NDKEvent, type NDKKind, type NostrEvent } from '@nostr-dev-kit/ndk'
 import type NDK from '@nostr-dev-kit/ndk'
-import { EVENT_KINDS } from '../constants'
 
 export interface ProjectAgent {
   pubkey: string
-  name: string
-  role?: string
+  name: string      // Agent slug (e.g., "human-replica", "executor")
+  isGlobal?: boolean  // true if agent is global
+  model?: string      // Model slug this agent uses (e.g., "sonnet", "gpt-4o-mini")
   status?: string
   lastSeen?: number
+  tools?: string[]    // Array of tool names this agent has access to
 }
 
 export interface ProjectModel {
@@ -78,38 +79,116 @@ export class NDKProjectStatus extends NDKEvent {
 
   get agents(): ProjectAgent[] {
     const agents: ProjectAgent[] = []
+    const agentMap = new Map<string, ProjectAgent>()  // name -> agent
+    
+    // First pass: build agents from agent tags
     for (const tag of this.tags) {
       if (tag[0] === 'agent' && tag[1]) {
-        agents.push({
+        const agent: ProjectAgent = {
           pubkey: tag[1],
           name: tag[2] || 'Unknown',
-          role: tag[3]
-        })
+          isGlobal: tag[3] === 'global',
+          tools: []  // Initialize empty tools array
+        }
+        agents.push(agent)
+        agentMap.set(agent.name, agent)
       }
     }
+    
+    // Second pass: add models to agents from model tags
+    for (const tag of this.tags) {
+      if (tag[0] === 'model' && tag[1]) {
+        const modelSlug = tag[1]       // e.g., "sonnet"
+        // Elements 2+ are agent names that use this model
+        for (let i = 2; i < tag.length; i++) {
+          const agentName = tag[i]
+          const agent = agentMap.get(agentName)
+          if (agent) {
+            agent.model = modelSlug
+          }
+        }
+      }
+    }
+    
+    // Third pass: add tools to agents from tool tags
+    for (const tag of this.tags) {
+      if (tag[0] === 'tool' && tag[1]) {
+        const toolName = tag[1]
+        // Elements 2+ are agent names that have this tool
+        for (let i = 2; i < tag.length; i++) {
+          const agentName = tag[i]
+          const agent = agentMap.get(agentName)
+          if (agent) {
+            if (!agent.tools) agent.tools = []
+            agent.tools.push(toolName)
+          }
+        }
+      }
+    }
+    
     return agents
   }
 
   set agents(agentList: ProjectAgent[]) {
-    // Remove existing agent tags
-    this.tags = this.tags.filter(tag => tag[0] !== 'agent')
+    // Remove existing agent, model, and tool tags
+    this.tags = this.tags.filter(tag => tag[0] !== 'agent' && tag[0] !== 'model' && tag[0] !== 'tool')
     
-    // Add new agent tags
+    // Add agent tags
     for (const agent of agentList) {
       const tag = ['agent', agent.pubkey, agent.name]
-      if (agent.role) tag.push(agent.role)
+      if (agent.isGlobal) tag.push('global')
       this.tags.push(tag)
+    }
+    
+    // Build model -> agents mapping
+    const modelMap = new Map<string, string[]>()
+    for (const agent of agentList) {
+      if (agent.model) {
+        if (!modelMap.has(agent.model)) {
+          modelMap.set(agent.model, [])
+        }
+        modelMap.get(agent.model)!.push(agent.name)
+      }
+    }
+    
+    // Add model tags - simple format: ["model", "slug", ...agent-names]
+    for (const [modelSlug, agentNames] of modelMap) {
+      this.tags.push(['model', modelSlug, ...agentNames])
+    }
+    
+    // Build tool -> agents mapping
+    const toolMap = new Map<string, string[]>()
+    for (const agent of agentList) {
+      if (agent.tools && agent.tools.length > 0) {
+        for (const tool of agent.tools) {
+          if (!toolMap.has(tool)) {
+            toolMap.set(tool, [])
+          }
+          toolMap.get(tool)!.push(agent.name)
+        }
+      }
+    }
+    
+    // Add tool tags
+    for (const [toolName, agentNames] of toolMap) {
+      this.tags.push(['tool', toolName, ...agentNames])
     }
   }
 
   get models(): ProjectModel[] {
     const models: ProjectModel[] = []
+    const modelSet = new Set<string>()
+    
     for (const tag of this.tags) {
-      if (tag[0] === 'model' && tag[1] && tag[2]) {
-        models.push({
-          provider: tag[1],
-          name: tag[2]
-        })
+      if (tag[0] === 'model' && tag[1]) {
+        const modelSlug = tag[1]
+        if (!modelSet.has(modelSlug)) {
+          modelSet.add(modelSlug)
+          models.push({
+            provider: modelSlug,  // Just use slug for both
+            name: modelSlug
+          })
+        }
       }
     }
     return models
@@ -119,9 +198,9 @@ export class NDKProjectStatus extends NDKEvent {
     // Remove existing model tags
     this.tags = this.tags.filter(tag => tag[0] !== 'model')
     
-    // Add new model tags
+    // Add new model tags - simple format
     for (const model of modelList) {
-      this.tags.push(['model', model.provider, model.name])
+      this.tags.push(['model', model.name])
     }
   }
 

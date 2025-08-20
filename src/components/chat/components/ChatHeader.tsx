@@ -1,9 +1,14 @@
-import { useMemo } from "react";
-import { ArrowLeft, Phone, PhoneOff } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowLeft, Phone, PhoneOff, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { ConversationAgents } from "./ConversationAgents";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "../hooks/useChatMessages";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
@@ -33,6 +38,7 @@ export function ChatHeader({
 }: ChatHeaderProps) {
   const isMobile = useIsMobile();
   const isNewThread = !rootEvent;
+  const [showTTSInfo, setShowTTSInfo] = useState(false);
 
   // Get thread title
   const threadTitle = useMemo(() => {
@@ -97,8 +103,8 @@ export function ChatHeader({
               rootEvent={rootEvent}
             />
           )}
-          {/* Auto-TTS toggle */}
-          {ttsEnabled && (
+          {/* Auto-TTS toggle - always visible */}
+          {ttsEnabled ? (
             <Button
               variant={autoTTS ? "default" : "ghost"}
               size="icon"
@@ -115,6 +121,45 @@ export function ChatHeader({
                 <PhoneOff className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
             </Button>
+          ) : (
+            <Popover open={showTTSInfo} onOpenChange={setShowTTSInfo}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+                  title="Voice mode not configured"
+                >
+                  <PhoneOff className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="space-y-2">
+                  <div className="font-semibold flex items-center gap-2">
+                    <Settings className="w-4 h-4" />
+                    Voice Mode Not Configured
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    To enable voice mode, you need to configure Text-to-Speech settings.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Go to Settings → TTS and add your Murf.ai API key and select a voice.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setShowTTSInfo(false);
+                      // Navigate to settings - this would need to be passed as a prop or use routing
+                      window.location.href = '/settings?tab=tts';
+                    }}
+                  >
+                    Go to Settings
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
         </div>
       </div>

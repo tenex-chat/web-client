@@ -3,7 +3,13 @@ import { Badge } from '../ui/badge'
 import { cn } from '../../lib/utils'
 import type { ProjectAgent } from '../../lib/ndk-events/NDKProjectStatus'
 import { useProfile } from '@nostr-dev-kit/ndk-hooks'
-import { Bot } from 'lucide-react'
+import { Bot, Wrench } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip'
 
 interface AgentStatusListProps {
   agents: ProjectAgent[]
@@ -24,13 +30,46 @@ function AgentStatusItem({ agent }: { agent: ProjectAgent }) {
       </Avatar>
       
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">
-          {agent.name}
-        </p>
-        {agent.role && (
-          <p className="text-xs text-muted-foreground">
-            {agent.role}
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium truncate">
+            {agent.name}
           </p>
+          {agent.isGlobal && (
+            <Badge variant="outline" className="text-xs px-1.5 py-0">
+              Global
+            </Badge>
+          )}
+          {agent.model && (
+            <Badge variant="secondary" className="text-xs px-1.5 py-0">
+              {agent.model}
+            </Badge>
+          )}
+        </div>
+        {agent.tools && agent.tools.length > 0 && (
+          <div className="flex items-center gap-1 mt-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground cursor-help">
+                    <Wrench className="w-3 h-3" />
+                    <span>{agent.tools.length} tools</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <div className="space-y-1">
+                    <p className="font-semibold text-xs">Available Tools:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {agent.tools.map((tool, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-xs px-1.5 py-0">
+                          {tool}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         )}
       </div>
 

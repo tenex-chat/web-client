@@ -6,6 +6,7 @@ import type NDK from "@nostr-dev-kit/ndk";
 import { useAgentsStore } from "./agents";
 import { useProjectActivityStore } from "./projectActivity";
 import { logger } from "../lib/logger";
+import { toast } from "sonner";
 
 export interface ProjectStatusData {
     statusEvent: NDKProjectStatus | null;
@@ -32,6 +33,8 @@ interface ProjectsState {
     statusSubscription: NDKSubscription | null;
     // Subscription for projects
     projectsSubscription: NDKSubscription | null;
+    // Track which agents we've already notified about per project
+    notifiedAgents: Map<string, Set<string>>; // dTag -> Set of agent pubkeys
     
     addProject: (project: NDKProject) => void;
     removeProject: (dTag: string) => void;
@@ -51,7 +54,7 @@ interface ProjectsState {
     
     // Status management
     initializeStatusSubscription: (ndk: NDK) => void;
-    updateProjectStatus: (event: NDKEvent) => void;
+    updateProjectStatus: (event: NDKEvent) => Promise<void>;
     cleanupStatusSubscription: () => void;
     getProjectStatus: (dTag: string) => ProjectStatusData | null;
 }
@@ -70,6 +73,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         projectStatus: new Map(),
         statusSubscription: null,
         projectsSubscription: null,
+        notifiedAgents: new Map(),
         
         addProject: (project) => set((state) => {
             logger.debug('addProject', project.dTag)
@@ -319,10 +323,10 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
          * Updates the status of a project based on an NDKEvent
          * @param event - The NDKEvent containing project status information
          */
-        updateProjectStatus: (event: NDKEvent) => {
+        updateProjectStatus: async (event: NDKEvent) => {
             if (!event.ndk) return;
 
-            const { projects, tagIdMap, projectStatus } = get();
+            const { projects, tagIdMap, projectStatus, notifiedAgents } = get();
             const status = new NDKProjectStatus(event.ndk, event);
             const projectTagId = status.projectId;
             
@@ -359,6 +363,44 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             
             // Check if this is actually a change
             const existingStatus = projectStatus.get(finalDTag);
+            
+            // Check for new agents and show toast notification
+            if (status.agents.length > 0) {
+                // Get or create the set of notified agents for this project
+                const projectNotifiedAgents = notifiedAgents.get(finalDTag) || new Set<string>();
+                
+                // Find agents we haven't notified about yet
+                const newAgents = status.agents.filter(a => !projectNotifiedAgents.has(a.pubkey));
+                
+                // Show toast only if exactly one new agent joined
+                if (newAgents.length === 1) {
+                    const newAgent = newAgents[0];
+                    const project = projects.get(finalDTag);
+                    const projectName = project?.title || 'the project';
+                    
+                    // Fetch the agent's profile to get their real name
+                    try {
+                        const agentUser = event.ndk.getUser({ pubkey: newAgent.pubkey });
+                        await agentUser.fetchProfile();
+                        const agentName = agentUser.profile?.displayName || 
+                                        agentUser.profile?.name || 
+                                        newAgent.name;
+                        toast.success(`Agent ${agentName} has joined ${projectName}`);
+                    } catch (e) {
+                        // Fallback to using the slug name if profile fetch fails
+                        toast.success(`Agent ${newAgent.name} has joined ${projectName}`);
+                    }
+                    
+                    // Mark this agent as notified
+                    projectNotifiedAgents.add(newAgent.pubkey);
+                    set((state) => {
+                        const newNotifiedAgents = new Map(state.notifiedAgents);
+                        newNotifiedAgents.set(finalDTag, projectNotifiedAgents);
+                        return { notifiedAgents: newNotifiedAgents };
+                    });
+                }
+            }
+            
             if (existingStatus && 
                 existingStatus.isOnline === status.isOnline &&
                 existingStatus.agents.length === status.agents.length &&

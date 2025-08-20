@@ -55,7 +55,6 @@ export class MurfTTSService {
             
             const audioChunks: ArrayBuffer[] = [];
             const audioContext = this.getAudioContext();
-            let isFirstChunk = true;
             
             ws.onopen = () => {
                 const message = {
@@ -108,14 +107,8 @@ export class MurfTTSService {
                                 return;
                             }
                             
-                            // Skip WAV header (first 44 bytes) from the first chunk
-                            if (isFirstChunk && bytes.length > 44) {
-                                const audioWithoutHeader = bytes.buffer.slice(44);
-                                audioChunks.push(audioWithoutHeader);
-                                isFirstChunk = false;
-                            } else if (bytes.length > 0) {
-                                audioChunks.push(bytes.buffer);
-                            }
+                            // Keep the complete WAV data including headers
+                            audioChunks.push(bytes.buffer);
                         }
                         
                         if (data.final === true || data.isFinalAudio === true) {
@@ -125,7 +118,7 @@ export class MurfTTSService {
                                 return;
                             }
 
-                            // Combine chunks
+                            // Combine chunks to form complete WAV file
                             const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.byteLength, 0);
                             const combinedBuffer = new ArrayBuffer(totalLength);
                             const view = new Uint8Array(combinedBuffer);
@@ -136,7 +129,7 @@ export class MurfTTSService {
                                 offset += chunk.byteLength;
                             }
                             
-                            // Decode and play
+                            // Decode and play the complete WAV file
                             try {
                                 const audioBuffer = await audioContext.decodeAudioData(combinedBuffer);
                                 const source = audioContext.createBufferSource();
@@ -156,7 +149,8 @@ export class MurfTTSService {
                                 };
                                 
                                 source.start(0);
-                            } catch {
+                            } catch (error) {
+                                logger.error('Failed to decode audio:', error);
                                 reject(new Error('Failed to decode audio'));
                             }
                             

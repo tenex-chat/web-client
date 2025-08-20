@@ -1,5 +1,5 @@
 import { NDKArticle } from '@nostr-dev-kit/ndk'
-import { ArrowLeft, Calendar, Clock, Copy, Hash, MessageSquare, Plus, History } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, Copy, Hash, MessageSquare, Plus, History, Edit } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
@@ -11,19 +11,18 @@ import { useMemo, useState, useCallback } from 'react'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
-import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { cn } from '@/lib/utils'
 import { ChangelogTabContent } from '@/components/changelog/ChangelogTabContent'
 
 interface DocumentationViewerProps {
   article: NDKArticle
   onBack?: () => void
+  onEdit?: () => void
   projectTitle?: string
   project?: NDKProject
 }
 
-export function DocumentationViewer({ article, onBack, projectTitle, project }: DocumentationViewerProps) {
-  const { ndk } = useNDK()
+export function DocumentationViewer({ article, onBack, onEdit, projectTitle, project }: DocumentationViewerProps) {
   const [showComments, setShowComments] = useState(false)
   const [showChangelog, setShowChangelog] = useState(false)
   const [chatThread, setChatThread] = useState<NDKEvent | undefined>(undefined)
@@ -92,6 +91,17 @@ export function DocumentationViewer({ article, onBack, projectTitle, project }: 
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onEdit}
+                className="h-9 w-9"
+                title="Edit documentation"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"

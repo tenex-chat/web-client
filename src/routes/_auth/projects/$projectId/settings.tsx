@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ProjectGeneralSettings } from '@/components/settings/ProjectGeneralSettings'
 import { ProjectAdvancedSettings } from '@/components/settings/ProjectAdvancedSettings'
 import { ProjectDangerZone } from '@/components/settings/ProjectDangerZone'
+import { ProjectAgentsPanel } from '@/components/projects/ProjectAgentsPanel'
 
 export const Route = createFileRoute('/_auth/projects/$projectId/settings')({
   component: ProjectSettingsPage,
@@ -65,6 +66,12 @@ function ProjectSettingsPage() {
                   General
                 </TabsTrigger>
                 <TabsTrigger 
+                  value="agents"
+                  onClick={() => navigate({ to: '/projects/$projectId/settings', params: { projectId }, search: { tab: 'agents' } })}
+                >
+                  Agents
+                </TabsTrigger>
+                <TabsTrigger 
                   value="advanced"
                   onClick={() => navigate({ to: '/projects/$projectId/settings', params: { projectId }, search: { tab: 'advanced' } })}
                 >
@@ -81,6 +88,11 @@ function ProjectSettingsPage() {
               {/* General Settings */}
               <TabsContent value="general">
                 <ProjectGeneralSettings project={project} />
+              </TabsContent>
+
+              {/* Agents */}
+              <TabsContent value="agents">
+                <ProjectAgentsPanel project={project} />
               </TabsContent>
 
               {/* Advanced Settings */}

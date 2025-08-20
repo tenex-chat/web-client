@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { getUserStatus } from '@/lib/utils/userStatus'
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
+import { Badge } from '@/components/ui/badge'
 
 interface MessageShellProps {
   event: NDKEvent
@@ -45,6 +46,11 @@ export const MessageShell = memo(function MessageShell({
       .map(tag => tag[1])
       .filter((pubkey, index, self) => self.indexOf(pubkey) === index) // Remove duplicates
   }, [event.tags])
+  
+  // Extract tool tag if present
+  const toolName = useMemo(() => {
+    return event.tagValue('tool')
+  }, [event])
 
   return (
     <div className={cn(
@@ -93,6 +99,11 @@ export const MessageShell = memo(function MessageShell({
                 <span className="text-xs text-muted-foreground">
                   ({userStatus.projectName || 'external'})
                 </span>
+              )}
+              {toolName && (
+                <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                  {toolName}
+                </Badge>
               )}
               <span className="text-xs text-muted-foreground">
                 {formatRelativeTime(event.created_at || 0)}

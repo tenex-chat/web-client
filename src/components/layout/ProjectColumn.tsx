@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { MessageSquare, FileText, Bot, BarChart, Settings, Plus, ChevronRight, Clock, Shield, AlertTriangle, WifiOff } from 'lucide-react'
+import { MessageSquare, FileText, Bot, Settings, Plus, ChevronRight, Shield, AlertTriangle, WifiOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
@@ -16,7 +16,7 @@ import { AddAgentsToProjectDialog } from '@/components/dialogs/AddAgentsToProjec
 import { useProjectStatus } from '@/stores/projects'
 import { bringProjectOnline } from '@/lib/utils/projectStatusUtils'
 
-type TabType = 'conversations' | 'docs' | 'agents' | 'status' | 'settings'
+type TabType = 'conversations' | 'docs' | 'agents' | 'settings'
 
 /**
  * Generate a deterministic HSL color based on a string
@@ -158,42 +158,6 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
           </ScrollArea>
         )
       
-      case 'status':
-        return (
-          <ScrollArea className="h-full">
-            <div className="p-2 space-y-1">
-              <Button
-                variant="ghost"
-                className="w-full justify-start p-2 h-auto"
-                onClick={() => onItemClick(project, 'status', 'overview')}
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <BarChart className="h-4 w-4 shrink-0" />
-                  <div className="flex-1 text-left">
-                    <div className="text-sm font-medium">Project Overview</div>
-                    <div className="text-xs text-muted-foreground">View detailed status</div>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                </div>
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start p-2 h-auto"
-                onClick={() => onItemClick(project, 'status', 'activity')}
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <Clock className="h-4 w-4 shrink-0" />
-                  <div className="flex-1 text-left">
-                    <div className="text-sm font-medium">Activity Log</div>
-                    <div className="text-xs text-muted-foreground">Recent events</div>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                </div>
-              </Button>
-            </div>
-          </ScrollArea>
-        )
-      
       case 'settings':
         return (
           <ScrollArea className="h-full">
@@ -253,7 +217,6 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
     { id: 'conversations' as const, icon: MessageSquare, label: 'Conversations' },
     { id: 'docs' as const, icon: FileText, label: 'Documentation' },
     { id: 'agents' as const, icon: Bot, label: 'Agents' },
-    { id: 'status' as const, icon: BarChart, label: 'Status' },
     { id: 'settings' as const, icon: Settings, label: 'Settings' },
   ]
 

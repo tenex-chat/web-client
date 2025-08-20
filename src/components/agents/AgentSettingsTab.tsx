@@ -231,14 +231,6 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
           {/* Project-specific Settings */}
           {agentProjects.length > 0 && (
             <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <Settings2 className="w-5 h-5 text-primary" />
-                <h3 className="text-lg font-semibold">Project Settings</h3>
-              </div>
-              <p className="text-sm text-muted-foreground -mt-4">
-                Configure model and tools for each project this agent is part of
-              </p>
-
               {agentProjects.map(({ dTag, title }) => {
                 const settings = projectSettings.get(dTag);
                 if (!settings) return null;
@@ -314,121 +306,124 @@ function ProjectSettingsCard({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <Bot className="w-4 h-4" />
-            {projectTitle}
-          </span>
-          {hasChanges && (
-            <Badge variant="outline" className="text-xs">
-              Unsaved changes
-            </Badge>
-          )}
-        </CardTitle>
-        <CardDescription>
-          Configure how this agent works in the {projectTitle} project
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Model Selection */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Settings2 className="w-4 h-4" />
-            Model
-          </label>
-          {availableModels.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No models available for this project
-            </p>
-          ) : (
-            <Select
-              value={settings.selectedModel}
-              onValueChange={(value) => onModelChange(projectDTag, value)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a model" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableModels.map((model) => (
-                  <SelectItem key={model.model} value={model.model}>
-                    <div className="flex items-center justify-between w-full">
-                      <span>{model.label}</span>
-                      {model.provider && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          {model.provider}
-                        </span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {settings.originalModel && settings.selectedModel !== settings.originalModel && (
-            <p className="text-xs text-muted-foreground">
-              Previously: {settings.originalModel}
-            </p>
-          )}
-        </div>
+			<Card>
+				<CardHeader>
+					<CardTitle className="flex items-center justify-between">
+						<span className="flex items-center gap-2">
+							<Settings2 className="w-4 h-4" />
+							Project Settings
+						</span>
+						{hasChanges && (
+							<Badge variant="outline" className="text-xs">
+								Unsaved changes
+							</Badge>
+						)}
+					</CardTitle>
+					<CardDescription>
+						Configure how this agent works in the {projectTitle} project
+					</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-6">
+					{/* Model Selection */}
+					<div className="space-y-2">
+						<label className="text-sm font-medium flex items-center gap-2">
+							<Settings2 className="w-4 h-4" />
+							Model
+						</label>
+						{availableModels.length === 0 ? (
+							<p className="text-sm text-muted-foreground">
+								No models available for this project
+							</p>
+						) : (
+							<Select
+								value={settings.selectedModel}
+								onValueChange={(value) => onModelChange(projectDTag, value)}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue placeholder="Select a model" />
+								</SelectTrigger>
+								<SelectContent>
+									{availableModels.map((model) => (
+										<SelectItem key={model.model} value={model.model}>
+											<div className="flex items-center justify-between w-full">
+												<span>{model.label}</span>
+												{model.provider && (
+													<span className="text-xs text-muted-foreground ml-2">
+														{model.provider}
+													</span>
+												)}
+											</div>
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						)}
+						{settings.originalModel &&
+							settings.selectedModel !== settings.originalModel && (
+								<p className="text-xs text-muted-foreground">
+									Previously: {settings.originalModel}
+								</p>
+							)}
+					</div>
 
-        {/* Tools Selection */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Wrench className="w-4 h-4" />
-            Tools
-            <Badge variant="secondary" className="text-xs">
-              {settings.selectedTools.size} selected
-            </Badge>
-          </label>
-          
-          {availableTools.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No tools available for this project
-            </p>
-          ) : (
-            <Card className="border bg-muted/10">
-              <ScrollArea className="h-48 p-4">
-                <div className="space-y-2">
-                  {availableTools.map((tool) => (
-                    <div
-                      key={tool}
-                      className="flex items-center space-x-3 py-1.5 px-2 rounded-md hover:bg-background/60 transition-colors"
-                    >
-                      <Checkbox
-                        id={`${projectDTag}-tool-${tool}`}
-                        checked={settings.selectedTools.has(tool)}
-                        onCheckedChange={() => onToolToggle(projectDTag, tool)}
-                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                      />
-                      <label
-                        htmlFor={`${projectDTag}-tool-${tool}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1 select-none"
-                      >
-                        {tool}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </Card>
-          )}
-        </div>
+					{/* Tools Selection */}
+					<div className="space-y-2">
+						<label className="text-sm font-medium flex items-center gap-2">
+							<Wrench className="w-4 h-4" />
+							Tools
+							<Badge variant="secondary" className="text-xs">
+								{settings.selectedTools.size} selected
+							</Badge>
+						</label>
 
-        {/* Save Button */}
-        <div className="flex justify-end pt-4 border-t">
-          <Button
-            onClick={handleSave}
-            disabled={!hasChanges || isSaving}
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {isSaving ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+						{availableTools.length === 0 ? (
+							<p className="text-sm text-muted-foreground">
+								No tools available for this project
+							</p>
+						) : (
+							<Card className="border bg-muted/10">
+								<ScrollArea className="h-48 p-4">
+									<div className="space-y-2">
+										{availableTools.map((tool) => (
+											<div
+												key={tool}
+												className="flex items-center space-x-3 py-1.5 px-2 rounded-md hover:bg-background/60 transition-colors"
+											>
+												<Checkbox
+													id={`${projectDTag}-tool-${tool}`}
+													checked={settings.selectedTools.has(tool)}
+													onCheckedChange={() =>
+														onToolToggle(projectDTag, tool)
+													}
+													className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+												/>
+												<label
+													htmlFor={`${projectDTag}-tool-${tool}`}
+													className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1 select-none"
+												>
+													{tool}
+												</label>
+											</div>
+										))}
+									</div>
+								</ScrollArea>
+							</Card>
+						)}
+					</div>
+
+					{/* Save Button */}
+					<div className="flex justify-end pt-4 border-t">
+						<Button
+							onClick={handleSave}
+							disabled={!hasChanges || isSaving}
+							size="sm"
+							className="flex items-center gap-2"
+						>
+							<Save className="w-4 h-4" />
+							{isSaving ? "Saving..." : "Save Changes"}
+						</Button>
+					</div>
+				</CardContent>
+			</Card>
+		);
 }

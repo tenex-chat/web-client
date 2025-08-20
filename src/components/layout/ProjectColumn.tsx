@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { MessageSquare, FileText, Bot, BarChart, Settings, Plus, ChevronRight, Clock, Shield, AlertTriangle, WifiOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
@@ -13,16 +13,28 @@ import { useProfile, useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AddAgentsToProjectDialog } from '@/components/dialogs/AddAgentsToProjectDialog'
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu'
 import { useProjectStatus } from '@/stores/projects'
 import { bringProjectOnline } from '@/lib/utils/projectStatusUtils'
 
 type TabType = 'conversations' | 'docs' | 'agents' | 'status' | 'settings'
+
+/**
+ * Generate a deterministic HSL color based on a string
+ * Same function as in project-avatar.tsx to ensure consistency
+ */
+function generateColorFromString(str: string): string {
+  if (!str) return 'hsl(213, 27%, 64%)' // Default slate-400 if no string provided
+  
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+  
+  const hue = Math.abs(hash) % 360
+  return `hsl(${hue}, 65%, 55%)`
+}
 
 // Agent list item component
 function AgentListItem({ agent, isOnline, onClick }: { 
@@ -76,6 +88,11 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
   const { ndk } = useNDK()
   const agents = useProjectOnlineAgents(project?.dTag)
   const projectStatus = useProjectStatus(project?.dTag)
+  
+  // Generate project color for the glow effect
+  const projectColor = useMemo(() => {
+    return generateColorFromString(project?.dTag || '')
+  }, [project?.dTag])
 
   // Reset state when project changes
   useEffect(() => {
@@ -101,193 +118,130 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
     switch (activeTab) {
       case 'conversations':
         return (
-          <div className="flex flex-col h-full">
-            {/* Conversations Header */}
-            <div className="border-b px-3 py-2 flex items-center justify-between">
-              <span className="text-sm font-medium">Conversations</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => onItemClick(project, 'conversations', 'new')}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-            {/* Thread List */}
-            <div className="flex-1 overflow-hidden">
-              <ThreadList
-                project={project}
-                selectedThread={selectedThread}
-                onThreadSelect={handleThreadSelect}
-                className="h-full"
-              />
-            </div>
-          </div>
+          <ThreadList
+            project={project}
+            selectedThread={selectedThread}
+            onThreadSelect={handleThreadSelect}
+            className="h-full"
+          />
         )
       
       case 'docs':
         return (
-          <div className="flex flex-col h-full">
-            {/* Documentation Header */}
-            <div className="border-b px-3 py-2 flex items-center justify-between">
-              <span className="text-sm font-medium">Documentation</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => onItemClick(project, 'docs', 'new')}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-            {/* Docs List */}
-            <div className="flex-1 overflow-hidden">
-              <DocumentationListSimple
-                projectId={project.dTag}
-                onArticleSelect={handleDocumentSelect}
-                className="h-full"
-              />
-            </div>
-          </div>
+          <DocumentationListSimple
+            projectId={project.dTag}
+            onArticleSelect={handleDocumentSelect}
+            className="h-full"
+          />
         )
       
       case 'agents':
         return (
-          <div className="flex flex-col h-full">
-            {/* Agents Header */}
-            <div className="border-b px-3 py-2 flex items-center justify-between">
-              <span className="text-sm font-medium">Agents</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => setAddAgentsDialogOpen(true)}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
+          <ScrollArea className="h-full">
+            <div className="flex flex-col">
+              {agents.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-32 gap-2 text-center px-3">
+                  <Bot className="h-8 w-8 text-muted-foreground/30" />
+                  <p className="text-sm text-muted-foreground">No agents available</p>
+                </div>
+              ) : (
+                agents.map((agent) => (
+                  <AgentListItem
+                    key={agent.pubkey}
+                    agent={agent}
+                    isOnline={true} // All agents from useProjectOnlineAgents are online
+                    onClick={() => onItemClick(project, 'agents', agent.pubkey)}
+                  />
+                ))
+              )}
             </div>
-            {/* Agents List */}
-            <ScrollArea className="flex-1">
-              <div className="flex flex-col">
-                {agents.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-32 gap-2 text-center px-3">
-                    <Bot className="h-8 w-8 text-muted-foreground/30" />
-                    <p className="text-sm text-muted-foreground">No agents available</p>
-                  </div>
-                ) : (
-                  agents.map((agent) => (
-                    <AgentListItem
-                      key={agent.pubkey}
-                      agent={agent}
-                      isOnline={true} // All agents from useProjectOnlineAgents are online
-                      onClick={() => onItemClick(project, 'agents', agent.pubkey)}
-                    />
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </div>
+          </ScrollArea>
         )
       
       case 'status':
         return (
-          <div className="flex flex-col h-full">
-            {/* Status Header */}
-            <div className="border-b px-3 py-2">
-              <span className="text-sm font-medium">Status</span>
+          <ScrollArea className="h-full">
+            <div className="p-2 space-y-1">
+              <Button
+                variant="ghost"
+                className="w-full justify-start p-2 h-auto"
+                onClick={() => onItemClick(project, 'status', 'overview')}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <BarChart className="h-4 w-4 shrink-0" />
+                  <div className="flex-1 text-left">
+                    <div className="text-sm font-medium">Project Overview</div>
+                    <div className="text-xs text-muted-foreground">View detailed status</div>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                </div>
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start p-2 h-auto"
+                onClick={() => onItemClick(project, 'status', 'activity')}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <Clock className="h-4 w-4 shrink-0" />
+                  <div className="flex-1 text-left">
+                    <div className="text-sm font-medium">Activity Log</div>
+                    <div className="text-xs text-muted-foreground">Recent events</div>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                </div>
+              </Button>
             </div>
-            {/* Status List */}
-            <ScrollArea className="flex-1">
-              <div className="p-2 space-y-1">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start p-2 h-auto"
-                  onClick={() => onItemClick(project, 'status', 'overview')}
-                >
-                  <div className="flex items-center gap-2 w-full">
-                    <BarChart className="h-4 w-4 shrink-0" />
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-medium">Project Overview</div>
-                      <div className="text-xs text-muted-foreground">View detailed status</div>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                  </div>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start p-2 h-auto"
-                  onClick={() => onItemClick(project, 'status', 'activity')}
-                >
-                  <div className="flex items-center gap-2 w-full">
-                    <Clock className="h-4 w-4 shrink-0" />
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-medium">Activity Log</div>
-                      <div className="text-xs text-muted-foreground">Recent events</div>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                  </div>
-                </Button>
-              </div>
-            </ScrollArea>
-          </div>
+          </ScrollArea>
         )
       
       case 'settings':
         return (
-          <div className="flex flex-col h-full">
-            {/* Settings Header */}
-            <div className="border-b px-3 py-2">
-              <span className="text-sm font-medium">Settings</span>
+          <ScrollArea className="h-full">
+            <div className="p-2 space-y-1">
+              <Button
+                variant="ghost"
+                className="w-full justify-start p-2 h-auto"
+                onClick={() => onItemClick(project, 'settings', 'general')}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <Settings className="h-4 w-4 shrink-0" />
+                  <div className="flex-1 text-left">
+                    <div className="text-sm font-medium">General</div>
+                    <div className="text-xs text-muted-foreground">Basic project information</div>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                </div>
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start p-2 h-auto"
+                onClick={() => onItemClick(project, 'settings', 'advanced')}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <Shield className="h-4 w-4 shrink-0" />
+                  <div className="flex-1 text-left">
+                    <div className="text-sm font-medium">Advanced</div>
+                    <div className="text-xs text-muted-foreground">Advanced configuration</div>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                </div>
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start p-2 h-auto"
+                onClick={() => onItemClick(project, 'settings', 'danger')}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
+                  <div className="flex-1 text-left">
+                    <div className="text-sm font-medium">Danger Zone</div>
+                    <div className="text-xs text-muted-foreground">Irreversible actions</div>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                </div>
+              </Button>
             </div>
-            {/* Settings List */}
-            <ScrollArea className="flex-1">
-              <div className="p-2 space-y-1">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start p-2 h-auto"
-                  onClick={() => onItemClick(project, 'settings', 'general')}
-                >
-                  <div className="flex items-center gap-2 w-full">
-                    <Settings className="h-4 w-4 shrink-0" />
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-medium">General</div>
-                      <div className="text-xs text-muted-foreground">Basic project information</div>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                  </div>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start p-2 h-auto"
-                  onClick={() => onItemClick(project, 'settings', 'advanced')}
-                >
-                  <div className="flex items-center gap-2 w-full">
-                    <Shield className="h-4 w-4 shrink-0" />
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-medium">Advanced</div>
-                      <div className="text-xs text-muted-foreground">Advanced configuration</div>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                  </div>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start p-2 h-auto"
-                  onClick={() => onItemClick(project, 'settings', 'danger')}
-                >
-                  <div className="flex items-center gap-2 w-full">
-                    <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-medium">Danger Zone</div>
-                      <div className="text-xs text-muted-foreground">Irreversible actions</div>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                  </div>
-                </Button>
-              </div>
-            </ScrollArea>
-          </div>
+          </ScrollArea>
         )
       
       default:
@@ -303,71 +257,99 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
     { id: 'settings' as const, icon: Settings, label: 'Settings' },
   ]
 
-  const activeTabInfo = tabs.find(tab => tab.id === activeTab)
-
   return (
     <>
-      <div className={cn('flex flex-col border-r bg-muted/5', className)}>
+      <div className={cn('flex flex-col border-r bg-muted/5 relative overflow-hidden', className)}>
+      {/* Glow effect at the top */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
+        style={{
+          background: `linear-gradient(to bottom, ${projectColor.replace('55%', '50%').replace('65%', '40%').replace(')', ', 0.12)')}, transparent)`,
+        }}
+      />
+      
       {/* Column Header */}
-      <div className="border-b px-3 py-2">
-        <div className="flex items-center gap-2">
-          <ProjectAvatar 
-            project={project} 
-            className="h-6 w-6"
-            fallbackClassName="text-xs"
-          />
-          <h3 className="font-medium text-sm truncate flex-1 flex items-center gap-1.5">
-            {project.title || 'Untitled Project'}
-            {(!projectStatus || !projectStatus.isOnline) && (
-              <TooltipProvider>
-                <Tooltip>
+      <div className="border-b relative">
+        <div className="px-3 py-2">
+          <div className="flex items-center gap-2">
+            <ProjectAvatar 
+              project={project} 
+              className="h-6 w-6"
+              fallbackClassName="text-xs"
+            />
+            <h3 className="font-medium text-sm truncate flex-1 flex items-center gap-1.5">
+              {project.title || 'Untitled Project'}
+              {(!projectStatus || !projectStatus.isOnline) && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 p-0 hover:bg-transparent"
+                        onClick={handleBringOnline}
+                      >
+                        <WifiOff className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Project is offline. Click to bring online.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </h3>
+          </div>
+        </div>
+        
+        {/* Icon Tab Bar */}
+        <div className="flex items-center justify-between px-2 pb-1">
+          <TooltipProvider>
+            <div className="flex gap-1">
+              {tabs.map((tab) => (
+                <Tooltip key={tab.id}>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4 p-0 hover:bg-transparent"
-                      onClick={handleBringOnline}
+                    <button
+                      onClick={() => setActiveTab(tab.id)}
+                      className={cn(
+                        "px-3 py-1.5 relative transition-colors rounded-sm",
+                        "hover:text-foreground hover:bg-accent/50",
+                        activeTab === tab.id 
+                          ? "text-foreground" 
+                          : "text-muted-foreground"
+                      )}
                     >
-                      <WifiOff className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
-                    </Button>
+                      <tab.icon className="h-4 w-4" />
+                      {activeTab === tab.id && (
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-primary rounded-full" />
+                      )}
+                    </button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Project is offline. Click to bring online.</p>
+                    <p>{tab.label}</p>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-            )}
-          </h3>
-          
-          {/* Dropdown Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7"
-              >
-                {activeTabInfo && (
-                  <activeTabInfo.icon className="h-3.5 w-3.5" />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {tabs.map((tab) => (
-                <DropdownMenuItem
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "flex items-center gap-2",
-                    activeTab === tab.id && "bg-accent"
-                  )}
-                >
-                  <tab.icon className="h-4 w-4" />
-                  <span>{tab.label}</span>
-                </DropdownMenuItem>
               ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </div>
+          </TooltipProvider>
+          
+          {/* Add button - conditionally shown based on active tab */}
+          {(activeTab === 'conversations' || activeTab === 'docs' || activeTab === 'agents') && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => {
+                if (activeTab === 'agents') {
+                  setAddAgentsDialogOpen(true)
+                } else {
+                  onItemClick(project, activeTab, 'new')
+                }
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </div>
 

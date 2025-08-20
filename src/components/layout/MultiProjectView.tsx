@@ -239,7 +239,13 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
       {/* Drawer for detail views */}
       <Sheet open={!!drawerContent} onOpenChange={(open) => !open && handleDrawerClose()}>
         <SheetContent 
-          className="w-[85%] sm:max-w-[85%] p-0 flex flex-col"
+          className={cn(
+            "p-0 flex flex-col",
+            // Use different widths based on content type
+            drawerContent?.type === 'docs' 
+              ? "w-[65%] sm:max-w-[65%]"  // Narrower for documentation
+              : "w-[85%] sm:max-w-[85%]"  // Wider for conversations and other content
+          )}
           side="right"
         >
           {drawerContent && renderDrawerContent()}

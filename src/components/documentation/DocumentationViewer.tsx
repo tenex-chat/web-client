@@ -141,7 +141,7 @@ export function DocumentationViewer({ article, onBack, onEdit, projectTitle, pro
 
         {/* Content */}
         <ScrollArea className="flex-1">
-          <div className="p-6 max-w-4xl mx-auto">
+          <div className="p-6 max-w-3xl mx-auto">
             {/* Metadata */}
             <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">

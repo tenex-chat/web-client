@@ -69,73 +69,75 @@ export function DocumentationViewer({ article, onBack, onEdit, projectTitle, pro
         getContentWidth()
       )}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-3">
+        <div className="border-b">
+          <div className="flex items-center justify-between p-4">
             {onBack && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onBack}
-                className="h-9 w-9"
+                className="h-9 w-9 absolute left-4"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             )}
-            <div>
-              {projectTitle && (
-                <p className="text-sm text-muted-foreground">
-                  {projectTitle} / Documentation
-                </p>
-              )}
-              <h1 className="text-xl font-semibold">{article.title}</h1>
+            <div className="max-w-3xl mx-auto w-full flex items-center justify-between">
+              <div>
+                {projectTitle && (
+                  <p className="text-sm text-muted-foreground">
+                    {projectTitle} / Documentation
+                  </p>
+                )}
+                <h1 className="text-xl font-semibold">{article.title}</h1>
+              </div>
+              <div className="flex items-center gap-2">
+                {onEdit && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onEdit}
+                    className="h-9 w-9"
+                    title="Edit documentation"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowChangelog(!showChangelog)
+                    if (!showChangelog) setShowComments(false) // Close comments when opening changelog
+                  }}
+                  className="h-9 w-9"
+                  title="Toggle changelog"
+                >
+                  <History className="h-4 w-4" />
+                </Button>
+                {project && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setShowComments(!showComments)
+                      if (!showComments) setShowChangelog(false) // Close changelog when opening comments
+                    }}
+                    className="h-9 w-9"
+                    title="Toggle comments"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCopyLink}
+                  className="h-9 w-9"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {onEdit && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onEdit}
-                className="h-9 w-9"
-                title="Edit documentation"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setShowChangelog(!showChangelog)
-                if (!showChangelog) setShowComments(false) // Close comments when opening changelog
-              }}
-              className="h-9 w-9"
-              title="Toggle changelog"
-            >
-              <History className="h-4 w-4" />
-            </Button>
-            {project && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setShowComments(!showComments)
-                  if (!showComments) setShowChangelog(false) // Close changelog when opening comments
-                }}
-                className="h-9 w-9"
-                title="Toggle comments"
-              >
-                <MessageSquare className="h-4 w-4" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleCopyLink}
-              className="h-9 w-9"
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 

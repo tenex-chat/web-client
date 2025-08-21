@@ -1,22 +1,31 @@
 import { useState, useEffect, useMemo } from 'react'
-import { MessageSquare, FileText, Bot, Settings, Plus, ChevronRight, Shield, AlertTriangle, WifiOff } from 'lucide-react'
+import { MessageSquare, FileText, Bot, Settings, Plus, ChevronRight, Shield, AlertTriangle, WifiOff, ListTodo, Users, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { Button } from '@/components/ui/button'
 import { ThreadList } from '@/components/chat/ThreadList'
 import { DocumentationListSimple } from '@/components/documentation/DocumentationListSimple'
+import { DocumentationList } from '@/components/documentation/DocumentationList'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
-import { useProfile, useNDK } from '@nostr-dev-kit/ndk-hooks'
+import { useProfile, useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AddAgentsToProjectDialog } from '@/components/dialogs/AddAgentsToProjectDialog'
 import { useProjectStatus } from '@/stores/projects'
 import { bringProjectOnline } from '@/lib/utils/projectStatusUtils'
+import { TasksTabContent } from '@/components/tasks/TasksTabContent'
+import { AgentsTabContent } from '@/components/agents/AgentsTabContent'
+import { ProjectStatusPanel } from '@/components/status/ProjectStatusPanel'
+import { ProjectStatusIndicator } from '@/components/status/ProjectStatusIndicator'
+import { NDKTask } from '@/lib/ndk-events/NDKTask'
+import { FAB } from '@/components/ui/fab'
 
-type TabType = 'conversations' | 'docs' | 'agents' | 'settings'
+type TabType = 'conversations' | 'docs' | 'agents' | 'settings' | 'status' | 'tasks'
+type ViewMode = 'column' | 'standalone'
+type ViewState = 'list' | 'detail'
 
 /**
  * Generate a deterministic HSL color based on a string
@@ -77,13 +86,25 @@ function AgentListItem({ agent, isOnline, onClick }: {
 
 interface ProjectColumnProps {
   project: NDKProject
-  onItemClick: (project: NDKProject, itemType: TabType, item?: string | NDKEvent) => void
+  onItemClick?: (project: NDKProject, itemType: TabType, item?: string | NDKEvent) => void
+  mode?: ViewMode
+  renderFullContent?: (project: NDKProject, itemType: TabType, item?: any) => React.ReactNode
   className?: string
+  onNavigateToSettings?: () => void
 }
 
-export function ProjectColumn({ project, onItemClick, className }: ProjectColumnProps) {
+export function ProjectColumn({ 
+  project, 
+  onItemClick, 
+  mode = 'column',
+  renderFullContent,
+  className,
+  onNavigateToSettings 
+}: ProjectColumnProps) {
   const [activeTab, setActiveTab] = useState<TabType>('conversations')
   const [selectedThread, setSelectedThread] = useState<NDKEvent>()
+  const [selectedItem, setSelectedItem] = useState<any>()
+  const [viewState, setViewState] = useState<ViewState>('list')
   const [addAgentsDialogOpen, setAddAgentsDialogOpen] = useState(false)
   const { ndk } = useNDK()
   const agents = useProjectOnlineAgents(project?.dTag)
@@ -94,19 +115,84 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
     return generateColorFromString(project?.dTag || '')
   }, [project?.dTag])
 
+  // Subscribe to tasks for this project
+  const taskFilter = useMemo(
+    () => project ? {
+      kinds: [NDKTask.kind],
+      '#a': [project.tagId()],
+    } : null,
+    [project]
+  )
+
+  const { events: taskEvents } = useSubscribe(
+    taskFilter ? [taskFilter] : []
+  )
+
+  const tasks = useMemo(() => {
+    return taskEvents?.map(event => NDKTask.from(event)) || []
+  }, [taskEvents])
+
   // Reset state when project changes
   useEffect(() => {
     setActiveTab('conversations')
     setSelectedThread(undefined)
+    setSelectedItem(undefined)
+    setViewState('list')
   }, [project.dTag])
 
-  const handleThreadSelect = (thread: NDKEvent) => {
-    setSelectedThread(thread)
-    onItemClick(project, 'conversations', thread)
+  const handleThreadSelect = async (threadId: string) => {
+    if (threadId === 'new') {
+      setSelectedThread(undefined)
+      setSelectedItem(undefined)
+      if (mode === 'standalone') {
+        setViewState('detail')
+      } else if (onItemClick) {
+        onItemClick(project, 'conversations', 'new')
+      }
+    } else if (ndk) {
+      const threadEvent = await ndk.fetchEvent(threadId)
+      if (threadEvent) {
+        setSelectedThread(threadEvent)
+        setSelectedItem(threadEvent)
+        if (mode === 'standalone') {
+          setViewState('detail')
+        } else if (onItemClick) {
+          onItemClick(project, 'conversations', threadEvent)
+        }
+      }
+    }
   }
 
   const handleDocumentSelect = (article: NDKArticle) => {
-    onItemClick(project, 'docs', article)
+    setSelectedItem(article)
+    if (mode === 'standalone') {
+      setViewState('detail')
+    } else if (onItemClick) {
+      onItemClick(project, 'docs', article)
+    }
+  }
+
+  const handleTaskSelect = async (_project: NDKProject, taskId: string) => {
+    if (ndk) {
+      const taskEvent = await ndk.fetchEvent(taskId)
+      if (taskEvent) {
+        setSelectedThread(taskEvent)
+        setSelectedItem(taskEvent)
+        setActiveTab('conversations')
+        if (mode === 'standalone') {
+          setViewState('detail')
+        }
+      }
+    }
+  }
+
+  const handleAgentSelect = (agentPubkey: string) => {
+    setSelectedItem(agentPubkey)
+    if (mode === 'standalone') {
+      setViewState('detail')
+    } else if (onItemClick) {
+      onItemClick(project, 'agents', agentPubkey)
+    }
   }
 
   const handleBringOnline = async () => {
@@ -115,19 +201,44 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
   }
 
   const renderContent = () => {
+    // In standalone mode with detail view, render full content
+    if (mode === 'standalone' && viewState === 'detail' && renderFullContent) {
+      return renderFullContent(project, activeTab, selectedItem)
+    }
+
+    // Otherwise render list views
     switch (activeTab) {
       case 'conversations':
         return (
           <ThreadList
             project={project}
             selectedThread={selectedThread}
-            onThreadSelect={handleThreadSelect}
+            onThreadSelect={async (thread: NDKEvent) => {
+              await handleThreadSelect(thread.id)
+            }}
             className="h-full"
           />
         )
       
-      case 'docs':
+      case 'tasks':
         return (
+          <TasksTabContent
+            tasks={tasks}
+            taskUnreadMap={new Map()}
+            project={project}
+            onTaskSelect={handleTaskSelect}
+            markTaskStatusUpdatesSeen={() => {}}
+          />
+        )
+      
+      case 'docs':
+        return mode === 'standalone' ? (
+          <DocumentationList
+            projectId={project.dTag}
+            onArticleSelect={handleDocumentSelect}
+            className="h-full"
+          />
+        ) : (
           <DocumentationListSimple
             projectId={project.dTag}
             onArticleSelect={handleDocumentSelect}
@@ -136,6 +247,9 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
         )
       
       case 'agents':
+        if (mode === 'standalone') {
+          return <AgentsTabContent project={project} />
+        }
         return (
           <ScrollArea className="h-full">
             <div className="flex flex-col">
@@ -149,14 +263,21 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
                   <AgentListItem
                     key={agent.pubkey}
                     agent={agent}
-                    isOnline={true} // All agents from useProjectOnlineAgents are online
-                    onClick={() => onItemClick(project, 'agents', agent.pubkey)}
+                    isOnline={true}
+                    onClick={() => handleAgentSelect(agent.pubkey)}
                   />
                 ))
               )}
             </div>
           </ScrollArea>
         )
+      
+      case 'status':
+        return mode === 'standalone' ? (
+          <div className="p-4">
+            <ProjectStatusPanel project={project} />
+          </div>
+        ) : null
       
       case 'settings':
         return (
@@ -165,7 +286,7 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
               <Button
                 variant="ghost"
                 className="w-full justify-start p-2 h-auto"
-                onClick={() => onItemClick(project, 'settings', 'general')}
+                onClick={() => onItemClick?.(project, 'settings', 'general')}
               >
                 <div className="flex items-center gap-2 w-full">
                   <Settings className="h-4 w-4 shrink-0" />
@@ -179,7 +300,7 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
               <Button
                 variant="ghost"
                 className="w-full justify-start p-2 h-auto"
-                onClick={() => onItemClick(project, 'settings', 'advanced')}
+                onClick={() => onItemClick?.(project, 'settings', 'advanced')}
               >
                 <div className="flex items-center gap-2 w-full">
                   <Shield className="h-4 w-4 shrink-0" />
@@ -193,7 +314,7 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
               <Button
                 variant="ghost"
                 className="w-full justify-start p-2 h-auto"
-                onClick={() => onItemClick(project, 'settings', 'danger')}
+                onClick={() => onItemClick?.(project, 'settings', 'danger')}
               >
                 <div className="flex items-center gap-2 w-full">
                   <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
@@ -213,16 +334,82 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
     }
   }
 
-  const tabs = [
-    { id: 'conversations' as const, icon: MessageSquare, label: 'Conversations' },
-    { id: 'docs' as const, icon: FileText, label: 'Documentation' },
-    { id: 'agents' as const, icon: Bot, label: 'Agents' },
-    { id: 'settings' as const, icon: Settings, label: 'Settings' },
-  ]
+  const tabs = useMemo(() => {
+    const baseTabs: Array<{ id: TabType; icon: any; label: string }> = [
+      { id: 'conversations', icon: MessageSquare, label: 'Conversations' },
+    ]
+    
+    // Add tasks tab only in standalone mode
+    if (mode === 'standalone') {
+      baseTabs.push({ id: 'tasks', icon: ListTodo, label: 'Tasks' })
+    }
+    
+    baseTabs.push(
+      { id: 'docs', icon: FileText, label: 'Documentation' },
+      { id: 'agents', icon: Bot, label: 'Agents' }
+    )
+    
+    // Add status tab only in standalone mode
+    if (mode === 'standalone') {
+      baseTabs.push({ id: 'status', icon: Users, label: 'Status' })
+    }
+    
+    // Settings only in column mode
+    if (mode === 'column') {
+      baseTabs.push({ id: 'settings', icon: Settings, label: 'Settings' })
+    }
+    
+    return baseTabs
+  }, [mode])
+
+  // For standalone mode with detail view, render differently
+  if (mode === 'standalone' && viewState === 'detail') {
+    return (
+      <div className={cn('flex flex-col h-full relative', className)}>
+        {/* Mobile-style header with back button */}
+        <div className="border-b px-4 py-3 flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 -ml-2"
+            onClick={() => {
+              setViewState('list')
+              setSelectedItem(undefined)
+              setSelectedThread(undefined)
+            }}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center gap-2 flex-1">
+            <ProjectAvatar 
+              project={project} 
+              className="h-8 w-8"
+              fallbackClassName="text-xs"
+            />
+            <div>
+              <h1 className="text-sm font-semibold">{project.title || 'Untitled Project'}</h1>
+              {activeTab === 'conversations' && (
+                <p className="text-xs text-muted-foreground">Conversation</p>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Full content */}
+        <div className="flex-1 overflow-hidden">
+          {renderContent()}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
-      <div className={cn('flex flex-col border-r bg-muted/5 relative overflow-hidden', className)}>
+      <div className={cn(
+        'flex flex-col bg-muted/5 relative overflow-hidden',
+        mode === 'column' ? 'border-r' : '',
+        className
+      )}>
       {/* Glow effect at the top */}
       <div 
         className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
@@ -233,37 +420,71 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
       
       {/* Column Header */}
       <div className="border-b relative">
-        <div className="px-3 py-2">
-          <div className="flex items-center gap-2">
-            <ProjectAvatar 
-              project={project} 
-              className="h-6 w-6"
-              fallbackClassName="text-xs"
-            />
-            <h3 className="font-medium text-sm truncate flex-1 flex items-center gap-1.5">
-              {project.title || 'Untitled Project'}
-              {(!projectStatus || !projectStatus.isOnline) && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 p-0 hover:bg-transparent"
-                        onClick={handleBringOnline}
-                      >
-                        <WifiOff className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Project is offline. Click to bring online.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+        {mode === 'standalone' ? (
+          // Standalone header with status indicator and settings
+          <div className="px-4 py-3">
+            <div className="flex items-center gap-3">
+              <ProjectAvatar 
+                project={project} 
+                className="h-10 w-10"
+                fallbackClassName="text-sm"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-base font-semibold">{project.title || 'Untitled Project'}</h1>
+                  <ProjectStatusIndicator 
+                    status={projectStatus?.isOnline ? 'online' : 'offline'} 
+                    size="sm" 
+                    onClick={handleBringOnline}
+                  />
+                </div>
+              </div>
+              {onNavigateToSettings && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={onNavigateToSettings}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
               )}
-            </h3>
+            </div>
           </div>
-        </div>
+        ) : (
+          // Column mode header (original)
+          <div className="px-3 py-2">
+            <div className="flex items-center gap-2">
+              <ProjectAvatar 
+                project={project} 
+                className="h-6 w-6"
+                fallbackClassName="text-xs"
+              />
+              <h3 className="font-medium text-sm truncate flex-1 flex items-center gap-1.5">
+                {project.title || 'Untitled Project'}
+                {(!projectStatus || !projectStatus.isOnline) && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 p-0 hover:bg-transparent"
+                          onClick={handleBringOnline}
+                        >
+                          <WifiOff className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Project is offline. Click to bring online.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </h3>
+            </div>
+          </div>
+        )}
         
         {/* Icon Tab Bar */}
         <div className="flex items-center justify-between px-2 pb-1">
@@ -296,8 +517,8 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
             </div>
           </TooltipProvider>
           
-          {/* Add button - conditionally shown based on active tab */}
-          {(activeTab === 'conversations' || activeTab === 'docs' || activeTab === 'agents') && (
+          {/* Add button - conditionally shown based on active tab and mode */}
+          {mode === 'column' && (activeTab === 'conversations' || activeTab === 'docs' || activeTab === 'agents') && (
             <Button
               variant="ghost"
               size="icon"
@@ -305,7 +526,7 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
               onClick={() => {
                 if (activeTab === 'agents') {
                   setAddAgentsDialogOpen(true)
-                } else {
+                } else if (onItemClick) {
                   onItemClick(project, activeTab, 'new')
                 }
               }}
@@ -320,6 +541,23 @@ export function ProjectColumn({ project, onItemClick, className }: ProjectColumn
         <div className="flex-1 overflow-hidden">
           {renderContent()}
         </div>
+        
+        {/* FAB for standalone mode */}
+        {mode === 'standalone' && activeTab === 'conversations' && viewState === 'list' && (
+          <FAB
+            onClick={() => {
+              setSelectedThread(undefined)
+              setSelectedItem(undefined)
+              setViewState('detail')
+            }}
+            label="New Chat"
+            showLabel={false}
+            position="bottom-right"
+            offset={{ bottom: '16px' }}
+          >
+            <Plus />
+          </FAB>
+        )}
       </div>
 
       <AddAgentsToProjectDialog

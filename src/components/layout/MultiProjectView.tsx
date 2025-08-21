@@ -9,12 +9,13 @@ import { ProjectGeneralSettings } from '@/components/settings/ProjectGeneralSett
 import { ProjectAdvancedSettings } from '@/components/settings/ProjectAdvancedSettings'
 import { ProjectDangerZone } from '@/components/settings/ProjectDangerZone'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { NDKEvent, NDKArticle, NDKTask, NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKEvent, NDKArticle, NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
-type TabType = 'conversations' | 'docs' | 'agents' | 'status' | 'settings'
+type TabType = 'conversations' | 'docs' | 'agents' | 'status' | 'settings' | 'tasks'
 
 interface DrawerContent {
   project: NDKProject

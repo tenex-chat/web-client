@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { useProject } from '@/hooks/useProject'
@@ -22,7 +22,7 @@ import { ProjectStatusPanel } from '@/components/status/ProjectStatusPanel'
 import { useProjectStatus } from '@/stores/projects'
 import { AgentsTabContent } from '@/components/agents/AgentsTabContent'
 import { useIsMobile } from '@/hooks/useMediaQuery'
-import { MobileTabs } from '@/components/mobile/MobileTabs'
+import { ProjectColumn } from '@/components/layout/ProjectColumn'
 import { useProjectActivityStore } from '@/stores/projectActivity'
 import { FAB } from '@/components/ui/fab'
 import { useAtom } from 'jotai'
@@ -43,13 +43,11 @@ function ProjectDetailPage() {
   const [activeTab, setActiveTab] = useState<'conversations' | 'tasks' | 'docs' | 'agents' | 'status'>('conversations')
   const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null)
   const [taskUnreadMap] = useState(new Map<string, number>())
-  const [mobileView, setMobileView] = useState<'tabs' | 'chat'>('tabs')
   const [, openSingleProject] = useAtom(openSingleProjectAtom)
   
   // Reset selected thread when project changes
   useEffect(() => {
     setSelectedThreadEvent(undefined)
-    setMobileView('tabs')
     setActiveTab('conversations')
     setSelectedArticle(null)
   }, [projectId, isMobile])
@@ -124,112 +122,58 @@ function ProjectDetailPage() {
   const markTaskStatusUpdatesSeen = (_taskId: string) => {
     // Mark task updates as seen - implementation pending
   }
-  
-  const handleThreadSelect = async (threadId: string) => {
-    if (threadId === 'new') {
-      setSelectedThreadEvent(undefined)
-    } else if (ndk) {
-      const threadEvent = await ndk.fetchEvent(threadId)
-      if (threadEvent) {
-        setSelectedThreadEvent(threadEvent)
-      }
+
+  // Render full content callback for mobile
+  const renderFullContent = useCallback((project: NDKProject, itemType: string, item?: any) => {
+    switch (itemType) {
+      case 'conversations':
+        return (
+          <ChatInterface 
+            project={project} 
+            rootEvent={item instanceof NDKEvent ? item : undefined}
+            key={item?.id || 'new'}
+            className="h-full"
+            onTaskClick={(task: NDKTask) => {
+              setSelectedThreadEvent(task)
+            }}
+            onThreadCreated={(newThread: NDKEvent) => {
+              setSelectedThreadEvent(newThread)
+            }}
+          />
+        )
+      
+      case 'docs':
+        if (item instanceof NDKArticle) {
+          return (
+            <DocumentationViewer
+              article={item}
+              projectTitle={project.title}
+              project={project}
+              onBack={() => setSelectedArticle(null)}
+            />
+          )
+        }
+        return null
+        
+      default:
+        return null
     }
-  }
+  }, [])
 
-  const handleStartProject = async () => {
-    if (!ndk || !project) return
-    await bringProjectOnline(project, ndk)
-  }
+  const handleNavigateToSettings = useCallback(() => {
+    navigate({ to: '/projects/$projectId/settings', params: { projectId: project.dTag || projectId } })
+  }, [navigate, project, projectId])
 
-  // Mobile view - show one view at a time
+  // Mobile view - use unified ProjectColumn
   if (isMobile) {
     return (
-        <div className="flex flex-col h-full relative">
-          {/* Mobile Header with Back Navigation */}
-          {mobileView !== 'tabs' && (
-            <div className="border-b px-4 py-3 flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 -ml-2"
-                onClick={() => {
-                  if (mobileView === 'chat') {
-                    setMobileView('tabs')
-                    setSelectedThreadEvent(undefined)
-                  }
-                }}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex items-center gap-2 flex-1">
-                <ProjectAvatar 
-                  project={project} 
-                  className="h-8 w-8"
-                  fallbackClassName="text-xs"
-                />
-                <div>
-                  <h1 className="text-sm font-semibold">{project.title || 'Untitled Project'}</h1>
-                  {mobileView === 'chat' && (
-                    <p className="text-xs text-muted-foreground">Conversation</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Mobile Content */}
-          {mobileView === 'tabs' && (
-            <MobileTabs
-              project={project}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              tasks={tasks}
-              selectedArticle={selectedArticle}
-              setSelectedArticle={setSelectedArticle}
-              taskUnreadMap={taskUnreadMap}
-              handleTaskSelect={handleTaskSelect}
-              markTaskStatusUpdatesSeen={markTaskStatusUpdatesSeen}
-              navigate={navigate}
-              mobileView={mobileView}
-              setMobileView={setMobileView}
-              selectedThreadEvent={selectedThreadEvent}
-              handleThreadSelect={handleThreadSelect}
-              handleStartProject={handleStartProject}
-            />
-          )}
-
-
-          {mobileView === 'chat' && (
-            <ChatInterface 
-              project={project} 
-              rootEvent={selectedThreadEvent}
-              key={selectedThreadEvent?.id || 'new'}
-              className="h-full"
-              onTaskClick={(task: NDKTask) => {
-                  setSelectedThreadEvent(task)
-              }}
-              onThreadCreated={(newThread: NDKEvent) => {
-                  setSelectedThreadEvent(newThread);
-              }}
-            />
-          )}
-          
-          {/* FAB for mobile - show when in tabs view */}
-          {mobileView === 'tabs' && activeTab === 'conversations' && (
-            <FAB
-              onClick={() => {
-                setSelectedThreadEvent(undefined)
-                setMobileView('chat')
-              }}
-              label="New Chat"
-              showLabel={false}
-              position="bottom-right"
-              offset={{ bottom: '80px' }} // Offset to account for tab bar
-            >
-              <Plus />
-            </FAB>
-          )}
-        </div>
+      <ProjectColumn
+        project={project}
+        mode="standalone"
+        renderFullContent={renderFullContent}
+        className="h-full"
+        onNavigateToSettings={handleNavigateToSettings}
+      />
     )
   }
 

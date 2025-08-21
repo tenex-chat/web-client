@@ -26,6 +26,10 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
+import {
+  Sheet,
+  SheetContent,
+} from '@/components/ui/sheet'
 
 // Import specialized card components
 import { TaskEmbedCard } from '@/components/embeds/TaskEmbedCard'
@@ -34,6 +38,7 @@ import { NoteEmbedCard } from '@/components/embeds/NoteEmbedCard'
 import { MCPToolEmbedCard } from '@/components/embeds/MCPToolEmbedCard'
 import { AgentDefinitionEmbedCard } from '@/components/embeds/AgentDefinitionEmbedCard'
 import { DefaultEmbedCard } from '@/components/embeds/DefaultEmbedCard'
+import { DocumentationViewer } from '@/components/documentation/DocumentationViewer'
 
 interface NostrEntityCardProps {
   entity: NostrEntity
@@ -47,6 +52,7 @@ export function NostrEntityCard({
   compact = false 
 }: NostrEntityCardProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const displayInfo = getEntityDisplayInfo(entity)
 
   // Build subscription filter based on entity type
@@ -162,14 +168,19 @@ export function NostrEntityCard({
             event={event} 
             compact={compact} 
             className={className}
-            onClick={handleClick}
+            onClick={() => setSheetOpen(true)}
           />
-          <EventDrawer 
-            event={event}
-            title={event.tags?.find(tag => tag[0] === 'title')?.[1] || 'Article'}
-            open={drawerOpen}
-            onOpenChange={setDrawerOpen}
-          />
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetContent 
+              className="p-0 flex flex-col w-[65%] sm:max-w-[65%]"
+              side="right"
+            >
+              <DocumentationViewer 
+                article={NDKArticle.from(event)}
+                onBack={() => setSheetOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
         </>
       )
 

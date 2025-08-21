@@ -1,32 +1,69 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { useProject } from '@/hooks/useProject'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { Button } from '@/components/ui/button'
-import { Settings, Users, MessageSquare, Menu, ListTodo, FileText, Bot, ArrowLeft, Plus } from 'lucide-react'
+import { Settings, Users, MessageSquare, Menu, FileText, Bot, Plus } from 'lucide-react'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 import { ThreadList } from '@/components/chat/ThreadList'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
-import { TasksTabContent } from '@/components/tasks/TasksTabContent'
-import { NDKTask } from '@/lib/ndk-events/NDKTask'
-import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
+import { useProfile } from '@nostr-dev-kit/ndk-hooks'
 import { cn } from '@/lib/utils'
 import { bringProjectOnline } from '@/lib/utils/projectStatusUtils'
 import { DocumentationList } from '@/components/documentation/DocumentationList'
 import { DocumentationViewer } from '@/components/documentation/DocumentationViewer'
 import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk'
 import { ProjectStatusIndicator } from '@/components/status/ProjectStatusIndicator'
-import { ProjectStatusPanel } from '@/components/status/ProjectStatusPanel'
 import { useProjectStatus } from '@/stores/projects'
-import { AgentsTabContent } from '@/components/agents/AgentsTabContent'
 import { useIsMobile } from '@/hooks/useMediaQuery'
+import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { ChevronRight } from 'lucide-react'
 import { ProjectColumn } from '@/components/layout/ProjectColumn'
 import { useProjectActivityStore } from '@/stores/projectActivity'
 import { FAB } from '@/components/ui/fab'
 import { useAtom } from 'jotai'
 import { openSingleProjectAtom } from '@/stores/openProjects'
+
+// Agent list item component
+function AgentListItem({ agent, isOnline }: { 
+  agent: { pubkey: string; name: string; status?: string; lastSeen?: number }
+  isOnline: boolean
+}) {
+  const profile = useProfile(agent.pubkey)
+  const avatarUrl = profile?.image || profile?.picture
+  const displayName = agent.name || profile?.displayName || profile?.name || 'Unknown Agent'
+  
+  return (
+    <div
+      className="flex items-start gap-3 px-3 py-2.5 hover:bg-accent/50 cursor-pointer transition-colors border-b"
+    >
+      <div className="relative">
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={avatarUrl} alt={displayName} />
+          <AvatarFallback>
+            <Bot className="h-4 w-4" />
+          </AvatarFallback>
+        </Avatar>
+        {isOnline && (
+          <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 border border-background" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-sm truncate">
+          {displayName}
+        </div>
+        <div className="text-xs text-muted-foreground mt-0.5">
+          {isOnline ? 'Online' : 'Offline'}
+        </div>
+      </div>
+      <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-1.5" />
+    </div>
+  )
+}
 
 export const Route = createFileRoute('/_auth/projects/$projectId/')({
   component: ProjectDetailPage,
@@ -40,9 +77,8 @@ function ProjectDetailPage() {
   const isMobile = useIsMobile()
   const [selectedThreadEvent, setSelectedThreadEvent] = useState<NDKEvent | undefined>(undefined)
   const [showThreadList, setShowThreadList] = useState(true)
-  const [activeTab, setActiveTab] = useState<'conversations' | 'tasks' | 'docs' | 'agents' | 'status'>('conversations')
+  const [activeTab, setActiveTab] = useState<'conversations' | 'docs' | 'agents'>('conversations')
   const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null)
-  const [taskUnreadMap] = useState(new Map<string, number>())
   const [, openSingleProject] = useAtom(openSingleProjectAtom)
   
   // Reset selected thread when project changes
@@ -54,6 +90,7 @@ function ProjectDetailPage() {
   
   // Use project status from the store
   const projectStatus = useProjectStatus(project?.dTag)
+  const agents = useProjectOnlineAgents(project?.dTag)
   
   // Update activity timestamp when user visits a project
   useEffect(() => {
@@ -73,26 +110,12 @@ function ProjectDetailPage() {
   // Helper functions for backwards compatibility
   const getOverallStatus = () => projectStatus?.isOnline ? 'online' : 'offline'
   
+  const handleStartProject = async () => {
+    if (!ndk || !project) return
+    await bringProjectOnline(project, ndk)
+  }
+  
 
-  // Create task subscription filter
-  const taskFilter = useMemo(
-    () => project ? {
-      kinds: [NDKTask.kind],
-      '#a': [project.tagId()],
-    } : null,
-    [project]
-  )
-
-  // Subscribe to tasks for this project
-  const { events: taskEvents } = useSubscribe(
-    taskFilter ? [taskFilter] : []
-  )
-
-
-  // Convert task events to NDKTask instances
-  const tasks = useMemo(() => {
-    return taskEvents?.map(event => NDKTask.from(event)) || []
-  }, [taskEvents])
 
   if (!project) {
     return (
@@ -103,25 +126,6 @@ function ProjectDetailPage() {
   }
 
 
-  const handleTaskSelect = async (_project: NDKProject, taskId: string) => {
-    // Fetch the task event and set it as the selected thread
-    if (ndk) {
-      const taskEvent = await ndk.fetchEvent(taskId)
-      if (taskEvent) {
-        setSelectedThreadEvent(taskEvent)
-        // Switch to conversations tab to show the task
-        setActiveTab('conversations')
-        // On mobile, switch to chat view
-        if (isMobile) {
-          setMobileView('chat')
-        }
-      }
-    }
-  }
-
-  const markTaskStatusUpdatesSeen = (_taskId: string) => {
-    // Mark task updates as seen - implementation pending
-  }
 
   // Render full content callback for mobile
   const renderFullContent = useCallback((project: NDKProject, itemType: string, item?: any) => {
@@ -133,9 +137,6 @@ function ProjectDetailPage() {
             rootEvent={item instanceof NDKEvent ? item : undefined}
             key={item?.id || 'new'}
             className="h-full"
-            onTaskClick={(task: NDKTask) => {
-              setSelectedThreadEvent(task)
-            }}
             onThreadCreated={(newThread: NDKEvent) => {
               setSelectedThreadEvent(newThread)
             }}
@@ -161,7 +162,7 @@ function ProjectDetailPage() {
   }, [])
 
   const handleNavigateToSettings = useCallback(() => {
-    navigate({ to: '/projects/$projectId/settings', params: { projectId: project.dTag || projectId } })
+    navigate({ to: '/projects/$projectId/settings', params: { projectId: project.dTag || projectId }, search: { tab: 'general' } })
   }, [navigate, project, projectId])
 
   // Mobile view - use unified ProjectColumn
@@ -211,20 +212,6 @@ function ProjectDetailPage() {
                   <span className="hidden sm:inline">Conversations</span>
                 </Button>
                 <Button
-                  variant={activeTab === 'tasks' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="gap-1.5 h-8"
-                  onClick={() => setActiveTab('tasks')}
-                >
-                  <ListTodo className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Tasks</span>
-                  {tasks.length > 0 && (
-                    <span className="ml-1 px-1.5 py-0 text-xs bg-muted rounded-full">
-                      {tasks.length}
-                    </span>
-                  )}
-                </Button>
-                <Button
                   variant={activeTab === 'docs' ? 'secondary' : 'ghost'}
                   size="sm"
                   className="gap-1.5 h-8"
@@ -242,15 +229,6 @@ function ProjectDetailPage() {
                   <Bot className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Agents</span>
                 </Button>
-                <Button
-                  variant={activeTab === 'status' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="gap-1.5 h-8"
-                  onClick={() => setActiveTab('status')}
-                >
-                  <Users className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Status</span>
-                </Button>
               </div>
             </div>
 
@@ -262,7 +240,7 @@ function ProjectDetailPage() {
                 variant="ghost" 
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => navigate({ to: '/projects/$projectId/settings', params: { projectId: project.dTag || projectId } })}
+                onClick={() => navigate({ to: '/projects/$projectId/settings', params: { projectId: project.dTag || projectId }, search: { tab: 'general' } })}
               >
                 <Settings className="h-4 w-4" />
               </Button>
@@ -273,7 +251,7 @@ function ProjectDetailPage() {
         {/* Tab content */}
         <Tabs
           value={activeTab}
-          onValueChange={(value) => setActiveTab(value as 'conversations' | 'tasks' | 'docs' | 'agents' | 'status')}
+          onValueChange={(value) => setActiveTab(value as 'conversations' | 'docs' | 'agents')}
           className="flex-1 flex flex-col overflow-hidden"
         >
           {/* Remove TabsList since we've integrated it into the header */}
@@ -293,10 +271,10 @@ function ProjectDetailPage() {
                   <>
                     <ThreadList
                       project={project}
-                      selectedThreadId={selectedThreadEvent?.id}
-                      onThreadSelect={async (threadId) => {
+                      selectedThread={selectedThreadEvent}
+                      onThreadSelect={async (thread) => {
                         if (ndk) {
-                          const threadEvent = await ndk.fetchEvent(threadId)
+                          const threadEvent = await ndk.fetchEvent(thread.id)
                           if (threadEvent) {
                             setSelectedThreadEvent(threadEvent)
                           }
@@ -353,56 +331,16 @@ function ProjectDetailPage() {
                     rootEvent={selectedThreadEvent}
                     key={selectedThreadEvent?.id} // Force remount on thread change
                     className="h-full"
-                    onTaskClick={async (taskId) => {
-                      if (ndk) {
-                        const taskEvent = await ndk.fetchEvent(taskId)
-                        if (taskEvent) {
-                          setSelectedThreadEvent(taskEvent)
-                        }
-                      }
-                      // Desktop already shows chat, just update the thread
+                    onTaskClick={(task) => {
+                      setSelectedThreadEvent(task)
                     }}
-                    onThreadCreated={async (newThreadId) => {
-                      if (ndk) {
-                        const newEvent = await ndk.fetchEvent(newThreadId)
-                        if (newEvent) {
-                          setSelectedThreadEvent(newEvent)
-                        }
-                      }
+                    onThreadCreated={(newThread) => {
+                      setSelectedThreadEvent(newThread)
                       // Update thread list and stay in current view
                     }}
                   />
                 </div>
               </div>
-            </div>
-          </TabsContent>
-
-          {/* Tasks Tab */}
-          <TabsContent value="tasks" className="flex-1 overflow-auto">
-            <div className="flex flex-col h-full relative">
-              {/* Tasks Header */}
-              <div className="border-b p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold">Project Tasks</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Tasks List */}
-              <div className="flex-1 overflow-auto">
-                <TasksTabContent
-                  tasks={tasks}
-                  taskUnreadMap={taskUnreadMap}
-                  project={project}
-                  onTaskSelect={handleTaskSelect}
-                  markTaskStatusUpdatesSeen={markTaskStatusUpdatesSeen}
-                />
-              </div>
-              
             </div>
           </TabsContent>
 
@@ -429,22 +367,26 @@ function ProjectDetailPage() {
 
           {/* Agents Tab */}
           <TabsContent value="agents" className="flex-1 overflow-auto">
-            <AgentsTabContent project={project} />
+            <ScrollArea className="h-full">
+              <div className="flex flex-col">
+                {agents.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-32 gap-2 text-center px-3">
+                    <Bot className="h-8 w-8 text-muted-foreground/30" />
+                    <p className="text-sm text-muted-foreground">No agents available</p>
+                  </div>
+                ) : (
+                  agents.map((agent) => (
+                    <AgentListItem
+                      key={agent.pubkey}
+                      agent={agent}
+                      isOnline={true}
+                    />
+                  ))
+                )}
+              </div>
+            </ScrollArea>
           </TabsContent>
 
-          {/* Status Tab */}
-          <TabsContent value="status" className="flex-1 overflow-auto">
-            <div className="p-6 max-w-4xl mx-auto">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold mb-2">Project Status</h2>
-                <p className="text-muted-foreground">
-                  Real-time status of agents and available models for this project
-                </p>
-              </div>
-              
-              <ProjectStatusPanel project={project} />
-            </div>
-          </TabsContent>
         </Tabs>
       </div>
   )

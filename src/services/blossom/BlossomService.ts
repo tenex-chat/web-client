@@ -55,7 +55,7 @@ export class BlossomService {
   private serverRegistry: BlossomServerRegistry
   
   private supportedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-  private maxUploadSize = 50 * 1024 * 1024 // 50MB default (largest Blossom server)
+  private maxUploadSize = UPLOAD_LIMITS.MAX_FILE_SIZE_MB * 1024 * 1024 // Use centralized constant
   private compressionThreshold = 2 * 1024 * 1024 // 2MB
 
   private constructor() {

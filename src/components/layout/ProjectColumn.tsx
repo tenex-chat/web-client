@@ -1,29 +1,24 @@
 import { useState, useEffect, useMemo } from 'react'
-import { MessageSquare, FileText, Bot, Settings, Plus, ChevronRight, Shield, AlertTriangle, WifiOff, ListTodo, Users, ArrowLeft } from 'lucide-react'
+import { MessageSquare, FileText, Bot, Settings, Plus, ChevronRight, Shield, AlertTriangle, WifiOff, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 import { Button } from '@/components/ui/button'
 import { ThreadList } from '@/components/chat/ThreadList'
 import { DocumentationListSimple } from '@/components/documentation/DocumentationListSimple'
-import { DocumentationList } from '@/components/documentation/DocumentationList'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
-import { useProfile, useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
+import { useProfile, useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AddAgentsToProjectDialog } from '@/components/dialogs/AddAgentsToProjectDialog'
 import { useProjectStatus } from '@/stores/projects'
 import { bringProjectOnline } from '@/lib/utils/projectStatusUtils'
-import { TasksTabContent } from '@/components/tasks/TasksTabContent'
-import { AgentsTabContent } from '@/components/agents/AgentsTabContent'
-import { ProjectStatusPanel } from '@/components/status/ProjectStatusPanel'
 import { ProjectStatusIndicator } from '@/components/status/ProjectStatusIndicator'
-import { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { FAB } from '@/components/ui/fab'
 
-type TabType = 'conversations' | 'docs' | 'agents' | 'settings' | 'status' | 'tasks'
+type TabType = 'conversations' | 'docs' | 'agents' | 'settings'
 type ViewMode = 'column' | 'standalone'
 type ViewState = 'list' | 'detail'
 
@@ -115,23 +110,6 @@ export function ProjectColumn({
     return generateColorFromString(project?.dTag || '')
   }, [project?.dTag])
 
-  // Subscribe to tasks for this project
-  const taskFilter = useMemo(
-    () => project ? {
-      kinds: [NDKTask.kind],
-      '#a': [project.tagId()],
-    } : null,
-    [project]
-  )
-
-  const { events: taskEvents } = useSubscribe(
-    taskFilter ? [taskFilter] : []
-  )
-
-  const tasks = useMemo(() => {
-    return taskEvents?.map(event => NDKTask.from(event)) || []
-  }, [taskEvents])
-
   // Reset state when project changes
   useEffect(() => {
     setActiveTab('conversations')
@@ -172,19 +150,6 @@ export function ProjectColumn({
     }
   }
 
-  const handleTaskSelect = async (_project: NDKProject, taskId: string) => {
-    if (ndk) {
-      const taskEvent = await ndk.fetchEvent(taskId)
-      if (taskEvent) {
-        setSelectedThread(taskEvent)
-        setSelectedItem(taskEvent)
-        setActiveTab('conversations')
-        if (mode === 'standalone') {
-          setViewState('detail')
-        }
-      }
-    }
-  }
 
   const handleAgentSelect = (agentPubkey: string) => {
     setSelectedItem(agentPubkey)
@@ -220,25 +185,8 @@ export function ProjectColumn({
           />
         )
       
-      case 'tasks':
-        return (
-          <TasksTabContent
-            tasks={tasks}
-            taskUnreadMap={new Map()}
-            project={project}
-            onTaskSelect={handleTaskSelect}
-            markTaskStatusUpdatesSeen={() => {}}
-          />
-        )
-      
       case 'docs':
-        return mode === 'standalone' ? (
-          <DocumentationList
-            projectId={project.dTag}
-            onArticleSelect={handleDocumentSelect}
-            className="h-full"
-          />
-        ) : (
+        return (
           <DocumentationListSimple
             projectId={project.dTag}
             onArticleSelect={handleDocumentSelect}
@@ -247,9 +195,6 @@ export function ProjectColumn({
         )
       
       case 'agents':
-        if (mode === 'standalone') {
-          return <AgentsTabContent project={project} />
-        }
         return (
           <ScrollArea className="h-full">
             <div className="flex flex-col">
@@ -271,13 +216,6 @@ export function ProjectColumn({
             </div>
           </ScrollArea>
         )
-      
-      case 'status':
-        return mode === 'standalone' ? (
-          <div className="p-4">
-            <ProjectStatusPanel project={project} />
-          </div>
-        ) : null
       
       case 'settings':
         return (
@@ -337,22 +275,9 @@ export function ProjectColumn({
   const tabs = useMemo(() => {
     const baseTabs: Array<{ id: TabType; icon: any; label: string }> = [
       { id: 'conversations', icon: MessageSquare, label: 'Conversations' },
-    ]
-    
-    // Add tasks tab only in standalone mode
-    if (mode === 'standalone') {
-      baseTabs.push({ id: 'tasks', icon: ListTodo, label: 'Tasks' })
-    }
-    
-    baseTabs.push(
       { id: 'docs', icon: FileText, label: 'Documentation' },
       { id: 'agents', icon: Bot, label: 'Agents' }
-    )
-    
-    // Add status tab only in standalone mode
-    if (mode === 'standalone') {
-      baseTabs.push({ id: 'status', icon: Users, label: 'Status' })
-    }
+    ]
     
     // Settings only in column mode
     if (mode === 'column') {
@@ -410,11 +335,11 @@ export function ProjectColumn({
         mode === 'column' ? 'border-r' : '',
         className
       )}>
-      {/* Glow effect at the top */}
+      {/* Glow effect at the top - more colorful gradient */}
       <div 
         className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
         style={{
-          background: `linear-gradient(to bottom, ${projectColor.replace('55%', '50%').replace('65%', '40%').replace(')', ', 0.12)')}, transparent)`,
+          background: `linear-gradient(to bottom, ${projectColor.replace('55%', '60%').replace('65%', '70%').replace(')', ', 0.18)')}, transparent)`,
         }}
       />
       
@@ -496,16 +421,35 @@ export function ProjectColumn({
                     <button
                       onClick={() => setActiveTab(tab.id)}
                       className={cn(
-                        "px-3 py-1.5 relative transition-colors rounded-sm",
-                        "hover:text-foreground hover:bg-accent/50",
+                        "px-3 py-1.5 relative transition-all rounded-sm group",
                         activeTab === tab.id 
                           ? "text-foreground" 
-                          : "text-muted-foreground"
+                          : "text-muted-foreground hover:text-foreground"
                       )}
+                      style={{
+                        backgroundColor: activeTab === tab.id 
+                          ? projectColor.replace(')', ', 0.12)')
+                          : undefined,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (activeTab !== tab.id) {
+                          e.currentTarget.style.backgroundColor = projectColor.replace(')', ', 0.06)')
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (activeTab !== tab.id) {
+                          e.currentTarget.style.backgroundColor = ''
+                        }
+                      }}
                     >
                       <tab.icon className="h-4 w-4" />
                       {activeTab === tab.id && (
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-primary rounded-full" />
+                        <div 
+                          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full" 
+                          style={{
+                            backgroundColor: projectColor.replace('55%', '65%')
+                          }}
+                        />
                       )}
                     </button>
                   </TooltipTrigger>

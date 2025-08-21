@@ -83,9 +83,24 @@ export function streamingSessionsToMessages(
 }
 
 /**
+ * Checks if an event is a direct reply to the root event
+ * (has an "e" tag pointing to the root, not just an "E" tag)
+ */
+function isDirectReplyToRoot(event: NDKEvent, rootEvent: NDKEvent | null): boolean {
+  if (!rootEvent) return true // If no root, include all events
+  
+  // The root event itself should always be included
+  if (event.id === rootEvent.id) return true
+  
+  // Check if this event has a lowercase "e" tag pointing to the root
+  const eTags = event.getMatchingTags('e')
+  return eTags.some(tag => tag[1] === rootEvent.id)
+}
+
+/**
  * Processes all events into final messages with streaming session management
  */
-export function processEventsToMessages(events: NDKEvent[]): Message[] {
+export function processEventsToMessages(events: NDKEvent[], rootEvent: NDKEvent | null = null): Message[] {
   const finalMessages: Message[] = []
   const streamingSessions = new Map<string, StreamingSession>()
   
@@ -94,7 +109,11 @@ export function processEventsToMessages(events: NDKEvent[]): Message[] {
   
   // Process each event
   for (const event of sortedEvents) {
-    processEvent(event, streamingSessions, finalMessages)
+    // Only include direct replies to the root event in the main conversation view
+    // Nested replies will still be accessible through their parent's reply count
+    if (isDirectReplyToRoot(event, rootEvent)) {
+      processEvent(event, streamingSessions, finalMessages)
+    }
   }
   
   // Add active streaming sessions to final messages

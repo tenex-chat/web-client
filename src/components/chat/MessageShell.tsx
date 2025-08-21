@@ -17,6 +17,7 @@ interface MessageShellProps {
   className?: string
   isNested?: boolean
   headerActions?: ReactNode
+  onTimeClick?: (event: NDKEvent) => void
 }
 
 /**
@@ -29,7 +30,8 @@ export const MessageShell = memo(function MessageShell({
   children,
   className,
   isNested = false,
-  headerActions
+  headerActions,
+  onTimeClick
 }: MessageShellProps) {
   const user = useNDKCurrentUser()
   
@@ -105,9 +107,13 @@ export const MessageShell = memo(function MessageShell({
                   {toolName}
                 </Badge>
               )}
-              <span className="text-xs text-muted-foreground">
+              <button
+                onClick={() => onTimeClick?.(event)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer hover:underline"
+                title="Open as root conversation"
+              >
                 {formatRelativeTime(event.created_at || 0)}
-              </span>
+              </button>
               {recipientPubkeys.length > 0 && (
                 <>
                   <span className="text-xs text-muted-foreground">→</span>

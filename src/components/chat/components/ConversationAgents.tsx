@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import {
   Popover,
   PopoverContent,
@@ -187,6 +188,21 @@ export function ConversationAgents({
   const availableModels = useProjectOnlineModels(project.dTag);
   const availableTools = useProjectAvailableTools(project.dTag);
 
+  // Subscribe to ALL events that reference this thread with #E tag
+  // This includes nested replies that aren't shown in the main thread
+  const { events: threadParticipants } = useSubscribe(
+    rootEvent && !rootEvent.tagValue("e") // Only if root event doesn't have an "e" tag
+      ? [
+          {
+            kinds: [NDKKind.GenericReply],
+            "#E": [rootEvent.id],
+          },
+        ]
+      : false,
+    { closeOnEose: false, groupable: true },
+    [rootEvent?.id]
+  );
+
   // Extract unique agents from the conversation
   const conversationAgents = useMemo(() => {
     const agentsMap = new Map<string, AgentInfo>();
@@ -219,8 +235,32 @@ export function ConversationAgents({
       }
     });
 
+    // If root event doesn't have an "e" tag, also include agents from #E tag participants
+    if (rootEvent && !rootEvent.tagValue("e") && threadParticipants) {
+      threadParticipants.forEach((event) => {
+        const pubkey = event.pubkey;
+
+        // Skip if it's the user or already in the map
+        if (pubkey === user?.pubkey || agentsMap.has(pubkey)) {
+          return;
+        }
+
+        // Find agent info from online agents
+        const agentInfo = onlineAgents.find((a) => a.pubkey === pubkey);
+        if (agentInfo) {
+          agentsMap.set(pubkey, {
+            pubkey,
+            name: agentInfo.name,
+            model: agentInfo.model,
+            lastMessageId: event.id,
+            tools: agentInfo.tools || [],
+          });
+        }
+      });
+    }
+
     return Array.from(agentsMap.values());
-  }, [messages, onlineAgents, user?.pubkey]);
+  }, [messages, onlineAgents, user?.pubkey, rootEvent, threadParticipants]);
 
   const handleSaveChanges = async (agentPubkey: string, agentName: string, newModel: string, tools: string[]) => {
     if (!ndk || !user || !rootEvent) return;

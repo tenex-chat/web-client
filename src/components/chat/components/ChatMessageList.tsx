@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
+import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import type NDK from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "../hooks/useChatMessages";
 
@@ -34,6 +35,7 @@ interface ChatMessageListProps {
   onReplyFocus: () => void;
   isNewThread: boolean;
   isRootEventTask?: boolean;
+  onTimeClick?: (event: NDKEvent) => void;
 }
 
 /**
@@ -53,6 +55,7 @@ export function ChatMessageList({
   onReplyFocus,
   isNewThread,
   isRootEventTask = false,
+  onTimeClick,
 }: ChatMessageListProps) {
   const isMobile = useIsMobile();
   const USE_VIRTUAL_LIST_THRESHOLD = 50; // Use virtual list for more than 50 messages
@@ -160,6 +163,7 @@ export function ChatMessageList({
               event={message.event}
               project={project}
               headerActions={taskHeaderActions}
+              onTimeClick={onTimeClick}
             >
               {/* Show only the task content for the first message */}
               <div className="text-sm text-foreground/90 whitespace-pre-wrap">
@@ -180,6 +184,7 @@ export function ChatMessageList({
             event={message.event}
             project={project}
             headerActions={taskHeaderActions}
+            onTimeClick={onTimeClick}
           >
             {useCompactMode ? (
               <CompactTaskCard
@@ -217,6 +222,7 @@ export function ChatMessageList({
           event={message.event}
           project={project}
           onReply={onReplyFocus}
+          onTimeClick={onTimeClick}
         />
       </div>
     );

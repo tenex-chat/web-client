@@ -33,12 +33,15 @@ import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { replaceNostrEntities } from '@/lib/utils/nostrEntityParser'
 import { getUserStatus } from '@/lib/utils/userStatus'
+import { useAtom } from 'jotai'
+import { hoveredMessageIdAtom } from './atoms/hoveredMessage'
 
 interface MessageWithRepliesProps {
   event: NDKEvent
   project: NDKProject
   onReply?: (event: NDKEvent) => void
   isNested?: boolean
+  onTimeClick?: (event: NDKEvent) => void
 }
 
 
@@ -46,7 +49,8 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   event,
   project,
   onReply,
-  isNested = false
+  isNested = false,
+  onTimeClick
 }: MessageWithRepliesProps) {
   const { ndk } = useNDK()
   const user = useNDKCurrentUser()
@@ -57,7 +61,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   const [showMetadataDialog, setShowMetadataDialog] = useState(false)
   const [, setLightboxImage] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [hoveredMessageId, setHoveredMessageId] = useAtom(hoveredMessageIdAtom)
   const isMobile = useIsMobile()
+  
+  const isHovered = hoveredMessageId === event.id
   
   // Get ONLINE agents to find the agent's name from its pubkey
   const onlineAgents = useProjectOnlineAgents(project.dTag)
@@ -319,10 +326,15 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 
 
   return (
-    <div className={cn(
-      "group hover:bg-muted/30 transition-colors px-4 py-1",
-      isNested && "ml-10"
-    )}>
+    <div 
+      className={cn(
+        "relative px-4 py-1 transition-colors",
+        isNested && "ml-10",
+        isHovered && "bg-muted/30"
+      )}
+      onMouseEnter={() => setHoveredMessageId(event.id)}
+      onMouseLeave={() => setHoveredMessageId(null)}
+    >
       {/* Message - Slack style layout */}
       <div className="flex gap-3">
         {/* Avatar column - fixed width */}
@@ -365,9 +377,13 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                   ({userStatus.projectName || 'external'})
                 </span>
               )}
-              <span className="text-xs text-muted-foreground">
+              <button
+                onClick={() => onTimeClick?.(event)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer hover:underline"
+                title="Open as root conversation"
+              >
                 {formatRelativeTime(event.created_at || 0)}
-              </span>
+              </button>
               {recipientPubkeys.length > 0 && (
                 <>
                   <span className="text-xs text-muted-foreground">→</span>
@@ -381,7 +397,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             
             {/* Action buttons - only visible on hover, hide for typing indicators */}
             {!showTypingIndicator && (
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className={cn(
+                "flex items-center gap-0.5 transition-opacity",
+                isHovered ? "opacity-100" : "opacity-0"
+              )}>
               {/* Phase indicator - inline with hover buttons */}
               {phase && (
                 <Badge 
@@ -627,7 +646,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 
       {/* Thread replies - Slack style indented */}
       {showReplies && sortedReplies.length > 0 && (
-        <div className="border-l-2 border-muted ml-12 mt-2">
+        <div className="border-l-2 border-muted ml-[18px] mt-2">
           {sortedReplies.map(reply => (
             <div key={reply.id}>
               <MessageWithReplies
@@ -635,6 +654,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                 project={project}
                 onReply={onReply}
                 isNested={true}
+                onTimeClick={onTimeClick}
               />
             </div>
           ))}
@@ -643,7 +663,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 
       {/* Reply input - Slack style inline */}
       {replyToEvent && (
-        <div className="ml-12 mt-2 border-l-2 border-muted pl-3">
+        <div className="ml-[18px] mt-2 border-l-2 border-muted pl-3">
           <div className="bg-muted/30 p-2 rounded-md mb-2">
             <div className="text-xs text-muted-foreground flex items-center gap-1">
               <Reply className="w-3 h-3" />

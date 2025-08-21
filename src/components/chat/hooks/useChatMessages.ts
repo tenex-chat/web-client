@@ -27,9 +27,9 @@ export function useChatMessages(_project: NDKProject, rootEvent: NDKEvent | null
 
   // Process thread replies into messages with streaming session management
   useEffect(() => {
-    const processedMessages = processEventsToMessages(events)
+    const processedMessages = processEventsToMessages(events, rootEvent)
     setMessages(processedMessages)
-  }, [events])
+  }, [events, rootEvent])
 
   return messages
 }

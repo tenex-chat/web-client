@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import { useChatNavigationStore } from "@/stores/chatNavigation";
 
 // Import new hooks and components
 import { useChatMessages } from "./hooks/useChatMessages";
@@ -61,6 +62,10 @@ export function ChatInterface({
   const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Navigation store
+  const navigationStore = useChatNavigationStore();
+  const projectId = project.dTag || '';
+
   // State for voice and TTS
   const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false);
   const [autoTTS, setAutoTTS] = useAtom(autoTTSAtom);
@@ -68,14 +73,35 @@ export function ChatInterface({
     null,
   );
 
+  // Use navigation store to track current root event
+  const [localRootEvent, setLocalRootEvent] = useState<NDKEvent | null>(
+    rootEvent || navigationStore.getCurrentRoot(projectId) || null
+  );
+
+  // Update local root when rootEvent prop changes
+  useEffect(() => {
+    if (rootEvent) {
+      setLocalRootEvent(rootEvent);
+      navigationStore.setCurrentRoot(projectId, rootEvent);
+    }
+  }, [rootEvent, projectId]);
+
+  // Clear navigation stack when switching projects
+  useEffect(() => {
+    return () => {
+      // Clear navigation when unmounting (switching projects)
+      navigationStore.clearStack(projectId);
+    };
+  }, [projectId]);
+
   // Thread management
   const threadManagement = useThreadManagement(
     project,
-    rootEvent || null,
+    localRootEvent,
     extraTags,
     onThreadCreated,
   );
-  const { localRootEvent, sendMessage } = threadManagement;
+  const { sendMessage } = threadManagement;
 
   // Message management
   const messages = useChatMessages(project, localRootEvent);
@@ -184,6 +210,36 @@ export function ChatInterface({
     [inputProps, handleSendMessage],
   );
 
+  // Handle clicking on a message timestamp to open it as root
+  const handleTimeClick = useCallback((event: NDKEvent) => {
+    // Push current root to stack and set new root
+    navigationStore.pushToStack(projectId, event);
+    setLocalRootEvent(event);
+    // Scroll to top when changing root
+    setTimeout(() => {
+      scrollProps.scrollToBottom(false);
+    }, 100);
+  }, [projectId, navigationStore, scrollProps]);
+
+  // Enhanced back handler with navigation stack
+  const handleBackWithStack = useCallback(() => {
+    // Check if we can go back in the navigation stack
+    if (navigationStore.canGoBack(projectId)) {
+      const previousEvent = navigationStore.popFromStack(projectId);
+      if (previousEvent) {
+        setLocalRootEvent(previousEvent);
+        // Don't call onBack, just navigate within the chat
+        return;
+      }
+    }
+    
+    // If no stack history, use original onBack behavior
+    if (onBack) {
+      navigationStore.clearStack(projectId);
+      onBack();
+    }
+  }, [navigationStore, projectId, onBack]);
+
   // Focus textarea on reply
   const handleReplyFocus = useCallback(() => {
     if (textareaRef.current) {
@@ -207,7 +263,7 @@ export function ChatInterface({
         {/* Header */}
         <ChatHeader
           rootEvent={localRootEvent}
-          onBack={onBack}
+          onBack={handleBackWithStack}
           autoTTS={autoTTS}
           onAutoTTSChange={setAutoTTS}
           ttsEnabled={!!ttsOptions}
@@ -229,6 +285,7 @@ export function ChatInterface({
           onReplyFocus={handleReplyFocus}
           isNewThread={isNewThread}
           isRootEventTask={isRootEventTask}
+          onTimeClick={handleTimeClick}
         />
 
         {/* Input Area */}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, Phone, PhoneOff, Settings } from "lucide-react";
+import { ArrowLeft, Phone, PhoneOff, Settings, Copy, Check, FileJson } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMediaQuery";
@@ -9,9 +9,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
+import { useSubscribe, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "../hooks/useChatMessages";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
+import { formatThreadAsMarkdown, formatThreadAsJSON } from "../utils/copyThread";
 
 interface ChatHeaderProps {
   rootEvent: NDKEvent | null;
@@ -39,6 +47,8 @@ export function ChatHeader({
   const isMobile = useIsMobile();
   const isNewThread = !rootEvent;
   const [showTTSInfo, setShowTTSInfo] = useState(false);
+  const [copiedFormat, setCopiedFormat] = useState<'markdown' | 'json' | null>(null);
+  const { ndk } = useNDK();
 
   // Get thread title
   const threadTitle = useMemo(() => {
@@ -54,6 +64,38 @@ export function ChatHeader({
     return isNewThread ? "New Thread" : "Thread";
   }, [rootEvent, isNewThread]);
 
+  // Subscribe to ALL thread replies (not just direct replies) to get nested replies for copying
+  const { events: allThreadReplies } = useSubscribe(
+    rootEvent && messages && messages.length > 0
+      ? [
+          {
+            kinds: [NDKKind.GenericReply],
+            "#E": [rootEvent.id], // Get all events that reference this thread root
+          },
+        ]
+      : false,
+    { closeOnEose: false, groupable: true },
+    [rootEvent?.id]
+  );
+
+  const handleCopyThread = async (format: 'markdown' | 'json') => {
+    if (messages) {
+      try {
+        let content: string;
+        if (format === 'json') {
+          content = await formatThreadAsJSON(messages, rootEvent, allThreadReplies || [], ndk || undefined);
+        } else {
+          content = await formatThreadAsMarkdown(messages, rootEvent, allThreadReplies || [], ndk || undefined);
+        }
+        await navigator.clipboard.writeText(content);
+        setCopiedFormat(format);
+        setTimeout(() => setCopiedFormat(null), 2000);
+      } catch (error) {
+        console.error(`Failed to copy thread as ${format}:`, error);
+      }
+    }
+  };
+
   if (!rootEvent) return null;
 
   return (
@@ -65,16 +107,16 @@ export function ChatHeader({
         )}
       >
         <div className="flex items-center gap-2 sm:gap-3">
-          {onBack && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onBack}
-              className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-            >
-              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            </Button>
-          )}
+          {/* Always show back button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onBack}
+            className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+            title="Go back"
+          >
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+          </Button>
           <div className="flex-1 min-w-0">
             <h1
               className={cn(
@@ -102,6 +144,47 @@ export function ChatHeader({
               project={project}
               rootEvent={rootEvent}
             />
+          )}
+          {/* Copy thread dropdown */}
+          {messages && messages.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+                  title="Copy thread"
+                >
+                  {copiedFormat ? (
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                  ) : (
+                    <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={() => handleCopyThread('markdown')}
+                  className="cursor-pointer"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy as Markdown
+                  {copiedFormat === 'markdown' && (
+                    <Check className="w-4 h-4 ml-auto text-green-600" />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleCopyThread('json')}
+                  className="cursor-pointer"
+                >
+                  <FileJson className="w-4 h-4 mr-2" />
+                  Copy as JSON
+                  {copiedFormat === 'json' && (
+                    <Check className="w-4 h-4 ml-auto text-green-600" />
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           {/* Auto-TTS toggle - always visible */}
           {ttsEnabled ? (

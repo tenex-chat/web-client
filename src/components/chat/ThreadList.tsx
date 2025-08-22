@@ -1,5 +1,5 @@
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { useMemo } from 'react'
+import { useMemo, useCallback, memo } from 'react'
 import { MessageSquare } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { VirtualList } from '@/components/ui/virtual-list'
@@ -16,7 +16,7 @@ interface ThreadListProps {
   className?: string
 }
 
-export function ThreadList({ 
+export const ThreadList = memo(function ThreadList({ 
   project, 
   selectedThread, 
   onThreadSelect, 
@@ -45,14 +45,14 @@ export function ThreadList({
     )
   }, [threadEvents])
 
-  const renderThread = (thread: typeof sortedThreads[0]) => (
+  const renderThread = useCallback((thread: typeof sortedThreads[0]) => (
     <ThreadItem
       key={thread.id}
       thread={thread}
       isSelected={thread.id === selectedThread?.id}
       onSelect={() => onThreadSelect(thread)}
     />
-  )
+  ), [selectedThread?.id, onThreadSelect])
 
   return (
     <div className={cn('flex flex-col h-full', className)}>
@@ -82,4 +82,4 @@ export function ThreadList({
       )}
     </div>
   )
-}
+})

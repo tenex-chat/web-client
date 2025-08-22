@@ -33,8 +33,8 @@ import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { replaceNostrEntities } from '@/lib/utils/nostrEntityParser'
 import { getUserStatus } from '@/lib/utils/userStatus'
-import { useAtom } from 'jotai'
-import { hoveredMessageIdAtom } from './atoms/hoveredMessage'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { hoveredMessageIdAtom, hoveredMessageStackAtom } from './atoms/hoveredMessage'
 
 interface MessageWithRepliesProps {
   event: NDKEvent
@@ -61,10 +61,19 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   const [showMetadataDialog, setShowMetadataDialog] = useState(false)
   const [, setLightboxImage] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
-  const [hoveredMessageId, setHoveredMessageId] = useAtom(hoveredMessageIdAtom)
+  const hoveredMessageId = useAtomValue(hoveredMessageIdAtom)
+  const setHoveredStack = useSetAtom(hoveredMessageStackAtom)
   const isMobile = useIsMobile()
   
   const isHovered = hoveredMessageId === event.id
+  
+  const handleMouseEnter = useCallback(() => {
+    setHoveredStack(stack => [...stack.filter(id => id !== event.id), event.id])
+  }, [event.id, setHoveredStack])
+  
+  const handleMouseLeave = useCallback(() => {
+    setHoveredStack(stack => stack.filter(id => id !== event.id))
+  }, [event.id, setHoveredStack])
   
   // Get ONLINE agents to find the agent's name from its pubkey
   const onlineAgents = useProjectOnlineAgents(project.dTag)
@@ -332,8 +341,8 @@ export const MessageWithReplies = memo(function MessageWithReplies({
         isNested && "ml-10",
         isHovered && "bg-muted/30"
       )}
-      onMouseEnter={() => setHoveredMessageId(event.id)}
-      onMouseLeave={() => setHoveredMessageId(null)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {/* Message - Slack style layout */}
       <div className="flex gap-3">

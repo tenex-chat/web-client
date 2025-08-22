@@ -13,7 +13,6 @@ import {
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import { InlineProfileMention } from '@/components/common/InlineProfileMention'
 import { cn } from '@/lib/utils'
-import { EVENT_KINDS } from '@/lib/constants'
 import { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
 import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition'
@@ -30,6 +29,8 @@ import {
   Sheet,
   SheetContent,
 } from '@/components/ui/sheet'
+import { useChatNavigationStore } from '@/stores/chatNavigation'
+import { useRouter } from '@tanstack/react-router'
 
 // Import specialized card components
 import { TaskEmbedCard } from '@/components/embeds/TaskEmbedCard'
@@ -38,6 +39,7 @@ import { NoteEmbedCard } from '@/components/embeds/NoteEmbedCard'
 import { MCPToolEmbedCard } from '@/components/embeds/MCPToolEmbedCard'
 import { AgentDefinitionEmbedCard } from '@/components/embeds/AgentDefinitionEmbedCard'
 import { DefaultEmbedCard } from '@/components/embeds/DefaultEmbedCard'
+import { ChatMessageEmbedCard } from '@/components/embeds/ChatMessageEmbedCard'
 import { DocumentationViewer } from '@/components/documentation/DocumentationViewer'
 
 interface NostrEntityCardProps {
@@ -54,6 +56,12 @@ export function NostrEntityCard({
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const displayInfo = getEntityDisplayInfo(entity)
+  const navigationStore = useChatNavigationStore()
+  const router = useRouter()
+  
+  // Extract project ID from the current path if we're in a project context
+  const pathMatch = router.state.location.pathname.match(/\/projects\/([^\/]+)/)
+  const projectIdFromUrl = pathMatch?.[1] || null
 
   // Build subscription filter based on entity type
   const subscriptionFilter = useMemo(() => {
@@ -116,7 +124,17 @@ export function NostrEntityCard({
 
   // Handle click events
   const handleClick = () => {
-    if (event?.content) {
+    // For kind:11 (Thread) events in a project context, 
+    // navigate to the conversation view like we do for task events
+    if (event && event.kind === NDKKind.Thread && projectIdFromUrl) {
+      // Push the event to the conversation stack
+      navigationStore.pushToStack(projectIdFromUrl, event)
+      // Navigate to the project chat interface
+      router.navigate({ 
+        to: '/projects/$projectId', 
+        params: { projectId: projectIdFromUrl }
+      })
+    } else if (event?.content) {
       setDrawerOpen(true)
     } else {
       // Open in njump if no content to display
@@ -160,6 +178,37 @@ export function NostrEntityCard({
           />
         </>
       )
+    
+    case NDKKind.Thread: // kind:11 - Handle like task events in project context
+      if (projectIdFromUrl) {
+        // Use specialized chat message card that navigates to conversation view on click
+        return (
+          <ChatMessageEmbedCard 
+            event={event} 
+            compact={compact} 
+            className={className}
+            onClick={handleClick}
+          />
+        )
+      } else {
+        // Outside of project context, show with drawer like before
+        return (
+          <>
+            <ChatMessageEmbedCard 
+              event={event} 
+              compact={compact} 
+              className={className}
+              onClick={handleClick}
+            />
+            <EventDrawer 
+              event={event}
+              title={`Thread: ${event.tags?.find(tag => tag[0] === 'title')?.[1] || 'Untitled'}`}
+              open={drawerOpen}
+              onOpenChange={setDrawerOpen}
+            />
+          </>
+        )
+      }
 
     case NDKArticle.kind: // 30023
       return (

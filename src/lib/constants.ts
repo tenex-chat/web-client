@@ -38,7 +38,7 @@ export const UPLOAD_LIMITS = {
 
 // Virtual list thresholds
 export const VIRTUAL_LIST_THRESHOLDS = {
-  THREAD_LIST: 30, // Use virtual list for more than 30 threads
+  THREAD_LIST: 10, // Use virtual list for more than 10 threads
   CHAT_MESSAGES: 50, // Use virtual list for more than 50 messages
   TASKS: 20, // Use virtual list for more than 20 tasks
 } as const

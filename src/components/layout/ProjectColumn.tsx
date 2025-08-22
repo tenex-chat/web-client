@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { MessageSquare, FileText, Bot, Settings, Plus, ChevronRight, Shield, AlertTriangle, WifiOff, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
@@ -40,12 +40,12 @@ function generateColorFromString(str: string): string {
   return `hsl(${hue}, 65%, 55%)`
 }
 
-// Agent list item component
-function AgentListItem({ agent, isOnline, onClick }: { 
+// Agent list item component - moved to top level to avoid conditional hook usage
+const AgentListItem = React.memo(({ agent, isOnline, onClick }: { 
   agent: { pubkey: string; name: string; status?: string; lastSeen?: number }
   isOnline: boolean
   onClick: () => void 
-}) {
+}) => {
   const profile = useProfile(agent.pubkey)
   const avatarUrl = profile?.image || profile?.picture
   const displayName = agent.name || profile?.displayName || profile?.name || 'Unknown Agent'
@@ -77,7 +77,7 @@ function AgentListItem({ agent, isOnline, onClick }: {
       <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-1.5" />
     </div>
   )
-}
+})
 
 interface ProjectColumnProps {
   project: NDKProject
@@ -118,7 +118,7 @@ export function ProjectColumn({
     setViewState('list')
   }, [project.dTag])
 
-  const handleThreadSelect = async (threadId: string) => {
+  const handleThreadSelect = useCallback(async (threadId: string) => {
     if (threadId === 'new') {
       setSelectedThread(undefined)
       setSelectedItem(undefined)
@@ -139,31 +139,35 @@ export function ProjectColumn({
         }
       }
     }
-  }
+  }, [ndk, mode, onItemClick, project])
 
-  const handleDocumentSelect = (article: NDKArticle) => {
+  const handleDocumentSelect = useCallback((article: NDKArticle) => {
     setSelectedItem(article)
     if (mode === 'standalone') {
       setViewState('detail')
     } else if (onItemClick) {
       onItemClick(project, 'docs', article)
     }
-  }
+  }, [mode, onItemClick, project])
 
 
-  const handleAgentSelect = (agentPubkey: string) => {
+  const handleAgentSelect = useCallback((agentPubkey: string) => {
     setSelectedItem(agentPubkey)
     if (mode === 'standalone') {
       setViewState('detail')
     } else if (onItemClick) {
       onItemClick(project, 'agents', agentPubkey)
     }
-  }
+  }, [mode, onItemClick, project])
 
-  const handleBringOnline = async () => {
+  const handleBringOnline = useCallback(async () => {
     if (!ndk) return
     await bringProjectOnline(project, ndk)
-  }
+  }, [project, ndk])
+
+  const handleThreadSelectWrapper = useCallback(async (thread: NDKEvent) => {
+    await handleThreadSelect(thread.id)
+  }, [handleThreadSelect])
 
   const renderContent = () => {
     // In standalone mode with detail view, render full content
@@ -178,9 +182,7 @@ export function ProjectColumn({
           <ThreadList
             project={project}
             selectedThread={selectedThread}
-            onThreadSelect={async (thread: NDKEvent) => {
-              await handleThreadSelect(thread.id)
-            }}
+            onThreadSelect={handleThreadSelectWrapper}
             className="h-full"
           />
         )

@@ -1,5 +1,5 @@
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { useState, useEffect } from 'react'
+import { useMemo, memo } from 'react'
 import { MessageSquare, ChevronRight, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { PhaseIndicator } from '@/components/ui/phase-indicator'
@@ -13,19 +13,16 @@ interface ThreadItemProps {
   onSelect: () => void
 }
 
-export function ThreadItem({ thread, isSelected, onSelect }: ThreadItemProps) {
-  const [replyCount, setReplyCount] = useState(0)
-  const [lastReplyAt, setLastReplyAt] = useState<number | undefined>()
-  const [lastMessage, setLastMessage] = useState<string | undefined>()
-  const [participants, setParticipants] = useState<Set<string>>(new Set([thread.pubkey]))
-  const [currentPhase, setCurrentPhase] = useState<string | undefined>()
+export const ThreadItem = memo(function ThreadItem({ thread, isSelected, onSelect }: ThreadItemProps) {
 
-  // Extract title from thread
-  const titleTag = thread.tags.find(t => t[0] === 'title')
-  const title = titleTag ? titleTag[1] : thread.content.split('\n')[0].slice(0, 50)
-  
-  // Extract t tags (hashtags/topics)
-  const tTags = thread.tags.filter(t => t[0] === 't').map(t => t[1])
+  // Memoize extracted data from thread
+  const { title, tTags } = useMemo(() => {
+    const titleTag = thread.tags.find(t => t[0] === 'title')
+    return {
+      title: titleTag ? titleTag[1] : thread.content.split('\n')[0].slice(0, 50),
+      tTags: thread.tags.filter(t => t[0] === 't').map(t => t[1])
+    }
+  }, [thread.tags, thread.content])
 
   // Subscribe to replies for this specific thread
   const { events: replies } = useSubscribe(
@@ -37,9 +34,17 @@ export function ThreadItem({ thread, isSelected, onSelect }: ThreadItemProps) {
     [thread.id]
   )
 
-  // Process replies and extract phase information
-  useEffect(() => {
-    if (!replies || replies.length === 0) return
+  // Process replies and extract phase information with memoization
+  const processedReplyData = useMemo(() => {
+    if (!replies || replies.length === 0) {
+      return {
+        replyCount: 0,
+        participants: new Set([thread.pubkey]),
+        lastReplyAt: undefined,
+        lastMessage: undefined,
+        currentPhase: undefined
+      }
+    }
 
     const uniqueParticipants = new Set([thread.pubkey])
     let latestReplyTime = 0
@@ -64,16 +69,17 @@ export function ThreadItem({ thread, isSelected, onSelect }: ThreadItemProps) {
       }
     })
 
-    setReplyCount(replies.length)
-    setParticipants(uniqueParticipants)
-    if (latestReplyTime > 0) {
-      setLastReplyAt(latestReplyTime)
-      setLastMessage(latestReplyContent)
-    }
-    if (latestPhase) {
-      setCurrentPhase(latestPhase)
+    return {
+      replyCount: replies.length,
+      participants: uniqueParticipants,
+      lastReplyAt: latestReplyTime > 0 ? latestReplyTime : undefined,
+      lastMessage: latestReplyTime > 0 ? latestReplyContent : undefined,
+      currentPhase: latestPhase || undefined
     }
   }, [replies, thread.pubkey])
+
+  // Use processed data instead of state
+  const { replyCount, participants, lastReplyAt, lastMessage, currentPhase } = processedReplyData
 
   const lastActivityTime = lastReplyAt || thread.created_at || 0
 
@@ -146,4 +152,11 @@ export function ThreadItem({ thread, isSelected, onSelect }: ThreadItemProps) {
       </div>
     </button>
   )
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison to prevent unnecessary re-renders
+  return (
+    prevProps.thread.id === nextProps.thread.id &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.thread.created_at === nextProps.thread.created_at
+  )
+})

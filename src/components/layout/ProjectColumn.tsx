@@ -16,7 +16,8 @@ import { AddAgentsToProjectDialog } from '@/components/dialogs/AddAgentsToProjec
 import { useProjectStatus } from '@/stores/projects'
 import { bringProjectOnline } from '@/lib/utils/projectStatusUtils'
 import { ProjectStatusIndicator } from '@/components/status/ProjectStatusIndicator'
-import { FAB } from '@/components/ui/fab'
+import { FABMenu } from '@/components/ui/fab-menu'
+import { CallView } from '@/components/call/CallView'
 
 type TabType = 'conversations' | 'docs' | 'agents' | 'settings'
 type ViewMode = 'column' | 'standalone'
@@ -101,6 +102,7 @@ export function ProjectColumn({
   const [selectedItem, setSelectedItem] = useState<any>()
   const [viewState, setViewState] = useState<ViewState>('list')
   const [addAgentsDialogOpen, setAddAgentsDialogOpen] = useState(false)
+  const [showCallView, setShowCallView] = useState(false)
   const { ndk } = useNDK()
   const agents = useProjectOnlineAgents(project?.dTag)
   const projectStatus = useProjectStatus(project?.dTag)
@@ -172,7 +174,11 @@ export function ProjectColumn({
   const renderContent = () => {
     // In standalone mode with detail view, render full content
     if (mode === 'standalone' && viewState === 'detail' && renderFullContent) {
-      return renderFullContent(project, activeTab, selectedItem)
+      return renderFullContent(project, activeTab, selectedItem, () => {
+        setViewState('list')
+        setSelectedItem(undefined)
+        setSelectedThread(undefined)
+      })
     }
 
     // Otherwise render list views
@@ -291,6 +297,16 @@ export function ProjectColumn({
 
   // For standalone mode with detail view, render differently
   if (mode === 'standalone' && viewState === 'detail') {
+    // For conversations, let ChatInterface handle its own header
+    if (activeTab === 'conversations') {
+      return (
+        <div className={cn('flex flex-col h-full relative', className)}>
+          {renderContent()}
+        </div>
+      )
+    }
+    
+    // For other tabs, keep the existing header
     return (
       <div className={cn('flex flex-col h-full relative', className)}>
         {/* Mobile-style header with back button */}
@@ -315,9 +331,6 @@ export function ProjectColumn({
             />
             <div>
               <h1 className="text-sm font-semibold">{project.title || 'Untitled Project'}</h1>
-              {activeTab === 'conversations' && (
-                <p className="text-xs text-muted-foreground">Conversation</p>
-              )}
             </div>
           </div>
         </div>
@@ -490,19 +503,29 @@ export function ProjectColumn({
         
         {/* FAB for standalone mode */}
         {mode === 'standalone' && activeTab === 'conversations' && viewState === 'list' && (
-          <FAB
-            onClick={() => {
+          <FABMenu
+            onTextClick={() => {
               setSelectedThread(undefined)
               setSelectedItem(undefined)
               setViewState('detail')
             }}
-            label="New Chat"
-            showLabel={false}
-            position="bottom-right"
+            onVoiceClick={() => {
+              setShowCallView(true)
+            }}
             offset={{ bottom: '16px' }}
-          >
-            <Plus />
-          </FAB>
+          />
+        )}
+        
+        {/* Call View Overlay */}
+        {showCallView && project && (
+          <CallView
+            project={project}
+            onClose={() => {
+              setShowCallView(false)
+              // Switch to chat view if a thread was created
+              setViewState('detail')
+            }}
+          />
         )}
       </div>
 

@@ -92,20 +92,32 @@ export class MurfTTSService {
                             const binaryString = atob(base64Clean);
                             const len = binaryString.length;
                             const bytes = new Uint8Array(len);
-                            let hasValidData = false;
+                            
+                            // Check if we have enough data for a valid WAV file (at least 44 bytes for header)
+                            if (len < 44) {
+                                logger.error('Audio data too small to be valid WAV file:', len);
+                                reject(new Error('Invalid audio data: insufficient data'));
+                                ws.close();
+                                return;
+                            }
                             
                             for (let i = 0; i < len; i++) {
                                 bytes[i] = binaryString.charCodeAt(i);
-                                if (bytes[i] !== 0) hasValidData = true;
                             }
                             
-                            // Additional check for valid audio data
-                            if (!hasValidData) {
+                            // Check for completely empty audio (all bytes are zero)
+                            const allZeros = bytes.every(byte => byte === 0);
+                            if (allZeros) {
                                 logger.error('Audio data contains only null bytes');
                                 reject(new Error('Invalid audio data: contains only null bytes'));
                                 ws.close();
                                 return;
                             }
+                            
+                            logger.debug('Received audio chunk:', { 
+                                size: len, 
+                                firstBytes: Array.from(bytes.slice(0, 20)).map(b => b.toString(16).padStart(2, '0')).join(' ')
+                            });
                             
                             // Keep the complete WAV data including headers
                             audioChunks.push(bytes.buffer);

@@ -36,7 +36,7 @@ export function FABMenu({ onTextClick, onVoiceClick, className, offset }: FABMen
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/20 z-40"
+            className="fixed inset-0 bg-black/20 z-[60]"
             onClick={() => setIsOpen(false)}
           />
         )}
@@ -45,7 +45,7 @@ export function FABMenu({ onTextClick, onVoiceClick, className, offset }: FABMen
       {/* Menu items */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed z-50" style={{ bottom: offset?.bottom || '80px', right: offset?.right || '16px' }}>
+          <div className="fixed z-[70]" style={{ bottom: offset?.bottom || '80px', right: offset?.right || '16px' }}>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

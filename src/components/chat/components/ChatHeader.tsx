@@ -30,6 +30,7 @@ interface ChatHeaderProps {
   ttsEnabled: boolean;
   messages?: Message[];
   project?: NDKProject | null;
+  onVoiceCallClick?: () => void;
 }
 
 /**
@@ -44,6 +45,7 @@ export function ChatHeader({
   ttsEnabled,
   messages,
   project,
+  onVoiceCallClick,
 }: ChatHeaderProps) {
   const isMobile = useIsMobile();
   const isNewThread = !rootEvent;
@@ -197,23 +199,16 @@ export function ChatHeader({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          {/* Auto-TTS toggle - always visible */}
+          {/* Voice call button - always visible */}
           {ttsEnabled ? (
             <Button
-              variant={autoTTS ? "default" : "ghost"}
+              variant="ghost"
               size="icon"
-              onClick={() => onAutoTTSChange(!autoTTS)}
-              className={cn(
-                "w-8 h-8 sm:w-9 sm:h-9",
-                autoTTS ? "bg-green-600 hover:bg-green-700" : "hover:bg-accent",
-              )}
-              title={autoTTS ? "Disable voice mode" : "Enable voice mode"}
+              onClick={onVoiceCallClick}
+              className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+              title="Start voice call"
             >
-              {autoTTS ? (
-                <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-              ) : (
-                <PhoneOff className="w-4 h-4 sm:w-5 sm:h-5" />
-              )}
+              <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           ) : (
             <Popover open={showTTSInfo} onOpenChange={setShowTTSInfo}>

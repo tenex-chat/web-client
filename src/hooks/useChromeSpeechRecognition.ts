@@ -67,13 +67,10 @@ export function useChromeSpeechRecognition() {
 
   useEffect(() => {
     // Check for browser support
-    console.log('Checking for Speech Recognition API support')
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition
-    console.log('SpeechRecognitionAPI found:', !!SpeechRecognitionAPI)
     setIsSupported(!!SpeechRecognitionAPI)
 
     if (SpeechRecognitionAPI) {
-      console.log('Creating new SpeechRecognition instance')
       const recognition = new SpeechRecognitionAPI()
       
       // Configure recognition
@@ -81,7 +78,6 @@ export function useChromeSpeechRecognition() {
       recognition.interimResults = true
       recognition.lang = 'en-US'
       recognition.maxAlternatives = 1
-      console.log('SpeechRecognition configured')
 
       // Handle results
       recognition.onresult = (event) => {
@@ -118,12 +114,10 @@ export function useChromeSpeechRecognition() {
 
       // Handle errors
       recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error, event)
         setError(event.error)
         
         // Don't try to restart on aborted - it means it was never properly started
         if (event.error === 'aborted') {
-          console.error('Speech recognition was aborted - likely permissions issue or not HTTPS')
           setIsListening(false)
           return
         }
@@ -135,7 +129,7 @@ export function useChromeSpeechRecognition() {
               try {
                 recognitionRef.current.start()
               } catch (e) {
-                console.error('Failed to restart recognition:', e)
+                // Failed to restart recognition
               }
             }
           }, 1000)
@@ -144,16 +138,13 @@ export function useChromeSpeechRecognition() {
 
       // Handle end
       recognition.onend = () => {
-        console.log('Recognition ended, isListening:', isListeningRef.current)
         // Auto-restart if still listening (for continuous mode)
         if (isListeningRef.current && recognitionRef.current) {
           setTimeout(() => {
             if (isListeningRef.current && recognitionRef.current) {
               try {
-                console.log('Auto-restarting recognition')
                 recognitionRef.current.start()
               } catch (e) {
-                console.error('Failed to restart recognition:', e)
                 setIsListening(false)
                 isListeningRef.current = false
               }
@@ -167,41 +158,29 @@ export function useChromeSpeechRecognition() {
 
     return () => {
       if (recognitionRef.current) {
-        console.log('Cleanup: aborting recognition')
         recognitionRef.current.abort()
       }
     }
   }, []) // Remove isListening from dependencies to avoid recreating recognition
 
   const startListening = useCallback((onSilence?: () => void) => {
-    console.log('startListening called', { 
-      hasRecognition: !!recognitionRef.current, 
-      isSupported,
-      currentlyListening: isListening 
-    })
-    
     if (!recognitionRef.current || !isSupported) {
-      console.error('Speech recognition not available', { recognitionRef: recognitionRef.current, isSupported })
       setError('Speech recognition not supported')
       return
     }
 
     try {
       // Reset transcripts
-      console.log('Resetting transcripts and starting recognition')
       setTranscript('')
       setInterimTranscript('')
       finalTranscriptRef.current = ''
       setError(null)
       onSilenceCallbackRef.current = onSilence || null
       
-      console.log('Calling recognition.start()')
       recognitionRef.current.start()
       setIsListening(true)
       isListeningRef.current = true
-      console.log('Recognition started successfully')
     } catch (error) {
-      console.error('Failed to start recognition - full error:', error)
       setError('Failed to start recognition')
       setIsListening(false)
       isListeningRef.current = false
@@ -209,7 +188,6 @@ export function useChromeSpeechRecognition() {
   }, [isSupported])
 
   const stopListening = useCallback(() => {
-    console.log('stopListening called')
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop()
@@ -222,7 +200,6 @@ export function useChromeSpeechRecognition() {
         }
         onSilenceCallbackRef.current = null
       } catch (error) {
-        console.error('Failed to stop recognition:', error)
         recognitionRef.current.abort()
         setIsListening(false)
         isListeningRef.current = false

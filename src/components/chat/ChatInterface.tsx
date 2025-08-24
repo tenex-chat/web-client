@@ -36,6 +36,7 @@ interface ChatInterfaceProps {
   onBack?: () => void;
   onTaskClick?: (task: NDKTask) => void;
   onThreadCreated?: (thread: NDKEvent) => void;
+  onVoiceCallClick?: () => void;
 }
 
 /**
@@ -50,6 +51,7 @@ export function ChatInterface({
   onBack,
   onTaskClick,
   onThreadCreated,
+  onVoiceCallClick,
 }: ChatInterfaceProps) {
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
@@ -274,6 +276,7 @@ export function ChatInterface({
           ttsEnabled={!!ttsOptions}
           messages={messages}
           project={project}
+          onVoiceCallClick={onVoiceCallClick}
         />
 
         {/* Messages Area */}

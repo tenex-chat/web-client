@@ -27,6 +27,7 @@ import { useProjectActivityStore } from '@/stores/projectActivity'
 import { FAB } from '@/components/ui/fab'
 import { useAtom } from 'jotai'
 import { openSingleProjectAtom } from '@/stores/openProjects'
+import { CallView } from '@/components/call/CallView'
 
 // Agent list item component
 function AgentListItem({ agent, isOnline }: { 
@@ -79,6 +80,7 @@ function ProjectDetailPage() {
   const [showThreadList, setShowThreadList] = useState(true)
   const [activeTab, setActiveTab] = useState<'conversations' | 'docs' | 'agents'>('conversations')
   const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null)
+  const [showCallView, setShowCallView] = useState(false)
   const [, openSingleProject] = useAtom(openSingleProjectAtom)
   
   // Reset selected thread when project changes
@@ -128,7 +130,7 @@ function ProjectDetailPage() {
 
 
   // Render full content callback for mobile
-  const renderFullContent = useCallback((project: NDKProject, itemType: string, item?: any, onBack?: () => void) => {
+  const renderFullContent = useCallback((project: NDKProject, itemType: string, item?: any, onBack?: () => void, onVoiceCallClick?: () => void) => {
     switch (itemType) {
       case 'conversations':
         return (
@@ -141,6 +143,7 @@ function ProjectDetailPage() {
             onThreadCreated={(newThread: NDKEvent) => {
               setSelectedThreadEvent(newThread)
             }}
+            onVoiceCallClick={onVoiceCallClick}
           />
         )
       
@@ -339,6 +342,9 @@ function ProjectDetailPage() {
                       setSelectedThreadEvent(newThread)
                       // Update thread list and stay in current view
                     }}
+                    onVoiceCallClick={() => {
+                      setShowCallView(true)
+                    }}
                   />
                 </div>
               </div>
@@ -389,6 +395,21 @@ function ProjectDetailPage() {
           </TabsContent>
 
         </Tabs>
+        
+        {/* Call View Overlay */}
+        {showCallView && project && (
+          <CallView
+            project={project}
+            onClose={(rootEvent) => {
+              setShowCallView(false)
+              // If a conversation was created during the call, select it
+              if (rootEvent) {
+                setSelectedThreadEvent(rootEvent)
+              }
+            }}
+            extraTags={selectedThreadEvent ? [['E', selectedThreadEvent.id]] : undefined}
+          />
+        )}
       </div>
   )
 }

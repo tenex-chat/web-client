@@ -84,7 +84,7 @@ interface ProjectColumnProps {
   project: NDKProject
   onItemClick?: (project: NDKProject, itemType: TabType, item?: string | NDKEvent) => void
   mode?: ViewMode
-  renderFullContent?: (project: NDKProject, itemType: TabType, item?: any) => React.ReactNode
+  renderFullContent?: (project: NDKProject, itemType: TabType, item?: any, onBack?: () => void, onVoiceCallClick?: () => void) => React.ReactNode
   className?: string
   onNavigateToSettings?: () => void
 }
@@ -178,6 +178,9 @@ export function ProjectColumn({
         setViewState('list')
         setSelectedItem(undefined)
         setSelectedThread(undefined)
+      }, () => {
+        // Handle voice call click
+        setShowCallView(true)
       })
     }
 
@@ -501,8 +504,8 @@ export function ProjectColumn({
           {renderContent()}
         </div>
         
-        {/* FAB for standalone mode */}
-        {mode === 'standalone' && activeTab === 'conversations' && viewState === 'list' && (
+        {/* FAB for standalone mode - hide when CallView is active */}
+        {mode === 'standalone' && activeTab === 'conversations' && viewState === 'list' && !showCallView && (
           <FABMenu
             onTextClick={() => {
               setSelectedThread(undefined)
@@ -520,11 +523,15 @@ export function ProjectColumn({
         {showCallView && project && (
           <CallView
             project={project}
-            onClose={() => {
+            onClose={(rootEvent) => {
               setShowCallView(false)
-              // Switch to chat view if a thread was created
-              setViewState('detail')
+              // If a conversation was created during the call, select it
+              if (rootEvent) {
+                setSelectedThread(rootEvent)
+                setViewState('detail')
+              }
             }}
+            extraTags={selectedThread ? [['E', selectedThread.id]] : undefined}
           />
         )}
       </div>

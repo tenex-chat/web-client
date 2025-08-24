@@ -1,37 +1,14 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-
-interface LLMProviderSettings {
-    id: string;
-    provider: string;
-    apiKey?: string;
-    model: string;
-    enabled: boolean;
-}
+import { useAtomValue } from "jotai";
+import { openAIApiKeyAtom } from "@/stores/ai-config-store";
 
 export function useSpeechToText() {
+    const apiKey = useAtomValue(openAIApiKeyAtom);
+    
     const transcribe = useCallback(async (audioBlob: Blob): Promise<string | null> => {
         try {
-            // Get OpenAI API key from LLM configs in localStorage
-            let apiKey: string | undefined;
-            
-            // First check environment variable (backwards compatibility)
-            apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-            
-            // If not in env, check localStorage for configured API key
-            if (!apiKey) {
-                const llmConfigs = localStorage.getItem('llm-configs');
-                if (llmConfigs) {
-                    try {
-                        const configs = JSON.parse(llmConfigs) as LLMProviderSettings[];
-                        const openAIConfig = configs.find(c => c.provider === 'openai' && c.enabled);
-                        apiKey = openAIConfig?.apiKey;
-                    } catch (error) {
-                        logger.error('Failed to parse LLM configs:', error);
-                    }
-                }
-            }
             
             if (!apiKey) {
                 const errorMsg = "OpenAI API key not configured. Please configure it in Settings > AI > Speech-to-Text";
@@ -111,7 +88,7 @@ export function useSpeechToText() {
             
             return null;
         }
-    }, []);
+    }, [apiKey]);
 
     return { transcribe };
 }

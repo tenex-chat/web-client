@@ -6,63 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Mic, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchOpenAIModelsWithDetails, type OpenAIModelWithAudio } from '@/services/llm-models';
-import { STORAGE_KEYS } from '@/lib/constants/storage';
 import { logger } from '@/lib/logger';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getWaveBlob } from 'webm-to-wav-converter';
-
-interface STTSettings {
-  model: string;
-  provider: 'openai';
-}
-
-interface LLMProviderSettings {
-  id: string;
-  provider: string;
-  apiKey?: string;
-  model: string;
-  enabled: boolean;
-}
+import { useSTT } from '@/stores/ai-config-store';
 
 export function STTSettings() {
-  const [settings, setSettings] = useState<STTSettings>({
-    model: 'whisper-1',
-    provider: 'openai'
-  });
+  const { config: sttConfig, setConfig: setSTTConfig, openAIApiKey } = useSTT();
   
   const [audioModels, setAudioModels] = useState<OpenAIModelWithAudio[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [hasOpenAIKey, setHasOpenAIKey] = useState(false);
-  const [openAIApiKey, setOpenAIApiKey] = useState<string>('');
+  const hasOpenAIKey = !!openAIApiKey;
 
-  // Load saved settings and check for OpenAI API key
-  useEffect(() => {
-    const savedSettings = localStorage.getItem(STORAGE_KEYS.STT_SETTINGS);
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        setSettings(parsed);
-      } catch (error) {
-        logger.error('Failed to parse STT settings:', error);
-      }
-    }
-
-    // Check if OpenAI API key exists in LLM configs
-    const llmConfigs = localStorage.getItem('llm-configs');
-    if (llmConfigs) {
-      try {
-        const configs = JSON.parse(llmConfigs) as LLMProviderSettings[];
-        const openAIConfig = configs.find(c => c.provider === 'openai' && c.enabled);
-        if (openAIConfig?.apiKey) {
-          setHasOpenAIKey(true);
-          setOpenAIApiKey(openAIConfig.apiKey);
-        }
-      } catch (error) {
-        logger.error('Failed to parse LLM configs:', error);
-      }
-    }
-  }, []);
+  // No need to load from localStorage - using atoms now
 
   // Fetch models when component mounts
   useEffect(() => {
@@ -89,7 +46,7 @@ export function STTSettings() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      localStorage.setItem(STORAGE_KEYS.STT_SETTINGS, JSON.stringify(settings));
+      // Settings are automatically saved via atom
       toast.success('Speech-to-text settings saved');
     } catch (error) {
       logger.error('Failed to save STT settings:', error);
@@ -100,11 +57,11 @@ export function STTSettings() {
   };
 
   const handleModelChange = (modelId: string) => {
-    setSettings(prev => ({ ...prev, model: modelId }));
+    setSTTConfig({ model: modelId });
   };
 
   const testTranscription = async () => {
-    if (!settings.model) {
+    if (!sttConfig.model) {
       toast.error('Please select a model first');
       return;
     }
@@ -139,7 +96,7 @@ export function STTSettings() {
           toast.info('Sending to OpenAI for transcription...');
           
           // Use different API based on model
-          if (settings.model === 'whisper-1') {
+          if (sttConfig.model === 'whisper-1') {
             // Use Whisper API for transcription
             const formData = new FormData();
             formData.append('file', wavBlob, 'audio.wav');
@@ -165,7 +122,7 @@ export function STTSettings() {
               description: transcription,
               duration: 10000
             });
-          } else if (settings.model === 'gpt-4o-transcribe') {
+          } else if (sttConfig.model === 'gpt-4o-transcribe') {
             // Use completions API for gpt-4o-transcribe
             // Convert WAV blob to base64
             const reader = new FileReader();
@@ -184,7 +141,7 @@ export function STTSettings() {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  model: settings.model,
+                  model: sttConfig.model,
                   prompt: `Transcribe the following audio: [audio:${base64Audio}]`,
                   max_tokens: 500,
                   temperature: 0.1
@@ -226,7 +183,7 @@ export function STTSettings() {
     }
   };
 
-  const selectedModel = audioModels.find(m => m.id === settings.model);
+  const selectedModel = audioModels.find(m => m.id === sttConfig.model);
 
   return (
     <div className="space-y-6">
@@ -250,7 +207,7 @@ export function STTSettings() {
           <div className="space-y-2">
             <Label htmlFor="stt-model">Transcription Model</Label>
             <Select
-              value={settings.model}
+              value={sttConfig.model}
               onValueChange={handleModelChange}
               disabled={isLoadingModels || !hasOpenAIKey}
             >
@@ -321,7 +278,7 @@ export function STTSettings() {
           <div className="flex gap-2">
             <Button
               onClick={handleSave}
-              disabled={isSaving || !settings.model}
+              disabled={isSaving || !sttConfig.model}
             >
               {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save Settings
@@ -330,7 +287,7 @@ export function STTSettings() {
             <Button
               variant="outline"
               onClick={testTranscription}
-              disabled={!settings.model || !hasOpenAIKey}
+              disabled={!sttConfig.model || !hasOpenAIKey}
             >
               <Mic className="h-4 w-4 mr-2" />
               Test Microphone

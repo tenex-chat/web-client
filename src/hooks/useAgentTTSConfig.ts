@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useLLMConfig } from '@/stores/llmConfig'
+import { useTTS } from '@/stores/ai-config-store'
 import { getAgentVoiceConfig } from '@/lib/voice-config'
 
 export interface AgentTTSOptions {
@@ -21,13 +21,11 @@ export interface AgentTTSOptions {
  * @returns TTS configuration options or null if TTS is not properly configured
  */
 export function useAgentTTSConfig(agentSlug?: string): AgentTTSOptions | null {
-  const { config: llmConfig } = useLLMConfig()
+  const { config: ttsConfig, apiKey } = useTTS()
   
   return useMemo(() => {
-    const ttsConfig = llmConfig?.tts
-    
     // Check if base TTS configuration is valid
-    if (!ttsConfig?.enabled || !ttsConfig?.apiKey || !ttsConfig?.voiceId) {
+    if (!ttsConfig?.enabled || !apiKey || !ttsConfig?.voiceId) {
       return null
     }
     
@@ -46,7 +44,7 @@ export function useAgentTTSConfig(agentSlug?: string): AgentTTSOptions | null {
     
     // Return merged configuration
     return {
-      apiKey: ttsConfig.apiKey,
+      apiKey: apiKey,
       voiceId: voiceId,
       style: ttsConfig.style || 'Conversational',
       rate: ttsConfig.rate || 1.0,
@@ -55,7 +53,7 @@ export function useAgentTTSConfig(agentSlug?: string): AgentTTSOptions | null {
       enabled: true,
       voiceName: voiceName
     }
-  }, [llmConfig, agentSlug])
+  }, [ttsConfig, apiKey, agentSlug])
 }
 
 /**

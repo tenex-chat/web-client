@@ -354,7 +354,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
         paddingClass,
         isNested && nestedMargin,
         isHovered && "bg-muted/30",
-        "border-b border-muted/50"
+        isMobile && "border-b border-border"
       )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -389,7 +389,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               phaseFrom={phaseFrom}
               onTimeClick={onTimeClick}
               isMobile={isMobile}
-              hideTimestamp={true} // We'll show timestamp in footer
+              hideTimestamp={false} // Show timestamp in header
             />
           </div>
           
@@ -483,19 +483,9 @@ export const MessageWithReplies = memo(function MessageWithReplies({
           </div>
           
           
-          {/* Mobile footer with timestamp and actions */}
+          {/* Mobile footer with actions only */}
           {!showTypingIndicator && (
-            <div className={cn("flex items-center justify-between mt-1", isNested && "ml-9")}>
-              {/* Timestamp on left */}
-              <button
-                onClick={() => onTimeClick?.(event)}
-                className="text-[10px] text-muted-foreground hover:text-foreground"
-                title={formatRelativeTime(event.created_at || 0)}
-              >
-                {formatCompactTime(event.created_at || 0)}
-              </button>
-              
-              {/* Actions on right - always visible on mobile */}
+            <div className={cn("flex items-center justify-end mt-1", isNested && "ml-9")}>
               <MessageActionsToolbar
                 event={event}
                 onReply={() => handleReply(event)}

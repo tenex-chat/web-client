@@ -76,7 +76,6 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         notifiedAgents: new Map(),
         
         addProject: (project) => set((state) => {
-            logger.debug('addProject', project.dTag)
             // Don't add deleted projects
             if (project.hasTag('deleted')) {
                 return state;
@@ -166,7 +165,6 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         }),
         
         setProjects: (projects) => set((state) => {
-            logger.debug('[setProjects] Called with', projects.length, 'projects');
             const newProjects = new Map();
             const newBech32Map = new Map();
             const newTagIdMap = new Map();
@@ -200,11 +198,9 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                 }
             });
             const newProjectsArray = Array.from(newProjects.values());
-            logger.debug('[setProjects] Returning', newProjectsArray.length, 'projects after filtering');
             
             // Check if projects actually changed
             if (newProjectsArray.length === 0 && state.projectsArray.length === 0) {
-                logger.debug('[setProjects] No changes detected, returning existing state');
                 return state;
             }
             
@@ -213,11 +209,8 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             
             // Only update arrays if projects actually changed
             if (!projectsChanged) {
-                logger.debug('[setProjects] No changes detected, returning existing state');
                 return state;
             }
-            
-            logger.debug('[setProjects] Projects changed, updating state')
             
             // Create new arrays
             const newProjectsWithStatusArray = newProjectsArray.map(p => ({
@@ -420,9 +413,6 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                 }
             }
             
-            const project = projects.get(finalDTag);
-            logger.debug(`[ProjectStore] Status update for ${project?.title || finalDTag}: ${status.isOnline ? 'online' : 'offline'} (${status.agents.length} agents, ${status.models.length} models)`);
-            
             set((state) => {
                 const newStatus = new Map(state.projectStatus);
                 newStatus.set(finalDTag, {
@@ -449,7 +439,6 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         
         // Initialize all subscriptions when user logs in
         initializeSubscriptions: (ndk: NDK, userPubkey: string) => {
-            logger.debug("[ProjectStore] Initializing subscriptions");
             const { projectsSubscription, statusSubscription } = get();
             
             // Clean up any existing subscriptions first
@@ -470,7 +459,6 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                 authors: [userPubkey],
             }, { closeOnEose: false }, {
                 onEvent: (event: NDKEvent) => {
-                    logger.debug('[ProjectStore] Received project event', event.dTag)
                     const project = new NDKProject(ndk, event.rawEvent());
                     const projectDTag = project.dTag;
 
@@ -498,12 +486,10 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             const { projectsSubscription, statusSubscription } = get();
             
             if (projectsSubscription) {
-                logger.debug('[ProjectStore] Cleaning up projects subscription');
                 projectsSubscription.stop();
             }
             
             if (statusSubscription) {
-                logger.debug('[ProjectStore] Cleaning up status subscription');
                 statusSubscription.stop();
             }
             
@@ -521,7 +507,6 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             const { statusSubscription } = get();
             
             if (statusSubscription) {
-                logger.debug('[ProjectStore] Cleaning up status subscription');
                 statusSubscription.stop();
             }
             

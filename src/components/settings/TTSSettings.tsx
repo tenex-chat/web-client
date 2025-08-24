@@ -1,6 +1,6 @@
 import { Check, Loader2, TestTube, Volume2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useTTSConfig } from "@/stores/llmConfig";
+import { useTTS } from "@/stores/ai-config-store";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ const LANGUAGES = [
 ];
 
 export function TTSSettings() {
-    const { config: currentConfig, setConfig: setTTSConfig } = useTTSConfig();
+    const { config: currentConfig, setConfig: setTTSConfig } = useTTS();
 
     const [provider] = useState<'murf'>("murf");
     const [apiKey, setApiKey] = useState(currentConfig?.apiKey || "");

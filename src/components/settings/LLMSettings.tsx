@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useAtom } from 'jotai';
-import { atomWithStorage } from 'jotai/utils';
 import { useToast } from '@/hooks/use-toast';
 import { fetchProviderModels, DEFAULT_MODELS } from '@/services/llm-models';
 import { logger } from '@/lib/logger';
@@ -58,11 +57,11 @@ const PROVIDER_INFO = {
   },
 };
 
-// Define atom outside component to prevent recreation on every render
-const llmConfigsAtom = atomWithStorage<LLMProviderSettings[]>('llm-configs', []);
+// Import from unified store
+import { useAIProviders } from '@/stores/ai-config-store';
 
 export function LLMSettings() {
-  const [configs, setConfigs] = useAtom(llmConfigsAtom);
+  const { providers: configs, setProviders: setConfigs } = useAIProviders();
   const [isAdding, setIsAdding] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [availableModels, setAvailableModels] = useState<string[]>([]);

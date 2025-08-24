@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { getAgentVoiceConfig, saveAgentVoiceConfig } from "@/lib/voice-config";
 import { VoiceSelector } from "@/components/voice/VoiceSelector";
 import { useMurfVoices, getVoiceInfo } from "@/hooks/useMurfVoices";
-import { useTTSConfig } from "@/stores/llmConfig";
+import { useTTS } from "@/stores/ai-config-store";
 import { useProjectStatusMap, useProjectsArray } from "@/stores/projects";
 import { useProjectOnlineModels } from "@/hooks/useProjectOnlineModels";
 import { useProjectAvailableTools } from "@/hooks/useProjectAvailableTools";
@@ -42,7 +42,7 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
   const [selectedVoice, setSelectedVoice] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [projectSettings, setProjectSettings] = useState<Map<string, ProjectAgentSettings>>(new Map());
-  const { config: ttsConfig } = useTTSConfig();
+  const { config: ttsConfig } = useTTS();
   const apiKey = ttsConfig?.apiKey;
   const { voices } = useMurfVoices(apiKey);
   const { ndk } = useNDK();

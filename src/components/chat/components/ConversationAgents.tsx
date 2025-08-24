@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 import {
   Popover,
   PopoverContent,
@@ -56,6 +57,7 @@ function AgentAvatar({ agent, project, availableModels, availableTools, onSaveCh
   const [selectedModel, setSelectedModel] = useState(agent.model || "");
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set(agent.tools || []));
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleToolToggle = (tool: string) => {
     const newTools = new Set(selectedTools);
@@ -79,10 +81,10 @@ function AgentAvatar({ agent, project, availableModels, availableTools, onSaveCh
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
       <PopoverTrigger asChild>
         <button className="group hover:opacity-80 transition-opacity">
-          <Avatar className="h-7 w-7 ring-2 ring-transparent hover:ring-accent transition-all">
+          <Avatar className={isMobile ? "h-6 w-6" : "h-7 w-7 ring-2 ring-transparent hover:ring-accent transition-all"}>
             <AvatarImage src={avatarUrl} alt={agent.slug} />
             <AvatarFallback>
-              <Bot className="w-3.5 h-3.5" />
+              <Bot className={isMobile ? "w-3 h-3" : "w-3.5 h-3.5"} />
             </AvatarFallback>
           </Avatar>
         </button>
@@ -290,18 +292,21 @@ export function ConversationAgents({
     }
   };
 
+  const isMobile = useIsMobile();
+  
   return (
-    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+    <div className={isMobile ? "flex items-center -space-x-1" : "flex flex-wrap items-center gap-x-1.5 gap-y-1"}>
       {/* Show agents with popover for model selection */}
-      {conversationAgents.map((agent) => (
-        <AgentAvatar
-          key={agent.pubkey}
-          agent={agent}
-          project={project}
-          availableModels={availableModels}
-          availableTools={availableTools}
-          onSaveChanges={handleSaveChanges}
-        />
+      {conversationAgents.map((agent, index) => (
+        <div key={agent.pubkey} className={isMobile && index > 0 ? "" : ""}>
+          <AgentAvatar
+            agent={agent}
+            project={project}
+            availableModels={availableModels}
+            availableTools={availableTools}
+            onSaveChanges={handleSaveChanges}
+          />
+        </div>
       ))}
     </div>
   );

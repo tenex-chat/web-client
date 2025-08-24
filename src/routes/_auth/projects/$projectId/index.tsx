@@ -128,7 +128,7 @@ function ProjectDetailPage() {
 
 
   // Render full content callback for mobile
-  const renderFullContent = useCallback((project: NDKProject, itemType: string, item?: any) => {
+  const renderFullContent = useCallback((project: NDKProject, itemType: string, item?: any, onBack?: () => void) => {
     switch (itemType) {
       case 'conversations':
         return (
@@ -137,6 +137,7 @@ function ProjectDetailPage() {
             rootEvent={item instanceof NDKEvent ? item : undefined}
             key={item?.id || 'new'}
             className="h-full"
+            onBack={onBack}
             onThreadCreated={(newThread: NDKEvent) => {
               setSelectedThreadEvent(newThread)
             }}
@@ -150,7 +151,7 @@ function ProjectDetailPage() {
               article={item}
               projectTitle={project.title}
               project={project}
-              onBack={() => setSelectedArticle(null)}
+              onBack={onBack || (() => setSelectedArticle(null))}
             />
           )
         }

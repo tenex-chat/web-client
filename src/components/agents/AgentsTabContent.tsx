@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { getAgentVoiceConfig } from "@/lib/voice-config";
-import { useTTSConfig } from "@/stores/llmConfig";
+import { useTTS } from "@/stores/ai-config-store";
 import { useNavigate } from "@tanstack/react-router";
 import { useProjectStatus } from "@/stores/projects";
 import { AddAgentsToProjectDialog } from "@/components/dialogs/AddAgentsToProjectDialog";
@@ -149,7 +149,7 @@ function AgentCard({
 export function AgentsTabContent({ project }: AgentsTabContentProps) {
   const { ndk } = useNDK();
   const navigate = useNavigate();
-  const { apiKey: murfApiKey } = useTTSConfig();
+  const { apiKey: murfApiKey } = useTTS();
   const [addAgentsDialogOpen, setAddAgentsDialogOpen] = useState(false);
 
   // Get agents from project status (same as Status tab)

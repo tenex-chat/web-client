@@ -20,6 +20,7 @@ import { useSubscribe, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "../hooks/useChatMessages";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { formatThreadAsMarkdown, formatThreadAsJSON } from "../utils/copyThread";
+import { ProjectAvatar } from "@/components/ui/project-avatar";
 
 interface ChatHeaderProps {
   rootEvent: NDKEvent | null;
@@ -28,7 +29,7 @@ interface ChatHeaderProps {
   onAutoTTSChange: (enabled: boolean) => void;
   ttsEnabled: boolean;
   messages?: Message[];
-  project?: NDKProject;
+  project?: NDKProject | null;
 }
 
 /**
@@ -117,6 +118,14 @@ export function ChatHeader({
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
+          {/* Project Avatar */}
+          {project && (
+            <ProjectAvatar 
+              project={project} 
+              className="h-8 w-8 sm:h-9 sm:w-9 shrink-0"
+              fallbackClassName="text-xs"
+            />
+          )}
           <div className="flex-1 min-w-0">
             <h1
               className={cn(
@@ -132,18 +141,20 @@ export function ChatHeader({
                 isMobile ? "text-[10px] mt-0" : "text-xs mt-0.5",
               )}
             >
-              Thread discussion
+              {project?.title || 'Project'}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Conversation Agents */}
+        <div className="flex items-center gap-1">
+          {/* Conversation Agents - show inline but smaller on mobile */}
           {messages && project && messages.length > 0 && (
-            <ConversationAgents
-              messages={messages}
-              project={project}
-              rootEvent={rootEvent}
-            />
+            <div className={cn(isMobile && "scale-75 -mr-1")}>
+              <ConversationAgents
+                messages={messages}
+                project={project}
+                rootEvent={rootEvent}
+              />
+            </div>
           )}
           {/* Copy thread dropdown */}
           {messages && messages.length > 0 && (

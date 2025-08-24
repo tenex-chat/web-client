@@ -26,7 +26,7 @@ import { useThreadManagement } from "./hooks/useThreadManagement";
 import { ChatHeader } from "./components/ChatHeader";
 import { ChatMessageList } from "./components/ChatMessageList";
 import { ChatInputArea } from "./components/ChatInputArea";
-import { autoTTSAtom } from "@/stores/llmConfig";
+import { useAutoTTS } from "@/stores/ai-config-store";
 
 interface ChatInterfaceProps {
   project?: NDKProject | null;
@@ -63,7 +63,7 @@ export function ChatInterface({
 
   // State for voice and TTS
   const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false);
-  const [autoTTS, setAutoTTS] = useAtom(autoTTSAtom);
+  const [autoTTS, setAutoTTS] = useAutoTTS();
   const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(
     null,
   );

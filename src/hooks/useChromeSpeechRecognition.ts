@@ -61,13 +61,19 @@ export function useChromeSpeechRecognition() {
   
   const recognitionRef = useRef<ISpeechRecognition | null>(null)
   const finalTranscriptRef = useRef('')
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const onSilenceCallbackRef = useRef<(() => void) | null>(null)
+  const isListeningRef = useRef(false)
 
   useEffect(() => {
     // Check for browser support
+    console.log('Checking for Speech Recognition API support')
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition
+    console.log('SpeechRecognitionAPI found:', !!SpeechRecognitionAPI)
     setIsSupported(!!SpeechRecognitionAPI)
 
     if (SpeechRecognitionAPI) {
+      console.log('Creating new SpeechRecognition instance')
       const recognition = new SpeechRecognitionAPI()
       
       // Configure recognition
@@ -75,6 +81,7 @@ export function useChromeSpeechRecognition() {
       recognition.interimResults = true
       recognition.lang = 'en-US'
       recognition.maxAlternatives = 1
+      console.log('SpeechRecognition configured')
 
       // Handle results
       recognition.onresult = (event) => {
@@ -93,17 +100,38 @@ export function useChromeSpeechRecognition() {
         finalTranscriptRef.current = final
         setTranscript(final)
         setInterimTranscript(interim)
+        
+        // Reset silence timer on any speech
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current)
+        }
+        
+        // Start new silence timer (2 seconds of silence = end of speech)
+        if (isListeningRef.current && (final.trim() || interim.trim())) {
+          silenceTimerRef.current = setTimeout(() => {
+            if (onSilenceCallbackRef.current) {
+              onSilenceCallbackRef.current()
+            }
+          }, 2000)
+        }
       }
 
       // Handle errors
       recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error)
+        console.error('Speech recognition error:', event.error, event)
         setError(event.error)
         
+        // Don't try to restart on aborted - it means it was never properly started
+        if (event.error === 'aborted') {
+          console.error('Speech recognition was aborted - likely permissions issue or not HTTPS')
+          setIsListening(false)
+          return
+        }
+        
         // Auto-restart on network errors
-        if (event.error === 'network' && isListening) {
+        if (event.error === 'network' && isListeningRef.current) {
           setTimeout(() => {
-            if (recognitionRef.current && isListening) {
+            if (recognitionRef.current && isListeningRef.current) {
               try {
                 recognitionRef.current.start()
               } catch (e) {
@@ -116,14 +144,21 @@ export function useChromeSpeechRecognition() {
 
       // Handle end
       recognition.onend = () => {
+        console.log('Recognition ended, isListening:', isListeningRef.current)
         // Auto-restart if still listening (for continuous mode)
-        if (isListening && recognitionRef.current) {
-          try {
-            recognitionRef.current.start()
-          } catch (e) {
-            console.error('Failed to restart recognition:', e)
-            setIsListening(false)
-          }
+        if (isListeningRef.current && recognitionRef.current) {
+          setTimeout(() => {
+            if (isListeningRef.current && recognitionRef.current) {
+              try {
+                console.log('Auto-restarting recognition')
+                recognitionRef.current.start()
+              } catch (e) {
+                console.error('Failed to restart recognition:', e)
+                setIsListening(false)
+                isListeningRef.current = false
+              }
+            }
+          }, 100)
         }
       }
 
@@ -132,45 +167,68 @@ export function useChromeSpeechRecognition() {
 
     return () => {
       if (recognitionRef.current) {
+        console.log('Cleanup: aborting recognition')
         recognitionRef.current.abort()
       }
     }
-  }, [isListening])
+  }, []) // Remove isListening from dependencies to avoid recreating recognition
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback((onSilence?: () => void) => {
+    console.log('startListening called', { 
+      hasRecognition: !!recognitionRef.current, 
+      isSupported,
+      currentlyListening: isListening 
+    })
+    
     if (!recognitionRef.current || !isSupported) {
+      console.error('Speech recognition not available', { recognitionRef: recognitionRef.current, isSupported })
       setError('Speech recognition not supported')
       return
     }
 
     try {
       // Reset transcripts
+      console.log('Resetting transcripts and starting recognition')
       setTranscript('')
       setInterimTranscript('')
       finalTranscriptRef.current = ''
       setError(null)
+      onSilenceCallbackRef.current = onSilence || null
       
+      console.log('Calling recognition.start()')
       recognitionRef.current.start()
       setIsListening(true)
+      isListeningRef.current = true
+      console.log('Recognition started successfully')
     } catch (error) {
-      console.error('Failed to start recognition:', error)
+      console.error('Failed to start recognition - full error:', error)
       setError('Failed to start recognition')
       setIsListening(false)
+      isListeningRef.current = false
     }
   }, [isSupported])
 
   const stopListening = useCallback(() => {
-    if (recognitionRef.current && isListening) {
+    console.log('stopListening called')
+    if (recognitionRef.current) {
       try {
         recognitionRef.current.stop()
         setIsListening(false)
+        isListeningRef.current = false
+        // Clear silence timer
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current)
+          silenceTimerRef.current = null
+        }
+        onSilenceCallbackRef.current = null
       } catch (error) {
         console.error('Failed to stop recognition:', error)
         recognitionRef.current.abort()
         setIsListening(false)
+        isListeningRef.current = false
       }
     }
-  }, [isListening])
+  }, [])
 
   const resetTranscript = useCallback(() => {
     setTranscript('')

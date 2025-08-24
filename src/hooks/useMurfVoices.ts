@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLLMConfig } from '@/stores/llmConfig';
+import { useTTS } from '@/stores/ai-config-store';
 import { MurfVoicesCache } from '@/services/murfVoicesCache';
 import { MurfTTSService } from '@/services/murfTTS';
 import { logger } from '@/lib/logger';
@@ -17,10 +17,10 @@ export function useMurfVoices(apiKeyOverride?: string): UseMurfVoicesReturn {
     const [voices, setVoices] = useState<MurfVoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
-    const config = useLLMConfig();
+    const { apiKey: configApiKey } = useTTS();
     
     // Use provided API key if available, otherwise fall back to config
-    const apiKey = apiKeyOverride || config.murfApiKey;
+    const apiKey = apiKeyOverride || configApiKey;
 
     useEffect(() => {
         const loadVoices = async () => {

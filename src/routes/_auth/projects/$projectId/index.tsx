@@ -30,12 +30,12 @@ import { openSingleProjectAtom } from '@/stores/openProjects'
 
 // Agent list item component
 function AgentListItem({ agent, isOnline }: { 
-  agent: { pubkey: string; name: string; status?: string; lastSeen?: number }
+  agent: { pubkey: string; slug: string; status?: string; lastSeen?: number }
   isOnline: boolean
 }) {
   const profile = useProfile(agent.pubkey)
   const avatarUrl = profile?.image || profile?.picture
-  const displayName = agent.name || profile?.displayName || profile?.name || 'Unknown Agent'
+  const displayName = agent.slug || profile?.displayName || profile?.name || 'Unknown Agent'
   
   return (
     <div

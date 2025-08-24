@@ -3,11 +3,7 @@ import { NDKEvent } from '@nostr-dev-kit/ndk'
 import { useNDK, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 import type { Message } from './useChatMessages'
-
-export interface AgentMention {
-  pubkey: string
-  name: string
-}
+import type { AgentInstance } from '@/types/agent'
 
 export interface ImageUpload {
   url: string
@@ -35,7 +31,7 @@ export function useThreadManagement(
 
   const createThread = useCallback(async (
     content: string,
-    mentions: AgentMention[],
+    mentions: AgentInstance[],
     images: ImageUpload[],
     autoTTS: boolean
   ) => {
@@ -101,7 +97,7 @@ export function useThreadManagement(
 
   const sendReply = useCallback(async (
     content: string,
-    mentions: AgentMention[],
+    mentions: AgentInstance[],
     images: ImageUpload[],
     autoTTS: boolean,
     recentMessages: Message[]
@@ -167,7 +163,7 @@ export function useThreadManagement(
 
   const sendMessage = useCallback(async (
     content: string,
-    mentions: AgentMention[],
+    mentions: AgentInstance[],
     images: ImageUpload[],
     autoTTS: boolean,
     recentMessages: Message[]

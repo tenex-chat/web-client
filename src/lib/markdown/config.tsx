@@ -3,7 +3,6 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { cn } from '@/lib/utils'
-import { findNostrEntities } from '@/lib/utils/nostrEntityParser'
 import { NostrEntityCard } from '@/components/common/NostrEntityCard'
 import type { Components } from 'react-markdown'
 
@@ -11,6 +10,7 @@ interface MarkdownComponentsOptions {
   isDarkMode: boolean
   isMobile?: boolean
   onImageClick?: (src: string) => void
+  projectId?: string | null
 }
 
 /**
@@ -40,19 +40,14 @@ export function getMarkdownComponents({
         // Parse the nostr entity
         const fullMatch = match[0]
         const bech32 = fullMatch.startsWith('nostr:') ? fullMatch.substring(6) : fullMatch
-        const entities = findNostrEntities(bech32)
         
-        if (entities.length > 0) {
-          parts.push(
-            <NostrEntityCard 
-              key={`${match.index}-${bech32}`} 
-              entity={entities[0]} 
-              compact 
-            />
-          )
-        } else {
-          parts.push(fullMatch)
-        }
+        // Just pass the bech32 directly to NostrEntityCard
+        parts.push(
+          <NostrEntityCard 
+            key={`${match.index}-${bech32}`} 
+            bech32={bech32} 
+          />
+        )
         
         lastIndex = match.index + match[0].length
       }
@@ -101,22 +96,16 @@ export function getMarkdownComponents({
       
       // Check if the children contains a nostr link (when href is empty or missing)
       // Now also handles bare bech32 strings like npub1...
-      if (childText) {
-        const entities = findNostrEntities(childText)
-        if (entities.length > 0) {
-          // Don't use compact mode for standalone entity references
-          return <NostrEntityCard entity={entities[0]} compact={false} />
-        }
+      if (childText && childText.match(/^(npub1|nprofile1|nevent1|naddr1|note1)[a-zA-Z0-9]+$/)) {
+        // Don't use compact mode for standalone entity references
+        return <NostrEntityCard bech32={childText} compact={false} />
       }
       
       // Check if this is a Nostr entity link in href
       // Now also handles bare bech32 strings like npub1...
-      if (href && typeof href === 'string') {
-        const entities = findNostrEntities(href)
-        if (entities.length > 0) {
-          // Don't use compact mode for standalone entity references
-          return <NostrEntityCard entity={entities[0]} compact={false} />
-        }
+      if (href && typeof href === 'string' && href.match(/^(npub1|nprofile1|nevent1|naddr1|note1)[a-zA-Z0-9]+$/)) {
+        // Don't use compact mode for standalone entity references
+        return <NostrEntityCard bech32={href} compact={false} />
       }
       
       // Regular link

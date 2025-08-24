@@ -1,5 +1,5 @@
 import { NDKArticle } from '@nostr-dev-kit/ndk'
-import { ArrowLeft, Calendar, Clock, Copy, Hash, MessageSquare, Plus, History, Edit } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, Copy, Hash, MessageSquare, Plus, History, Edit, User } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
@@ -11,8 +11,10 @@ import { useMemo, useState, useCallback } from 'react'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
+import { useProfile } from '@nostr-dev-kit/ndk-hooks'
 import { cn } from '@/lib/utils'
 import { ChangelogTabContent } from '@/components/changelog/ChangelogTabContent'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 interface DocumentationViewerProps {
   article: NDKArticle
@@ -26,6 +28,10 @@ export function DocumentationViewer({ article, onBack, onEdit, projectTitle, pro
   const [showComments, setShowComments] = useState(false)
   const [showChangelog, setShowChangelog] = useState(false)
   const [chatThread, setChatThread] = useState<NDKEvent | undefined>(undefined)
+  
+  const profile = useProfile(article.pubkey)
+  const authorName = profile?.displayName || profile?.name || 'Unknown Author'
+  const authorAvatar = profile?.image || profile?.picture
   
   const readingTime = useMemo(() => {
     const content = article.content || ''
@@ -146,6 +152,15 @@ export function DocumentationViewer({ article, onBack, onEdit, projectTitle, pro
           <div className="p-6 max-w-3xl mx-auto">
             {/* Metadata */}
             <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={authorAvatar} alt={authorName} />
+                  <AvatarFallback>
+                    <User className="h-3 w-3" />
+                  </AvatarFallback>
+                </Avatar>
+                <span>{authorName}</span>
+              </div>
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
                 <span>{formatRelativeTime(article.created_at || 0)}</span>

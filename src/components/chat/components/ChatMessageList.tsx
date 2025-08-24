@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { MessageWithReplies } from "../MessageWithReplies";
 import { MessageShell } from "../MessageShell";
 import { TaskContent } from "../TaskContent";
-import { CompactTaskCard } from "../CompactTaskCard";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { motion, AnimatePresence } from "framer-motion";
@@ -65,8 +64,6 @@ export function ChatMessageList({
     if (message.event.kind === NDKTask.kind) {
       const task = new NDKTask(ndk!, message.event.rawEvent());
       const isFirstMessage = index === 0;
-      // Only use compact mode if the root event is a task (i.e., we're in a task conversation)
-      const useCompactMode = isRootEventTask && !isFirstMessage;
       
       // Check for LLM metadata tags
       const hasLLMMetadata = message.event.tags?.some(tag => 
@@ -186,27 +183,15 @@ export function ChatMessageList({
             headerActions={taskHeaderActions}
             onTimeClick={onTimeClick}
           >
-            {useCompactMode ? (
-              <CompactTaskCard
-                task={task}
-                onClick={() => {
-                  // Open the task as a conversation
-                  if (onTaskClick) {
-                    onTaskClick(task);
-                  }
-                }}
-              />
-            ) : (
-              <TaskContent
-                task={task}
-                onClick={() => {
-                  // Open the task as a conversation
-                  if (onTaskClick) {
-                    onTaskClick(task);
-                  }
-                }}
-              />
-            )}
+            <TaskContent
+              task={task}
+              onClick={() => {
+                // Open the task as a conversation
+                if (onTaskClick) {
+                  onTaskClick(task);
+                }
+              }}
+            />
           </MessageShell>
         </div>
       );

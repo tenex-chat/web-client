@@ -1,116 +1,95 @@
 import { create } from 'zustand'
 import { NDKEvent } from '@nostr-dev-kit/ndk'
 
-interface NavigationStack {
+interface ChatNavigationStore {
+  // Simple conversation stack
   stack: NDKEvent[]
   currentRoot: NDKEvent | null
-}
-
-interface ChatNavigationStore {
-  // Per-project navigation stacks
-  projectStacks: Map<string, NavigationStack>
   
-  // Push a new conversation to the stack for a project
-  pushToStack: (projectId: string, event: NDKEvent) => void
+  // Push a new conversation to the stack
+  pushToStack: (event: NDKEvent) => void
   
   // Pop from stack and return the previous conversation
-  popFromStack: (projectId: string) => NDKEvent | null
+  popFromStack: () => NDKEvent | null
   
-  // Check if we can go back for a project
-  canGoBack: (projectId: string) => boolean
+  // Check if we can go back
+  canGoBack: () => boolean
   
-  // Clear the navigation stack for a project
-  clearStack: (projectId: string) => void
+  // Clear the navigation stack
+  clearStack: () => void
   
-  // Get the current stack for a project
-  getStack: (projectId: string) => NDKEvent[]
+  // Get the current stack
+  getStack: () => NDKEvent[]
   
-  // Set the current root event for a project
-  setCurrentRoot: (projectId: string, event: NDKEvent | null) => void
+  // Set the current root event
+  setCurrentRoot: (event: NDKEvent | null) => void
   
-  // Get the current root event for a project
-  getCurrentRoot: (projectId: string) => NDKEvent | null
+  // Get the current root event
+  getCurrentRoot: () => NDKEvent | null
+  
+  // Legacy per-project methods (for backwards compatibility)
+  projectStacks: Map<string, { stack: NDKEvent[], currentRoot: NDKEvent | null }>
 }
 
 export const useChatNavigationStore = create<ChatNavigationStore>((set, get) => ({
-  projectStacks: new Map(),
+  stack: [],
+  currentRoot: null,
+  projectStacks: new Map(), // Keep for backwards compatibility
   
-  pushToStack: (projectId: string, event: NDKEvent) => {
+  pushToStack: (event: NDKEvent) => {
     set((state) => {
-      const newStacks = new Map(state.projectStacks)
-      const projectStack = newStacks.get(projectId) || { stack: [], currentRoot: null }
-      
       // Only push the current root if it exists and isn't already the same event
-      if (projectStack.currentRoot && projectStack.currentRoot.id !== event.id) {
-        projectStack.stack = [...projectStack.stack, projectStack.currentRoot]
+      const newStack = state.currentRoot && state.currentRoot.id !== event.id
+        ? [...state.stack, state.currentRoot]
+        : state.stack
+      
+      return { 
+        stack: newStack,
+        currentRoot: event 
       }
-      
-      projectStack.currentRoot = event
-      newStacks.set(projectId, projectStack)
-      
-      return { projectStacks: newStacks }
     })
   },
   
-  popFromStack: (projectId: string) => {
+  popFromStack: () => {
     const state = get()
-    const projectStack = state.projectStacks.get(projectId)
     
-    if (!projectStack || projectStack.stack.length === 0) {
+    if (state.stack.length === 0) {
       return null
     }
     
-    const previousEvent = projectStack.stack[projectStack.stack.length - 1]
+    const previousEvent = state.stack[state.stack.length - 1]
     
-    set((state) => {
-      const newStacks = new Map(state.projectStacks)
-      const projectStack = newStacks.get(projectId)!
-      
-      projectStack.stack = projectStack.stack.slice(0, -1)
-      projectStack.currentRoot = previousEvent
-      newStacks.set(projectId, projectStack)
-      
-      return { projectStacks: newStacks }
-    })
+    set((state) => ({
+      stack: state.stack.slice(0, -1),
+      currentRoot: previousEvent
+    }))
     
     return previousEvent
   },
   
-  canGoBack: (projectId: string) => {
+  canGoBack: () => {
     const state = get()
-    const projectStack = state.projectStacks.get(projectId)
-    return projectStack ? projectStack.stack.length > 0 : false
+    return state.stack.length > 0
   },
   
-  clearStack: (projectId: string) => {
-    set((state) => {
-      const newStacks = new Map(state.projectStacks)
-      newStacks.delete(projectId)
-      return { projectStacks: newStacks }
+  clearStack: () => {
+    set({
+      stack: [],
+      currentRoot: null
     })
   },
   
-  getStack: (projectId: string) => {
+  getStack: () => {
     const state = get()
-    const projectStack = state.projectStacks.get(projectId)
-    return projectStack ? projectStack.stack : []
+    return state.stack
   },
   
-  setCurrentRoot: (projectId: string, event: NDKEvent | null) => {
-    set((state) => {
-      const newStacks = new Map(state.projectStacks)
-      const projectStack = newStacks.get(projectId) || { stack: [], currentRoot: null }
-      
-      projectStack.currentRoot = event
-      newStacks.set(projectId, projectStack)
-      
-      return { projectStacks: newStacks }
-    })
+  setCurrentRoot: (event: NDKEvent | null) => {
+    set({ currentRoot: event })
   },
   
-  getCurrentRoot: (projectId: string) => {
+  getCurrentRoot: () => {
     const state = get()
-    const projectStack = state.projectStacks.get(projectId)
-    return projectStack ? projectStack.currentRoot : null
+    return state.currentRoot
   }
 }))

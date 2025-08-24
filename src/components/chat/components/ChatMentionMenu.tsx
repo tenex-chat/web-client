@@ -1,20 +1,7 @@
 import { cn } from "@/lib/utils";
 import { ProfileDisplay } from "@/components/common/ProfileDisplay";
 import { ChevronRight, ChevronDown } from "lucide-react";
-
-interface AgentInstance {
-  pubkey: string;
-  name: string;
-  projectName?: string;
-  projectDTag?: string;
-}
-
-interface ProjectGroup {
-  projectName: string;
-  projectDTag: string;
-  agents: AgentInstance[];
-  isCurrentProject?: boolean;
-}
+import type { AgentInstance, ProjectGroup } from "@/types/agent";
 
 interface ChatMentionMenuProps {
   showAgentMenu: boolean;
@@ -68,7 +55,7 @@ export function ChatMentionMenu({
                         showName={false}
                         avatarClassName="h-5 w-5"
                       />
-                      <span className="text-sm truncate">{agent.name}</span>
+                      <span className="text-sm truncate">{agent.slug}</span>
                     </button>
                   ))}
                 </div>
@@ -109,7 +96,7 @@ export function ChatMentionMenu({
                             showName={false}
                             avatarClassName="h-5 w-5"
                           />
-                          <span className="text-sm truncate">{agent.name}</span>
+                          <span className="text-sm truncate">{agent.slug}</span>
                         </button>
                       ))}
                     </div>
@@ -145,7 +132,7 @@ export function ChatMentionMenu({
               showName={false}
               avatarClassName="h-6 w-6"
             />
-            <span className="text-sm font-medium truncate">{agent.name}</span>
+            <span className="text-sm font-medium truncate">{agent.slug}</span>
           </div>
         </button>
       ))}

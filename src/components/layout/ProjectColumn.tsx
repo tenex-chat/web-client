@@ -42,13 +42,13 @@ function generateColorFromString(str: string): string {
 
 // Agent list item component - moved to top level to avoid conditional hook usage
 const AgentListItem = React.memo(({ agent, isOnline, onClick }: { 
-  agent: { pubkey: string; name: string; status?: string; lastSeen?: number }
+  agent: { pubkey: string; slug: string; status?: string; lastSeen?: number }
   isOnline: boolean
   onClick: () => void 
 }) => {
   const profile = useProfile(agent.pubkey)
   const avatarUrl = profile?.image || profile?.picture
-  const displayName = agent.name || profile?.displayName || profile?.name || 'Unknown Agent'
+  const displayName = agent.slug || profile?.displayName || profile?.name || 'Unknown Agent'
   
   return (
     <div

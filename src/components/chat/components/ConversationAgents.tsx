@@ -38,7 +38,7 @@ interface ConversationAgentsProps {
 
 interface AgentInfo {
   pubkey: string;
-  name: string;
+  slug: string;
   model?: string;  // Model slug from the agent
   lastMessageId?: string;
   tools?: string[];
@@ -49,7 +49,7 @@ function AgentAvatar({ agent, project, availableModels, availableTools, onSaveCh
   project: NDKProject;
   availableModels: any[];
   availableTools: string[];
-  onSaveChanges: (agentPubkey: string, agentName: string, newModel: string, tools: string[]) => Promise<void>;
+  onSaveChanges: (agentPubkey: string, agentSlug: string, newModel: string, tools: string[]) => Promise<void>;
 }) {
   const profile = useProfile(agent.pubkey);
   const avatarUrl = profile?.image || profile?.picture;
@@ -68,7 +68,7 @@ function AgentAvatar({ agent, project, availableModels, availableTools, onSaveCh
   };
 
   const handleSave = async () => {
-    await onSaveChanges(agent.pubkey, agent.name, selectedModel, Array.from(selectedTools));
+    await onSaveChanges(agent.pubkey, agent.slug, selectedModel, Array.from(selectedTools));
     setPopoverOpen(false);
   };
 
@@ -80,7 +80,7 @@ function AgentAvatar({ agent, project, availableModels, availableTools, onSaveCh
       <PopoverTrigger asChild>
         <button className="group hover:opacity-80 transition-opacity">
           <Avatar className="h-7 w-7 ring-2 ring-transparent hover:ring-accent transition-all">
-            <AvatarImage src={avatarUrl} alt={agent.name} />
+            <AvatarImage src={avatarUrl} alt={agent.slug} />
             <AvatarFallback>
               <Bot className="w-3.5 h-3.5" />
             </AvatarFallback>
@@ -91,7 +91,7 @@ function AgentAvatar({ agent, project, availableModels, availableTools, onSaveCh
         <div className="space-y-4">
           <div>
             <h4 className="text-sm font-semibold">
-              {project.title || project.dTag} / {agent.name}
+              {project.title || project.dTag} / {agent.slug}
             </h4>
             <p className="text-xs text-muted-foreground truncate">
               {agent.pubkey}
@@ -222,7 +222,7 @@ export function ConversationAgents({
         if (!agentsMap.has(pubkey)) {
           agentsMap.set(pubkey, {
             pubkey,
-            name: agentInfo.name,
+            slug: agentInfo.slug,
             model: agentInfo.model,
             lastMessageId: message.id,
             tools: agentInfo.tools || [],
@@ -250,7 +250,7 @@ export function ConversationAgents({
         if (agentInfo) {
           agentsMap.set(pubkey, {
             pubkey,
-            name: agentInfo.name,
+            slug: agentInfo.slug,
             model: agentInfo.model,
             lastMessageId: event.id,
             tools: agentInfo.tools || [],

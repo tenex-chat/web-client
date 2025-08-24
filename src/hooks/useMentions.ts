@@ -1,18 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
-
-interface Agent {
-  pubkey: string;
-  name: string;
-}
-
-interface ProjectGroup {
-  id: string;
-  name: string;
-  agents: Agent[];
-}
+import type { AgentInstance, ProjectGroup } from '@/types/agent';
 
 interface UseMentionsProps {
-  agents: Agent[];
+  agents: AgentInstance[];
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   messageInput: string;
   setMessageInput: (value: string) => void;
@@ -37,7 +27,7 @@ export function useMentions({
     
     const searchLower = mentionSearchTerm.toLowerCase();
     return agents.filter(agent =>
-      agent.name.toLowerCase().includes(searchLower)
+      agent.slug.toLowerCase().includes(searchLower)
     );
   }, [agents, mentionSearchTerm]);
 
@@ -75,14 +65,15 @@ export function useMentions({
   }, [setMessageInput, textareaRef]);
 
   // Insert mention into text
-  const insertMention = useCallback((agent: Agent | ProjectGroup) => {
+  const insertMention = useCallback((agent: AgentInstance | ProjectGroup) => {
     if (mentionStartPosition === -1) return;
 
     const beforeMention = messageInput.slice(0, mentionStartPosition);
     const cursorPosition = textareaRef.current?.selectionStart || 0;
     const afterCursor = messageInput.slice(cursorPosition);
 
-    const mentionText = `@${agent.name} `;
+    const slug = 'projectName' in agent ? agent.projectName : agent.slug;
+    const mentionText = `@${slug} `;
     const newText = beforeMention + mentionText + afterCursor;
     
     setMessageInput(newText);
@@ -137,37 +128,37 @@ export function useMentions({
 
   // Extract mentions from the message
   const extractMentions = useCallback((content?: string) => {
-    const mentions: Array<{ pubkey: string; name: string }> = [];
+    const mentions: Array<{ pubkey: string; slug: string }> = [];
     const textToSearch = content ?? messageInput; // Use provided content or fallback to messageInput
-    const mentionRegex = /@([\w-]+)/g; // Updated to include hyphens in agent names
+    const mentionRegex = /@([\w-]+)/g; // Updated to include hyphens in agent slugs
     let match;
 
     while ((match = mentionRegex.exec(textToSearch)) !== null) {
-      const mentionName = match[1];
+      const mentionSlug = match[1];
       
       // Debug logging to help identify matching issues
-      console.log('Extracting mention:', mentionName, 'Available agents:', agents.map(a => a.name));
+      console.log('Extracting mention:', mentionSlug, 'Available agents:', agents.map(a => a.slug));
       
       // Find matching agent - case insensitive comparison
       const agent = agents.find(a => 
-        a.name.toLowerCase() === mentionName.toLowerCase()
+        a.slug.toLowerCase() === mentionSlug.toLowerCase()
       );
       if (agent) {
-        mentions.push({ pubkey: agent.pubkey, name: agent.name });
-        console.log('Found agent match:', agent.name, 'pubkey:', agent.pubkey);
+        mentions.push({ pubkey: agent.pubkey, slug: agent.slug });
+        console.log('Found agent match:', agent.slug, 'pubkey:', agent.pubkey);
       } else {
-        console.warn('No agent found for mention:', mentionName);
+        console.warn('No agent found for mention:', mentionSlug);
       }
       
       // Find matching project group - expand to individual agents
       const group = filteredProjectGroups.find(g => 
-        g.name.toLowerCase() === mentionName.toLowerCase()
+        g.projectName.toLowerCase() === mentionSlug.toLowerCase()
       );
       if (group && group.agents) {
         group.agents.forEach(groupAgent => {
-          mentions.push({ pubkey: groupAgent.pubkey, name: groupAgent.name });
+          mentions.push({ pubkey: groupAgent.pubkey, slug: groupAgent.slug });
         });
-        console.log('Found group match:', group.name, 'with', group.agents.length, 'agents');
+        console.log('Found group match:', group.projectName, 'with', group.agents.length, 'agents');
       }
     }
 

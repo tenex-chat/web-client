@@ -3,11 +3,7 @@ import { useImageUpload } from '@/hooks/useImageUpload';
 import { useMentions } from '@/hooks/useMentions';
 import type { NDKProject } from '@/lib/ndk-events/NDKProject';
 import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks';
-
-interface AgentMention {
-  pubkey: string;
-  name: string;
-}
+import type { AgentInstance } from '@/types/agent';
 
 /**
  * Hook for managing chat input state and handlers
@@ -15,7 +11,7 @@ interface AgentMention {
 export function useChatInput(
   _project: NDKProject,
   _rootEvent: NDKEvent | null,
-  projectAgents: AgentMention[],
+  projectAgents: AgentInstance[],
   textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   includeAllProjects: boolean = false
 ) {

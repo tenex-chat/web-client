@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { useAtom } from "jotai";
 import { cn } from "@/lib/utils";
@@ -22,17 +22,14 @@ import { useChatNavigationStore } from "@/stores/chatNavigation";
 import { useChatMessages } from "./hooks/useChatMessages";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatInput } from "./hooks/useChatInput";
-import {
-  useThreadManagement,
-  type AgentMention,
-} from "./hooks/useThreadManagement";
+import { useThreadManagement } from "./hooks/useThreadManagement";
 import { ChatHeader } from "./components/ChatHeader";
 import { ChatMessageList } from "./components/ChatMessageList";
 import { ChatInputArea } from "./components/ChatInputArea";
 import { autoTTSAtom } from "@/stores/llmConfig";
 
 interface ChatInterfaceProps {
-  project: NDKProject;
+  project?: NDKProject | null;
   rootEvent?: NDKEvent;
   extraTags?: string[][];
   className?: string;
@@ -40,8 +37,6 @@ interface ChatInterfaceProps {
   onTaskClick?: (task: NDKTask) => void;
   onThreadCreated?: (thread: NDKEvent) => void;
 }
-
-type AgentInstance = AgentMention;
 
 /**
  * Refactored ChatInterface component
@@ -64,7 +59,7 @@ export function ChatInterface({
 
   // Navigation store
   const navigationStore = useChatNavigationStore();
-  const projectId = project.dTag || '';
+  const projectId = project?.dTag || '';
 
   // State for voice and TTS
   const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false);
@@ -74,23 +69,39 @@ export function ChatInterface({
   );
 
   // Use navigation store to track current root event
+  const currentRootFromStore = navigationStore.getCurrentRoot();
   const [localRootEvent, setLocalRootEvent] = useState<NDKEvent | null>(
-    rootEvent || navigationStore.getCurrentRoot(projectId) || null
+    rootEvent || currentRootFromStore || null
   );
+
+  // Subscribe to navigation store changes
+  useEffect(() => {
+    // Update local root when store changes
+    const unsubscribe = useChatNavigationStore.subscribe(
+      (state) => state.currentRoot,
+      (currentRoot) => {
+        // Only update if it's actually different to avoid loops
+        if (currentRoot && currentRoot.id !== localRootEvent?.id) {
+          setLocalRootEvent(currentRoot);
+        }
+      }
+    );
+    return unsubscribe;
+  }, [localRootEvent?.id]);
 
   // Update local root when rootEvent prop changes
   useEffect(() => {
-    if (rootEvent) {
+    if (rootEvent && rootEvent.id !== navigationStore.getCurrentRoot()?.id) {
       setLocalRootEvent(rootEvent);
-      navigationStore.setCurrentRoot(projectId, rootEvent);
+      navigationStore.setCurrentRoot(rootEvent);
     }
-  }, [rootEvent, projectId]);
+  }, [rootEvent]);
 
   // Clear navigation stack when switching projects
   useEffect(() => {
     return () => {
-      // Clear navigation when unmounting (switching projects)
-      navigationStore.clearStack(projectId);
+      // Clear navigation when unmounting
+      navigationStore.clearStack();
     };
   }, [projectId]);
 
@@ -113,19 +124,13 @@ export function ChatInterface({
   const scrollProps = useChatScroll(messages);
 
   // Get ONLINE agents for @mentions
-  const onlineAgents = useProjectOnlineAgents(project.dTag);
-  const projectAgents: AgentInstance[] = useMemo(() => {
-    return onlineAgents.map((agent) => ({
-      pubkey: agent.pubkey,
-      name: agent.name,
-    }));
-  }, [onlineAgents]);
+  const onlineAgents = useProjectOnlineAgents(project?.dTag);
 
   // Input management - always include all projects
   const inputProps = useChatInput(
     project,
     localRootEvent,
-    projectAgents,
+    onlineAgents,
     textareaRef,
     true,
   );
@@ -213,19 +218,19 @@ export function ChatInterface({
   // Handle clicking on a message timestamp to open it as root
   const handleTimeClick = useCallback((event: NDKEvent) => {
     // Push current root to stack and set new root
-    navigationStore.pushToStack(projectId, event);
+    navigationStore.pushToStack(event);
     setLocalRootEvent(event);
     // Scroll to top when changing root
     setTimeout(() => {
       scrollProps.scrollToBottom(false);
     }, 100);
-  }, [projectId, navigationStore, scrollProps]);
+  }, [navigationStore, scrollProps]);
 
   // Enhanced back handler with navigation stack
   const handleBackWithStack = useCallback(() => {
     // Check if we can go back in the navigation stack
-    if (navigationStore.canGoBack(projectId)) {
-      const previousEvent = navigationStore.popFromStack(projectId);
+    if (navigationStore.canGoBack()) {
+      const previousEvent = navigationStore.popFromStack();
       if (previousEvent) {
         setLocalRootEvent(previousEvent);
         // Don't call onBack, just navigate within the chat
@@ -235,10 +240,10 @@ export function ChatInterface({
     
     // If no stack history, use original onBack behavior
     if (onBack) {
-      navigationStore.clearStack(projectId);
+      navigationStore.clearStack();
       onBack();
     }
-  }, [navigationStore, projectId, onBack]);
+  }, [navigationStore, onBack]);
 
   // Focus textarea on reply
   const handleReplyFocus = useCallback(() => {
@@ -314,7 +319,7 @@ export function ChatInterface({
           onOpenChange={setIsVoiceDialogOpen}
           onComplete={handleVoiceComplete}
           conversationId={localRootEvent?.id}
-          projectId={project.tagId()}
+          projectId={project?.tagId()}
           publishAudioEvent={true}
         />
 

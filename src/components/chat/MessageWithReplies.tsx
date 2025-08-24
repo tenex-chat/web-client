@@ -1,44 +1,38 @@
 import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
 import { useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
-import { ChevronDown, ChevronRight, Send, Reply, MoreVertical, Cpu, DollarSign, Volume2, Square, Brain } from 'lucide-react'
+import { ChevronDown, ChevronRight, Send, Reply, Brain } from 'lucide-react'
 import { TypingIndicator } from './TypingIndicator'
 import { StreamingCaret } from './StreamingCaret'
 import { memo, useCallback, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
-import { formatRelativeTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { EVENT_KINDS } from '@/lib/constants'
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
-import { Badge } from '@/components/ui/badge'
-import { toast } from 'sonner'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { LLMMetadataDialog } from '@/components/dialogs/LLMMetadataDialog'
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'
-import { RecipientAvatars } from '@/components/common/RecipientAvatars'
 import { Link } from '@tanstack/react-router'
 import { useMurfTTS } from '@/hooks/useMurfTTS'
 import { extractTTSContent } from '@/lib/utils/extractTTSContent'
 import { useAgentTTSConfig, getVoiceDisplayName } from '@/hooks/useAgentTTSConfig'
 import { useMarkdownComponents } from '@/lib/markdown/config'
-import { extractLLMMetadata, getEventPhase, getEventPhaseFrom, getPhaseIcon } from '@/lib/utils/event-metadata'
+import { extractLLMMetadata, getEventPhase, getEventPhaseFrom } from '@/lib/utils/event-metadata'
+import { formatRelativeTime, formatCompactTime } from '@/lib/utils/time'
 import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { useIsMobile } from '@/hooks/useMediaQuery'
-import { replaceNostrEntities } from '@/lib/utils/nostrEntityParser'
 import { getUserStatus } from '@/lib/utils/userStatus'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { hoveredMessageIdAtom, hoveredMessageStackAtom } from './atoms/hoveredMessage'
+import { TaskContent } from './TaskContent'
+import { NDKTask } from '@/lib/ndk-events/NDKTask'
+import { MessageHeaderContent } from './MessageHeaderContent'
+import { MessageActionsToolbar } from './MessageActionsToolbar'
 
 interface MessageWithRepliesProps {
   event: NDKEvent
-  project: NDKProject
+  project?: NDKProject | null
   onReply?: (event: NDKEvent) => void
   isNested?: boolean
   onTimeClick?: (event: NDKEvent) => void
@@ -68,27 +62,43 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   const isHovered = hoveredMessageId === event.id
   
   const handleMouseEnter = useCallback(() => {
-    setHoveredStack(stack => [...stack.filter(id => id !== event.id), event.id])
-  }, [event.id, setHoveredStack])
+    if (!isMobile) {
+      setHoveredStack(stack => [...stack.filter(id => id !== event.id), event.id])
+    }
+  }, [event.id, setHoveredStack, isMobile])
   
   const handleMouseLeave = useCallback(() => {
-    setHoveredStack(stack => stack.filter(id => id !== event.id))
-  }, [event.id, setHoveredStack])
+    if (!isMobile) {
+      setHoveredStack(stack => stack.filter(id => id !== event.id))
+    }
+  }, [event.id, setHoveredStack, isMobile])
+  
+  // Handle tap for mobile
+  const handleTap = useCallback(() => {
+    if (isMobile) {
+      setHoveredStack(stack => {
+        if (stack.includes(event.id)) {
+          return stack.filter(id => id !== event.id)
+        }
+        return [event.id] // Only one message selected at a time on mobile
+      })
+    }
+  }, [event.id, setHoveredStack, isMobile])
   
   // Get ONLINE agents to find the agent's name from its pubkey
-  const onlineAgents = useProjectOnlineAgents(project.dTag)
+  const onlineAgents = useProjectOnlineAgents(project?.dTag)
   
-  // Get the agent's name from the online agents
+  // Get the agent's slug from the online agents
   const agentSlug = useMemo(() => {
     if (!onlineAgents || onlineAgents.length === 0) return null
     const agent = onlineAgents.find(a => a.pubkey === event.pubkey)
-    return agent?.name || null
+    return agent?.slug || null
   }, [onlineAgents, event.pubkey])
   
   // Get user status (external or belonging to another project)
   const userStatus = useMemo(() => {
-    return getUserStatus(event.pubkey, user?.pubkey, project.dTag)
-  }, [event.pubkey, user?.pubkey, project.dTag])
+    return getUserStatus(event.pubkey, user?.pubkey, project?.dTag || '')
+  }, [event.pubkey, user?.pubkey, project?.dTag])
   
   // Extract p-tags (recipients) from the event
   const recipientPubkeys = useMemo(() => {
@@ -121,7 +131,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 			event.kind === NDKKind.GenericReply
 				? [
 						{
-							kinds: [NDKKind.GenericReply],
+							kinds: [NDKKind.GenericReply, 1934], // Include task events as replies
 							"#e": [event.id],
 						},
 					]
@@ -163,8 +173,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
       // Remove all p-tags that NDK's .reply() generated
       replyEvent.tags = replyEvent.tags.filter((tag) => tag[0] !== "p")
       
-      // Add project tag
-      replyEvent.tags.push(['a', project.tagId()])
+      // Add project tag if we have a project
+      if (project) {
+        replyEvent.tags.push(['a', project.tagId()])
+      }
       
       await replyEvent.publish()
       
@@ -216,11 +228,6 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     
     let content = event.content || ""
     const parts: Array<{ type: 'text' | 'thinking', content: string }> = []
-    
-    // Convert plain text nostr: references to markdown links so they're handled by the markdown renderer
-    const hasMarkdownNostrLinks = /\[([^\]]+)\]\((nostr:[^)]+)\)/.test(content)
-    
-    // Don't do any replacement here - let the markdown renderer handle it directly
     
     // Special handling for task messages - hide the entire thinking block content
     if (event.kind === 1934) {
@@ -334,216 +341,232 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   }, [event])
 
 
+  // Responsive padding and margins
+  const paddingClass = isMobile ? "px-3 py-1" : "px-4 py-1"
+  const nestedMargin = isMobile ? "ml-4" : "ml-10"
+  const avatarSize = isMobile ? "h-7 w-7" : "h-9 w-9"
+  const contentGap = isMobile ? "gap-2" : "gap-3"
+
   return (
     <div 
       className={cn(
-        "relative px-4 py-1 transition-colors",
-        isNested && "ml-10",
-        isHovered && "bg-muted/30"
+        "relative transition-colors",
+        paddingClass,
+        isNested && nestedMargin,
+        isHovered && "bg-muted/30",
+        "border-b border-muted/50"
       )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onClick={handleTap}
     >
-      {/* Message - Slack style layout */}
-      <div className="flex gap-3">
-        {/* Avatar column - fixed width */}
-        <div className="flex-shrink-0 pt-0.5">
-          <Link 
-            to="/p/$pubkey" 
-            params={{ pubkey: event.pubkey }}
-            className="block hover:opacity-80 transition-opacity"
-          >
-            <ProfileDisplay 
-              pubkey={event.pubkey} 
-              size="md" 
-              showName={false}
-              showAvatar={true}
-              avatarClassName="h-9 w-9 rounded-md"
-            />
-          </Link>
-        </div>
-        
-        {/* Content column */}
-        <div className="flex-1 min-w-0">
-          {/* Header row with name, time, and actions */}
-          <div className="flex items-start justify-between gap-2 mb-0.5">
-            <div className="flex items-baseline gap-2 flex-wrap">
+      {/* Message layout - completely different for mobile */}
+      {isMobile ? (
+        // Mobile layout - header with avatar, then full-width content below
+        <div className="flex-1">
+          {/* Mobile header with avatar and name on same line */}
+          <div className="flex items-center gap-2 mb-1">
+            {!isNested && (
               <Link 
                 to="/p/$pubkey" 
                 params={{ pubkey: event.pubkey }}
-                className="hover:underline"
+                className="flex-shrink-0"
               >
                 <ProfileDisplay 
                   pubkey={event.pubkey} 
-                  size="md" 
-                  showName={true}
-                  showAvatar={false}
-                  nameClassName="text-sm font-semibold text-foreground"
+                  size="sm" 
+                  showName={false}
+                  showAvatar={true}
+                  avatarClassName="h-7 w-7 rounded-md"
                 />
               </Link>
-              {userStatus.isExternal && (
-                <span className="text-xs text-muted-foreground">
-                  ({userStatus.projectName || 'external'})
-                </span>
-              )}
-              <button
-                onClick={() => onTimeClick?.(event)}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer hover:underline"
-                title="Open as root conversation"
-              >
-                {formatRelativeTime(event.created_at || 0)}
-              </button>
-              {recipientPubkeys.length > 0 && (
+            )}
+            <MessageHeaderContent
+              event={event}
+              userStatus={userStatus}
+              recipientPubkeys={recipientPubkeys}
+              phase={phase}
+              phaseFrom={phaseFrom}
+              onTimeClick={onTimeClick}
+              isMobile={isMobile}
+              hideTimestamp={true} // We'll show timestamp in footer
+            />
+          </div>
+          
+          {/* Message content - full width below header */}
+          <div className={cn("markdown-content", isNested && "ml-9")}>
+            <div className={cn(
+              "break-words text-foreground",
+              "text-[14px] leading-[1.4]"
+            )}>
+              {/* Show typing indicator for typing events */}
+              {showTypingIndicator ? (
+                <TypingIndicator users={[{ pubkey: event.pubkey, name: agentSlug || undefined }]} />
+              ) : (
                 <>
-                  <span className="text-xs text-muted-foreground">→</span>
-                  <RecipientAvatars 
-                    pubkeys={recipientPubkeys}
-                    className="ml-1"
-                  />
+                  {/* Render content parts with inline thinking blocks */}
+                  {contentParts.map((part, partIndex) => {
+                if (part.type === 'text') {
+                  // Render text content with markdown
+                  const textToRender = shouldTruncate && !isExpanded && partIndex === 0 
+                    ? part.content.substring(0, 280) 
+                    : part.content
+                  
+                  return (
+                    <span key={`text-${partIndex}`}>
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={markdownComponents}
+                      >
+                        {textToRender}
+                      </ReactMarkdown>
+                      {/* Show streaming caret only on the last text part when streaming */}
+                      {isStreamingResponse && partIndex === contentParts.filter(p => p.type === 'text').length - 1 && (
+                        <StreamingCaret className="ml-0.5" />
+                      )}
+                    </span>
+                  )
+                } else {
+                  // Render thinking block
+                  const isThinkingExpanded = expandedThinkingBlocks.has(partIndex)
+                  const thinkingPreview = part.content.split('\n')[0]
+                  const preview = thinkingPreview.length > 100 
+                    ? thinkingPreview.substring(0, 100) + '...' 
+                    : thinkingPreview
+                  
+                  return (
+                    <div key={`thinking-${partIndex}`} className="my-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleThinkingBlock(partIndex)}
+                        className={cn(
+                          "flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors",
+                          "text-[11px]"
+                        )}
+                      >
+                        {isThinkingExpanded ? (
+                          <ChevronDown className="w-3 h-3 flex-shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                        )}
+                        <Brain className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate max-w-[600px]">
+                          {isThinkingExpanded ? 'Hide thinking' : preview}
+                        </span>
+                      </button>
+                      
+                      {isThinkingExpanded && (
+                        <div className="mt-1 p-2 bg-muted/20 rounded-md border border-muted/30">
+                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
+                            {part.content}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
+              })}
+              
+                  {/* Show expand/collapse button for truncated content */}
+                  {shouldTruncate && contentParts.some(p => p.type === 'text' && p.content.length > 280) && (
+                    <button
+                      type="button"
+                      onClick={() => setIsExpanded(!isExpanded)}
+                      className="text-xs text-blue-600 hover:text-blue-700 mt-1"
+                    >
+                      {isExpanded ? 'Show less' : 'Show more'}
+                    </button>
+                  )}
                 </>
               )}
             </div>
-            
-            {/* Action buttons - only visible on hover, hide for typing indicators */}
-            {!showTypingIndicator && (
-              <div className={cn(
-                "flex items-center gap-0.5 transition-opacity",
-                isHovered ? "opacity-100" : "opacity-0"
-              )}>
-              {/* Phase indicator - inline with hover buttons */}
-              {phase && (
-                <Badge 
-                  variant="secondary"
-                  className={cn(
-                    "text-[10px] h-5 px-1.5 gap-0.5",
-                    phase?.toLowerCase() === 'chat' && "bg-blue-500/90 text-white border-blue-600",
-                    phase?.toLowerCase() === 'plan' && "bg-purple-500/90 text-white border-purple-600",
-                    phase?.toLowerCase() === 'execute' && "bg-green-500/90 text-white border-green-600",
-                    phase?.toLowerCase() === 'review' && "bg-orange-500/90 text-white border-orange-600",
-                    phase?.toLowerCase() === 'chores' && "bg-gray-500/90 text-white border-gray-600"
-                  )}
-                  title={phaseFrom ? `Phase: ${phaseFrom} → ${phase}` : `Phase: ${phase}`}
-                >
-                  {(() => {
-                    const IconComponent = getPhaseIcon(phase?.toLowerCase() || null)
-                    return IconComponent ? <IconComponent className="w-2.5 h-2.5" /> : null
-                  })()}
-                  <span className="ml-0.5">{phase}</span>
-                </Badge>
-              )}
-              
-              {/* TTS button */}
-              {ttsOptions && event.content && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={async () => {
-                    if (tts.isPlaying) {
-                      tts.stop()
-                    } else {
-                      const ttsContent = extractTTSContent(event.content)
-                      if (ttsContent) {
-                        await tts.play(ttsContent)
-                      }
-                    }
-                  }}
-                  className="h-7 w-7 p-0 hover:bg-muted"
-                  title={tts.isPlaying ? `Stop reading (Voice: ${voiceName})` : `Read aloud (Voice: ${voiceName})`}
-                >
-                  {tts.isPlaying ? (
-                    <Square className="h-3.5 w-3.5" />
-                  ) : (
-                    <Volume2 className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              )}
-              
-              {/* Reply button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleReply(event)}
-                className="h-7 w-7 p-0 hover:bg-muted"
-                title="Reply to this message"
-              >
-                <Reply className="h-3.5 w-3.5" />
-              </Button>
-              
-              {/* LLM Metadata Icon */}
-              {llmMetadata && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowMetadataDialog(true)}
-                  className="h-7 w-7 p-0 hover:bg-muted"
-                  title="View LLM metadata"
-                >
-                  <Cpu className="h-3.5 w-3.5" />
-                </Button>
-              )}
-              
-              {/* More options dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 hover:bg-muted"
-                    title="Message options"
-                  >
-                    <MoreVertical className="h-3.5 w-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem 
-                    className="cursor-pointer"
-                    onClick={() => {
-                      navigator.clipboard.writeText(event.encode())
-                    }}
-                  >
-                    Copy ID
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="cursor-pointer"
-                    onClick={() => {
-                      const rawEventString = JSON.stringify(event.rawEvent(), null, 2)
-                      navigator.clipboard.writeText(rawEventString)
-                      toast.success('Raw event copied to clipboard')
-                    }}
-                  >
-                    View Raw
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="cursor-pointer"
-                    onClick={() => {
-                      const rawEventString = JSON.stringify(event.rawEvent(), null, 4)
-                      navigator.clipboard.writeText(rawEventString)
-                    }}
-                  >
-                    Copy Raw Event
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              {/* Cost indicator */}
-              {(llmMetadata?.["llm-cost-usd"] || llmMetadata?.["llm-cost"]) && (
-                <Badge
-                  variant="outline"
-                  className="text-[10px] h-5 px-1.5 text-green-600 border-green-600"
-                >
-                  <DollarSign className="w-3 h-3 mr-0.5" />
-                  {llmMetadata?.["llm-cost-usd"] || llmMetadata?.["llm-cost"]}
-                </Badge>
-              )}
-              </div>
-            )}
           </div>
+          
+          
+          {/* Mobile footer with timestamp and actions */}
+          {!showTypingIndicator && (
+            <div className={cn("flex items-center justify-between mt-1", isNested && "ml-9")}>
+              {/* Timestamp on left */}
+              <button
+                onClick={() => onTimeClick?.(event)}
+                className="text-[10px] text-muted-foreground hover:text-foreground"
+                title={formatRelativeTime(event.created_at || 0)}
+              >
+                {formatCompactTime(event.created_at || 0)}
+              </button>
+              
+              {/* Actions on right - always visible on mobile */}
+              <MessageActionsToolbar
+                event={event}
+                onReply={() => handleReply(event)}
+                onMetadataClick={() => setShowMetadataDialog(true)}
+                ttsOptions={ttsOptions}
+                tts={tts}
+                voiceName={voiceName}
+                llmMetadata={llmMetadata}
+                extractTTSContent={extractTTSContent}
+                isMobile={true}
+                isHovered={false}
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        // Desktop layout - keep original side-by-side design
+        <div className={cn("flex", contentGap)}>
+          {/* Avatar column - desktop only */}
+          <div className="flex-shrink-0 pt-0.5">
+            <Link 
+              to="/p/$pubkey" 
+              params={{ pubkey: event.pubkey }}
+              className="block hover:opacity-80 transition-opacity"
+            >
+              <ProfileDisplay 
+                pubkey={event.pubkey} 
+                size="md" 
+                showName={false}
+                showAvatar={true}
+                avatarClassName="h-9 w-9 rounded-md"
+              />
+            </Link>
+          </div>
+          
+          {/* Content column */}
+          <div className="flex-1 min-w-0">
+            {/* Header row with name, time, and actions */}
+            <div className="flex items-start justify-between gap-2 mb-0.5">
+              <MessageHeaderContent
+                event={event}
+                userStatus={userStatus}
+                recipientPubkeys={recipientPubkeys}
+                phase={phase}
+                phaseFrom={phaseFrom}
+                onTimeClick={onTimeClick}
+                isMobile={isMobile}
+              />
+              
+              {/* Action buttons - desktop hover */}
+              {!showTypingIndicator && (
+                <MessageActionsToolbar
+                  event={event}
+                  onReply={() => handleReply(event)}
+                  onMetadataClick={() => setShowMetadataDialog(true)}
+                  ttsOptions={ttsOptions}
+                  tts={tts}
+                  voiceName={voiceName}
+                  llmMetadata={llmMetadata}
+                  extractTTSContent={extractTTSContent}
+                  isMobile={false}
+                  isHovered={isHovered}
+                />
+              )}
+            </div>
           
           {/* Message content - no background, just text */}
           <div className="markdown-content">
             <div className={cn(
               "break-words text-foreground",
-              isMobile ? "text-[15px] leading-[1.6]" : "text-sm"
+              isMobile ? "text-[14px] leading-[1.4] mt-1" : "text-sm"
             )}>
               {/* Show typing indicator for typing events */}
               {showTypingIndicator ? (
@@ -628,51 +651,90 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             </div>
           </div>
           
-          {/* Reply count and toggle - Slack style - hide for typing indicators */}
-          {!showTypingIndicator && replyCount > 0 && !showReplies && (
-            <div className="mt-1.5">
-              <button
-                type="button"
-                onClick={() => setShowReplies(!showReplies)}
-                className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 transition-colors font-medium hover:bg-blue-50 dark:hover:bg-blue-950/30 px-2 py-1 rounded">
-                <div className="flex -space-x-1.5">
-                  {/* Show up to 3 user avatars who replied */}
-                  {sortedReplies.slice(0, 3).map((reply, idx) => (
-                    <div key={reply.id} style={{ zIndex: 3 - idx }}>
-                      <ProfileDisplay pubkey={reply.pubkey} showName={false} avatarClassName="w-5 h-5 border-2 border-background rounded" />
-                    </div>
-                  ))}
-                </div>
-                <span>
-                  {replyCount} {replyCount === 1 ? "reply" : "replies"}
-                </span>
-                <ChevronRight className="w-3 h-3" />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Thread replies - Slack style indented */}
-      {showReplies && sortedReplies.length > 0 && (
-        <div className="border-l-2 border-muted ml-[18px] mt-2">
-          {sortedReplies.map(reply => (
-            <div key={reply.id}>
-              <MessageWithReplies
-                event={reply}
-                project={project}
-                onReply={onReply}
-                isNested={true}
-                onTimeClick={onTimeClick}
+            {/* Mobile action toolbar - show inline when message is selected */}
+            {!showTypingIndicator && isMobile && isHovered && (
+              <MessageActionsToolbar
+                event={event}
+                onReply={() => handleReply(event)}
+                onMetadataClick={() => setShowMetadataDialog(true)}
+                ttsOptions={ttsOptions}
+                tts={tts}
+                voiceName={voiceName}
+                llmMetadata={llmMetadata}
+                extractTTSContent={extractTTSContent}
+                isMobile={true}
+                isHovered={false}
               />
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Reply count and toggle - Slack style - hide for typing indicators */}
+      {!showTypingIndicator && replyCount > 0 && !showReplies && (
+        <div className="mt-1.5">
+          <button
+            type="button"
+            onClick={() => setShowReplies(!showReplies)}
+            className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 transition-colors font-medium hover:bg-blue-50 dark:hover:bg-blue-950/30 px-2 py-1 rounded">
+            <div className="flex -space-x-1.5">
+              {/* Show up to 3 user avatars who replied */}
+              {sortedReplies.slice(0, 3).map((reply, idx) => (
+                <div key={reply.id} style={{ zIndex: 3 - idx }}>
+                  <ProfileDisplay pubkey={reply.pubkey} showName={false} avatarClassName="w-5 h-5 border-2 border-background rounded" />
+                </div>
+              ))}
             </div>
-          ))}
+            <span>
+              {replyCount} {replyCount === 1 ? "reply" : "replies"}
+            </span>
+            <ChevronRight className="w-3 h-3" />
+          </button>
         </div>
       )}
 
-      {/* Reply input - Slack style inline */}
+      {/* Thread replies - responsive indentation */}
+      {showReplies && sortedReplies.length > 0 && (
+        <div className={cn(
+          "border-l-2 border-muted mt-2",
+          isMobile ? "ml-3" : "ml-[18px]"
+        )}>
+          {sortedReplies.map(reply => {
+            // Check if this is a task event
+            if (reply.kind === 1934) {
+              const task = new NDKTask(ndk!, reply.rawEvent())
+              return (
+                <div key={reply.id} className="ml-3 mt-2">
+                  <TaskContent 
+                    task={task}
+                    onClick={() => onTimeClick?.(reply)}
+                  />
+                </div>
+              )
+            }
+            
+            // Regular message reply
+            return (
+              <div key={reply.id}>
+                <MessageWithReplies
+                  event={reply}
+                  project={project}
+                  onReply={onReply}
+                  isNested={true}
+                  onTimeClick={onTimeClick}
+                />
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Reply input - responsive inline */}
       {replyToEvent && (
-        <div className="ml-[18px] mt-2 border-l-2 border-muted pl-3">
+        <div className={cn(
+          "mt-2 border-l-2 border-muted pl-3",
+          isMobile ? "ml-3" : "ml-[18px]"
+        )}>
           <div className="bg-muted/30 p-2 rounded-md mb-2">
             <div className="text-xs text-muted-foreground flex items-center gap-1">
               <Reply className="w-3 h-3" />

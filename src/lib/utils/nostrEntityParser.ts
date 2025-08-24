@@ -57,37 +57,6 @@ export function findNostrEntities(text: string): NostrEntity[] {
 }
 
 /**
- * Replace Nostr entity references in text with placeholders for rendering
- */
-export function replaceNostrEntities(
-  text: string,
-  replacer: (entity: NostrEntity, match: string) => string
-): string {
-  // Match both nostr: prefixed and bare bech32 strings
-  const regex = /(?:nostr:)?(nevent1|naddr1|note1|npub1|nprofile1)[\w]+/g
-
-  return text.replace(regex, (match) => {
-    const bech32 = match.replace('nostr:', '')
-
-    try {
-      const decoded = nip19.decode(bech32)
-      const entity: NostrEntity = {
-        type: decoded.type as NostrEntity['type'],
-        bech32,
-        data: decoded.data,
-      }
-
-      // If the original match didn't have "nostr:" prefix, add it for consistency
-      const normalizedMatch = match.startsWith('nostr:') ? match : `nostr:${match}`
-      return replacer(entity, normalizedMatch)
-    } catch {
-      // If decode fails, return original match
-      return match
-    }
-  })
-}
-
-/**
  * Type guard to check if data is AddressPointer
  */
 export function isAddressPointer(data: NostrEntityData): data is AddressPointer {

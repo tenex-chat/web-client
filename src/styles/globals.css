@@ -210,16 +210,22 @@
 
 /* Mobile-specific overrides */
 @media (max-width: 768px) {
-  /* Ensure minimum touch target sizes */
-  button, 
-  [role="button"],
-  a,
-  [role="link"],
+  /* Ensure minimum touch target sizes for interactive elements */
+  button:not(.inline-link), 
+  [role="button"]:not(.inline-link),
+  nav a,
+  .touch-target,
   input[type="checkbox"],
   input[type="radio"],
   select {
     min-height: 44px;
     min-width: 44px;
+  }
+  
+  /* Inline links in text should not have min-height */
+  a:not(nav a):not(.touch-target) {
+    min-height: auto;
+    min-width: auto;
   }
   
   /* Improve form inputs on mobile */

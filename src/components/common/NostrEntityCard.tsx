@@ -1,15 +1,8 @@
-import { NDKArticle, NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKArticle, NDKKind, NDKUser } from '@nostr-dev-kit/ndk'
 import { useEvent } from '@nostr-dev-kit/ndk-hooks'
 import { ExternalLink } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Card } from '@/components/ui/card'
-import { 
-  NostrEntity, 
-  getEntityDisplayInfo, 
-  isAddressPointer, 
-  isEventPointer,
-  isProfilePointer 
-} from '@/lib/utils/nostrEntityParser'
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import { InlineProfileMention } from '@/components/common/InlineProfileMention'
 import { cn } from '@/lib/utils'
@@ -29,8 +22,6 @@ import {
   Sheet,
   SheetContent,
 } from '@/components/ui/sheet'
-import { useChatNavigationStore } from '@/stores/chatNavigation'
-import { useRouter } from '@tanstack/react-router'
 
 // Import specialized card components
 import { TaskEmbedCard } from '@/components/embeds/TaskEmbedCard'
@@ -41,74 +32,39 @@ import { AgentDefinitionEmbedCard } from '@/components/embeds/AgentDefinitionEmb
 import { DefaultEmbedCard } from '@/components/embeds/DefaultEmbedCard'
 import { ChatMessageEmbedCard } from '@/components/embeds/ChatMessageEmbedCard'
 import { DocumentationViewer } from '@/components/documentation/DocumentationViewer'
+import { ChatInterface } from '@/components/chat/ChatInterface'
 
 interface NostrEntityCardProps {
-  entity: NostrEntity
+  bech32: string
   className?: string
   compact?: boolean
 }
 
 export function NostrEntityCard({ 
-  entity, 
+  bech32, 
   className = '',
   compact = false 
 }: NostrEntityCardProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
-  const displayInfo = getEntityDisplayInfo(entity)
-  const navigationStore = useChatNavigationStore()
-  const router = useRouter()
+  const [conversationDrawerOpen, setConversationDrawerOpen] = useState(false)
   
-  // Extract project ID from the current path if we're in a project context
-  const pathMatch = router.state.location.pathname.match(/\/projects\/([^\/]+)/)
-  const projectIdFromUrl = pathMatch?.[1] || null
-
-  // Build subscription filter based on entity type
-  const subscriptionFilter = useMemo(() => {
-    if (!entity.data) return undefined
-
-    if (entity.type === 'nevent' && isEventPointer(entity.data)) {
-      // For events, subscribe by ID
-      return [{
-        ids: [entity.data.id],
-      }]
-    } else if (entity.type === 'naddr' && isAddressPointer(entity.data)) {
-      // For addressable events, subscribe by author + d-tag
-      return [{
-        kinds: [entity.data.kind as NDKKind],
-        authors: [entity.data.pubkey],
-        '#d': [entity.data.identifier],
-      }]
-    } else if (entity.type === 'note' && typeof entity.data === 'string') {
-      // For note references (just the event ID)
-      return [{
-        ids: [entity.data],
-      }]
-    }
-
-    return undefined
-  }, [entity])
-
-  // Subscribe to the event if we have a filter
+  // Just pass the bech32 to useEvent - it handles everything!
+  const isEventEntity = bech32.startsWith('nevent1') || bech32.startsWith('note1') || bech32.startsWith('naddr1')
   const event = useEvent(
-    subscriptionFilter || false,
+    isEventEntity ? bech32 : false,
     {}
   )
 
   // Handle profile types (npub, nprofile)
-  if (entity.type === 'npub' || entity.type === 'nprofile') {
-    let pubkey: string | undefined
+  let user: NDKUser | undefined;
+  if (bech32.startsWith('npub')) user = new NDKUser({ npub: bech32 });
+  else if (bech32.startsWith('nprofile')) user = new NDKUser({ nprofile: bech32 });
     
-    if (entity.type === 'npub' && typeof entity.data === 'string') {
-      pubkey = entity.data
-    } else if (entity.type === 'nprofile' && isProfilePointer(entity.data)) {
-      pubkey = entity.data.pubkey
-    }
-
-    if (pubkey) {
+  if (user) {
       // Use inline mention for compact mode, card for full mode
       if (compact) {
-        return <InlineProfileMention pubkey={pubkey} className={className} />
+        return <InlineProfileMention pubkey={user.pubkey} className={className} />
       }
       
       return (
@@ -116,34 +72,26 @@ export function NostrEntityCard({
           "inline-flex items-center gap-2",
           className
         )}>
-          <ProfileDisplay pubkey={pubkey} />
+          <ProfileDisplay pubkey={user.pubkey} />
         </Card>
       )
-    }
   }
 
   // Handle click events
   const handleClick = () => {
-    // For kind:11 (Thread) events in a project context, 
-    // navigate to the conversation view like we do for task events
-    if (event && event.kind === NDKKind.Thread && projectIdFromUrl) {
-      // Push the event to the conversation stack
-      navigationStore.pushToStack(projectIdFromUrl, event)
-      // Navigate to the project chat interface
-      router.navigate({ 
-        to: '/projects/$projectId', 
-        params: { projectId: projectIdFromUrl }
-      })
+    // For kind:11 (Thread) events, open in conversation drawer
+    if (event && event.kind === NDKKind.Thread) {
+      setConversationDrawerOpen(true)
     } else if (event?.content) {
       setDrawerOpen(true)
     } else {
       // Open in njump if no content to display
-      window.open(`https://njump.me/${entity.bech32}`, '_blank')
+      window.open(`https://njump.me/${bech32}`, '_blank')
     }
   }
 
   // If we don't have the event yet, show loading state
-  if (!event) {
+  if (isEventEntity && !event) {
     return (
       <span
         className={cn(
@@ -153,14 +101,14 @@ export function NostrEntityCard({
           className
         )}
       >
-        <span className="text-base">{displayInfo.icon}</span>
         <span className="font-medium">Loading...</span>
       </span>
     )
   }
 
   // Route to specialized card components based on event kind
-  switch (event.kind) {
+  if (event) {
+    switch (event.kind) {
     case NDKTask.kind:
       return (
         <>
@@ -179,36 +127,30 @@ export function NostrEntityCard({
         </>
       )
     
-    case NDKKind.Thread: // kind:11 - Handle like task events in project context
-      if (projectIdFromUrl) {
-        // Use specialized chat message card that navigates to conversation view on click
-        return (
+    case NDKKind.Thread: // kind:11 - Show in conversation drawer
+      return (
+        <>
           <ChatMessageEmbedCard 
             event={event} 
             compact={compact} 
             className={className}
             onClick={handleClick}
           />
-        )
-      } else {
-        // Outside of project context, show with drawer like before
-        return (
-          <>
-            <ChatMessageEmbedCard 
-              event={event} 
-              compact={compact} 
-              className={className}
-              onClick={handleClick}
-            />
-            <EventDrawer 
-              event={event}
-              title={`Thread: ${event.tags?.find(tag => tag[0] === 'title')?.[1] || 'Untitled'}`}
-              open={drawerOpen}
-              onOpenChange={setDrawerOpen}
-            />
-          </>
-        )
-      }
+          {/* Conversation drawer - using actual ChatInterface */}
+          <Sheet open={conversationDrawerOpen} onOpenChange={setConversationDrawerOpen}>
+            <SheetContent 
+              className="flex flex-col w-[65%] sm:max-w-[65%] p-0"
+              side="right"
+            >
+              <ChatInterface 
+                project={null}
+                rootEvent={event}
+                onBack={() => setConversationDrawerOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
+        </>
+      )
 
     case NDKArticle.kind: // 30023
       return (
@@ -281,7 +223,7 @@ export function NostrEntityCard({
           />
           <EventDrawer 
             event={event}
-            title={displayInfo.title}
+            title="Agent Lesson"
             open={drawerOpen}
             onOpenChange={setDrawerOpen}
           />
@@ -299,13 +241,17 @@ export function NostrEntityCard({
           />
           <EventDrawer 
             event={event}
-            title={displayInfo.title}
+            title="Event Details"
             open={drawerOpen}
             onOpenChange={setDrawerOpen}
           />
         </>
       )
+    }
   }
+  
+  // If we couldn't load the event or it's not an event type, show nothing
+  return null
 }
 
 // Shared drawer component for viewing full event content

@@ -1,13 +1,14 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Settings, Volume2, Mic, Play, Square, TestTube, Activity } from 'lucide-react'
+import { Settings, Volume2, Mic, Play, Square, TestTube, Activity, Headphones } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useCallSettings } from '@/stores/call-settings-store'
+import { useCallSettings, type InterruptionMode, type InterruptionSensitivity } from '@/stores/call-settings-store'
 import { useAudioDevices } from '@/hooks/useAudioDevices'
 import { useChromeSpeechRecognition } from '@/hooks/useChromeSpeechRecognition'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -404,6 +405,87 @@ export function CallSettings({ className }: CallSettingsProps) {
                 </div>
               )}
             </div>
+          </div>
+          
+          <Separator />
+          
+          {/* Interruption settings */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium flex items-center gap-2">
+              <Headphones className="h-4 w-4" />
+              Interruption Mode
+            </h3>
+            
+            <RadioGroup 
+              value={audioSettings.interruptionMode} 
+              onValueChange={(value) => 
+                updateAudioSettings({ interruptionMode: value as InterruptionMode })
+              }
+            >
+              <div className="flex items-start gap-3">
+                <RadioGroupItem value="disabled" id="disabled" className="mt-1" />
+                <div className="space-y-1">
+                  <Label htmlFor="disabled" className="font-normal cursor-pointer">
+                    No interruption
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Manual pause only - tap speaking agent to pause
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <RadioGroupItem value="headphones" id="headphones" className="mt-1" />
+                <div className="space-y-1">
+                  <Label htmlFor="headphones" className="font-normal cursor-pointer">
+                    Headphones mode
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Enable interruption (requires headphones to avoid echo)
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+            
+            {audioSettings.interruptionMode === 'headphones' && (
+              <div className="pl-4 space-y-3 pt-2">
+                <div className="space-y-2">
+                  <Label>Interruption Sensitivity</Label>
+                  <Select
+                    value={audioSettings.interruptionSensitivity}
+                    onValueChange={(value) => 
+                      updateAudioSettings({ 
+                        interruptionSensitivity: value as InterruptionSensitivity 
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">
+                        Conservative (5+ words)
+                      </SelectItem>
+                      <SelectItem value="medium">
+                        Balanced (3+ words)
+                      </SelectItem>
+                      <SelectItem value="high">
+                        Responsive (any speech)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Lower sensitivity reduces false interruptions
+                  </p>
+                </div>
+                
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                    ⚠️ Headphones required to prevent audio feedback
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
           
           <Separator />

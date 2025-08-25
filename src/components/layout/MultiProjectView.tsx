@@ -14,6 +14,7 @@ import { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { CallView } from '@/components/call/CallView'
 
 type TabType = 'conversations' | 'docs' | 'agents' | 'status' | 'settings' | 'tasks'
 
@@ -35,6 +36,8 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
   const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null)
   const [isCreatingDoc, setIsCreatingDoc] = useState(false)
   const [editingArticle, setEditingArticle] = useState<NDKArticle | null>(null)
+  const [showCallView, setShowCallView] = useState(false)
+  const [callViewProject, setCallViewProject] = useState<NDKProject | null>(null)
   
   // Collect existing hashtags from documentation for suggestions
   const currentProject = drawerContent?.project
@@ -126,6 +129,10 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
                 setSelectedThreadEvent(newThread)
                 setDrawerContent({ ...drawerContent, data: newThread, item: newThread.id })
               }
+            }}
+            onVoiceCallClick={() => {
+              setCallViewProject(project)
+              setShowCallView(true)
             }}
           />
         )
@@ -252,6 +259,28 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
           {drawerContent && renderDrawerContent()}
         </SheetContent>
       </Sheet>
+
+      {/* Call View Overlay */}
+      {showCallView && callViewProject && (
+        <CallView
+          project={callViewProject}
+          onClose={(rootEvent) => {
+            setShowCallView(false)
+            setCallViewProject(null)
+            // If a conversation was created during the call, open it in the drawer
+            if (rootEvent) {
+              setSelectedThreadEvent(rootEvent)
+              setDrawerContent({ 
+                project: callViewProject, 
+                type: 'conversations', 
+                item: rootEvent,
+                data: rootEvent 
+              })
+            }
+          }}
+          extraTags={selectedThreadEvent ? [['E', selectedThreadEvent.id]] : undefined}
+        />
+      )}
     </div>
   )
 }

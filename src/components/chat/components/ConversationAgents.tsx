@@ -18,6 +18,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Bot, Save } from "lucide-react";
 import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
 import { useProjectOnlineModels } from "@/hooks/useProjectOnlineModels";
@@ -25,7 +31,7 @@ import { useProjectAvailableTools } from "@/hooks/useProjectAvailableTools";
 import {
   useNDK,
   useNDKCurrentUser,
-  useProfile,
+  useProfileValue,
 } from "@nostr-dev-kit/ndk-hooks";
 import { toast } from "sonner";
 import type { Message } from "../hooks/useChatMessages";
@@ -39,57 +45,123 @@ interface ConversationAgentsProps {
 
 interface AgentInfo {
   pubkey: string;
-  slug: string;
+  slug?: string;
   model?: string;  // Model slug from the agent
   lastMessageId?: string;
   tools?: string[];
+  isProjectAgent?: boolean; // Flag to indicate if this is a project agent
 }
 
-function AgentAvatar({ agent, project, availableModels, availableTools, onSaveChanges }: {
+function AgentAvatar({
+  agent,
+  project,
+  availableModels,
+  availableTools,
+  onSaveChanges,
+}: {
   agent: AgentInfo;
   project: NDKProject;
   availableModels: any[];
   availableTools: string[];
-  onSaveChanges: (agentPubkey: string, agentSlug: string, newModel: string, tools: string[]) => Promise<void>;
+  onSaveChanges: (
+    agentPubkey: string,
+    agentSlug: string,
+    newModel: string,
+    tools: string[],
+  ) => Promise<void>;
 }) {
-  const profile = useProfile(agent.pubkey);
-  const avatarUrl = profile?.image || profile?.picture;
-  const [selectedModel, setSelectedModel] = useState(agent.model || "");
-  const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set(agent.tools || []));
-  const [popoverOpen, setPopoverOpen] = useState(false);
+  const profile = useProfileValue(agent.pubkey);
+  const avatarUrl = profile?.picture;
+  const displayName = profile?.displayName || profile?.name || agent.pubkey;
   const isMobile = useIsMobile();
 
-  const handleToolToggle = (tool: string) => {
-    const newTools = new Set(selectedTools);
-    if (newTools.has(tool)) {
-      newTools.delete(tool);
-    } else {
-      newTools.add(tool);
+  if (!agent.isProjectAgent) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Avatar className={isMobile ? "h-6 w-6" : "h-7 w-7"}>
+              <AvatarImage src={avatarUrl} alt={displayName} />
+              <AvatarFallback>
+                <Bot className={isMobile ? "w-3 h-3" : "w-3.5 h-3.5"} />
+              </AvatarFallback>
+            </Avatar>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{displayName}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  // Logic for project agents (the popover)
+  const [selectedModel, setSelectedModel] = useState(agent.model || "");
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(
+    new Set(agent.tools || []),
+  );
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  const hasChanges =
+    selectedModel !== (agent.model || "") ||
+    !setsAreEqual(selectedTools, new Set(agent.tools || []));
+
+  function setsAreEqual<T>(setA: Set<T>, setB: Set<T>): boolean {
+    if (setA.size !== setB.size) return false;
+    for (const item of setA) {
+      if (!setB.has(item)) return false;
     }
-    setSelectedTools(newTools);
+    return true;
+  }
+
+  const handleToolToggle = (tool: string) => {
+    setSelectedTools(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tool)) {
+        newSet.delete(tool);
+      } else {
+        newSet.add(tool);
+      }
+      return newSet;
+    });
   };
 
   const handleSave = async () => {
-    await onSaveChanges(agent.pubkey, agent.slug, selectedModel, Array.from(selectedTools));
-    setPopoverOpen(false);
+    try {
+      await onSaveChanges(
+        agent.pubkey,
+        agent.slug,
+        selectedModel,
+        Array.from(selectedTools),
+      );
+      setPopoverOpen(false);
+    } catch (error) {
+      console.error("Failed to save agent changes:", error);
+    }
   };
 
-  const hasChanges = selectedModel !== agent.model || 
-    Array.from(selectedTools).sort().join(',') !== (agent.tools || []).sort().join(',');
-  
   return (
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
       <PopoverTrigger asChild>
-        <button className="group hover:opacity-80 transition-opacity">
-          <Avatar className={isMobile ? "h-6 w-6" : "h-7 w-7 ring-2 ring-transparent hover:ring-accent transition-all"}>
-            <AvatarImage src={avatarUrl} alt={agent.slug} />
+        <button
+          className="group hover:opacity-80 transition-opacity"
+          title={displayName}
+        >
+          <Avatar
+            className={
+              isMobile
+                ? "h-6 w-6"
+                : "h-7 w-7 ring-2 ring-transparent hover:ring-accent transition-all"
+            }
+          >
+            <AvatarImage src={avatarUrl} alt={displayName} />
             <AvatarFallback>
               <Bot className={isMobile ? "w-3 h-3" : "w-3.5 h-3.5"} />
             </AvatarFallback>
           </Avatar>
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-96">
+      <PopoverContent className="w-80" side="bottom" align="end">
         <div className="space-y-4">
           <div>
             <h4 className="text-sm font-semibold">
@@ -117,7 +189,7 @@ function AgentAvatar({ agent, project, availableModels, availableTools, onSaveCh
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableModels.map((model) => (
+                  {availableModels.map(model => (
                     <SelectItem
                       key={model.model}
                       value={model.model}
@@ -144,7 +216,7 @@ function AgentAvatar({ agent, project, availableModels, availableTools, onSaveCh
             </div>
             <div className="h-48 overflow-y-auto rounded-md border p-2">
               <div className="space-y-1">
-                {availableTools.map((tool) => (
+                {availableTools.map(tool => (
                   <div key={tool} className="flex items-center space-x-2 py-1">
                     <Checkbox
                       id={`tool-${tool}`}
@@ -185,7 +257,7 @@ export function ConversationAgents({
 }: ConversationAgentsProps) {
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
-  useProfile(user?.pubkey || "");
+  useProfileValue(user?.pubkey || "");
   const onlineAgents = useProjectOnlineAgents(project.dTag);
   const availableModels = useProjectOnlineModels(project.dTag);
   const availableTools = useProjectAvailableTools(project.dTag);
@@ -209,35 +281,49 @@ export function ConversationAgents({
   const conversationAgents = useMemo(() => {
     const agentsMap = new Map<string, AgentInfo>();
 
-    // Go through messages to find unique agents
+    // Go through messages to find unique participants
     messages.forEach((message) => {
       const pubkey = message.event.pubkey;
 
-      // Skip if it's the user
-      if (pubkey === user?.pubkey) {
-        return;
-      }
-
-      // Find agent info from online agents
+      // Check if this is a project agent
       const agentInfo = onlineAgents.find((a) => a.pubkey === pubkey);
-      if (agentInfo) {
-        if (!agentsMap.has(pubkey)) {
-          agentsMap.set(pubkey, {
-            pubkey,
-            slug: agentInfo.slug,
-            model: agentInfo.model,
-            lastMessageId: message.id,
-            tools: agentInfo.tools || [],
-          });
-        } else {
-          // Update last message ID
-          const existing = agentsMap.get(pubkey)!;
-          existing.lastMessageId = message.id;
-        }
+      
+      if (!agentsMap.has(pubkey)) {
+        agentsMap.set(pubkey, {
+          pubkey,
+          slug: agentInfo?.slug,
+          model: agentInfo?.model,
+          lastMessageId: message.id,
+          tools: agentInfo?.tools || [],
+          isProjectAgent: !!agentInfo,
+        });
+      } else {
+        // Update last message ID
+        const existing = agentsMap.get(pubkey)!;
+        existing.lastMessageId = message.id;
       }
     });
 
-    // If root event doesn't have an "e" tag, also include agents from #E tag participants
+    // Also check E-tags in messages to find all participants
+    messages.forEach((message) => {
+      const eTags = message.event.tags.filter(tag => tag[0] === 'E');
+      eTags.forEach(tag => {
+        const pubkey = tag[1];
+        if (pubkey && pubkey !== user?.pubkey && !agentsMap.has(pubkey)) {
+          const agentInfo = onlineAgents.find((a) => a.pubkey === pubkey);
+          agentsMap.set(pubkey, {
+            pubkey,
+            slug: agentInfo?.slug,
+            model: agentInfo?.model,
+            lastMessageId: message.id,
+            tools: agentInfo?.tools || [],
+            isProjectAgent: !!agentInfo,
+          });
+        }
+      });
+    });
+
+    // If root event doesn't have an "e" tag, also include participants from #E tag references
     if (rootEvent && !rootEvent.tagValue("e") && threadParticipants) {
       threadParticipants.forEach((event) => {
         const pubkey = event.pubkey;
@@ -247,17 +333,16 @@ export function ConversationAgents({
           return;
         }
 
-        // Find agent info from online agents
+        // Check if this is a project agent
         const agentInfo = onlineAgents.find((a) => a.pubkey === pubkey);
-        if (agentInfo) {
-          agentsMap.set(pubkey, {
-            pubkey,
-            slug: agentInfo.slug,
-            model: agentInfo.model,
-            lastMessageId: event.id,
-            tools: agentInfo.tools || [],
-          });
-        }
+        agentsMap.set(pubkey, {
+          pubkey,
+          slug: agentInfo?.slug || 'Agent',
+          model: agentInfo?.model,
+          lastMessageId: event.id,
+          tools: agentInfo?.tools || [],
+          isProjectAgent: !!agentInfo,
+        });
       });
     }
 
@@ -274,7 +359,6 @@ export function ConversationAgents({
       changeEvent.content = "";
       changeEvent.tags = [
         ["p", agentPubkey], // Target agent
-        ["agent", agentName], // Agent name/slug
         ["model", newModel], // New model slug
         ["a", project.tagId()], // Project reference
       ];
@@ -293,7 +377,7 @@ export function ConversationAgents({
   };
 
   const isMobile = useIsMobile();
-  
+
   return (
     <div className={isMobile ? "flex items-center -space-x-1" : "flex flex-wrap items-center gap-x-1.5 gap-y-1"}>
       {/* Show agents with popover for model selection */}

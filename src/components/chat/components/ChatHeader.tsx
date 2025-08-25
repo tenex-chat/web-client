@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
+import { type NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { useSubscribe, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "../hooks/useChatMessages";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";

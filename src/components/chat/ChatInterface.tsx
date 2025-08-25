@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
-import { useAtom } from "jotai";
 import { cn } from "@/lib/utils";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useIsMobile } from "@/hooks/useMediaQuery";

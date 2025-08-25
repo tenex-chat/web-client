@@ -24,6 +24,10 @@ export class MurfTTSService {
     private audioContext: AudioContext | null = null;
     private currentWebSocket: WebSocket | null = null;
     private currentAudioSource: AudioBufferSourceNode | null = null;
+    private pausedAt: number = 0;
+    private startedAt: number = 0;
+    private audioBuffer: AudioBuffer | null = null;
+    private isPaused: boolean = false;
 
     constructor(private config: MurfTTSConfig) {
         // Initialize audio context lazily
@@ -144,6 +148,8 @@ export class MurfTTSService {
                             // Decode and play the complete WAV file
                             try {
                                 const audioBuffer = await audioContext.decodeAudioData(combinedBuffer);
+                                this.audioBuffer = audioBuffer;
+                                
                                 const source = audioContext.createBufferSource();
                                 source.buffer = audioBuffer;
                                 
@@ -154,10 +160,16 @@ export class MurfTTSService {
                                 gainNode.connect(audioContext.destination);
                                 
                                 this.currentAudioSource = source;
+                                this.startedAt = audioContext.currentTime;
+                                this.pausedAt = 0;
+                                this.isPaused = false;
                                 
                                 source.onended = () => {
-                                    this.currentAudioSource = null;
-                                    resolve();
+                                    if (!this.isPaused) {
+                                        this.currentAudioSource = null;
+                                        this.audioBuffer = null;
+                                        resolve();
+                                    }
                                 };
                                 
                                 source.start(0);
@@ -193,6 +205,45 @@ export class MurfTTSService {
         });
     }
 
+    pause(): void {
+        if (this.currentAudioSource && !this.isPaused) {
+            const audioContext = this.getAudioContext();
+            this.pausedAt = audioContext.currentTime - this.startedAt;
+            this.currentAudioSource.stop();
+            this.currentAudioSource.disconnect();
+            this.currentAudioSource = null;
+            this.isPaused = true;
+        }
+    }
+
+    resume(): void {
+        if (this.isPaused && this.audioBuffer) {
+            const audioContext = this.getAudioContext();
+            const source = audioContext.createBufferSource();
+            source.buffer = this.audioBuffer;
+            
+            const gainNode = audioContext.createGain();
+            gainNode.gain.value = this.config.volume || 1.0;
+            
+            source.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            this.currentAudioSource = source;
+            this.startedAt = audioContext.currentTime - this.pausedAt;
+            this.isPaused = false;
+            
+            source.onended = () => {
+                if (!this.isPaused) {
+                    this.currentAudioSource = null;
+                    this.audioBuffer = null;
+                }
+            };
+            
+            // Resume from where we paused
+            source.start(0, this.pausedAt);
+        }
+    }
+
     stop(): void {
         if (this.currentAudioSource) {
             try {
@@ -204,10 +255,19 @@ export class MurfTTSService {
             this.currentAudioSource = null;
         }
         
+        this.audioBuffer = null;
+        this.isPaused = false;
+        this.pausedAt = 0;
+        this.startedAt = 0;
+        
         if (this.currentWebSocket && this.currentWebSocket.readyState === WebSocket.OPEN) {
             this.currentWebSocket.close();
             this.currentWebSocket = null;
         }
+    }
+    
+    getIsPaused(): boolean {
+        return this.isPaused;
     }
 
     async getVoices(): Promise<MurfVoice[]> {

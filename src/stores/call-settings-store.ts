@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export type InterruptionMode = 'disabled' | 'headphones'
+export type InterruptionSensitivity = 'low' | 'medium' | 'high'
+
 export interface CallAudioSettings {
   // Device selection
   inputDeviceId: string | null
@@ -12,6 +15,10 @@ export interface CallAudioSettings {
   echoCancellation: boolean
   voiceActivityDetection: boolean
   vadSensitivity: number // 0-100, lower = more sensitive
+  
+  // Interruption settings
+  interruptionMode: InterruptionMode
+  interruptionSensitivity: InterruptionSensitivity
 }
 
 interface CallSettingsStore {
@@ -28,6 +35,8 @@ const defaultAudioSettings: CallAudioSettings = {
   echoCancellation: true,
   voiceActivityDetection: true,
   vadSensitivity: 50,
+  interruptionMode: 'disabled',
+  interruptionSensitivity: 'medium',
 }
 
 export const useCallSettings = create<CallSettingsStore>()(

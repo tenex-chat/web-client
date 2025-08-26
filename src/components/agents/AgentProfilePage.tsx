@@ -7,23 +7,23 @@ import {
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Bot, BookOpen, Copy, CheckCircle2 } from "lucide-react";
-import { TIMING } from "../../lib/constants";
-import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
-import { NDKAgentLesson } from "../../lib/ndk-events/NDKAgentLesson";
-import { Button } from "../ui/button";
+import { TIMING } from "@/lib/constants";
+import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
+import { NDKAgentLesson } from "@/lib/ndk-events/NDKAgentLesson";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Badge } from "../ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { ScrollArea } from "../ui/scroll-area";
-import { EmptyState } from "../common/EmptyState";
-import { formatRelativeTime } from "../../lib/utils/time";
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { EmptyState } from "@/components/common/EmptyState";
+import { formatRelativeTime } from "@/lib/utils/time";
 import { AgentSettingsTab } from "./AgentSettingsTab";
 // Dialog components removed - using route navigation instead
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PhoneOff, Mic, MicOff, Bot, AlertCircle, Send } from 'lucide-react'
+import { PhoneOff, Mic, MicOff, Bot, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
@@ -280,8 +280,8 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
     if (audioSettings.outputDeviceId && 'audioElement' in tts && tts.audioElement) {
       const audio = tts.audioElement as HTMLAudioElement
       if (audio && typeof audio.setSinkId === 'function') {
-        audio.setSinkId(audioSettings.outputDeviceId).catch((err: Error) => {
-          console.error('Failed to set audio output device:', err)
+        audio.setSinkId(audioSettings.outputDeviceId).catch(() => {
+          toast.error('Failed to set audio output device')
         })
       }
     }
@@ -495,23 +495,17 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
         // Small delay to ensure everything is ready
         setTimeout(() => {
           if (isChromeTranscriptionSupported) {
-            console.log('Starting Chrome speech recognition, isSupported:', isChromeTranscriptionSupported)
             try {
               startListening(handleSilenceDetected)
-              console.log('Chrome speech recognition started successfully')
             } catch (error) {
-              console.error('Failed to start Chrome speech recognition:', error)
-              // Fallback to MediaRecorder
-              console.log('Falling back to MediaRecorder')
+              // Fallback to MediaRecorder silently
               startRecording()
             }
           } else {
-            console.log('Starting MediaRecorder for non-Chrome browser')
             startRecording()
           }
         }, 500) // Increased delay to ensure everything is ready
       } catch (error) {
-        console.error('Failed to get microphone permission:', error)
         toast.error('Microphone access required for voice calls')
         setConversationState('error')
         // Reset initialized flag on error so user can retry

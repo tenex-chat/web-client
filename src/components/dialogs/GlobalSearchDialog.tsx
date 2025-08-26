@@ -2,13 +2,13 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk";
 import { useNavigate } from "@tanstack/react-router";
 import { FileText, FolderOpen, MessageCircle } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { useProjectsStore } from "../../stores/projects";
-import { useTimeFormat } from "../../hooks/useTimeFormat";
-import type { NDKProject } from "../../lib/ndk-events/NDKProject";
-import { NDKTask } from "../../lib/ndk-events/NDKTask";
-import { Badge } from "../ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { SearchBar } from "../common/SearchBar";
+import { useProjectsStore } from "@/stores/projects";
+import { useTimeFormat } from "@/hooks/useTimeFormat";
+import type { NDKProject } from "@/lib/ndk-events/NDKProject";
+import { NDKTask } from "@/lib/ndk-events/NDKTask";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SearchBar } from "@/components/common/SearchBar";
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 
 interface GlobalSearchDialogProps {

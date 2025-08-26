@@ -7,7 +7,7 @@ import {
   formatFileSize,
   getUploadStatusIcon
 } from './uploadUtils'
-import { UPLOAD_STATUS } from '../constants'
+import { UPLOAD_STATUS } from '@/lib/constants'
 
 describe('uploadUtils', () => {
   const mockUploads = [

@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { EVENT_KINDS } from '@/lib/constants'
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
@@ -183,7 +184,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
       setReplyInput("")
       setReplyToEvent(null)
     } catch (error) {
-      console.error("Failed to send reply:", error)
+      toast.error("Failed to send reply")
     } finally {
       setIsSending(false)
     }

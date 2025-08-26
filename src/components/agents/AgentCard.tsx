@@ -1,7 +1,7 @@
 import { Bot } from "lucide-react";
 import { memo } from "react";
 import type { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
-import { SelectableCard } from "../common/SelectableCard";
+import { SelectableCard } from "@/components/common/SelectableCard";
 
 interface AgentCardProps {
   agent: NDKAgentDefinition;

@@ -3,6 +3,7 @@ import { ArrowLeft, Phone, PhoneOff, Settings, Copy, Check, FileJson } from "luc
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+import { toast } from "sonner";
 import { ConversationAgents } from "./ConversationAgents";
 import {
   Popover,
@@ -17,9 +18,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { type NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { useSubscribe, useNDK } from "@nostr-dev-kit/ndk-hooks";
-import type { Message } from "../hooks/useChatMessages";
+import type { Message } from "@/components/chat/hooks/useChatMessages";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
-import { formatThreadAsMarkdown, formatThreadAsJSON } from "../utils/copyThread";
+import { formatThreadAsMarkdown, formatThreadAsJSON } from "@/components/chat/utils/copyThread";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
 
 interface ChatHeaderProps {
@@ -94,7 +95,7 @@ export function ChatHeader({
         setCopiedFormat(format);
         setTimeout(() => setCopiedFormat(null), 2000);
       } catch (error) {
-        console.error(`Failed to copy thread as ${format}:`, error);
+        toast.error(`Failed to copy thread as ${format}`);
       }
     }
   };

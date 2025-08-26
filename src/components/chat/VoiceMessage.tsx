@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Play, Pause, Download } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
-import { getAudioURL, getAudioDuration, getAudioWaveform } from "../../lib/utils/audioEvents";
-import { cn } from "../../lib/utils";
-import { logger } from "../../lib/logger";
+import { getAudioURL, getAudioDuration, getAudioWaveform } from "@/lib/utils/audioEvents";
+import { cn } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 interface VoiceMessageProps {
     event: NDKEvent;

@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, memo } from "react";
 import { Send, Mic, Paperclip, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,7 +32,7 @@ interface ChatInputAreaProps {
  * Chat input area component
  * Handles message input, file attachments, and mentions
  */
-export function ChatInputArea({
+export const ChatInputArea = memo(function ChatInputArea({
   textareaRef,
   messageInput,
   setMessageInput,
@@ -322,4 +322,4 @@ export function ChatInputArea({
       </div>
     </div>
   );
-}
+});

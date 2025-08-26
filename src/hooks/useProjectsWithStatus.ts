@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
-import { NDKProjectStatus } from '../lib/ndk-events/NDKProjectStatus'
-import { TIMING } from '../lib/constants'
-import type { NDKProject } from '../lib/ndk-events/NDKProject'
+import { NDKProjectStatus } from '@/lib/ndk-events/NDKProjectStatus'
+import { TIMING } from '@/lib/constants'
+import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { logger } from '@/lib/logger'
 
 interface ProjectWithStatus {

@@ -1,11 +1,11 @@
 import { create } from "zustand";
-import { NDKProject } from "../lib/ndk-events/NDKProject";
-import { NDKProjectStatus, type ProjectAgent, type ProjectModel, type ExecutionQueue } from "../lib/ndk-events/NDKProjectStatus";
+import { NDKProject } from "@/lib/ndk-events/NDKProject";
+import { NDKProjectStatus, type ProjectAgent, type ProjectModel, type ExecutionQueue } from "@/lib/ndk-events/NDKProjectStatus";
 import type { NDKEvent, NDKSubscription } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 import { useAgentsStore } from "./agents";
 import { useProjectActivityStore } from "./projectActivity";
-import { logger } from "../lib/logger";
+import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 
 export interface ProjectStatusData {

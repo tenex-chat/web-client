@@ -16,6 +16,7 @@ import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useChatNavigationStore } from "@/stores/chatNavigation";
+import { toast } from "sonner";
 
 // Import new hooks and components
 import { useChatMessages } from "./hooks/useChatMessages";
@@ -78,15 +79,13 @@ export function ChatInterface({
   // Subscribe to navigation store changes
   useEffect(() => {
     // Update local root when store changes
-    const unsubscribe = useChatNavigationStore.subscribe(
-      (state) => state.currentRoot,
-      (currentRoot) => {
-        // Only update if it's actually different to avoid loops
-        if (currentRoot && currentRoot.id !== localRootEvent?.id) {
-          setLocalRootEvent(currentRoot);
-        }
+    const unsubscribe = useChatNavigationStore.subscribe((state) => {
+      const currentRoot = state.currentRoot;
+      // Only update if it's actually different to avoid loops
+      if (currentRoot && currentRoot.id !== localRootEvent?.id) {
+        setLocalRootEvent(currentRoot);
       }
-    );
+    });
     return unsubscribe;
   }, [localRootEvent?.id]);
 
@@ -148,8 +147,11 @@ export function ChatInterface({
   }, [rootEvent, threadManagement]);
 
   // Auto-play new messages when auto-TTS is enabled
+  // Only depend on the latest message ID to avoid re-running on every render
+  const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
+  
   useEffect(() => {
-    if (!autoTTS || !ttsOptions || messages.length === 0) return;
+    if (!autoTTS || !ttsOptions || !latestMessageId || messages.length === 0) return;
 
     const latestMessage = messages[messages.length - 1];
 
@@ -165,12 +167,12 @@ export function ChatInterface({
     // Extract and play TTS content
     const ttsContent = extractTTSContent(latestMessage.event.content);
     if (ttsContent && !tts.isPlaying) {
-      tts.play(ttsContent).catch((error) => {
-        console.error("TTS playback failed:", error);
+      tts.play(ttsContent).catch(() => {
+        toast.error("TTS playback failed");
       });
       setLastPlayedMessageId(latestMessage.id);
     }
-  }, [messages, autoTTS, ttsOptions, lastPlayedMessageId, user?.pubkey, tts]);
+  }, [latestMessageId, autoTTS, ttsOptions, lastPlayedMessageId, user?.pubkey, tts, messages]);
 
   // Handle sending messages
   const handleSendMessage = useCallback(async () => {
@@ -201,7 +203,7 @@ export function ChatInterface({
         scrollProps.scrollToBottom(true);
       }, 100);
     } catch (error) {
-      console.error("Failed to send message:", error);
+      toast.error("Failed to send message");
     }
   }, [ndk, user, inputProps, sendMessage, autoTTS, messages, scrollProps]);
 
@@ -281,7 +283,7 @@ export function ChatInterface({
         {/* Messages Area */}
         <ChatMessageList
           messages={messages}
-          project={project}
+          project={project!}
           ndk={ndk || undefined}
           scrollAreaRef={scrollProps.scrollAreaRef}
           showScrollToBottom={scrollProps.showScrollToBottom}

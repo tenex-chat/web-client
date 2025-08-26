@@ -1,6 +1,6 @@
 import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk-hooks'
 import { EVENT_KINDS } from '@/lib/constants'
-import type { Message } from '../hooks/useChatMessages'
+import type { Message } from '@/components/chat/hooks/useChatMessages'
 
 interface StreamingSession {
   syntheticId: string

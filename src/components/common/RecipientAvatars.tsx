@@ -1,6 +1,6 @@
 import { useProfile } from "@nostr-dev-kit/ndk-hooks"
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "../ui/hover-card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { cn } from "@/lib/utils"
 import { Link } from "@tanstack/react-router"
 

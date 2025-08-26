@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { Plus, Settings, LogOut, Bot, Wrench, User, ChevronDown, Globe, Search } from 'lucide-react'
-import { CreateProjectDialog } from '../dialogs/CreateProjectDialog'
-import { GlobalSearchDialog } from '../dialogs/GlobalSearchDialog'
+import { CreateProjectDialog } from '@/components/dialogs/CreateProjectDialog'
+import { GlobalSearchDialog } from '@/components/dialogs/GlobalSearchDialog'
 import { cn } from '@/lib/utils'
 import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
 import { useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks'
@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ProjectCard } from '../projects/ProjectCard'
+import { ProjectCard } from '@/components/projects/ProjectCard'
 import { logger } from '@/lib/logger'
 import { useProjectsStore } from '@/stores/projects'
 import { useGlobalAgents } from '@/stores/agents'

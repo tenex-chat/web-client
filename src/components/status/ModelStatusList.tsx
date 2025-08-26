@@ -1,5 +1,5 @@
-import { Badge } from '../ui/badge'
-import { cn } from '../../lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import { 
   SiOpenai, 
   SiAnthropic,
@@ -7,7 +7,7 @@ import {
   SiMeta
 } from 'react-icons/si'
 import { Cpu } from 'lucide-react'
-import type { ProjectModel } from '../../lib/ndk-events/NDKProjectStatus'
+import type { ProjectModel } from '@/lib/ndk-events/NDKProjectStatus'
 
 interface ModelStatusListProps {
   models: ProjectModel[]

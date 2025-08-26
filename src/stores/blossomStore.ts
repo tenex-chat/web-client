@@ -1,5 +1,5 @@
 import { atom } from 'jotai'
-import type { BlossomServerInfo } from '../services/blossom/BlossomServerRegistry'
+import type { BlossomServerInfo } from '@/services/blossom/BlossomServerRegistry'
 import { UPLOAD_LIMITS } from '@/lib/constants'
 
 export interface UploadQueueItem {

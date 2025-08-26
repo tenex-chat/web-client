@@ -2,11 +2,11 @@ import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Bot } from "lucide-react";
-import { Card, CardContent } from "../ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Badge } from "../ui/badge";
-import { EmptyState } from "../common/EmptyState";
-import { ScrollArea } from "../ui/scroll-area";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/common/EmptyState";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AgentInstancesProps {
   agentDefinitionId: string;

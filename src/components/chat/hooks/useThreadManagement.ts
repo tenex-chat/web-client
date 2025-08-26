@@ -75,7 +75,7 @@ export function useThreadManagement(
     // Log warning if there are unresolved mentions
     const hasUnresolvedMentions = /@[\w-]+/.test(content) && mentions.length === 0
     if (hasUnresolvedMentions) {
-      console.warn('Thread has @ mentions but no agents were resolved. Check agent names.')
+      // Silent warning - mentions might be for agents not in this project
     }
 
     // Add voice mode tag if auto-TTS is enabled

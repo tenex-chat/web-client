@@ -1,11 +1,12 @@
+import { memo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { VirtualList } from "@/components/ui/virtual-list";
 import { ArrowDown, Reply, MoreVertical, Cpu } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MessageWithReplies } from "../MessageWithReplies";
-import { MessageShell } from "../MessageShell";
-import { TaskContent } from "../TaskContent";
+import { MessageWithReplies } from "@/components/chat/MessageWithReplies";
+import { MessageShell } from "@/components/chat/MessageShell";
+import { TaskContent } from "@/components/chat/TaskContent";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,7 +20,7 @@ import {
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import type NDK from "@nostr-dev-kit/ndk-hooks";
-import type { Message } from "../hooks/useChatMessages";
+import type { Message } from "@/components/chat/hooks/useChatMessages";
 
 interface ChatMessageListProps {
   messages: Message[];
@@ -41,7 +42,7 @@ interface ChatMessageListProps {
  * Chat message list component
  * Handles rendering messages and scroll management UI
  */
-export function ChatMessageList({
+export const ChatMessageList = memo(function ChatMessageList({
   messages,
   project,
   ndk,
@@ -92,10 +93,13 @@ export function ChatMessageList({
               variant="ghost"
               size="sm"
               onClick={() => {
-                // For now, just show in console - could open a dialog later
-                console.log('Task LLM metadata:', message.event.tags?.filter(tag => 
+                // Show metadata in a toast for now
+                const llmTags = message.event.tags?.filter(tag => 
                   tag[0]?.startsWith('llm-') || tag[0] === 'system-prompt' || tag[0] === 'prompt'
-                ));
+                );
+                if (llmTags && llmTags.length > 0) {
+                  toast.info(`LLM metadata: ${llmTags.length} tags found`);
+                }
               }}
               className="h-7 w-7 p-0 hover:bg-muted"
               title="View LLM metadata"
@@ -277,4 +281,4 @@ export function ChatMessageList({
       </AnimatePresence>
     </div>
   );
-}
+});

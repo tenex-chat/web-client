@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+import { toast } from "sonner";
 import {
   Popover,
   PopoverContent,
@@ -34,7 +35,7 @@ import {
   useProfileValue,
 } from "@nostr-dev-kit/ndk-hooks";
 import { toast } from "sonner";
-import type { Message } from "../hooks/useChatMessages";
+import type { Message } from "@/components/chat/hooks/useChatMessages";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 
 interface ConversationAgentsProps {
@@ -136,7 +137,7 @@ function AgentAvatar({
       );
       setPopoverOpen(false);
     } catch (error) {
-      console.error("Failed to save agent changes:", error);
+      toast.error("Failed to save agent changes");
     }
   };
 
@@ -371,7 +372,7 @@ export function ConversationAgents({
       await changeEvent.publish();
       toast.success(`Agent settings updated`);
     } catch (error) {
-      console.error("Failed to update agent settings:", error);
+      toast.error("Failed to update agent settings");
       toast.error("Failed to update agent settings");
     }
   };

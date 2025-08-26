@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Square, Edit2, Check, X, RotateCcw, Send } from "lucide-react";
-import { Button } from "../ui/button";
-import { Dialog, DialogContent } from "../ui/dialog";
-import { Textarea } from "../ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import NDKBlossom from "@nostr-dev-kit/ndk-blossom";
 import { useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { NDKEvent } from "@nostr-dev-kit/ndk";
-import { useSpeechToText } from "../../hooks/useSpeechToText";
-import { useLLM } from "../../hooks/useLLM";
+import { useSpeechToText } from "@/hooks/useSpeechToText";
+import { useLLM } from "@/hooks/useLLM";
 import { toast } from "sonner";
 import { UPLOAD_LIMITS } from "@/lib/constants";
 

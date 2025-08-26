@@ -4,22 +4,22 @@ import {
   useNDKSessionSigners,
   useSubscribe,
 } from "@nostr-dev-kit/ndk-hooks";
-import { EVENT_KINDS, TIMING } from "../../lib/constants";
+import { EVENT_KINDS, TIMING } from "@/lib/constants";
 import { ArrowLeft, Bot, CheckCircle2, Copy, Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { EmptyState } from "../common/EmptyState";
-import { Button } from "../ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Checkbox } from "../ui/checkbox";
+import { EmptyState } from "@/components/common/EmptyState";
+import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "../ui/dialog";
-import { ScrollArea } from "../ui/scroll-area";
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 

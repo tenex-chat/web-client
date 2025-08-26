@@ -1,7 +1,7 @@
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
-import { Badge } from '../ui/badge'
-import { cn } from '../../lib/utils'
-import type { ProjectAgent } from '../../lib/ndk-events/NDKProjectStatus'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+import type { ProjectAgent } from '@/lib/ndk-events/NDKProjectStatus'
 import { useProfile } from '@nostr-dev-kit/ndk-hooks'
 import { Bot, Wrench } from 'lucide-react'
 import {
@@ -9,7 +9,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '../ui/tooltip'
+} from '@/components/ui/tooltip'
 
 interface AgentStatusListProps {
   agents: ProjectAgent[]

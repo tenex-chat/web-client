@@ -1,16 +1,16 @@
 import { useProfile } from "@nostr-dev-kit/ndk-hooks";
 import { Bot } from "lucide-react";
-import { NDKAgentDefinition } from "../../lib/ndk-events/NDKAgentDefinition";
+import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Badge } from "../ui/badge";
-import { generateAgentColor } from "../../lib/utils/agent-colors";
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { generateAgentColor } from "@/lib/utils/agent-colors";
 
 interface AgentDefinitionCardProps {
   agent: NDKAgentDefinition;

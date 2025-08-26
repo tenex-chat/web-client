@@ -136,8 +136,6 @@ export function useMentions({
     while ((match = mentionRegex.exec(textToSearch)) !== null) {
       const mentionSlug = match[1];
       
-      // Debug logging to help identify matching issues
-      console.log('Extracting mention:', mentionSlug, 'Available agents:', agents.map(a => a.slug));
       
       // Find matching agent - case insensitive comparison
       const agent = agents.find(a => 
@@ -145,9 +143,6 @@ export function useMentions({
       );
       if (agent) {
         mentions.push({ pubkey: agent.pubkey, slug: agent.slug });
-        console.log('Found agent match:', agent.slug, 'pubkey:', agent.pubkey);
-      } else {
-        console.warn('No agent found for mention:', mentionSlug);
       }
       
       // Find matching project group - expand to individual agents
@@ -158,11 +153,9 @@ export function useMentions({
         group.agents.forEach(groupAgent => {
           mentions.push({ pubkey: groupAgent.pubkey, slug: groupAgent.slug });
         });
-        console.log('Found group match:', group.projectName, 'with', group.agents.length, 'agents');
       }
     }
 
-    console.log('Total mentions extracted:', mentions.length, mentions);
     return mentions;
   }, [messageInput, agents, filteredProjectGroups]);
 

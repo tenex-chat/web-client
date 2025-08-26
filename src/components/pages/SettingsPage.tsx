@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNDKCurrentUser, useNDKSessionLogout, useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AISettings } from '../settings/AISettings';
-import { AppearanceSettings } from '../settings/AppearanceSettings';
-import { NotificationSettings } from '../settings/NotificationSettings';
-import { BlossomSettings } from '../settings/BlossomSettings'
+import { AISettings } from '@/components/settings/AISettings';
+import { AppearanceSettings } from '@/components/settings/AppearanceSettings';
+import { NotificationSettings } from '@/components/settings/NotificationSettings';
+import { BlossomSettings } from '@/components/settings/BlossomSettings'
 
 export function SettingsPage() {
   const navigate = useNavigate();

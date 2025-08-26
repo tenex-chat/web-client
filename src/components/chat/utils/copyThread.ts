@@ -1,6 +1,6 @@
 import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import type NDK from '@nostr-dev-kit/ndk'
-import type { Message } from '../hooks/useChatMessages'
+import type { Message } from '@/components/chat/hooks/useChatMessages'
 
 interface JSONMessage {
   id: string

@@ -1,7 +1,7 @@
 // Voice configuration management for agents
 // Stores voice settings in localStorage keyed by agent slug
 
-import { Storage } from './utils/storage';
+import { Storage } from '@/lib/utils/storage';
 
 export interface AgentVoiceConfig {
     voiceId: string;

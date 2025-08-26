@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
-import { NDKProjectStatus } from '../lib/ndk-events/NDKProjectStatus'
-import { TIMING } from '../lib/constants'
+import { NDKProjectStatus } from '@/lib/ndk-events/NDKProjectStatus'
+import { TIMING } from '@/lib/constants'
 
 interface ProjectStatus {
   isOnline: boolean

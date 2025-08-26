@@ -1,7 +1,7 @@
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Bot } from "lucide-react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
-import { ItemSelector } from "../common/ItemSelector";
+import { ItemSelector } from "@/components/common/ItemSelector";
 import { AgentCard } from "./AgentCard";
 import { useMemo } from "react";
 

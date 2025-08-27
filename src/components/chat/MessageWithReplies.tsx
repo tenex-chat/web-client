@@ -15,13 +15,9 @@ import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { LLMMetadataDialog } from '@/components/dialogs/LLMMetadataDialog'
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import { Link } from '@tanstack/react-router'
-import { useMurfTTS } from '@/hooks/useMurfTTS'
-import { extractTTSContent } from '@/lib/utils/extractTTSContent'
-import { useAgentTTSConfig, getVoiceDisplayName } from '@/hooks/useAgentTTSConfig'
 import { useMarkdownComponents } from '@/lib/markdown/config'
 import { extractLLMMetadata, getEventPhase, getEventPhaseFrom } from '@/lib/utils/event-metadata'
 import { formatRelativeTime, formatCompactTime } from '@/lib/utils/time'
-import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { getUserStatus } from '@/lib/utils/userStatus'
 import { useAtomValue, useSetAtom } from 'jotai'
@@ -86,16 +82,6 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     }
   }, [event.id, setHoveredStack, isMobile])
   
-  // Get ONLINE agents to find the agent's name from its pubkey
-  const onlineAgents = useProjectOnlineAgents(project?.dTag)
-  
-  // Get the agent's slug from the online agents
-  const agentSlug = useMemo(() => {
-    if (!onlineAgents || onlineAgents.length === 0) return null
-    const agent = onlineAgents.find(a => a.pubkey === event.pubkey)
-    return agent?.slug || null
-  }, [onlineAgents, event.pubkey])
-  
   // Get user status (external or belonging to another project)
   const userStatus = useMemo(() => {
     return getUserStatus(event.pubkey, user?.pubkey, project?.dTag || '')
@@ -110,20 +96,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
       .filter((pubkey, index, self) => self.indexOf(pubkey) === index) // Remove duplicates
   }, [event.tags])
   
-  // TTS configuration
-  const ttsOptions = useAgentTTSConfig(agentSlug || undefined)
-  const voiceName = getVoiceDisplayName(ttsOptions)
-  
   // Markdown configuration
   const markdownComponents = useMarkdownComponents({ 
     isMobile, 
     onImageClick: setLightboxImage 
-  })
-  
-  const tts = useMurfTTS(ttsOptions || {
-    apiKey: '',
-    voiceId: '',
-    enabled: false
   })
 
   // Subscribe to replies that e-tag this event (NIP-10/NIP-22 threading)
@@ -400,7 +376,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             )}>
               {/* Show typing indicator for typing events */}
               {showTypingIndicator ? (
-                <TypingIndicator users={[{ pubkey: event.pubkey, name: agentSlug || undefined }]} />
+                <TypingIndicator users={[{ pubkey: event.pubkey }]} />
               ) : (
                 <>
                   {/* Render content parts with inline thinking blocks */}
@@ -487,13 +463,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             <div className={cn("flex items-center justify-end mt-1", isNested && "ml-9")}>
               <MessageActionsToolbar
                 event={event}
+                project={project}
                 onReply={() => handleReply(event)}
                 onMetadataClick={() => setShowMetadataDialog(true)}
-                ttsOptions={ttsOptions}
-                tts={tts}
-                voiceName={voiceName}
                 llmMetadata={llmMetadata}
-                extractTTSContent={extractTTSContent}
                 isMobile={true}
                 isHovered={false}
               />
@@ -538,13 +511,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               {!showTypingIndicator && (
                 <MessageActionsToolbar
                   event={event}
+                  project={project}
                   onReply={() => handleReply(event)}
                   onMetadataClick={() => setShowMetadataDialog(true)}
-                  ttsOptions={ttsOptions}
-                  tts={tts}
-                  voiceName={voiceName}
                   llmMetadata={llmMetadata}
-                  extractTTSContent={extractTTSContent}
                   isMobile={false}
                   isHovered={isHovered}
                 />
@@ -559,7 +529,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             )}>
               {/* Show typing indicator for typing events */}
               {showTypingIndicator ? (
-                <TypingIndicator users={[{ pubkey: event.pubkey, name: agentSlug || undefined }]} />
+                <TypingIndicator users={[{ pubkey: event.pubkey }]} />
               ) : (
                 <>
                   {/* Render content parts with inline thinking blocks */}
@@ -644,13 +614,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             {!showTypingIndicator && isMobile && isHovered && (
               <MessageActionsToolbar
                 event={event}
+                project={project}
                 onReply={() => handleReply(event)}
                 onMetadataClick={() => setShowMetadataDialog(true)}
-                ttsOptions={ttsOptions}
-                tts={tts}
-                voiceName={voiceName}
                 llmMetadata={llmMetadata}
-                extractTTSContent={extractTTSContent}
                 isMobile={true}
                 isHovered={false}
               />

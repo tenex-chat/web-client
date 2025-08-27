@@ -15,6 +15,7 @@ export interface Message {
  */
 export function useChatMessages(_project: NDKProject, rootEvent: NDKEvent | null) {
   const [messages, setMessages] = useState<Message[]>([])
+  console.log('re-rendering useChatMessages', rootEvent?.id)
   
   // Subscribe to thread messages using NIP-22 threading
   const { events } = useSubscribe(
@@ -25,12 +26,6 @@ export function useChatMessages(_project: NDKProject, rootEvent: NDKEvent | null
     [rootEvent?.id],
   )
 
-  if (events) {
-    for (const e of events) {
-      console.log('here', e.content)
-    }
-  }
-  
   // Process thread replies into messages with streaming session management
   useEffect(() => {
     const processedMessages = processEventsToMessages(events, rootEvent)

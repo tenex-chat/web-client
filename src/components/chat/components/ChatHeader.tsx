@@ -23,13 +23,13 @@ import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { formatThreadAsMarkdown, formatThreadAsJSON } from "@/components/chat/utils/copyThread";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
 import { useConversationMetadata } from "@/hooks/useConversationMetadata";
+import { useAgentTTSConfig } from "@/hooks/useAgentTTSConfig";
 
 interface ChatHeaderProps {
   rootEvent: NDKEvent | null;
   onBack?: () => void;
   autoTTS: boolean;
   onAutoTTSChange: (enabled: boolean) => void;
-  ttsEnabled: boolean;
   messages?: Message[];
   project?: NDKProject | null;
   onVoiceCallClick?: () => void;
@@ -44,7 +44,6 @@ export function ChatHeader({
   onBack,
   autoTTS,
   onAutoTTSChange,
-  ttsEnabled,
   messages,
   project,
   onVoiceCallClick,
@@ -52,6 +51,8 @@ export function ChatHeader({
   const isMobile = useIsMobile();
   const isNewThread = !rootEvent;
   const [showTTSInfo, setShowTTSInfo] = useState(false);
+  const ttsOptions = useAgentTTSConfig();
+  const ttsEnabled = !!ttsOptions;
   const [copiedFormat, setCopiedFormat] = useState<'markdown' | 'json' | null>(null);
   const { ndk } = useNDK();
 

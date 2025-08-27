@@ -58,9 +58,16 @@ export const ThreadItem = memo(function ThreadItem({ thread, isSelected, onSelec
     let latestReplyContent = ''
     let latestPhaseTime = 0
     let latestPhase = ''
+    
+    // Count only kind 1111 (GenericReply) and 1934 (Task) events as replies
+    let replyCount = 0
 
     replies.forEach(reply => {
-      uniqueParticipants.add(reply.pubkey)
+      // Only count kinds 1111 and 1934 for the reply count
+      if (reply.kind === 1111 || reply.kind === 1934) {
+        replyCount++
+        uniqueParticipants.add(reply.pubkey)
+      }
       
       const replyTime = reply.created_at || 0
       if (replyTime > latestReplyTime) {
@@ -68,7 +75,7 @@ export const ThreadItem = memo(function ThreadItem({ thread, isSelected, onSelec
         latestReplyContent = reply.content
       }
 
-      // Check for phase tags in this reply
+      // Check for phase tags in this reply (from any event kind)
       const phaseTag = reply.tags.find(t => t[0] === 'phase')
       if (phaseTag && phaseTag[1] && replyTime > latestPhaseTime) {
         latestPhaseTime = replyTime
@@ -77,7 +84,7 @@ export const ThreadItem = memo(function ThreadItem({ thread, isSelected, onSelec
     })
 
     return {
-      replyCount: replies.length,
+      replyCount: replyCount,
       participants: uniqueParticipants,
       lastReplyAt: latestReplyTime > 0 ? latestReplyTime : undefined,
       lastMessage: latestReplyTime > 0 ? latestReplyContent : undefined,

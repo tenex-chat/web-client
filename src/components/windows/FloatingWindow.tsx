@@ -36,7 +36,7 @@ interface FloatingWindowProps {
 }
 
 export function FloatingWindow({
-  content,
+  content: initialContent,
   onClose,
   onMinimize,
   onFocus,
@@ -50,6 +50,9 @@ export function FloatingWindow({
   const [preMaximizeState, setPreMaximizeState] = useState({ size, position })
   const [aspectRatio, setAspectRatio] = useState(800 / 600)
   const [isScaling, setIsScaling] = useState(false)
+  
+  // Store the content locally to prevent external updates
+  const [content] = useState(initialContent)
 
   // Hide window when minimized
   if (isMinimized) {
@@ -98,7 +101,7 @@ export function FloatingWindow({
             <ChatInterface
               project={content.project}
               rootEvent={content.data}
-              className="h-full"
+              className="h-full w-full"
             />
           )
         }
@@ -267,14 +270,19 @@ export function FloatingWindow({
         </div>
 
         {/* Window Content */}
-        <div className="flex-1 overflow-hidden relative">
-          <ScrollArea className="h-full">
-            {renderContent()}
-          </ScrollArea>
+        <div className="flex-1 min-h-0 overflow-hidden relative flex flex-col">
+          {/* Render content directly for conversations, wrap others in ScrollArea */}
+          {content.type === 'conversations' ? (
+            renderContent()
+          ) : (
+            <ScrollArea className="h-full">
+              {renderContent()}
+            </ScrollArea>
+          )}
           
           {/* Scaling indicator */}
           {isScaling && (
-            <div className="absolute bottom-2 right-2 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md flex items-center gap-1">
+            <div className="absolute bottom-2 right-2 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md flex items-center gap-1 z-10 pointer-events-none">
               <Lock className="h-3 w-3" />
               Aspect ratio locked
             </div>

@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useCallback, useState, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { VirtualList } from "@/components/ui/virtual-list";
@@ -23,6 +23,11 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import type NDK from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "@/components/chat/hooks/useChatMessages";
 import { EVENT_KINDS } from "@/lib/constants";
+import { useChatNavigationStore } from "@/stores/chatNavigation";
+import { useMurfTTS } from "@/hooks/useMurfTTS";
+import { useAgentTTSConfig } from "@/hooks/useAgentTTSConfig";
+import { extractTTSContent } from "@/lib/utils/extractTTSContent";
+import { isAudioEvent } from "@/lib/utils/audioEvents";
 
 interface ChatMessageListProps {
   messages: Message[];
@@ -37,7 +42,8 @@ interface ChatMessageListProps {
   onReplyFocus: () => void;
   isNewThread: boolean;
   isRootEventTask?: boolean;
-  onTimeClick?: (event: NDKEvent) => void;
+  autoTTS?: boolean;
+  currentUserPubkey?: string;
 }
 
 /**
@@ -57,9 +63,56 @@ export const ChatMessageList = memo(function ChatMessageList({
   onReplyFocus,
   isNewThread,
   isRootEventTask = false,
-  onTimeClick,
+  autoTTS = false,
+  currentUserPubkey,
 }: ChatMessageListProps) {
   const isMobile = useIsMobile();
+  const navigationStore = useChatNavigationStore();
+  const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(null);
+  
+  // TTS configuration
+  const ttsOptions = useAgentTTSConfig();
+  const tts = useMurfTTS(
+    ttsOptions || { apiKey: "", voiceId: "", enabled: false },
+  );
+
+  // Handle clicking on a message timestamp to navigate
+  const handleTimeClick = useCallback((event: NDKEvent) => {
+    // Push current root to stack and set new root
+    navigationStore.pushToStack(event);
+    navigationStore.setCurrentRoot(event);
+    // Scroll to top when changing root
+    setTimeout(() => {
+      scrollToBottom(false);
+    }, 100);
+  }, [navigationStore, scrollToBottom]);
+
+  // Auto-play new messages when auto-TTS is enabled
+  const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
+  
+  useEffect(() => {
+    if (!autoTTS || !ttsOptions || !latestMessageId || messages.length === 0) return;
+
+    const latestMessage = messages[messages.length - 1];
+
+    // Don't play messages from the current user
+    if (latestMessage.event.pubkey === currentUserPubkey) return;
+
+    // Don't play the same message twice
+    if (latestMessage.id === lastPlayedMessageId) return;
+
+    // Don't play audio messages (they have their own player)
+    if (isAudioEvent(latestMessage.event)) return;
+
+    // Extract and play TTS content
+    const ttsContent = extractTTSContent(latestMessage.event.content);
+    if (ttsContent && !tts.isPlaying) {
+      tts.play(ttsContent).catch(() => {
+        toast.error("TTS playback failed");
+      });
+      setLastPlayedMessageId(latestMessage.id);
+    }
+  }, [latestMessageId, autoTTS, ttsOptions, lastPlayedMessageId, currentUserPubkey, tts, messages]);
   const USE_VIRTUAL_LIST_THRESHOLD = 50; // Use virtual list for more than 50 messages
 
   const renderMessage = (message: Message, index: number) => {
@@ -74,7 +127,7 @@ export const ChatMessageList = memo(function ChatMessageList({
         >
           <MetadataChangeMessage
             event={message.event}
-            onTimeClick={onTimeClick}
+            onTimeClick={handleTimeClick}
           />
         </div>
       );
@@ -183,7 +236,7 @@ export const ChatMessageList = memo(function ChatMessageList({
               event={message.event}
               project={project}
               headerActions={taskHeaderActions}
-              onTimeClick={onTimeClick}
+              onTimeClick={handleTimeClick}
             >
               {/* Show only the task content for the first message */}
               <div className="text-sm text-foreground/90 whitespace-pre-wrap">
@@ -204,7 +257,7 @@ export const ChatMessageList = memo(function ChatMessageList({
             event={message.event}
             project={project}
             headerActions={taskHeaderActions}
-            onTimeClick={onTimeClick}
+            onTimeClick={handleTimeClick}
           >
             <TaskContent
               task={task}
@@ -230,7 +283,7 @@ export const ChatMessageList = memo(function ChatMessageList({
           event={message.event}
           project={project}
           onReply={onReplyFocus}
-          onTimeClick={onTimeClick}
+          onTimeClick={handleTimeClick}
         />
       </div>
     );

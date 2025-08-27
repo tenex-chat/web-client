@@ -4,12 +4,6 @@ import { cn } from "@/lib/utils";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
-import { useMurfTTS } from "@/hooks/useMurfTTS";
-import { useAgentTTSConfig } from "@/hooks/useAgentTTSConfig";
-import { extractTTSContent } from "@/lib/utils/extractTTSContent";
-import { isAudioEvent } from "@/lib/utils/audioEvents";
-import { VoiceDialog } from "@/components/dialogs/VoiceDialog";
-import { ImageUploadQueue } from "@/components/upload/ImageUploadQueue";
 import { ChatDropZone } from "./ChatDropZone";
 import { motion, AnimatePresence } from "framer-motion";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
@@ -63,12 +57,8 @@ export function ChatInterface({
   const navigationStore = useChatNavigationStore();
   const projectId = project?.dTag || '';
 
-  // State for voice and TTS
-  const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false);
+  // TTS state
   const [autoTTS, setAutoTTS] = useAutoTTS();
-  const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(
-    null,
-  );
 
   // Use navigation store to track current root event
   const currentRootFromStore = navigationStore.getCurrentRoot();
@@ -130,104 +120,55 @@ export function ChatInterface({
   const inputProps = useChatInput(
     project,
     localRootEvent,
-    onlineAgents,
-    textareaRef,
+    onlineAgents, // Pass the agents here
+    textareaRef, // Pass the textareaRef
     true,
   );
 
-  // TTS configuration
-  const ttsOptions = useAgentTTSConfig();
-  const tts = useMurfTTS(
-    ttsOptions || { apiKey: "", voiceId: "", enabled: false },
+  // Update threadManagement's localRootEvent when our localRootEvent state changes
+  useEffect(() => {
+    threadManagement.setLocalRootEvent(localRootEvent || null);
+  }, [localRootEvent, threadManagement]);
+
+  // Stable callback for sending messages - only pass what ChatInputArea needs
+  const handleSendMessage = useCallback(
+    async (content: string, mentions: any[], imageUploads: any[]) => {
+      if (!ndk || !user) return;
+
+      try {
+        await sendMessage(content, mentions, imageUploads, autoTTS, messages);
+
+        // Auto-scroll to bottom after sending
+        setTimeout(() => {
+          scrollProps.scrollToBottom(true);
+        }, 100);
+      } catch (error) {
+        toast.error("Failed to send message");
+      }
+    },
+    [ndk, user, sendMessage, autoTTS, messages, scrollProps]
   );
-
-  // Update localRootEvent when rootEvent prop changes
-  useEffect(() => {
-    threadManagement.setLocalRootEvent(rootEvent || null);
-  }, [rootEvent, threadManagement]);
-
-  // Auto-play new messages when auto-TTS is enabled
-  // Only depend on the latest message ID to avoid re-running on every render
-  const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
-  
-  useEffect(() => {
-    if (!autoTTS || !ttsOptions || !latestMessageId || messages.length === 0) return;
-
-    const latestMessage = messages[messages.length - 1];
-
-    // Don't play messages from the current user
-    if (latestMessage.event.pubkey === user?.pubkey) return;
-
-    // Don't play the same message twice
-    if (latestMessage.id === lastPlayedMessageId) return;
-
-    // Don't play audio messages (they have their own player)
-    if (isAudioEvent(latestMessage.event)) return;
-
-    // Extract and play TTS content
-    const ttsContent = extractTTSContent(latestMessage.event.content);
-    if (ttsContent && !tts.isPlaying) {
-      tts.play(ttsContent).catch(() => {
-        toast.error("TTS playback failed");
-      });
-      setLastPlayedMessageId(latestMessage.id);
-    }
-  }, [latestMessageId, autoTTS, ttsOptions, lastPlayedMessageId, user?.pubkey, tts, messages]);
-
-  // Handle sending messages
-  const handleSendMessage = useCallback(async () => {
-    if (
-      !ndk ||
-      !user ||
-      (!inputProps.messageInput.trim() &&
-        inputProps.pendingImageUrls.length === 0)
-    )
-      return;
-
-    try {
-      const content = inputProps.buildMessageContent();
-      const mentions = inputProps.mentionProps.extractMentions(content);
-      const completedUploads = inputProps.getCompletedUploads();
-
-      const imageUploads = completedUploads.map((upload) => ({
-        url: upload.url!,
-        metadata: upload.metadata,
-      }));
-
-      await sendMessage(content, mentions, imageUploads, autoTTS, messages);
-
-      inputProps.clearInput();
-
-      // Auto-scroll to bottom after sending
-      setTimeout(() => {
-        scrollProps.scrollToBottom(true);
-      }, 100);
-    } catch (error) {
-      toast.error("Failed to send message");
-    }
-  }, [ndk, user, inputProps, sendMessage, autoTTS, messages, scrollProps]);
 
   // Handle voice dialog completion
   const handleVoiceComplete = useCallback(
     async (data: { transcription: string }) => {
       if (data.transcription.trim()) {
         inputProps.setMessageInput(data.transcription);
-        await handleSendMessage();
+        // Voice sends need to build content and extract mentions
+        const content = data.transcription;
+        const mentions = inputProps.mentionProps.extractMentions(content);
+        const completedUploads = inputProps.getCompletedUploads();
+        const imageUploads = completedUploads.map((upload) => ({
+          url: upload.url!,
+          metadata: upload.metadata,
+        }));
+        await handleSendMessage(content, mentions, imageUploads);
+        inputProps.clearInput();
       }
     },
     [inputProps, handleSendMessage],
   );
 
-  // Handle clicking on a message timestamp to open it as root
-  const handleTimeClick = useCallback((event: NDKEvent) => {
-    // Push current root to stack and set new root
-    navigationStore.pushToStack(event);
-    setLocalRootEvent(event);
-    // Scroll to top when changing root
-    setTimeout(() => {
-      scrollProps.scrollToBottom(false);
-    }, 100);
-  }, [navigationStore, scrollProps]);
 
   // Enhanced back handler with navigation stack
   const handleBackWithStack = useCallback(() => {
@@ -248,12 +189,8 @@ export function ChatInterface({
     }
   }, [navigationStore, onBack]);
 
-  // Focus textarea on reply
-  const handleReplyFocus = useCallback(() => {
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  }, []);
+
+  console.log('rendering <ChatInterface>')
 
   const isNewThread = !localRootEvent;
 
@@ -274,7 +211,6 @@ export function ChatInterface({
           onBack={handleBackWithStack}
           autoTTS={autoTTS}
           onAutoTTSChange={setAutoTTS}
-          ttsEnabled={!!ttsOptions}
           messages={messages}
           project={project}
           onVoiceCallClick={onVoiceCallClick}
@@ -291,55 +227,25 @@ export function ChatInterface({
           scrollToBottom={scrollProps.scrollToBottom}
           onScroll={scrollProps.handleScroll}
           onTaskClick={onTaskClick}
-          onReplyFocus={handleReplyFocus}
           isNewThread={isNewThread}
           isRootEventTask={isRootEventTask}
-          onTimeClick={handleTimeClick}
+          autoTTS={autoTTS}
+          currentUserPubkey={user?.pubkey}
         />
 
-        {/* Input Area */}
+        {/* Input Area - manages its own voice dialog */}
         <ChatInputArea
+          project={project}
+          inputProps={inputProps}
           textareaRef={textareaRef}
-          messageInput={inputProps.messageInput}
-          setMessageInput={inputProps.setMessageInput}
-          pendingImageUrls={inputProps.pendingImageUrls}
-          removeImageUrl={inputProps.removeImageUrl}
-          uploadQueue={inputProps.uploadQueue}
-          uploadFiles={inputProps.uploadFiles}
-          handlePaste={inputProps.handlePaste}
-          cancelUpload={inputProps.cancelUpload}
-          retryUpload={inputProps.retryUpload}
-          setShowUploadProgress={inputProps.setShowUploadProgress}
-          mentionProps={inputProps.mentionProps}
           onSend={handleSendMessage}
-          onVoiceClick={() => setIsVoiceDialogOpen(true)}
           isNewThread={isNewThread}
           showVoiceButton={!isMobile}
+          canSend={!!ndk && !!user}
+          localRootEvent={localRootEvent}
+          onVoiceComplete={handleVoiceComplete}
         />
 
-        {/* Voice Dialog */}
-        <VoiceDialog
-          open={isVoiceDialogOpen}
-          onOpenChange={setIsVoiceDialogOpen}
-          onComplete={handleVoiceComplete}
-          conversationId={localRootEvent?.id}
-          projectId={project?.tagId()}
-          publishAudioEvent={true}
-        />
-
-        {/* Upload Queue Overlay */}
-        <AnimatePresence>
-          {inputProps.showUploadProgress &&
-            inputProps.uploadStats.total > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-              >
-                <ImageUploadQueue />
-              </motion.div>
-            )}
-        </AnimatePresence>
       </div>
     </ChatDropZone>
   );

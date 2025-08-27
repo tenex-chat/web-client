@@ -1,4 +1,5 @@
 import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
@@ -6,12 +7,11 @@ import {
   MoreVertical, 
   Cpu, 
   DollarSign, 
-  Volume2, 
-  Square,
   Menu,
   User,
   Copy
 } from 'lucide-react'
+import { TTSButton } from './TTSButton'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,30 +31,20 @@ import { useState } from 'react'
 
 interface MessageActionsToolbarProps {
   event: NDKEvent
+  project?: NDKProject | null
   onReply?: () => void
   onMetadataClick?: () => void
-  ttsOptions?: any
-  tts?: {
-    isPlaying: boolean
-    play: (text: string) => Promise<void>
-    stop: () => void
-  }
-  voiceName?: string
   llmMetadata?: Record<string, any> | null
-  extractTTSContent?: (content: string) => string
   isMobile: boolean
   isHovered?: boolean
 }
 
 export function MessageActionsToolbar({
   event,
+  project,
   onReply,
   onMetadataClick,
-  ttsOptions,
-  tts,
-  voiceName,
   llmMetadata,
-  extractTTSContent,
   isMobile,
   isHovered = false
 }: MessageActionsToolbarProps) {
@@ -73,30 +63,16 @@ export function MessageActionsToolbar({
           <Reply className="h-2.5 w-2.5" />
         </Button>
         
-        {/* TTS button if available */}
-        {ttsOptions && tts && event.content && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              if (tts.isPlaying) {
-                tts.stop()
-              } else if (extractTTSContent) {
-                const ttsContent = extractTTSContent(event.content)
-                if (ttsContent) {
-                  await tts.play(ttsContent)
-                }
-              }
-            }}
-            className="h-5 px-1 text-[10px] text-muted-foreground hover:text-foreground"
-          >
-            {tts.isPlaying ? (
-              <Square className="h-2.5 w-2.5" />
-            ) : (
-              <Volume2 className="h-2.5 w-2.5" />
-            )}
-          </Button>
-        )}
+        {/* TTS button */}
+        <TTSButton
+          content={event.content}
+          authorPubkey={event.pubkey}
+          projectId={project?.dTag}
+          size="sm"
+          variant="ghost"
+          className="h-5 px-1 text-[10px] text-muted-foreground hover:text-foreground [&>svg]:h-2.5 [&>svg]:w-2.5"
+          tooltipEnabled={false}
+        />
         
         {/* More options */}
         <DropdownMenu>
@@ -186,30 +162,14 @@ export function MessageActionsToolbar({
         isHovered ? "opacity-100" : "opacity-0"
       )}>
       {/* TTS button */}
-      {ttsOptions && tts && event.content && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={async () => {
-            if (tts.isPlaying) {
-              tts.stop()
-            } else if (extractTTSContent) {
-              const ttsContent = extractTTSContent(event.content)
-              if (ttsContent) {
-                await tts.play(ttsContent)
-              }
-            }
-          }}
-          className="h-7 w-7 p-0 hover:bg-muted"
-          title={tts.isPlaying ? `Stop reading (Voice: ${voiceName})` : `Read aloud (Voice: ${voiceName})`}
-        >
-          {tts.isPlaying ? (
-            <Square className="h-3.5 w-3.5" />
-          ) : (
-            <Volume2 className="h-3.5 w-3.5" />
-          )}
-        </Button>
-      )}
+      <TTSButton
+        content={event.content}
+        authorPubkey={event.pubkey}
+        projectId={project?.dTag}
+        size="icon"
+        variant="ghost"
+        className="h-7 w-7 p-0 hover:bg-muted"
+      />
       
       {/* Reply button */}
       <Button

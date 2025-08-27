@@ -1,22 +1,59 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { useMentions } from '@/hooks/useMentions';
+import { useDraftPersistence } from '@/hooks/useDraftPersistence';
 import type { NDKProject } from '@/lib/ndk-events/NDKProject';
 import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks';
 import type { AgentInstance } from '@/types/agent';
+import { NDKTask } from '@/lib/ndk-events/NDKTask';
 
 /**
  * Hook for managing chat input state and handlers
  */
 export function useChatInput(
-  _project: NDKProject,
-  _rootEvent: NDKEvent | null,
-  projectAgents: AgentInstance[],
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
+  _project: NDKProject | null | undefined,
+  rootEvent: NDKEvent | null,
+  projectAgents: AgentInstance[] | null,
+  textareaRef: React.RefObject<HTMLTextAreaElement | null> | null,
   includeAllProjects: boolean = false
 ) {
+  // Determine if root event is a task or thread for draft persistence
+  const threadId = rootEvent && rootEvent.kind !== NDKTask.kind ? rootEvent.id : undefined;
+  const taskId = rootEvent && rootEvent.kind === NDKTask.kind ? rootEvent.id : undefined;
+  
+  // Use draft persistence
+  const { draft, saveDraft, clearDraft } = useDraftPersistence({
+    threadId,
+    taskId,
+    enabled: true
+  });
+  
+  // Initialize state with draft or empty string
   const [messageInput, setMessageInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Load draft when root event changes or when draft is initially loaded
+  useEffect(() => {
+    // Load draft for this specific thread/task
+    if (draft) {
+      const key = rootEvent?.kind === NDKTask.kind ? `task:${rootEvent?.id}` : `thread:${rootEvent?.id}`;
+      console.log('Loading draft for', key, ':', draft);
+      setMessageInput(draft);
+    } else if (rootEvent?.id) {
+      // Clear input when switching to a thread/task without a draft
+      setMessageInput('');
+    }
+  }, [rootEvent?.id, draft, rootEvent?.kind]);
+  
+  // Save draft whenever input changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      console.log('Saving draft:', messageInput);
+      saveDraft(messageInput);
+    }, 500); // Debounce saving to avoid too frequent writes
+    
+    return () => clearTimeout(timeoutId);
+  }, [messageInput, saveDraft]);
 
   // Image upload functionality
   const {
@@ -34,10 +71,10 @@ export function useChatInput(
     clearUploads,
   } = useImageUpload();
 
-  // Mentions functionality
+  // Mentions functionality - make agents optional
   const mentionProps = useMentions({
-    agents: projectAgents,
-    textareaRef,
+    agents: projectAgents || [],
+    textareaRef: textareaRef || { current: null },
     messageInput,
     setMessageInput,
     includeAllProjects,
@@ -67,7 +104,8 @@ export function useChatInput(
   const clearInput = useCallback(() => {
     setMessageInput('');
     clearUploads();
-  }, [clearUploads]);
+    clearDraft(); // Clear the draft when sending message
+  }, [clearUploads, clearDraft]);
 
   // Handle submit
   const handleSubmit = useCallback(async (onSubmit: (message: string) => Promise<void>) => {

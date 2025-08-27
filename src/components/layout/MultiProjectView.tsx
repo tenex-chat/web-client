@@ -114,9 +114,11 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
   const handleDetachWindow = () => {
     if (!drawerContent || isMobile) return
     
-    // Prepare the drawer content for the floating window
+    // Create a deep copy of the drawer content to make it independent
     const contentForWindow: DrawerContent = {
-      ...drawerContent,
+      project: drawerContent.project, // NDKProject is immutable, safe to share reference
+      type: drawerContent.type,
+      item: drawerContent.item,
       data: selectedThreadEvent || drawerContent.data
     }
     

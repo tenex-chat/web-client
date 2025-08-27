@@ -1,4 +1,4 @@
-import { useRef, useCallback, memo } from "react";
+import React, { useRef, useCallback, memo, useState } from "react";
 import { Send, Mic, Paperclip, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,25 +7,22 @@ import { useIsMobile } from "@/hooks/useMediaQuery";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImagePreview } from "@/components/upload/ImagePreview";
 import { ChatMentionMenu } from "./ChatMentionMenu";
+import { VoiceDialog } from "@/components/dialogs/VoiceDialog";
+import { ImageUploadQueue } from "@/components/upload/ImageUploadQueue";
+import type { NDKProject } from "@/lib/ndk-events/NDKProject";
+import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 
 interface ChatInputAreaProps {
+  project?: NDKProject | null;
+  inputProps: any; // The entire inputProps object from useChatInput
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-  messageInput: string;
-  setMessageInput: (value: string) => void; // Used by mentionProps
-  pendingImageUrls: string[];
-  removeImageUrl: (url: string) => void;
-  uploadQueue: any[];
-  uploadFiles: (files: File[]) => Promise<void>;
-  handlePaste: (e: React.ClipboardEvent) => void;
-  cancelUpload: (id: string) => void;
-  retryUpload: (id: string) => void;
-  setShowUploadProgress: (show: boolean) => void;
-  mentionProps: any;
-  onSend: () => void;
-  onVoiceClick: () => void;
+  onSend: (content: string, mentions: any[], imageUploads: any[]) => void;
   isNewThread: boolean;
   disabled?: boolean;
   showVoiceButton?: boolean;
+  canSend: boolean;
+  localRootEvent: NDKEvent | null;
+  onVoiceComplete: (data: { transcription: string }) => void;
 }
 
 /**
@@ -33,27 +30,43 @@ interface ChatInputAreaProps {
  * Handles message input, file attachments, and mentions
  */
 export const ChatInputArea = memo(function ChatInputArea({
+  project,
+  inputProps,
   textareaRef,
-  messageInput,
-  setMessageInput,
-  pendingImageUrls,
-  removeImageUrl,
-  uploadQueue,
-  uploadFiles,
-  handlePaste,
-  cancelUpload,
-  retryUpload,
-  setShowUploadProgress,
-  mentionProps,
   onSend,
-  onVoiceClick,
   isNewThread,
   disabled = false,
   showVoiceButton = true,
+  canSend,
+  localRootEvent,
+  onVoiceComplete,
 }: ChatInputAreaProps) {
+  const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false);
+  // Focus input on reply (exposed through parent)
+  React.useImperativeHandle(inputProps.inputRef, () => ({
+    focus: () => textareaRef.current?.focus(),
+  }), []);
+
+  // Destructure from inputProps
+  const {
+    messageInput,
+    setMessageInput,
+    pendingImageUrls,
+    removeImageUrl,
+    uploadQueue,
+    uploadFiles,
+    handlePaste,
+    cancelUpload,
+    retryUpload,
+    setShowUploadProgress,
+    mentionProps,
+    buildMessageContent,
+    clearInput,
+    getCompletedUploads,
+  } = inputProps;
   const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+  
   // Update mention props with the textarea ref and setMessageInput
   const mentionPropsWithRef = {
     ...mentionProps,
@@ -63,6 +76,24 @@ export const ChatInputArea = memo(function ChatInputArea({
       mentionProps.handleInputChange(value);
     },
   };
+
+  // Handle sending with all the logic local to this component
+  const handleSend = useCallback(() => {
+    if (!canSend || (!messageInput.trim() && pendingImageUrls.length === 0)) {
+      return;
+    }
+
+    const content = buildMessageContent();
+    const mentions = mentionProps.extractMentions(content);
+    const completedUploads = getCompletedUploads();
+    const imageUploads = completedUploads.map((upload) => ({
+      url: upload.url!,
+      metadata: upload.metadata,
+    }));
+
+    onSend(content, mentions, imageUploads);
+    clearInput();
+  }, [canSend, messageInput, pendingImageUrls, buildMessageContent, mentionProps, getCompletedUploads, onSend, clearInput]);
 
   // Handle file selection from input
   const handleFileSelect = useCallback(
@@ -99,11 +130,9 @@ export const ChatInputArea = memo(function ChatInputArea({
     // Handle sending with Enter (without shift)
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      onSend();
+      handleSend();
     }
   };
-
-  const canSend = messageInput.trim() || pendingImageUrls.length > 0;
 
   return (
     <div
@@ -281,7 +310,7 @@ export const ChatInputArea = memo(function ChatInputArea({
 
             {!isMobile && showVoiceButton && (
               <Button
-                onClick={onVoiceClick}
+                onClick={() => setIsVoiceDialogOpen(true)}
                 size="icon"
                 variant="ghost"
                 disabled={disabled}
@@ -297,8 +326,8 @@ export const ChatInputArea = memo(function ChatInputArea({
             )}
 
             <Button
-              onClick={onSend}
-              disabled={disabled || !canSend}
+              onClick={handleSend}
+              disabled={disabled || !messageInput.trim() && pendingImageUrls.length === 0}
               size="icon"
               className={cn(
                 "rounded-full transition-all duration-200",
@@ -320,6 +349,30 @@ export const ChatInputArea = memo(function ChatInputArea({
           </div>
         </div>
       </div>
+      
+      {/* Voice Dialog */}
+      <VoiceDialog
+        open={isVoiceDialogOpen}
+        onOpenChange={setIsVoiceDialogOpen}
+        onComplete={onVoiceComplete}
+        conversationId={localRootEvent?.id}
+        projectId={project?.tagId()}
+        publishAudioEvent={true}
+      />
+
+      {/* Upload Queue Overlay */}
+      <AnimatePresence>
+        {inputProps.showUploadProgress &&
+          inputProps.uploadStats.total > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+            >
+              <ImageUploadQueue />
+            </motion.div>
+          )}
+      </AnimatePresence>
     </div>
   );
 });

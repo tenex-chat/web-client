@@ -148,14 +148,18 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   const sortedReplies = useMemo(() => {
     if (!directReplies || directReplies.length === 0) return []
     
-    // Filter to only include events that directly e-tag this event
+    // Filter out events that have a "root" tag marker
+    // These are already shown in the main conversation thread
     const filtered = directReplies.filter(reply => {
       const eTags = reply.tags?.filter(tag => tag[0] === 'e')
-      return eTags?.some(tag => tag[1] === event.id)
+      // Check if any e-tag has "root" as its marker (4th element)
+      const hasRootMarker = eTags?.some(tag => tag[3] === 'root')
+      // Exclude replies that have a root marker (they're in the main thread)
+      return !hasRootMarker
     })
     
     return filtered.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0))
-  }, [directReplies, event.id])
+  }, [directReplies])
 
   const handleReply = useCallback((targetEvent: NDKEvent) => {
     setReplyToEvent(targetEvent)
@@ -202,14 +206,8 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 
   // Count for replies display
   const replyCount = useMemo(() => {
-    if (!directReplies) return 0
-    
-    // Count events that directly e-tag this event
-    return directReplies.filter(reply => {
-      const eTags = reply.tags?.filter(tag => tag[0] === 'e')
-      return eTags?.some(tag => tag[1] === event.id)
-    }).length
-  }, [directReplies, event.id])
+    return sortedReplies.length
+  }, [sortedReplies])
 
   // Check if this is a typing indicator event
   const isTypingEvent = event.kind === EVENT_KINDS.TYPING_INDICATOR || event.kind === EVENT_KINDS.STREAMING_RESPONSE

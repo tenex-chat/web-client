@@ -91,9 +91,8 @@ export function streamingSessionsToMessages(
 }
 
 /**
- * Checks if an event should be shown in the main thread
- * Excludes events that have an "e" tag with "root" marker pointing to the conversation root
- * (these are replies that will be shown nested under other messages)
+ * Checks if an event is a direct reply to the root event
+ * (has an "e" tag pointing to the root, not just an "E" tag)
  */
 function isDirectReplyToRoot(event: NDKEvent, rootEvent: NDKEvent | null): boolean {
   if (!rootEvent) return true // If no root, include all events
@@ -101,20 +100,9 @@ function isDirectReplyToRoot(event: NDKEvent, rootEvent: NDKEvent | null): boole
   // The root event itself should always be included
   if (event.id === rootEvent.id) return true
   
-  // Check if this event has an "e" tag with "root" marker pointing to our conversation root
-  // If it does, it means this is a reply that should be shown nested, not in main thread
+  // Check if this event has a lowercase "e" tag pointing to the root
   const eTags = event.getMatchingTags('e')
-  for (const tag of eTags) {
-    // tag format: ["e", "<event-id>", "<relay-url>", "<marker>"]
-    if (tag[1] === rootEvent.id && tag[3] === 'root') {
-      // This event marks our root as its root, so it's a nested reply
-      // Don't show it in the main thread (it will be shown as a nested reply)
-      return false
-    }
-  }
-  
-  // Include events that don't have a "root" marker to our conversation root
-  return true
+  return eTags.some(tag => tag[1] === rootEvent.id)
 }
 
 /**

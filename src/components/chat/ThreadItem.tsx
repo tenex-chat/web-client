@@ -69,7 +69,7 @@ export const ThreadItem = memo(function ThreadItem({ thread, isSelected, onSelec
         uniqueParticipants.add(reply.pubkey)
       }
       
-      const replyTime = reply.created_at || 0
+      const replyTime = reply.created_at!
       if (replyTime > latestReplyTime) {
         latestReplyTime = replyTime
         latestReplyContent = reply.content
@@ -95,7 +95,7 @@ export const ThreadItem = memo(function ThreadItem({ thread, isSelected, onSelec
   // Use processed data instead of state
   const { replyCount, participants, lastReplyAt, lastMessage, currentPhase } = processedReplyData
 
-  const lastActivityTime = lastReplyAt || thread.created_at || 0
+  const lastActivityTime = lastReplyAt ?? thread.created_at!
 
   return (
     <button

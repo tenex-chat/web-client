@@ -46,9 +46,9 @@ interface ConversationAgentsProps {
 interface AgentInfo {
   pubkey: string;
   slug?: string;
-  model?: string;  // Model slug from the agent
+  model?: string;  // Model slug from the agent - optional
   lastMessageId?: string;
-  tools?: string[];
+  tools?: string[];  // Tools are optional - agent might not use any
   isProjectAgent?: boolean; // Flag to indicate if this is a project agent
 }
 
@@ -96,15 +96,15 @@ function AgentAvatar({
   }
 
   // Logic for project agents (the popover)
-  const [selectedModel, setSelectedModel] = useState(agent.model || "");
+  const [selectedModel, setSelectedModel] = useState(agent.model ?? "");
   const [selectedTools, setSelectedTools] = useState<Set<string>>(
-    new Set(agent.tools || []),
+    new Set(agent.tools ?? []),
   );
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   const hasChanges =
-    selectedModel !== (agent.model || "") ||
-    !setsAreEqual(selectedTools, new Set(agent.tools || []));
+    selectedModel !== (agent.model ?? "") ||
+    !setsAreEqual(selectedTools, new Set(agent.tools ?? []));
 
   function setsAreEqual<T>(setA: Set<T>, setB: Set<T>): boolean {
     if (setA.size !== setB.size) return false;
@@ -127,6 +127,10 @@ function AgentAvatar({
   };
 
   const handleSave = async () => {
+    if (!agent.slug) {
+      toast.error("Agent slug is missing");
+      return;
+    }
     try {
       await onSaveChanges(
         agent.pubkey,
@@ -294,7 +298,7 @@ export function ConversationAgents({
           slug: agentInfo?.slug,
           model: agentInfo?.model,
           lastMessageId: message.id,
-          tools: agentInfo?.tools || [],
+          tools: agentInfo?.tools,
           isProjectAgent: !!agentInfo,
         });
       } else {
@@ -316,7 +320,7 @@ export function ConversationAgents({
             slug: agentInfo?.slug,
             model: agentInfo?.model,
             lastMessageId: message.id,
-            tools: agentInfo?.tools || [],
+            tools: agentInfo?.tools,
             isProjectAgent: !!agentInfo,
           });
         }
@@ -340,7 +344,7 @@ export function ConversationAgents({
           slug: agentInfo?.slug || 'Agent',
           model: agentInfo?.model,
           lastMessageId: event.id,
-          tools: agentInfo?.tools || [],
+          tools: agentInfo?.tools,
           isProjectAgent: !!agentInfo,
         });
       });
@@ -349,7 +353,7 @@ export function ConversationAgents({
     return Array.from(agentsMap.values());
   }, [messages, onlineAgents, user?.pubkey, rootEvent, threadParticipants]);
 
-  const handleSaveChanges = async (agentPubkey: string, agentName: string, newModel: string, tools: string[]) => {
+  const handleSaveChanges = async (agentPubkey: string, _agentName: string, newModel: string, tools: string[]) => {
     if (!ndk || !user || !rootEvent) return;
 
     try {

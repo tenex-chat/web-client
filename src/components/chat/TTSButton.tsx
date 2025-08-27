@@ -38,22 +38,18 @@ export function TTSButton({
   const agentSlug = useMemo(() => {
     if (!onlineAgents || onlineAgents.length === 0) return null
     const agent = onlineAgents.find(a => a.pubkey === authorPubkey)
-    return agent?.slug || null
+    return agent?.slug ?? null
   }, [onlineAgents, authorPubkey])
   
   // Get TTS configuration for this agent
-  const ttsConfig = useAgentTTSConfig(agentSlug || undefined)
+  const ttsConfig = useAgentTTSConfig(agentSlug ?? undefined)
   const voiceName = getVoiceDisplayName(ttsConfig)
   
-  // Initialize TTS
-  const tts = useMurfTTS(ttsConfig || {
-    apiKey: '',
-    voiceId: '',
-    enabled: false
-  })
+  // Don't render if TTS is not configured
+  if (!ttsConfig || !ttsConfig.enabled || !agentSlug || !content) return null
   
-  // Don't render if TTS is not enabled
-  if (!ttsConfig?.enabled || !agentSlug || !content) return null
+  // Initialize TTS only if we have config
+  const tts = useMurfTTS(ttsConfig)
   
   const handleClick = () => {
     if (tts.isPlaying) {

@@ -17,7 +17,6 @@ import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import { Link } from '@tanstack/react-router'
 import { useMarkdownComponents } from '@/lib/markdown/config'
 import { extractLLMMetadata, getEventPhase, getEventPhaseFrom } from '@/lib/utils/event-metadata'
-import { formatRelativeTime, formatCompactTime } from '@/lib/utils/time'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { getUserStatus } from '@/lib/utils/userStatus'
 import { useAtomValue, useSetAtom } from 'jotai'
@@ -201,7 +200,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
       return { contentParts: [], shouldTruncate: false }
     }
     
-    let content = event.content || ""
+    let content = event.content ?? ""  // Empty string is valid content
     const parts: Array<{ type: 'text' | 'thinking', content: string }> = []
     
     // Special handling for task messages - hide the entire thinking block content
@@ -319,7 +318,6 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   // Responsive padding and margins
   const paddingClass = isMobile ? "px-3 py-1" : "px-4 py-1"
   const nestedMargin = isMobile ? "ml-4" : "ml-4"
-  const avatarSize = isMobile ? "h-7 w-7" : "h-9 w-9"
   const contentGap = isMobile ? "gap-2" : "gap-3"
 
   return (

@@ -28,8 +28,6 @@ import { useAgentTTSConfig } from "@/hooks/useAgentTTSConfig";
 interface ChatHeaderProps {
   rootEvent: NDKEvent | null;
   onBack?: () => void;
-  autoTTS: boolean;
-  onAutoTTSChange: (enabled: boolean) => void;
   messages?: Message[];
   project?: NDKProject | null;
   onVoiceCallClick?: () => void;
@@ -42,8 +40,6 @@ interface ChatHeaderProps {
 export function ChatHeader({
   rootEvent,
   onBack,
-  autoTTS,
-  onAutoTTSChange,
   messages,
   project,
   onVoiceCallClick,

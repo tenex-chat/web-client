@@ -32,7 +32,6 @@ import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition'
 import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
 import { cn } from '@/lib/utils'
-import { EVENT_KINDS } from '@/lib/constants'
 
 interface CreateProjectDialogProps {
   open: boolean

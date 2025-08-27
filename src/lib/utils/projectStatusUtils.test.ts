@@ -3,7 +3,6 @@ import { bringProjectOnline } from './projectStatusUtils'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { NDKEvent } from '@nostr-dev-kit/ndk'
 import type NDK from '@nostr-dev-kit/ndk'
-import { EVENT_KINDS } from '@/lib/constants'
 
 // Mock sonner toast
 vi.mock('sonner', () => ({

@@ -63,9 +63,9 @@ export function MessageHeaderContent({
             <button
               onClick={() => onTimeClick?.(event)}
               className="text-[10px] text-muted-foreground hover:text-foreground transition-colors hover:underline"
-              title={formatRelativeTime(event.created_at || 0)}
+              title={formatRelativeTime(event.created_at!)}
             >
-              {formatCompactTime(event.created_at || 0)}
+              {formatCompactTime(event.created_at!)}
             </button>
           )}
           {phase && (
@@ -130,7 +130,7 @@ export function MessageHeaderContent({
         className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer hover:underline"
         title="Open as root conversation"
       >
-        {formatRelativeTime(event.created_at || 0)}
+        {formatRelativeTime(event.created_at!)}
       </button>
       {recipientPubkeys.length > 0 && (
         <>

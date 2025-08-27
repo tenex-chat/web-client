@@ -112,7 +112,7 @@ export const MessageShell = memo(function MessageShell({
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer hover:underline"
                 title="Open as root conversation"
               >
-                {formatRelativeTime(event.created_at || 0)}
+                {formatRelativeTime(event.created_at!)}
               </button>
               {recipientPubkeys.length > 0 && (
                 <>

@@ -73,8 +73,8 @@ export function useChatInput(
 
   // Mentions functionality - make agents optional
   const mentionProps = useMentions({
-    agents: projectAgents || [],
-    textareaRef: textareaRef || { current: null },
+    agents: projectAgents ?? [],
+    textareaRef: textareaRef ?? { current: null },
     messageInput,
     setMessageInput,
     includeAllProjects,

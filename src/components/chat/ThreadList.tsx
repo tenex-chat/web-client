@@ -40,7 +40,7 @@ export const ThreadList = memo(function ThreadList({
     if (!threadEvents || threadEvents.length === 0) return []
     
     return [...threadEvents].sort((a, b) => 
-      (b.created_at || 0) - (a.created_at || 0)
+      b.created_at! - a.created_at!
     )
   }, [threadEvents])
 

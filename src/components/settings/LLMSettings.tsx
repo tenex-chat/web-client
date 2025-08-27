@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useAtom } from 'jotai';
 import { useToast } from '@/hooks/use-toast';
 import { fetchProviderModels, DEFAULT_MODELS } from '@/services/llm-models';
 import { logger } from '@/lib/logger';

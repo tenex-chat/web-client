@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { NDKArticle, NDKKind } from "@nostr-dev-kit/ndk";
-import { EVENT_KINDS } from "@/lib/constants";
 import { formatRelativeTime } from "@/lib/utils/time";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";

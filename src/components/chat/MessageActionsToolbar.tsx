@@ -7,7 +7,6 @@ import {
   MoreVertical, 
   Cpu, 
   DollarSign, 
-  Menu,
   User,
   Copy
 } from 'lucide-react'

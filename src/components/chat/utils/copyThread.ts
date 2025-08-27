@@ -85,7 +85,7 @@ async function formatMessageWithReplies(
   })
   
   // Sort replies by timestamp
-  directReplies.sort((a, b) => (a.created_at || 0) - (b.created_at || 0))
+  directReplies.sort((a, b) => a.created_at! - b.created_at!)
   
   // Process each reply recursively
   if (directReplies.length > 0) {
@@ -255,7 +255,7 @@ async function formatMessageAsJSON(
   })
   
   // Sort replies by timestamp
-  directReplies.sort((a, b) => (a.created_at || 0) - (b.created_at || 0))
+  directReplies.sort((a, b) => a.created_at! - b.created_at!)
   
   // Process replies recursively
   if (directReplies.length > 0) {

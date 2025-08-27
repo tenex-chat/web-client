@@ -52,7 +52,6 @@ export function CallSettings({ className }: CallSettingsProps) {
   const {
     fullTranscript,
     isSupported: isSpeechSupported,
-    isListening,
     startListening,
     stopListening,
     resetTranscript

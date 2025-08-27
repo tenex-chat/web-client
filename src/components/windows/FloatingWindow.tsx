@@ -177,7 +177,7 @@ export function FloatingWindow({
           setIsScaling(true)
         }
       }}
-      onResize={(e, direction, ref, delta, position) => {
+      onResize={(e, _direction, ref, _delta, _position) => {
         // Check if shift key is pressed for proportional scaling
         if (e instanceof MouseEvent && e.shiftKey) {
           const newWidth = parseInt(ref.style.width)

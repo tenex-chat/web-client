@@ -130,7 +130,7 @@ export function processEventsToMessages(events: NDKEvent[], rootEvent: NDKEvent 
   
   // Sort everything by timestamp
   finalMessages.sort((a, b) => 
-    (a.event.created_at || 0) - (b.event.created_at || 0)
+    a.event.created_at! - b.event.created_at!
   )
   
   return finalMessages

@@ -4,8 +4,7 @@ import {
   validateFile, 
   validateFiles,
   getFileSize,
-  DEFAULT_MAX_SIZE_MB,
-  SUPPORTED_IMAGE_TYPES
+  DEFAULT_MAX_SIZE_MB
 } from './fileValidation'
 
 describe('fileValidation', () => {

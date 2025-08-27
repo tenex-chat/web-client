@@ -15,13 +15,11 @@ import { generateAgentColor } from "@/lib/utils/agent-colors";
 interface AgentDefinitionCardProps {
   agent: NDKAgentDefinition;
   onClick: () => void;
-  getRoleColor: (role: string) => string;
 }
 
 export function AgentDefinitionCard({
   agent,
   onClick,
-  getRoleColor,
 }: AgentDefinitionCardProps) {
   const authorProfile = useProfile(agent.pubkey);
   const agentColor = generateAgentColor(agent.name || agent.id);

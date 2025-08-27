@@ -5,7 +5,6 @@ import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
 import { ChatDropZone } from "./ChatDropZone";
-import { motion, AnimatePresence } from "framer-motion";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
@@ -55,10 +54,24 @@ export function ChatInterface({
 
   // Navigation store
   const navigationStore = useChatNavigationStore();
-  const projectId = project?.dTag || '';
+  
+  // Require project for chat functionality  
+  if (!project) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        No project selected
+      </div>
+    );
+  }
+  
+  if (!project.dTag) {
+    console.error('ChatInterface: Project missing required dTag field');
+    return null;
+  }
+  const projectId = project.dTag;
 
   // TTS state
-  const [autoTTS, setAutoTTS] = useAutoTTS();
+  const [autoTTS] = useAutoTTS();
 
   // Use navigation store to track current root event
   const currentRootFromStore = navigationStore.getCurrentRoot();
@@ -127,13 +140,16 @@ export function ChatInterface({
 
   // Update threadManagement's localRootEvent when our localRootEvent state changes
   useEffect(() => {
-    threadManagement.setLocalRootEvent(localRootEvent || null);
+    threadManagement.setLocalRootEvent(localRootEvent);
   }, [localRootEvent, threadManagement]);
 
   // Stable callback for sending messages - only pass what ChatInputArea needs
   const handleSendMessage = useCallback(
     async (content: string, mentions: any[], imageUploads: any[]) => {
-      if (!ndk || !user) return;
+      if (!ndk || !user) {
+        console.error('ChatInterface: Cannot send message without NDK or user');
+        return;
+      }
 
       try {
         await sendMessage(content, mentions, imageUploads, autoTTS, messages);
@@ -209,8 +225,6 @@ export function ChatInterface({
         <ChatHeader
           rootEvent={localRootEvent}
           onBack={handleBackWithStack}
-          autoTTS={autoTTS}
-          onAutoTTSChange={setAutoTTS}
           messages={messages}
           project={project}
           onVoiceCallClick={onVoiceCallClick}
@@ -219,8 +233,8 @@ export function ChatInterface({
         {/* Messages Area */}
         <ChatMessageList
           messages={messages}
-          project={project!}
-          ndk={ndk || undefined}
+          project={project}
+          ndk={ndk ?? undefined}
           scrollAreaRef={scrollProps.scrollAreaRef}
           showScrollToBottom={scrollProps.showScrollToBottom}
           unreadCount={scrollProps.unreadCount}

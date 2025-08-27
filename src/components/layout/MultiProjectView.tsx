@@ -15,6 +15,11 @@ import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { CallView } from '@/components/call/CallView'
+import { WindowManager } from '@/components/windows/WindowManager'
+import { useWindowManager } from '@/stores/windowManager'
+import { useIsMobile } from '@/hooks/useMediaQuery'
+import { ExternalLink } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 type TabType = 'conversations' | 'docs' | 'agents' | 'status' | 'settings' | 'tasks'
 
@@ -38,6 +43,9 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
   const [editingArticle, setEditingArticle] = useState<NDKArticle | null>(null)
   const [showCallView, setShowCallView] = useState(false)
   const [callViewProject, setCallViewProject] = useState<NDKProject | null>(null)
+  
+  const { addWindow, canAddWindow } = useWindowManager()
+  const isMobile = useIsMobile()
   
   // Collect existing hashtags from documentation for suggestions
   const currentProject = drawerContent?.project
@@ -101,6 +109,24 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
     setSelectedArticle(null)
     setIsCreatingDoc(false)
     setEditingArticle(null)
+  }
+
+  const handleDetachWindow = () => {
+    if (!drawerContent || isMobile) return
+    
+    // Prepare the drawer content for the floating window
+    const contentForWindow: DrawerContent = {
+      ...drawerContent,
+      data: selectedThreadEvent || drawerContent.data
+    }
+    
+    // Add to floating windows
+    const windowId = addWindow(contentForWindow)
+    
+    if (windowId) {
+      // Close the drawer after successful detachment
+      handleDrawerClose()
+    }
   }
 
   const renderDrawerContent = () => {
@@ -253,6 +279,21 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
           )}
           side="right"
         >
+          {/* Add detach button in header for desktop only */}
+          {!isMobile && drawerContent && (
+            <div className="absolute top-4 right-16 z-[60]">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDetachWindow}
+                disabled={!canAddWindow()}
+                title={canAddWindow() ? "Detach to floating window" : "Maximum windows reached (5)"}
+                className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           {drawerContent && renderDrawerContent()}
         </SheetContent>
       </Sheet>
@@ -278,6 +319,9 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
           extraTags={selectedThreadEvent ? [['E', selectedThreadEvent.id]] : undefined}
         />
       )}
+      
+      {/* Floating Windows Manager - Desktop only */}
+      {!isMobile && <WindowManager />}
     </div>
   )
 }

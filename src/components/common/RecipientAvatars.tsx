@@ -71,7 +71,7 @@ export function RecipientAvatars({
   pubkeys, 
   className,
   avatarClassName,
-  maxDisplay = 3 
+  maxDisplay = 20 
 }: RecipientAvatarsProps) {
   if (!pubkeys || pubkeys.length === 0) return null
   

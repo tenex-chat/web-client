@@ -32,8 +32,7 @@ export const ThreadList = memo(function ThreadList({
           },
         ]
       : false,
-    {},
-    [project?.dTag],
+    {}
   )
 
   // Sort threads by creation time (newest first)

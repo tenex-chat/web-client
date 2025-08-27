@@ -32,8 +32,7 @@ export const TaskCard = memo(
 							"#e": [task.id],
 						},
 					],
-					{ closeOnEose: false, groupable: true },
-					[task.id],
+					{ closeOnEose: false, groupable: true }
 				);
 
     // Get the latest status update

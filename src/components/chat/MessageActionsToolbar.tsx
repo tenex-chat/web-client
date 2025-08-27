@@ -8,7 +8,9 @@ import {
   DollarSign, 
   Volume2, 
   Square,
-  Menu
+  Menu,
+  User,
+  Copy
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -16,6 +18,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { formatCost } from '@/lib/utils/formatCost'
@@ -50,6 +58,7 @@ export function MessageActionsToolbar({
   isMobile,
   isHovered = false
 }: MessageActionsToolbarProps) {
+  const [showRawEventDialog, setShowRawEventDialog] = useState(false)
   // Mobile layout: Inline actions integrated with message
   if (isMobile) {
     return (
@@ -113,11 +122,30 @@ export function MessageActionsToolbar({
             <DropdownMenuItem 
               className="cursor-pointer text-xs"
               onClick={() => {
+                navigator.clipboard.writeText(event.pubkey)
+                toast.success('Author pubkey copied')
+              }}
+            >
+              <User className="h-3 w-3 mr-2" />
+              Copy Author
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              className="cursor-pointer text-xs"
+              onClick={() => {
                 navigator.clipboard.writeText(event.encode())
                 toast.success('ID copied')
               }}
             >
+              <Copy className="h-3 w-3 mr-2" />
               Copy ID
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              className="cursor-pointer text-xs"
+              onClick={() => {
+                setShowRawEventDialog(true)
+              }}
+            >
+              View Raw Event
             </DropdownMenuItem>
             <DropdownMenuItem 
               className="cursor-pointer text-xs"
@@ -127,6 +155,7 @@ export function MessageActionsToolbar({
                 toast.success('Raw event copied')
               }}
             >
+              <Copy className="h-3 w-3 mr-2" />
               Copy Raw Event
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -151,10 +180,11 @@ export function MessageActionsToolbar({
 
   // Desktop layout: Hover-based actions
   return (
-    <div className={cn(
-      "flex items-center gap-0.5 transition-opacity",
-      isHovered ? "opacity-100" : "opacity-0"
-    )}>
+    <>
+      <div className={cn(
+        "flex items-center gap-0.5 transition-opacity",
+        isHovered ? "opacity-100" : "opacity-0"
+      )}>
       {/* TTS button */}
       {ttsOptions && tts && event.content && (
         <Button
@@ -221,28 +251,40 @@ export function MessageActionsToolbar({
           <DropdownMenuItem 
             className="cursor-pointer"
             onClick={() => {
-              navigator.clipboard.writeText(event.encode())
+              navigator.clipboard.writeText(event.pubkey)
+              toast.success('Author pubkey copied')
             }}
           >
+            <User className="h-3.5 w-3.5 mr-2" />
+            Copy Author
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            className="cursor-pointer"
+            onClick={() => {
+              navigator.clipboard.writeText(event.encode())
+              toast.success('ID copied')
+            }}
+          >
+            <Copy className="h-3.5 w-3.5 mr-2" />
             Copy ID
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            className="cursor-pointer"
+            onClick={() => {
+              setShowRawEventDialog(true)
+            }}
+          >
+            View Raw Event
           </DropdownMenuItem>
           <DropdownMenuItem 
             className="cursor-pointer"
             onClick={() => {
               const rawEventString = JSON.stringify(event.rawEvent(), null, 2)
               navigator.clipboard.writeText(rawEventString)
-              toast.success('Raw event copied to clipboard')
+              toast.success('Raw event copied')
             }}
           >
-            View Raw
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            className="cursor-pointer"
-            onClick={() => {
-              const rawEventString = JSON.stringify(event.rawEvent(), null, 4)
-              navigator.clipboard.writeText(rawEventString)
-            }}
-          >
+            <Copy className="h-3.5 w-3.5 mr-2" />
             Copy Raw Event
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -262,6 +304,20 @@ export function MessageActionsToolbar({
           </Badge>
         )
       })()}
-    </div>
+      
+      </div>
+      
+      {/* Raw Event Dialog */}
+      <Dialog open={showRawEventDialog} onOpenChange={setShowRawEventDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Raw Event</DialogTitle>
+          </DialogHeader>
+          <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto">
+            {JSON.stringify(event.rawEvent(), null, 2)}
+          </pre>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

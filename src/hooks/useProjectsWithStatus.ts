@@ -27,13 +27,13 @@ export function useProjectsWithStatus(projects: NDKProject[]) {
 
   // Subscribe to status events published by the current user (their projects)
   // This is much more efficient than fetching all status events
-  const filter = projects.length > 0 && userPubkey ? {
-    kinds: [NDKProjectStatus.kind as number],
-    '#p': [userPubkey], // Only fetch status events that reference the current user
-    since: Math.floor(Date.now() / 1000) - TIMING.PROJECT_STATUS_FILTER_SECONDS
-  } : undefined
-
-  const { events } = useSubscribe(filter ? [filter] : [])
+  const { events } = useSubscribe(
+    projects.length > 0 && userPubkey ? [{
+      kinds: [NDKProjectStatus.kind as number],
+      '#p': [userPubkey], // Only fetch status events that reference the current user
+      since: Math.floor(Date.now() / 1000) - TIMING.PROJECT_STATUS_FILTER_SECONDS
+    }] : []
+  )
 
   useEffect(() => {
     if (projects.length === 0) {

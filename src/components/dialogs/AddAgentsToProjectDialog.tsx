@@ -11,7 +11,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Bot } from 'lucide-react';
+import { Loader2, Bot, AlertCircle, Wrench, Server } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition';
 import { NDKProject } from '@/lib/ndk-events/NDKProject';
 import { AgentDefinitionCard } from '@/components/agents/AgentDefinitionCard';
@@ -108,6 +109,24 @@ export function AddAgentsToProjectDialog({
 
     setIsAdding(true);
     try {
+      // Collect all MCP servers needed by selected agents
+      const mcpServersToAdd = new Set<string>();
+      const toolsRequiredByAgents = new Set<string>();
+      
+      selectedAgentIds.forEach(agentId => {
+        const agent = agents.find(a => a.id === agentId);
+        if (agent) {
+          // Collect MCP servers from this agent
+          agent.mcpServers?.forEach(mcpEventId => {
+            mcpServersToAdd.add(mcpEventId);
+          });
+          // Collect tools for informational purposes
+          agent.tools?.forEach(tool => {
+            toolsRequiredByAgents.add(tool);
+          });
+        }
+      });
+
       // Add each selected agent to the project
       selectedAgentIds.forEach(agentId => {
         if (!existingAgentIds.includes(agentId)) {
@@ -115,10 +134,23 @@ export function AddAgentsToProjectDialog({
         }
       });
 
+      // Add required MCP servers to the project
+      // Check which ones are already added to avoid duplicates
+      const existingMCPTools = project.mcpTools || [];
+      mcpServersToAdd.forEach(mcpEventId => {
+        if (!existingMCPTools.includes(mcpEventId)) {
+          project.addMCPTool(mcpEventId);
+        }
+      });
+
       // Publish the updated project event
       await project.publishReplaceable();
       
-      toast.success(`Added ${selectedAgentIds.size} agent${selectedAgentIds.size > 1 ? 's' : ''} to the project`);
+      let successMessage = `Added ${selectedAgentIds.size} agent${selectedAgentIds.size > 1 ? 's' : ''} to the project`;
+      if (mcpServersToAdd.size > 0) {
+        successMessage += ` and installed ${mcpServersToAdd.size} MCP server${mcpServersToAdd.size > 1 ? 's' : ''}`;
+      }
+      toast.success(successMessage);
       
       // Reset and close
       setSelectedAgentIds(new Set());
@@ -141,6 +173,25 @@ export function AddAgentsToProjectDialog({
     }
     setSelectedAgentIds(newSelection);
   };
+
+  // Calculate required tools and MCP servers for selected agents
+  const selectedAgentsRequirements = useMemo(() => {
+    const tools = new Set<string>();
+    const mcpServers = new Set<string>();
+    
+    selectedAgentIds.forEach(agentId => {
+      const agent = agents.find(a => a.id === agentId);
+      if (agent) {
+        agent.tools?.forEach(tool => tools.add(tool));
+        agent.mcpServers?.forEach(mcp => mcpServers.add(mcp));
+      }
+    });
+    
+    return {
+      tools: Array.from(tools),
+      mcpServers: Array.from(mcpServers)
+    };
+  }, [selectedAgentIds, agents]);
 
   const getRoleColor = (role: string) => {
     const roleColors: Record<string, string> = {
@@ -172,6 +223,42 @@ export function AddAgentsToProjectDialog({
             placeholder="Search agents by name, description, or role..."
           />
         </div>
+        
+        {/* Show requirements alert if agents have tools or MCP requirements */}
+        {selectedAgentIds.size > 0 && (selectedAgentsRequirements.tools.length > 0 || selectedAgentsRequirements.mcpServers.length > 0) && (
+          <div className="px-6 pb-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="space-y-2">
+                  <div>Selected agents require:</div>
+                  {selectedAgentsRequirements.tools.length > 0 && (
+                    <div className="flex items-start gap-2">
+                      <Wrench className="h-3 w-3 mt-0.5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium">Tools: </span>
+                        <span className="text-sm text-muted-foreground">
+                          {selectedAgentsRequirements.tools.join(', ')}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {selectedAgentsRequirements.mcpServers.length > 0 && (
+                    <div className="flex items-start gap-2">
+                      <Server className="h-3 w-3 mt-0.5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium">MCP Servers: </span>
+                        <span className="text-sm text-muted-foreground">
+                          {selectedAgentsRequirements.mcpServers.length} server{selectedAgentsRequirements.mcpServers.length !== 1 ? 's' : ''} will be installed
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
         
         {/* Agent Grid with proper scrolling */}
         <ScrollArea className="flex-1 px-6">

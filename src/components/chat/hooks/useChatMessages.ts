@@ -21,10 +21,16 @@ export function useChatMessages(_project: NDKProject, rootEvent: NDKEvent | null
     rootEvent
       ? [{ ids: [rootEvent.id] }, rootEvent.filter(), rootEvent.nip22Filter()]
       : false,
-    { closeOnEose: false, groupable: false },
+    { closeOnEose: false, groupable: false, subId: 'use-chat-messages' },
     [rootEvent?.id],
   )
 
+  if (events) {
+    for (const e of events) {
+      console.log('here', e.content)
+    }
+  }
+  
   // Process thread replies into messages with streaming session management
   useEffect(() => {
     const processedMessages = processEventsToMessages(events, rootEvent)

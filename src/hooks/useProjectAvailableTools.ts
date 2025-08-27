@@ -7,9 +7,10 @@ import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
 
 /**
  * Gets all tools available in the project.
- * This includes both:
+ * This includes:
  * 1. Tools defined in the project event (mcp tags)
  * 2. Tools currently assigned to agents (from project status)
+ * 3. Unassigned tools from project status events (standalone tool tags)
  */
 export function useProjectAvailableTools(projectDTag?: string): string[] {
   const projectStatus = useProjectStatus(projectDTag)
@@ -38,12 +39,22 @@ export function useProjectAvailableTools(projectDTag?: string): string[] {
       })
     }
     
-    // Also add tools currently assigned to agents (from project status)
-    // This ensures we capture any dynamically added tools
+    // Add tools currently assigned to agents (from project status)
     if (projectStatus?.agents) {
       projectStatus.agents.forEach(agent => {
         if (agent.tools) {
           agent.tools.forEach(tool => toolSet.add(tool))
+        }
+      })
+    }
+    
+    // Add unassigned tools from the status event
+    // These are tool tags without any agent assignments: ["tool", "tool-name"]
+    if (projectStatus?.statusEvent) {
+      projectStatus.statusEvent.tags.forEach(tag => {
+        if (tag[0] === 'tool' && tag[1] && tag.length === 2) {
+          // This is an unassigned tool (no agent names in the tag)
+          toolSet.add(tag[1])
         }
       })
     }

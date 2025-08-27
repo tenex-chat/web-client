@@ -22,6 +22,7 @@ import type { Message } from "@/components/chat/hooks/useChatMessages";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { formatThreadAsMarkdown, formatThreadAsJSON } from "@/components/chat/utils/copyThread";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
+import { useConversationMetadata } from "@/hooks/useConversationMetadata";
 
 interface ChatHeaderProps {
   rootEvent: NDKEvent | null;
@@ -54,19 +55,30 @@ export function ChatHeader({
   const [copiedFormat, setCopiedFormat] = useState<'markdown' | 'json' | null>(null);
   const { ndk } = useNDK();
 
+  // Subscribe to metadata updates for this conversation
+  const metadata = useConversationMetadata(rootEvent?.id);
+
   // Get thread title
   const threadTitle = useMemo(() => {
+    // First priority: metadata title from kind 513 event
+    if (metadata?.title) {
+      return metadata.title;
+    }
+    
+    // Second priority: title tag from root event
     if (rootEvent) {
       const titleTag = rootEvent.tags?.find(
         (tag: string[]) => tag[0] === "title",
       )?.[1];
       if (titleTag) return titleTag;
+      
       // Fallback to first line of content
       const firstLine = rootEvent.content?.split("\n")[0] || "Thread";
       return firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine;
     }
+    
     return isNewThread ? "New Thread" : "Thread";
-  }, [rootEvent, isNewThread]);
+  }, [rootEvent, isNewThread, metadata?.title]);
 
   // Subscribe to ALL thread replies (not just direct replies) to get nested replies for copying
   const { events: allThreadReplies } = useSubscribe(

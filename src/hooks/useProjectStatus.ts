@@ -19,14 +19,14 @@ export function useProjectStatus(projectTagId?: string): ProjectStatus | undefin
   }, [ndk])
 
   // Subscribe to status events for this project
-  const filter = projectTagId && userPubkey ? {
-    kinds: [NDKProjectStatus.kind as number],
-    '#p': [userPubkey],
-    '#a': [projectTagId],
-    since: Math.floor(Date.now() / 1000) - TIMING.PROJECT_STATUS_FILTER_SECONDS
-  } : undefined
-
-  const { events } = useSubscribe(filter ? [filter] : [])
+  const { events } = useSubscribe(
+    projectTagId && userPubkey ? [{
+      kinds: [NDKProjectStatus.kind as number],
+      '#p': [userPubkey],
+      '#a': [projectTagId],
+      since: Math.floor(Date.now() / 1000) - TIMING.PROJECT_STATUS_FILTER_SECONDS
+    }] : []
+  )
 
   useEffect(() => {
     if (!projectTagId) {

@@ -35,6 +35,14 @@ export function processEvent(
   streamingSessions: Map<string, StreamingSession>,
   finalMessages: Message[]
 ): void {
+  console.log('process', event.content)
+  
+  // Metadata events should always be shown as final messages
+  if (event.kind === EVENT_KINDS.CONVERSATION_METADATA) {
+    finalMessages.push({ id: event.id, event: event })
+    return
+  }
+  
   if (
     event.kind === EVENT_KINDS.STREAMING_RESPONSE ||
     event.kind === EVENT_KINDS.TYPING_INDICATOR

@@ -34,7 +34,6 @@ import {
   useNDKCurrentUser,
   useProfileValue,
 } from "@nostr-dev-kit/ndk-hooks";
-import { toast } from "sonner";
 import type { Message } from "@/components/chat/hooks/useChatMessages";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 

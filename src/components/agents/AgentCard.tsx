@@ -1,4 +1,4 @@
-import { Bot } from "lucide-react";
+import { Bot, Wrench, Server } from "lucide-react";
 import { memo } from "react";
 import type { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { SelectableCard } from "@/components/common/SelectableCard";
@@ -31,6 +31,22 @@ export const AgentCard = memo(function AgentCard({
           {agent.description && <p className="mb-2">{agent.description}</p>}
           {agent.role && (
             <p className="text-primary font-medium">Role: {agent.role}</p>
+          )}
+          {(agent.tools?.length > 0 || agent.mcpServers?.length > 0) && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {agent.tools?.length > 0 && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Wrench className="w-3 h-3" />
+                  <span>{agent.tools.length} tool{agent.tools.length !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+              {agent.mcpServers?.length > 0 && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Server className="w-3 h-3" />
+                  <span>{agent.mcpServers.length} MCP server{agent.mcpServers.length !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+            </div>
           )}
         </>
       )}

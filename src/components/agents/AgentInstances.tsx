@@ -1,12 +1,13 @@
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Bot } from "lucide-react";
+import { Bot, FolderOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useProjectsStore } from "@/stores/projects";
 
 interface AgentInstancesProps {
   agentDefinitionId: string;
@@ -23,9 +24,30 @@ export function AgentInstances({ agentDefinitionId }: AgentInstancesProps) {
     },
   ]);
 
-  // Parse profile events to get agent instances
+  // Parse profile events to get agent instances with their projects
   const agentInstances = useMemo(() => {
+    const projectsMap = useProjectsStore.getState().projects;
+    
     return profileEvents.map((event) => {
+      // Extract project from "a" tags (NIP-33 reference format: kind:pubkey:d-tag)
+      const projectTag = event.tags.find(tag => tag[0] === 'a' && tag[1]?.startsWith('31933:'));
+      let projectInfo = null;
+      
+      if (projectTag) {
+        // Parse the NIP-33 reference
+        const [, , dTag] = projectTag[1].split(':');
+        if (dTag) {
+          const project = projectsMap.get(dTag);
+          if (project) {
+            projectInfo = {
+              dTag,
+              title: project.title,
+              picture: project.picture
+            };
+          }
+        }
+      }
+      
       try {
         const profile = JSON.parse(event.content);
         return {
@@ -36,12 +58,14 @@ export function AgentInstances({ agentDefinitionId }: AgentInstancesProps) {
           lud16: profile.lud16,
           nip05: profile.nip05,
           created_at: event.created_at,
+          project: projectInfo,
         };
       } catch {
         return {
           pubkey: event.pubkey,
           name: "Unnamed Agent",
           created_at: event.created_at,
+          project: projectInfo,
         };
       }
     });
@@ -49,6 +73,11 @@ export function AgentInstances({ agentDefinitionId }: AgentInstancesProps) {
 
   const handleAgentClick = (pubkey: string) => {
     navigate({ to: "/p/$pubkey", params: { pubkey } });
+  };
+
+  const handleProjectClick = (e: React.MouseEvent, dTag: string) => {
+    e.stopPropagation(); // Prevent agent card click
+    navigate({ to: "/projects/$projectId", params: { projectId: dTag } });
   };
 
   if (agentInstances.length === 0) {
@@ -89,6 +118,17 @@ export function AgentInstances({ agentDefinitionId }: AgentInstancesProps) {
                     <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                       {agent.about}
                     </p>
+                  )}
+                  {agent.project && (
+                    <div 
+                      className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded hover:bg-muted/70 transition-colors cursor-pointer"
+                      onClick={(e) => handleProjectClick(e, agent.project!.dTag)}
+                    >
+                      <FolderOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-sm font-medium truncate">
+                        {agent.project.title}
+                      </span>
+                    </div>
                   )}
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="outline" className="text-xs">

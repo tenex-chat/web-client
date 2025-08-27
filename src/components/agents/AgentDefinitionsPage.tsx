@@ -25,9 +25,7 @@ export function AgentDefinitionsPage() {
 
   // Fetch all agents (kind 4199)
   const { events: rawAgents } = useSubscribe(
-    [{ kinds: [NDKAgentDefinition.kind as NDKKind] }],
-    {},
-    [],
+    [{ kinds: [NDKAgentDefinition.kind as NDKKind] }]
   );
 
   // Convert raw events to NDKAgentDefinition instances and filter to latest versions only

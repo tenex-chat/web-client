@@ -99,23 +99,17 @@ export function DocumentationListSimple({
     return projectsArray.find(p => p.dTag === projectId)
   }, [projectId, projectsMap])
 
-  // Build subscription filter for articles tagged with this project
-  const filter = useMemo(() => {
-    if (!project) return false
-    
-    return [{
+  // Subscribe to articles tagged with this project
+  const { events: articles } = useSubscribe<NDKArticle>(
+    project ? [{
       kinds: [30023 as NDKKind], // NDK Article kind
       '#a': [project.tagId()]
-    }]
-  }, [project])
-
-  // Subscribe to articles
-  const { events: articles } = useSubscribe<NDKArticle>(filter, {
+    }] : false, {
     wrap: true,
     closeOnEose: false,
     groupable: true,
     subId: 'proj-docs-simple'
-  }, [project])
+  })
 
   // Sort articles by date
   const sortedArticles = useMemo(() => {

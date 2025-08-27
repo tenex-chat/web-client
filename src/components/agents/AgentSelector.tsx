@@ -1,9 +1,10 @@
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { Bot } from "lucide-react";
+import { Bot, AlertCircle, Wrench, Server } from "lucide-react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { ItemSelector } from "@/components/common/ItemSelector";
 import { AgentCard } from "./AgentCard";
 import { useMemo } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AgentSelectorProps {
   selectedAgents: NDKAgentDefinition[];
@@ -20,7 +21,7 @@ export function AgentSelector({
     {
       closeOnEose: false,
       groupable: false,
-    },
+    }
   );
 
   // Convert raw events to NDKAgentDefinition instances and deduplicate
@@ -83,16 +84,67 @@ export function AgentSelector({
     onAgentsChange(selectedAgents.filter((a) => a.id !== agent.id));
   };
 
+  // Calculate requirements for selected agents
+  const selectedAgentsRequirements = useMemo(() => {
+    const tools = new Set<string>();
+    const mcpServers = new Set<string>();
+    
+    selectedAgents.forEach(agent => {
+      agent.tools?.forEach(tool => tools.add(tool));
+      agent.mcpServers?.forEach(mcp => mcpServers.add(mcp));
+    });
+    
+    return {
+      tools: Array.from(tools),
+      mcpServers: Array.from(mcpServers)
+    };
+  }, [selectedAgents]);
+
   return (
-    <ItemSelector
-      items={agentEvents}
-      selectedItems={selectedAgents}
-      onItemsChange={onAgentsChange}
-      searchPlaceholder="Search agents..."
-      filterLabel="Filters"
-      emptyStateIcon={<Bot className="w-6 h-6 text-muted-foreground" />}
-      emptyStateTitle="No agents found"
-      renderCard={(agent, isSelected) => (
+    <div className="space-y-4">
+      {/* Show requirements alert if selected agents have requirements */}
+      {selectedAgents.length > 0 && (selectedAgentsRequirements.tools.length > 0 || selectedAgentsRequirements.mcpServers.length > 0) && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <div className="space-y-2">
+              <div className="font-medium">Selected agents require:</div>
+              {selectedAgentsRequirements.tools.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <Wrench className="h-3 w-3 mt-0.5 text-muted-foreground" />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium">Tools: </span>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedAgentsRequirements.tools.join(', ')}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {selectedAgentsRequirements.mcpServers.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <Server className="h-3 w-3 mt-0.5 text-muted-foreground" />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium">MCP Servers: </span>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedAgentsRequirements.mcpServers.length} server{selectedAgentsRequirements.mcpServers.length !== 1 ? 's' : ''} will be installed
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      <ItemSelector
+        items={agentEvents}
+        selectedItems={selectedAgents}
+        onItemsChange={onAgentsChange}
+        searchPlaceholder="Search agents..."
+        filterLabel="Filters"
+        emptyStateIcon={<Bot className="w-6 h-6 text-muted-foreground" />}
+        emptyStateTitle="No agents found"
+        renderCard={(agent, isSelected) => (
         <AgentCard
           agent={agent}
           isSelected={isSelected}
@@ -114,7 +166,8 @@ export function AgentSelector({
           agent.role?.toLowerCase().includes(searchLower) ||
           false
         );
-      }}
-    />
+        }}
+      />
+    </div>
   );
 }

@@ -127,4 +127,38 @@ export class NDKAgentDefinition extends NDKEvent {
     return undefined
   }
 
+  get tools(): string[] {
+    return this.tags
+      .filter(tag => tag[0] === 'tool' && tag[1])
+      .map(tag => tag[1])
+  }
+
+  set tools(toolNames: string[]) {
+    // Remove existing tool tags
+    this.tags = this.tags.filter(tag => tag[0] !== 'tool')
+    // Add new tool tags
+    toolNames.forEach(tool => {
+      if (tool) {
+        this.tags.push(['tool', tool])
+      }
+    })
+  }
+
+  get mcpServers(): string[] {
+    return this.tags
+      .filter(tag => tag[0] === 'mcp' && tag[1])
+      .map(tag => tag[1])
+  }
+
+  set mcpServers(mcpEventIds: string[]) {
+    // Remove existing mcp tags
+    this.tags = this.tags.filter(tag => tag[0] !== 'mcp')
+    // Add new mcp tags
+    mcpEventIds.forEach(eventId => {
+      if (eventId) {
+        this.tags.push(['mcp', eventId])
+      }
+    })
+  }
+
 }

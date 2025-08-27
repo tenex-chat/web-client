@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { MessageWithReplies } from "@/components/chat/MessageWithReplies";
 import { MessageShell } from "@/components/chat/MessageShell";
 import { TaskContent } from "@/components/chat/TaskContent";
+import { MetadataChangeMessage } from "@/components/chat/MetadataChangeMessage";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +22,7 @@ import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import type NDK from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "@/components/chat/hooks/useChatMessages";
+import { EVENT_KINDS } from "@/lib/constants";
 
 interface ChatMessageListProps {
   messages: Message[];
@@ -61,6 +63,23 @@ export const ChatMessageList = memo(function ChatMessageList({
   const USE_VIRTUAL_LIST_THRESHOLD = 50; // Use virtual list for more than 50 messages
 
   const renderMessage = (message: Message, index: number) => {
+    console.log(message.event.content)
+    
+    // Check if this is a metadata change event (kind 513)
+    if (message.event.kind === EVENT_KINDS.CONVERSATION_METADATA) {
+      return (
+        <div
+          key={message.id}
+          data-message-author={message.event.pubkey}
+        >
+          <MetadataChangeMessage
+            event={message.event}
+            onTimeClick={onTimeClick}
+          />
+        </div>
+      );
+    }
+    
     // Check if this is a task event
     if (message.event.kind === NDKTask.kind) {
       const task = new NDKTask(ndk!, message.event.rawEvent());

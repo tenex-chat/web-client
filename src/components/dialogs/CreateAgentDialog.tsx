@@ -13,9 +13,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Loader2, ChevronLeft, ChevronRight, Wrench, Server } from 'lucide-react'
 import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition'
 import ReactMarkdown from 'react-markdown'
+import { ToolSelector } from '@/components/common/ToolSelector'
+import { useAvailableTools } from '@/hooks/useAvailableTools'
+import { useAvailableMCPServers } from '@/hooks/useAvailableMCPServers'
 
 interface CreateAgentDialogProps {
   open: boolean
@@ -23,12 +26,14 @@ interface CreateAgentDialogProps {
   forkFromAgent?: NDKAgentDefinition
 }
 
-type WizardStep = 'basics' | 'prompt' | 'preview' | 'criteria'
+type WizardStep = 'basics' | 'prompt' | 'preview' | 'tools' | 'criteria'
 
 export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateAgentDialogProps) {
   const { ndk } = useNDK()
   const [isCreating, setIsCreating] = useState(false)
   const [currentStep, setCurrentStep] = useState<WizardStep>('basics')
+  const availableTools = useAvailableTools()
+  const mcpServers = useAvailableMCPServers()
   
   // Agent data
   const [agentData, setAgentData] = useState({
@@ -39,6 +44,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
     useCriteria: '',
     version: '1',
     slug: '',
+    tools: [] as string[],
+    mcpServers: [] as string[],
   })
 
   // Load fork data when agent changes
@@ -56,6 +63,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         useCriteria: forkFromAgent.useCriteria?.join('\n') || '',
         version: String(newVersion),
         slug: forkFromAgent.slug || '',
+        tools: forkFromAgent.tools || [],
+        mcpServers: forkFromAgent.mcpServers || [],
       })
     } else {
       // Reset form when not forking
@@ -67,6 +76,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         useCriteria: '',
         version: '1',
         slug: '',
+        tools: [],
+        mcpServers: [],
       })
     }
     // Reset to first step when dialog opens/closes
@@ -113,6 +124,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
       agent.useCriteria = criteria
       agent.version = agentData.version || undefined
       agent.slug = agentData.slug || undefined
+      agent.tools = agentData.tools
+      agent.mcpServers = agentData.mcpServers
 
       // If forking, add an "e" tag to reference the previous version
       if (forkFromAgent) {
@@ -133,6 +146,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         useCriteria: '',
         version: '1',
         slug: '',
+        tools: [],
+        mcpServers: [],
       })
     } catch (error) {
       console.error('Failed to save agent:', error)
@@ -149,6 +164,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
       case 'prompt':
         return agentData.instructions.trim().length > 0
       case 'preview':
+        return true
+      case 'tools':
         return true
       case 'criteria':
         return true
@@ -168,6 +185,9 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         setCurrentStep('preview')
         break
       case 'preview':
+        setCurrentStep('tools')
+        break
+      case 'tools':
         setCurrentStep('criteria')
         break
       case 'criteria':
@@ -184,8 +204,11 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
       case 'preview':
         setCurrentStep('prompt')
         break
-      case 'criteria':
+      case 'tools':
         setCurrentStep('preview')
+        break
+      case 'criteria':
+        setCurrentStep('tools')
         break
     }
   }
@@ -198,6 +221,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         return 'System Prompt'
       case 'preview':
         return 'Preview System Prompt'
+      case 'tools':
+        return 'Tools & MCP Servers'
       case 'criteria':
         return 'Use Criteria & Version'
       default:
@@ -213,6 +238,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         return 'Write the system prompt that defines this agent\'s behavior and capabilities'
       case 'preview':
         return 'Review how your system prompt will be displayed'
+      case 'tools':
+        return 'Select tools and MCP servers this agent requires'
       case 'criteria':
         return 'Define when this agent should be used and set version'
       default:
@@ -346,6 +373,77 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
                 >
                   Edit System Prompt
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 'tools' && (
+            <div className="space-y-6">
+              <div className="grid gap-2">
+                <Label htmlFor="tools">Required Tools</Label>
+                <div className="text-sm text-muted-foreground mb-2">
+                  Specify which tools this agent needs access to. Users will be notified when adding this agent.
+                </div>
+                <ToolSelector
+                  value={agentData.tools}
+                  onChange={(tools) => setAgentData({ ...agentData, tools })}
+                  suggestions={availableTools}
+                  placeholder="Add tools this agent needs..."
+                  icon={<Wrench className="h-3 w-3" />}
+                  label="tool"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="mcp-servers">Required MCP Servers</Label>
+                <div className="text-sm text-muted-foreground mb-2">
+                  Select MCP servers this agent requires. These will be installed when the agent is added to a project.
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+                  {mcpServers.length > 0 ? (
+                    mcpServers.map(server => (
+                      <label
+                        key={server.id}
+                        className="flex items-start gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={agentData.mcpServers.includes(server.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAgentData({
+                                ...agentData,
+                                mcpServers: [...agentData.mcpServers, server.id]
+                              })
+                            } else {
+                              setAgentData({
+                                ...agentData,
+                                mcpServers: agentData.mcpServers.filter(id => id !== server.id)
+                              })
+                            }
+                          }}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Server className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium text-sm">{server.name}</span>
+                          </div>
+                          {server.description && (
+                            <p className="text-xs text-muted-foreground mt-1">{server.description}</p>
+                          )}
+                          {server.command && (
+                            <code className="text-xs text-muted-foreground mt-1 block font-mono">{server.command}</code>
+                          )}
+                        </div>
+                      </label>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No MCP servers available. Create MCP tool events first.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           )}

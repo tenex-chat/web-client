@@ -5,6 +5,7 @@ import { useIsMobile } from '@/hooks/useMediaQuery'
 import { MultiProjectView } from '@/components/layout/MultiProjectView'
 import { useAtom } from 'jotai'
 import { openProjectsAtom } from '@/stores/openProjects'
+import { useRestoreOpenProjects } from '@/hooks/useRestoreOpenProjects'
 
 export const Route = createFileRoute('/_auth/projects/')({
   component: ProjectsIndexPage,
@@ -13,6 +14,9 @@ export const Route = createFileRoute('/_auth/projects/')({
 function ProjectsIndexPage() {
   const isMobile = useIsMobile()
   const [openProjects] = useAtom(openProjectsAtom)
+  
+  // Restore open projects from localStorage when projects load
+  useRestoreOpenProjects()
   
   // On mobile, show the Telegram-style projects list
   if (isMobile) {

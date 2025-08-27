@@ -344,7 +344,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 
   // Responsive padding and margins
   const paddingClass = isMobile ? "px-3 py-1" : "px-4 py-1"
-  const nestedMargin = isMobile ? "ml-4" : "ml-10"
+  const nestedMargin = isMobile ? "ml-4" : "ml-4"
   const avatarSize = isMobile ? "h-7 w-7" : "h-9 w-9"
   const contentGap = isMobile ? "gap-2" : "gap-3"
 
@@ -662,24 +662,33 @@ export const MessageWithReplies = memo(function MessageWithReplies({
       )}
       
       {/* Reply count and toggle - Slack style - hide for typing indicators */}
-      {!showTypingIndicator && replyCount > 0 && !showReplies && (
+      {!showTypingIndicator && replyCount > 0 && (
         <div className="mt-1.5">
           <button
             type="button"
             onClick={() => setShowReplies(!showReplies)}
             className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 transition-colors font-medium hover:bg-blue-50 dark:hover:bg-blue-950/30 px-2 py-1 rounded">
             <div className="flex -space-x-1.5">
-              {/* Show up to 3 user avatars who replied */}
-              {sortedReplies.slice(0, 3).map((reply, idx) => (
-                <div key={reply.id} style={{ zIndex: 3 - idx }}>
+              {/* Show up to 20 user avatars who replied */}
+              {sortedReplies.slice(0, 20).map((reply, idx) => (
+                <div key={reply.id} style={{ zIndex: 20 - idx }}>
                   <ProfileDisplay pubkey={reply.pubkey} showName={false} avatarClassName="w-5 h-5 border-2 border-background rounded" />
                 </div>
               ))}
+              {sortedReplies.length > 20 && (
+                <span className="ml-1 text-[10px] text-muted-foreground">
+                  +{sortedReplies.length - 20}
+                </span>
+              )}
             </div>
             <span>
               {replyCount} {replyCount === 1 ? "reply" : "replies"}
             </span>
-            <ChevronRight className="w-3 h-3" />
+            {showReplies ? (
+              <ChevronDown className="w-3 h-3" />
+            ) : (
+              <ChevronRight className="w-3 h-3" />
+            )}
           </button>
         </div>
       )}

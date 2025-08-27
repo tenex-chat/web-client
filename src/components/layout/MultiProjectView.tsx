@@ -41,20 +41,17 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
   
   // Collect existing hashtags from documentation for suggestions
   const currentProject = drawerContent?.project
-  const filter = useMemo(() => {
-    if (!currentProject) return null
-    return {
+  
+  const { events: articles } = useSubscribe<NDKArticle>(
+    currentProject ? [{
       kinds: [NDKKind.Article],
       '#a': [currentProject.tagId()]
-    }
-  }, [currentProject])
-  
-  const { events: articles } = useSubscribe<NDKArticle>(filter ? [filter] : false, {
+    }] : false, {
     wrap: true,
     closeOnEose: false,
     groupable: true,
     subId: 'hashtag-suggestions'
-  }, [currentProject])
+  })
   
   const existingHashtags = useMemo(() => {
     if (!articles) return []

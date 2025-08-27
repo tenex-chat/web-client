@@ -32,16 +32,12 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
     );
     
     // Subscribe to tasks for all projects
-    const taskFilter = useMemo(() => {
-        if (projectsArray.length === 0) return null;
-        
-        return {
+    const { events: taskEvents } = useSubscribe(
+        projectsArray.length > 0 ? [{
             kinds: [NDKTask.kind],
             "#a": projectsArray.map(p => p.tagId())
-        };
-    }, [projectsArray]);
-    
-    const { events: taskEvents } = useSubscribe(taskFilter ? [taskFilter] : [], {}, [taskFilter]);
+        }] : []
+    );
     
     const tasks = useMemo(() => {
         if (!ndk) return [];

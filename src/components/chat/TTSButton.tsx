@@ -45,11 +45,11 @@ export function TTSButton({
   const ttsConfig = useAgentTTSConfig(agentSlug ?? undefined)
   const voiceName = getVoiceDisplayName(ttsConfig)
   
+  // Initialize TTS hook - must be called before any conditional returns
+  const tts = useMurfTTS(ttsConfig)
+  
   // Don't render if TTS is not configured
   if (!ttsConfig || !ttsConfig.enabled || !agentSlug || !content) return null
-  
-  // Initialize TTS only if we have config
-  const tts = useMurfTTS(ttsConfig)
   
   const handleClick = () => {
     if (tts.isPlaying) {

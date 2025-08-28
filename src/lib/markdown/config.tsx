@@ -5,12 +5,14 @@ import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { cn } from '@/lib/utils'
 import { NostrEntityCard } from '@/components/common/NostrEntityCard'
 import type { Components } from 'react-markdown'
+import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 
 interface MarkdownComponentsOptions {
   isDarkMode: boolean
   isMobile?: boolean
   onImageClick?: (src: string) => void
   projectId?: string | null
+  onConversationClick?: (event: NDKEvent) => void
 }
 
 /**
@@ -20,7 +22,8 @@ interface MarkdownComponentsOptions {
 export function getMarkdownComponents({
   isDarkMode,
   isMobile = false,
-  onImageClick
+  onImageClick,
+  onConversationClick
 }: MarkdownComponentsOptions) {
   // Helper function to process text and replace nostr entities
   const processNostrEntities = (child: ReactNode): ReactNode | ReactNode[] => {
@@ -45,7 +48,8 @@ export function getMarkdownComponents({
         parts.push(
           <NostrEntityCard 
             key={`${match.index}-${bech32}`} 
-            bech32={bech32} 
+            bech32={bech32}
+            onConversationClick={onConversationClick}
           />
         )
         
@@ -98,14 +102,14 @@ export function getMarkdownComponents({
       // Now also handles bare bech32 strings like npub1...
       if (childText && childText.match(/^(npub1|nprofile1|nevent1|naddr1|note1)[a-zA-Z0-9]+$/)) {
         // Don't use compact mode for standalone entity references
-        return <NostrEntityCard bech32={childText} compact={false} />
+        return <NostrEntityCard bech32={childText} compact={false} onConversationClick={onConversationClick} />
       }
       
       // Check if this is a Nostr entity link in href
       // Now also handles bare bech32 strings like npub1...
       if (href && typeof href === 'string' && href.match(/^(npub1|nprofile1|nevent1|naddr1|note1)[a-zA-Z0-9]+$/)) {
         // Don't use compact mode for standalone entity references
-        return <NostrEntityCard bech32={href} compact={false} />
+        return <NostrEntityCard bech32={href} compact={false} onConversationClick={onConversationClick} />
       }
       
       // Regular link
@@ -245,6 +249,6 @@ export function useMarkdownComponents(options?: Omit<MarkdownComponentsOptions, 
   
   return React.useMemo(() => 
     getMarkdownComponents({ ...options, isDarkMode }), 
-    [isDarkMode, options?.isMobile, options?.onImageClick]
+    [isDarkMode, options?.isMobile, options?.onImageClick, options?.onConversationClick]
   )
 }

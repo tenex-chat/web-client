@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNDKCurrentUser, useNDKSessionLogin, NDKPrivateKeySigner } from '@nostr-dev-kit/ndk-hooks'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'

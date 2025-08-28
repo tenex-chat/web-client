@@ -38,16 +38,17 @@ interface NostrEntityCardProps {
   bech32: string
   className?: string
   compact?: boolean
+  onConversationClick?: (event: NDKEvent) => void
 }
 
 export function NostrEntityCard({ 
   bech32, 
   className = '',
-  compact = false 
+  compact = false,
+  onConversationClick
 }: NostrEntityCardProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [conversationDrawerOpen, setConversationDrawerOpen] = useState(false)
   
   // Just pass the bech32 to useEvent - it handles everything!
   const isEventEntity = bech32.startsWith('nevent1') || bech32.startsWith('note1') || bech32.startsWith('naddr1')
@@ -104,9 +105,9 @@ export function NostrEntityCard({
 
   // Handle click events
   const handleClick = () => {
-    // For kind:11 (Thread) events, open in conversation drawer
-    if (event && event.kind === NDKKind.Thread) {
-      setConversationDrawerOpen(true)
+    // For kind:11 (Thread) events, use the callback if provided
+    if (event && event.kind === NDKKind.Thread && onConversationClick) {
+      onConversationClick(event)
     } else if (event?.content) {
       setDrawerOpen(true)
     } else {
@@ -152,29 +153,14 @@ export function NostrEntityCard({
         </>
       )
     
-    case NDKKind.Thread: // kind:11 - Show in conversation drawer
+    case NDKKind.Thread: // kind:11 - Use navigation callback
       return (
-        <>
-          <ChatMessageEmbedCard 
-            event={event} 
-            compact={compact} 
-            className={className}
-            onClick={handleClick}
-          />
-          {/* Conversation drawer - using actual ChatInterface */}
-          <Sheet open={conversationDrawerOpen} onOpenChange={setConversationDrawerOpen}>
-            <SheetContent 
-              className="flex flex-col w-[65%] sm:max-w-[65%] p-0"
-              side="right"
-            >
-              <ChatInterface 
-                project={null}
-                rootEvent={event}
-                onBack={() => setConversationDrawerOpen(false)}
-              />
-            </SheetContent>
-          </Sheet>
-        </>
+        <ChatMessageEmbedCard 
+          event={event} 
+          compact={compact} 
+          className={className}
+          onClick={handleClick}
+        />
       )
 
     case NDKArticle.kind: // 30023

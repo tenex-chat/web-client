@@ -9,6 +9,8 @@
     "build:strict": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",
+    "lint": "eslint src --ext .tsx,.ts",
+    "lint:fix": "eslint src --ext .tsx,.ts --fix",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:e2e": "playwright test",

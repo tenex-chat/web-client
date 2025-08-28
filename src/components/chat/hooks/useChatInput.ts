@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { useMentions } from '@/hooks/useMentions';
 import { useDraftPersistence } from '@/hooks/useDraftPersistence';
@@ -21,39 +21,40 @@ export function useChatInput(
   const threadId = rootEvent && rootEvent.kind !== NDKTask.kind ? rootEvent.id : undefined;
   const taskId = rootEvent && rootEvent.kind === NDKTask.kind ? rootEvent.id : undefined;
   
-  // Use draft persistence
+  // Use draft persistence - this hook properly isolates drafts by thread/task ID
   const { draft, saveDraft, clearDraft } = useDraftPersistence({
     threadId,
     taskId,
-    enabled: true
+    enabled: !!rootEvent // Only enable if we have a root event
   });
   
-  // Initialize state with draft or empty string
+  // Initialize state with empty string
   const [messageInput, setMessageInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Load draft when root event changes or when draft is initially loaded
+  // Load draft when root event changes
   useEffect(() => {
-    // Load draft for this specific thread/task
-    if (draft) {
-      const key = rootEvent?.kind === NDKTask.kind ? `task:${rootEvent?.id}` : `thread:${rootEvent?.id}`;
-      console.log('Loading draft for', key, ':', draft);
-      setMessageInput(draft);
-    } else if (rootEvent?.id) {
-      // Clear input when switching to a thread/task without a draft
+    // When switching conversations, load the draft for that specific conversation
+    if (rootEvent?.id) {
+      // The draft hook will return the correct draft for this thread/task
+      setMessageInput(draft || '');
+    } else {
+      // No root event, clear the input
       setMessageInput('');
     }
-  }, [rootEvent?.id, draft, rootEvent?.kind]);
+  }, [rootEvent?.id, draft]);
   
   // Save draft whenever input changes
   useEffect(() => {
+    // Only save if we have a root event (conversation context)
+    if (!rootEvent?.id) return;
+    
     const timeoutId = setTimeout(() => {
-      console.log('Saving draft:', messageInput);
       saveDraft(messageInput);
     }, 500); // Debounce saving to avoid too frequent writes
     
     return () => clearTimeout(timeoutId);
-  }, [messageInput, saveDraft]);
+  }, [messageInput, saveDraft, rootEvent?.id]);
 
   // Image upload functionality
   const {

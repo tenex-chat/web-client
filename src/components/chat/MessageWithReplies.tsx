@@ -1,8 +1,9 @@
 import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
 import { useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
-import { ChevronDown, ChevronRight, Send, Reply, Brain } from 'lucide-react'
+import { ChevronDown, ChevronRight, Send, Reply } from 'lucide-react'
 import { TypingIndicator } from './TypingIndicator'
 import { StreamingCaret } from './StreamingCaret'
+import { ThinkingBlock } from './ThinkingBlock'
 import { memo, useCallback, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -32,6 +33,7 @@ interface MessageWithRepliesProps {
   onReply?: (event: NDKEvent) => void
   isNested?: boolean
   onTimeClick?: (event: NDKEvent) => void
+  onConversationNavigate?: (event: NDKEvent) => void
 }
 
 
@@ -40,7 +42,8 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   project,
   onReply,
   isNested = false,
-  onTimeClick
+  onTimeClick,
+  onConversationNavigate
 }: MessageWithRepliesProps) {
   const { ndk } = useNDK()
   const user = useNDKCurrentUser()
@@ -98,7 +101,8 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   // Markdown configuration
   const markdownComponents = useMarkdownComponents({ 
     isMobile, 
-    onImageClick: setLightboxImage 
+    onImageClick: setLightboxImage,
+    onConversationClick: onConversationNavigate
   })
 
   // Subscribe to replies that e-tag this event (NIP-10/NIP-22 threading)
@@ -401,41 +405,15 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                   )
                 } else {
                   // Render thinking block
-                  const isThinkingExpanded = expandedThinkingBlocks.has(partIndex)
-                  const thinkingPreview = part.content.split('\n')[0]
-                  const preview = thinkingPreview.length > 100 
-                    ? thinkingPreview.substring(0, 100) + '...' 
-                    : thinkingPreview
-                  
                   return (
-                    <div key={`thinking-${partIndex}`} className="my-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleThinkingBlock(partIndex)}
-                        className={cn(
-                          "flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors",
-                          "text-[11px]"
-                        )}
-                      >
-                        {isThinkingExpanded ? (
-                          <ChevronDown className="w-3 h-3 flex-shrink-0" />
-                        ) : (
-                          <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                        )}
-                        <Brain className="w-3 h-3 flex-shrink-0" />
-                        <span className="truncate max-w-[600px]">
-                          {isThinkingExpanded ? 'Hide thinking' : preview}
-                        </span>
-                      </button>
-                      
-                      {isThinkingExpanded && (
-                        <div className="mt-1 p-2 bg-muted/20 rounded-md border border-muted/30">
-                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
-                            {part.content}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
+                    <ThinkingBlock
+                      key={`thinking-${partIndex}`}
+                      content={part.content}
+                      index={partIndex}
+                      isExpanded={expandedThinkingBlocks.has(partIndex)}
+                      onToggle={() => toggleThinkingBlock(partIndex)}
+                      isMobile={true}
+                    />
                   )
                 }
               })}
@@ -554,41 +532,15 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                   )
                 } else {
                   // Render thinking block
-                  const isThinkingExpanded = expandedThinkingBlocks.has(partIndex)
-                  const thinkingPreview = part.content.split('\n')[0]
-                  const preview = thinkingPreview.length > 100 
-                    ? thinkingPreview.substring(0, 100) + '...' 
-                    : thinkingPreview
-                  
                   return (
-                    <div key={`thinking-${partIndex}`} className="my-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleThinkingBlock(partIndex)}
-                        className={cn(
-                          "flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors",
-                          isMobile ? "text-[11px]" : "text-xs"
-                        )}
-                      >
-                        {isThinkingExpanded ? (
-                          <ChevronDown className="w-3 h-3 flex-shrink-0" />
-                        ) : (
-                          <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                        )}
-                        <Brain className="w-3 h-3 flex-shrink-0" />
-                        <span className="truncate max-w-[600px]">
-                          {isThinkingExpanded ? 'Hide thinking' : preview}
-                        </span>
-                      </button>
-                      
-                      {isThinkingExpanded && (
-                        <div className="mt-1 p-2 bg-muted/20 rounded-md border border-muted/30">
-                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
-                            {part.content}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
+                    <ThinkingBlock
+                      key={`thinking-${partIndex}`}
+                      content={part.content}
+                      index={partIndex}
+                      isExpanded={expandedThinkingBlocks.has(partIndex)}
+                      onToggle={() => toggleThinkingBlock(partIndex)}
+                      isMobile={isMobile}
+                    />
                   )
                 }
               })}
@@ -685,6 +637,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                   onReply={onReply}
                   isNested={true}
                   onTimeClick={onTimeClick}
+                  onConversationNavigate={onConversationNavigate}
                 />
               </div>
             )

@@ -147,14 +147,16 @@ export function ChatHeader({
             >
               {threadTitle}
             </h1>
-            <p
-              className={cn(
-                "text-muted-foreground",
-                isMobile ? "text-[10px] mt-0" : "text-xs mt-0.5",
-              )}
-            >
-              {project?.title || 'Project'}
-            </p>
+            {project?.title && (
+              <p
+                className={cn(
+                  "text-muted-foreground",
+                  isMobile ? "text-[10px] mt-0" : "text-xs mt-0.5",
+                )}
+              >
+                {project.title}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1">

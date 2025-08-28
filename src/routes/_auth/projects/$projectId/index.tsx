@@ -17,7 +17,8 @@ import { DocumentationViewer } from '@/components/documentation/DocumentationVie
 import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk'
 import { ProjectStatusIndicator } from '@/components/status/ProjectStatusIndicator'
 import { useProjectStatus } from '@/stores/projects'
-import { useIsMobile } from '@/hooks/useMediaQuery'
+import { useIsMobile, useIsDesktop } from '@/hooks/useMediaQuery'
+import { useWindowManager } from '@/stores/windowManager'
 import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -82,6 +83,8 @@ function ProjectDetailPage() {
   const [selectedArticle, setSelectedArticle] = useState<NDKArticle | null>(null)
   const [showCallView, setShowCallView] = useState(false)
   const [, openSingleProject] = useAtom(openSingleProjectAtom)
+  const isDesktop = useIsDesktop()
+  const { addWindow, canAddWindow } = useWindowManager()
   
   // Reset selected thread when project changes
   useEffect(() => {
@@ -119,18 +122,9 @@ function ProjectDetailPage() {
   
 
 
-  if (!project) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">Project not found</p>
-      </div>
-    )
-  }
-
-
-
-  // Render full content callback for mobile
-  const renderFullContent = useCallback((project: NDKProject, itemType: string, item?: any, onBack?: () => void, onVoiceCallClick?: () => void) => {
+  // Render full content callback for mobile - must be called before conditional returns
+  const renderFullContent = useCallback((project: NDKProject | null, itemType: string, item?: any, onBack?: () => void, onVoiceCallClick?: () => void) => {
+    if (!project) return null;
     switch (itemType) {
       case 'conversations':
         return (
@@ -166,8 +160,19 @@ function ProjectDetailPage() {
   }, [])
 
   const handleNavigateToSettings = useCallback(() => {
-    navigate({ to: '/projects/$projectId/settings', params: { projectId: project.dTag || projectId }, search: { tab: 'general' } })
+    if (project) {
+      navigate({ to: '/projects/$projectId/settings', params: { projectId: project.dTag || projectId }, search: { tab: 'general' } })
+    }
   }, [navigate, project, projectId])
+
+  // Early return after all hooks are called
+  if (!project) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-muted-foreground">Project not found</p>
+      </div>
+    )
+  }
 
   // Mobile view - use unified ProjectColumn
   if (isMobile) {
@@ -343,7 +348,32 @@ function ProjectDetailPage() {
                       // Update thread list and stay in current view
                     }}
                     onVoiceCallClick={() => {
-                      setShowCallView(true)
+                      // On desktop, open in floating window; on mobile/tablet, use fullscreen overlay
+                      if (isDesktop) {
+                        const callContent = {
+                          project,
+                          type: 'call' as const,
+                          data: {
+                            onCallEnd: (rootEvent?: NDKEvent | null) => {
+                              // If a conversation was created during the call, select it
+                              if (rootEvent) {
+                                setSelectedThreadEvent(rootEvent)
+                              }
+                            },
+                            extraTags: selectedThreadEvent ? [['E', selectedThreadEvent.id]] : undefined
+                          }
+                        }
+                        
+                        if (canAddWindow()) {
+                          addWindow(callContent)
+                        } else {
+                          // If we can't add more windows, use fullscreen overlay as fallback
+                          setShowCallView(true)
+                        }
+                      } else {
+                        // Mobile/tablet: use fullscreen overlay
+                        setShowCallView(true)
+                      }
                     }}
                   />
                 </div>

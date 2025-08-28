@@ -1,4 +1,4 @@
-import { memo, useCallback, useState, useEffect } from "react";
+import React, { memo, useCallback, useState, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { VirtualList } from "@/components/ui/virtual-list";
@@ -23,7 +23,6 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import type NDK from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "@/components/chat/hooks/useChatMessages";
 import { EVENT_KINDS } from "@/lib/constants";
-import { useChatNavigationStore } from "@/stores/chatNavigation";
 import { useMurfTTS } from "@/hooks/useMurfTTS";
 import { useAgentTTSConfig } from "@/hooks/useAgentTTSConfig";
 import { extractTTSContent } from "@/lib/utils/extractTTSContent";
@@ -44,6 +43,7 @@ interface ChatMessageListProps {
   isRootEventTask?: boolean;
   autoTTS?: boolean;
   currentUserPubkey?: string;
+  onNavigate?: (event: NDKEvent) => void;
 }
 
 /**
@@ -65,9 +65,9 @@ export const ChatMessageList = memo(function ChatMessageList({
   isRootEventTask = false,
   autoTTS = false,
   currentUserPubkey,
+  onNavigate,
 }: ChatMessageListProps) {
   const isMobile = useIsMobile();
-  const navigationStore = useChatNavigationStore();
   const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(null);
   
   // TTS configuration
@@ -78,14 +78,14 @@ export const ChatMessageList = memo(function ChatMessageList({
 
   // Handle clicking on a message timestamp to navigate
   const handleTimeClick = useCallback((event: NDKEvent) => {
-    // Push current root to stack and set new root
-    navigationStore.pushToStack(event);
-    navigationStore.setCurrentRoot(event);
-    // Scroll to top when changing root
-    setTimeout(() => {
-      scrollToBottom(false);
-    }, 100);
-  }, [navigationStore, scrollToBottom]);
+    if (onNavigate) {
+      onNavigate(event);
+      // Scroll to top when changing root
+      setTimeout(() => {
+        scrollToBottom(false);
+      }, 100);
+    }
+  }, [onNavigate, scrollToBottom]);
 
   // Auto-play new messages when auto-TTS is enabled
   const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
@@ -284,6 +284,7 @@ export const ChatMessageList = memo(function ChatMessageList({
           project={project}
           onReply={onReplyFocus}
           onTimeClick={handleTimeClick}
+          onConversationNavigate={onNavigate}
         />
       </div>
     );

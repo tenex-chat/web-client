@@ -20,6 +20,7 @@ interface WindowManagerStore {
   canAddWindow: () => boolean
   getWindowById: (id: string) => WindowState | undefined
   isContentOpen: (content: DrawerContent) => boolean
+  attachToDrawer: (id: string, onAttach: (content: DrawerContent) => void) => void
 }
 
 const MAX_WINDOWS = 5
@@ -188,5 +189,14 @@ export const useWindowManager = create<WindowManagerStore>((set, get) => ({
       }
     }
     return false
+  },
+  
+  attachToDrawer: (id: string, onAttach: (content: DrawerContent) => void) => {
+    const state = get()
+    const window = state.windows.get(id)
+    if (window) {
+      onAttach(window.content)
+      get().removeWindow(id)
+    }
   }
 }))

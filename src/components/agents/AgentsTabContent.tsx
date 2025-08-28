@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNDK, useSubscribe, useProfile } from "@nostr-dev-kit/ndk-hooks";
 import { type NDKKind } from "@nostr-dev-kit/ndk";
 import { Bot, Plus, Settings, Volume2 } from "lucide-react";

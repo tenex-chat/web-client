@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import type { AgentInstance, ProjectGroup } from '@/types/agent';
 
 interface UseMentionsProps {

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent, NDKThread } from '@nostr-dev-kit/ndk'
 import { useNDK, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 import type { Message } from './useChatMessages'
@@ -38,13 +38,11 @@ export function useThreadManagement(
     if (!ndk || !user) return null
 
     // Create the initial thread event (kind 11)
-    const newThreadEvent = new NDKEvent(ndk)
-    newThreadEvent.kind = 11 // GROUP_NOTE  
+    const newThreadEvent = new NDKThread(ndk)
     newThreadEvent.content = content
-    newThreadEvent.tags = [
-      ['title', content.slice(0, 50) || 'Image'], // Use first 50 chars as title
-      ['a', project.tagId()], // NIP-33 reference to the project
-    ]
+    newThreadEvent.title = content.slice(0, 50)
+
+    if (project) newThreadEvent.tag(project.tagReference());
 
     // Add extra tags if provided
     if (extraTags && extraTags.length > 0) {

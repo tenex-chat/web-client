@@ -1,16 +1,27 @@
 import { useWindowManager } from '@/stores/windowManager'
-import { FloatingWindow } from './FloatingWindow'
+import { FloatingWindow, DrawerContent } from './FloatingWindow'
 import { WindowTaskbar } from './WindowTaskbar'
 import { AnimatePresence } from 'framer-motion'
 
-export function WindowManager() {
+interface WindowManagerProps {
+  onAttach?: (content: DrawerContent) => void
+}
+
+export function WindowManager({ onAttach }: WindowManagerProps) {
   const { 
     windows, 
     removeWindow, 
     minimizeWindow, 
     restoreWindow,
-    focusWindow 
+    focusWindow,
+    attachToDrawer
   } = useWindowManager()
+  
+  const handleAttach = (windowId: string, content: DrawerContent) => {
+    if (onAttach) {
+      attachToDrawer(windowId, onAttach)
+    }
+  }
   
   return (
     <>
@@ -23,6 +34,7 @@ export function WindowManager() {
             onClose={() => removeWindow(window.id)}
             onMinimize={() => minimizeWindow(window.id)}
             onFocus={() => focusWindow(window.id)}
+            onAttach={onAttach ? (content) => handleAttach(window.id, content) : undefined}
             isMinimized={window.isMinimized}
             zIndex={window.zIndex}
             initialPosition={window.position}

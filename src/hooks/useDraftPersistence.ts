@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useMemo } from 'react'
 import { useAtom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 import { TIMING } from '@/lib/constants'
@@ -150,8 +150,14 @@ export function useDraftPersistence({
     }
   }, [saveDraft, updateTimestamp])
 
+  // Use useMemo to ensure draft is recalculated when key changes
+  const currentDraft = useMemo(() => {
+    if (!draftKey || !enabled) return ''
+    return drafts.get(draftKey) || ''
+  }, [draftKey, drafts, enabled])
+  
   return {
-    draft: getDraft(),
+    draft: currentDraft,
     saveDraft: saveDraftWithTimestamp,
     clearDraft,
   }

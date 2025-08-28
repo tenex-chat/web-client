@@ -49,28 +49,22 @@ export function AgentProfilePage({ pubkey: propPubkey }: AgentProfilePageProps =
   const [copiedPubkey, setCopiedPubkey] = useState(false);
   // Dialog state removed - using route navigation instead
 
-  // Early return if no pubkey is available
-  if (!pubkey) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">No agent pubkey provided</p>
-      </div>
-    );
-  }
-
   // The agent IS the pubkey - get their profile
-  const profile = useProfileValue(pubkey);
+  // Must call all hooks before any conditional returns
+  const profile = useProfileValue(pubkey || "");
 
   // The pubkey parameter is the agent's pubkey (not the author of an NDKAgentDefinition event)
   // For agent profiles, we may not have an NDKAgentDefinition event - the agent might just be in status events
   const { events: agentEvents } = useSubscribe(
-    [
-      {
-        kinds: [NDKAgentDefinition.kind as NDKKind],
-        authors: [pubkey],
-        limit: 1,
-      },
-    ],
+    pubkey
+      ? [
+          {
+            kinds: [NDKAgentDefinition.kind as NDKKind],
+            authors: [pubkey],
+            limit: 1,
+          },
+        ]
+      : false,
     {},
     [pubkey],
   );
@@ -101,6 +95,15 @@ export function AgentProfilePage({ pubkey: propPubkey }: AgentProfilePageProps =
     () => events.map((e) => NDKAgentLesson.from(e)),
     [events],
   );
+
+  // Early return if no pubkey is available - after all hooks
+  if (!pubkey) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-muted-foreground">No agent pubkey provided</p>
+      </div>
+    );
+  }
 
   const handleBack = () => {
     // Check if we came from a project page by looking at the history

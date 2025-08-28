@@ -17,9 +17,10 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { CallView } from '@/components/call/CallView'
 import { WindowManager } from '@/components/windows/WindowManager'
 import { useWindowManager } from '@/stores/windowManager'
-import { useIsMobile } from '@/hooks/useMediaQuery'
+import { useIsMobile, useIsDesktop } from '@/hooks/useMediaQuery'
 import { ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import type { DrawerContent as FloatingWindowContent } from '@/components/windows/FloatingWindow'
 
 type TabType = 'conversations' | 'docs' | 'agents' | 'status' | 'settings' | 'tasks'
 
@@ -46,6 +47,7 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
   
   const { addWindow, canAddWindow, windows } = useWindowManager()
   const isMobile = useIsMobile()
+  const isDesktop = useIsDesktop()
   
   // Collect existing hashtags from documentation for suggestions
   const currentProject = drawerContent?.project
@@ -159,6 +161,33 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
     }
   }
 
+  const handleAttachWindow = (content: DrawerContent) => {
+    // Set up the drawer content based on the attached window content
+    if (content.type === 'conversations') {
+      if (content.item === 'new') {
+        setSelectedThreadEvent(undefined)
+        setDrawerContent({ project: content.project, type: content.type, item: 'new' })
+      } else if (content.data) {
+        setSelectedThreadEvent(content.data)
+        setDrawerContent({ project: content.project, type: content.type, item: content.item, data: content.data })
+      }
+    } else if (content.type === 'docs') {
+      if (content.item === 'new') {
+        setIsCreatingDoc(true)
+        setEditingArticle(null)
+        setSelectedArticle(null)
+        setDrawerContent({ project: content.project, type: content.type, item: 'new' })
+      } else if (content.item instanceof NDKEvent) {
+        setIsCreatingDoc(false)
+        setEditingArticle(null)
+        setDrawerContent({ project: content.project, type: content.type, item: content.item })
+        setSelectedArticle(NDKArticle.from(content.item))
+      }
+    } else {
+      setDrawerContent(content)
+    }
+  }
+
   const renderDrawerContent = () => {
     if (!drawerContent) return null
 
@@ -171,6 +200,7 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
             project={project}
             rootEvent={selectedThreadEvent}
             className="h-full"
+            onBack={handleDrawerClose}
             onTaskClick={(task: NDKTask) => {
                 if (task) {
                   setSelectedThreadEvent(task)
@@ -184,8 +214,39 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
               }
             }}
             onVoiceCallClick={() => {
-              setCallViewProject(project)
-              setShowCallView(true)
+              // On desktop, open in floating window; on mobile/tablet, use fullscreen overlay
+              if (isDesktop) {
+                const callContent: FloatingWindowContent = {
+                  project,
+                  type: 'call',
+                  data: {
+                    onCallEnd: (rootEvent?: NDKEvent | null) => {
+                      // If a conversation was created during the call, open it in the drawer
+                      if (rootEvent) {
+                        setSelectedThreadEvent(rootEvent)
+                        setDrawerContent({
+                          project,
+                          type: 'conversations',
+                          data: rootEvent,
+                          item: rootEvent.id
+                        })
+                      }
+                    }
+                  }
+                }
+                
+                if (canAddWindow()) {
+                  addWindow(callContent)
+                } else {
+                  // If we can't add more windows, use fullscreen overlay as fallback
+                  setCallViewProject(project)
+                  setShowCallView(true)
+                }
+              } else {
+                // Mobile/tablet: use fullscreen overlay
+                setCallViewProject(project)
+                setShowCallView(true)
+              }
             }}
           />
         )
@@ -356,7 +417,7 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
       )}
       
       {/* Floating Windows Manager - Desktop only */}
-      {!isMobile && <WindowManager />}
+      {!isMobile && <WindowManager onAttach={handleAttachWindow} />}
     </div>
   )
 }

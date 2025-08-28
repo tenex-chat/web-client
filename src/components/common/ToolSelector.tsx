@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, KeyboardEvent } from 'react'
+import React, { useState, useRef, KeyboardEvent } from 'react'
 import { X, Wrench } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

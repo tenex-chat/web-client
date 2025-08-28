@@ -1,3 +1,4 @@
+import React from "react";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";

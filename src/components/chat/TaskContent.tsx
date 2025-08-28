@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import React, { memo, useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CheckSquare, Square, User, Clock } from 'lucide-react'

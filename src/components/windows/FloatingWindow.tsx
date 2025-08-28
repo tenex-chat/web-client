@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Rnd } from 'react-rnd'
 import { cn } from '@/lib/utils'
-import { X, Minus, Maximize2, Minimize2, Lock } from 'lucide-react'
+import { X, Minus, Maximize2, Minimize2, Lock, ArrowLeftFromLine } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 import { DocumentationViewer } from '@/components/documentation/DocumentationViewer'
@@ -11,12 +11,13 @@ import { AgentProfilePage } from '@/components/agents/AgentProfilePage'
 import { ProjectGeneralSettings } from '@/components/settings/ProjectGeneralSettings'
 import { ProjectAdvancedSettings } from '@/components/settings/ProjectAdvancedSettings'
 import { ProjectDangerZone } from '@/components/settings/ProjectDangerZone'
+import { CallView } from '@/components/call/CallView'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { NDKEvent, NDKArticle } from '@nostr-dev-kit/ndk'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 
-type TabType = 'conversations' | 'docs' | 'agents' | 'status' | 'settings' | 'tasks'
+export type TabType = 'conversations' | 'docs' | 'agents' | 'status' | 'settings' | 'tasks' | 'call'
 
 export interface DrawerContent {
   project: NDKProject
@@ -30,6 +31,7 @@ interface FloatingWindowProps {
   onClose: () => void
   onMinimize: () => void
   onFocus: () => void
+  onAttach?: (content: DrawerContent) => void
   isMinimized: boolean
   zIndex: number
   initialPosition?: { x: number; y: number }
@@ -40,19 +42,52 @@ export function FloatingWindow({
   onClose,
   onMinimize,
   onFocus,
+  onAttach,
   isMinimized,
   zIndex,
   initialPosition = { x: 100, y: 100 }
 }: FloatingWindowProps) {
-  const [isMaximized, setIsMaximized] = useState(false)
-  const [size, setSize] = useState({ width: 800, height: 600 })
-  const [position, setPosition] = useState(initialPosition)
-  const [preMaximizeState, setPreMaximizeState] = useState({ size, position })
-  const [aspectRatio, setAspectRatio] = useState(800 / 600)
-  const [isScaling, setIsScaling] = useState(false)
-  
   // Store the content locally to prevent external updates
   const [content] = useState(initialContent)
+  
+  const [isMaximized, setIsMaximized] = useState(false)
+  // Use portrait aspect ratio for conversations (600x800), call gets a compact size (400x600), landscape for others (800x600)
+  const defaultSize = content.type === 'conversations' 
+    ? { width: 600, height: 800 } 
+    : content.type === 'call'
+    ? { width: 400, height: 600 }
+    : { width: 800, height: 600 }
+  const [size, setSize] = useState(defaultSize)
+  const [position, setPosition] = useState(initialPosition)
+  const [preMaximizeState, setPreMaximizeState] = useState({ size, position })
+  const [contentScale, setContentScale] = useState(1)
+  const [originalSize] = useState(defaultSize)
+  const [isScaling, setIsScaling] = useState(false)
+  const [isShiftPressed, setIsShiftPressed] = useState(false)
+  
+  // Track shift key state globally
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        setIsShiftPressed(true)
+      }
+    }
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        setIsShiftPressed(false)
+        setIsScaling(false)
+      }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [])
 
   // Hide window when minimized
   if (isMinimized) {
@@ -88,6 +123,8 @@ export function FloatingWindow({
         return 'Agent Profile'
       case 'settings':
         return `${content.project.title} Settings`
+      case 'call':
+        return 'Voice Call'
       default:
         return content.project.title
     }
@@ -152,6 +189,21 @@ export function FloatingWindow({
           default:
             return <ProjectGeneralSettings project={content.project} />
         }
+
+      case 'call':
+        return (
+          <CallView
+            project={content.project}
+            onClose={() => {
+              onClose()
+              // Call the onCallEnd callback if provided
+              if (content.data?.onCallEnd) {
+                content.data.onCallEnd(content.data.rootEvent)
+              }
+            }}
+            extraTags={content.data?.extraTags}
+          />
+        )
     }
 
     return <div className="p-4">Content not available</div>
@@ -172,32 +224,41 @@ export function FloatingWindow({
           setPosition({ x: d.x, y: d.y })
         }
       }}
-      onResizeStart={(e) => {
-        if (e instanceof MouseEvent && e.shiftKey) {
+      onResizeStart={() => {
+        if (isShiftPressed) {
           setIsScaling(true)
         }
       }}
-      onResize={(e, _direction, ref, _delta, _position) => {
-        // Check if shift key is pressed for proportional scaling
-        if (e instanceof MouseEvent && e.shiftKey) {
+      onResize={(e, direction, ref) => {
+        if (isShiftPressed) {
+          // Calculate scale based on window size vs original size
           const newWidth = parseInt(ref.style.width)
-          const newHeight = Math.round(newWidth / aspectRatio)
-          ref.style.height = `${newHeight}px`
+          const newHeight = parseInt(ref.style.height)
+          
+          // Use the average scale factor from both dimensions
+          const scaleX = newWidth / originalSize.width
+          const scaleY = newHeight / originalSize.height
+          const avgScale = (scaleX + scaleY) / 2
+          
+          setContentScale(avgScale)
         }
       }}
-      onResizeStop={(e, __, ref, ___, position) => {
+      onResizeStop={(e, direction, ref, delta, position) => {
         if (!isMaximized) {
           const newWidth = parseInt(ref.style.width)
           const newHeight = parseInt(ref.style.height)
+          
+          // Always save the new size
           setSize({
             width: newWidth,
             height: newHeight
           })
           setPosition(position)
           
-          // Update aspect ratio if not shift-scaling
-          if (!(e instanceof MouseEvent && e.shiftKey)) {
-            setAspectRatio(newWidth / newHeight)
+          // Only update scale when shift was pressed
+          // Scale persists through normal resizes
+          if (isShiftPressed) {
+            // Scale was already set in onResize
           }
         }
         setIsScaling(false)
@@ -209,7 +270,14 @@ export function FloatingWindow({
       dragHandleClassName="window-drag-handle"
       disableDragging={isMaximized}
       enableResizing={!isMaximized}
-      onMouseDown={onFocus}
+      onMouseDown={(e) => {
+        // Only focus if not clicking on an interactive element
+        const target = e.target as HTMLElement;
+        const isInteractive = target.closest('button, a, input, textarea, select, [role="button"], [onclick]');
+        if (!isInteractive) {
+          onFocus();
+        }
+      }}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -222,8 +290,13 @@ export function FloatingWindow({
         )}
       >
         {/* Window Header */}
-        <div className="window-drag-handle flex items-center justify-between px-4 py-2 border-b bg-muted/50 cursor-move select-none">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/50">
+          {/* Draggable area - only the title/project section */}
+          <div 
+            className="window-drag-handle flex items-center gap-2 flex-1 cursor-move select-none"
+            onDoubleClick={() => setContentScale(1)}
+            title={contentScale !== 1 ? "Double-click to reset scale" : undefined}
+          >
             <ProjectAvatar 
               project={content.project} 
               className="h-6 w-6 shrink-0"
@@ -235,9 +308,26 @@ export function FloatingWindow({
             <span className="text-xs text-muted-foreground">
               • {content.project.title}
             </span>
+            {contentScale !== 1 && (
+              <span className="text-xs text-primary font-medium">
+                [{Math.round(contentScale * 100)}%]
+              </span>
+            )}
           </div>
           
+          {/* Non-draggable button area */}
           <div className="flex items-center gap-1">
+            {onAttach && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => onAttach(content)}
+                title="Attach to drawer"
+              >
+                <ArrowLeftFromLine className="h-3 w-3" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -271,20 +361,30 @@ export function FloatingWindow({
 
         {/* Window Content */}
         <div className="flex-1 min-h-0 overflow-hidden relative flex flex-col">
-          {/* Render content directly for conversations, wrap others in ScrollArea */}
-          {content.type === 'conversations' ? (
-            renderContent()
-          ) : (
-            <ScrollArea className="h-full">
-              {renderContent()}
-            </ScrollArea>
-          )}
+          {/* Inner content wrapper with scale transform */}
+          <div 
+            className="w-full h-full origin-top-left"
+            style={{ 
+              transform: `scale(${contentScale})`,
+              width: contentScale !== 1 ? `${100 / contentScale}%` : '100%',
+              height: contentScale !== 1 ? `${100 / contentScale}%` : '100%'
+            }}
+          >
+            {/* Render content directly for conversations and calls, wrap others in ScrollArea */}
+            {content.type === 'conversations' || content.type === 'call' ? (
+              renderContent()
+            ) : (
+              <ScrollArea className="h-full">
+                {renderContent()}
+              </ScrollArea>
+            )}
+          </div>
           
           {/* Scaling indicator */}
           {isScaling && (
             <div className="absolute bottom-2 right-2 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md flex items-center gap-1 z-10 pointer-events-none">
               <Lock className="h-3 w-3" />
-              Aspect ratio locked
+              Scale: {Math.round(contentScale * 100)}%
             </div>
           )}
         </div>

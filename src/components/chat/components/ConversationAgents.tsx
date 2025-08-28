@@ -75,6 +75,13 @@ function AgentAvatar({
   const displayName = profile?.displayName || profile?.name || agent.pubkey;
   const isMobile = useIsMobile();
 
+  // Always call hooks before any conditional returns
+  const [selectedModel, setSelectedModel] = useState(agent.model ?? "");
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(
+    new Set(agent.tools ?? []),
+  );
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
   if (!agent.isProjectAgent) {
     return (
       <TooltipProvider>
@@ -96,11 +103,6 @@ function AgentAvatar({
   }
 
   // Logic for project agents (the popover)
-  const [selectedModel, setSelectedModel] = useState(agent.model ?? "");
-  const [selectedTools, setSelectedTools] = useState<Set<string>>(
-    new Set(agent.tools ?? []),
-  );
-  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const hasChanges =
     selectedModel !== (agent.model ?? "") ||

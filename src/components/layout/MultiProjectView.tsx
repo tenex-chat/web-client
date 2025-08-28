@@ -44,7 +44,7 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
   const [showCallView, setShowCallView] = useState(false)
   const [callViewProject, setCallViewProject] = useState<NDKProject | null>(null)
   
-  const { addWindow, canAddWindow } = useWindowManager()
+  const { addWindow, canAddWindow, windows } = useWindowManager()
   const isMobile = useIsMobile()
   
   // Collect existing hashtags from documentation for suggestions
@@ -74,32 +74,60 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
 
   // Handle item clicks from project columns
   const handleItemClick = async (project: NDKProject, itemType: TabType, item?: string | NDKEvent) => {
-    // Fetch necessary data based on item type
-    if (itemType === 'conversations' && item === 'new') {
-      // New conversation
-      setSelectedThreadEvent(undefined)
-      setDrawerContent({ project, type: itemType, item: 'new' })
-    } else if (itemType === 'conversations' && item) {
-      // Existing conversation
-      const threadEvent = item;
-      if (threadEvent instanceof NDKEvent) {
-        setSelectedThreadEvent(threadEvent)
-        setDrawerContent({ project, type: itemType, item, data: threadEvent })
+    // If we have detached windows and we're on desktop, prefer opening in detached window
+    const hasDetachedWindows = windows.size > 0
+    const shouldUseDetachedWindow = !isMobile && hasDetachedWindows && canAddWindow()
+    
+    // Create content object
+    const content: DrawerContent = { project, type: itemType, item }
+    
+    // Add data for conversations
+    if (itemType === 'conversations' && item instanceof NDKEvent) {
+      content.data = item
+    }
+    
+    if (shouldUseDetachedWindow) {
+      // Open in detached window
+      if (itemType === 'conversations' && item === 'new') {
+        setSelectedThreadEvent(undefined)
+        addWindow({ ...content, item: 'new' })
+      } else if (itemType === 'conversations' && item instanceof NDKEvent) {
+        addWindow({ ...content, data: item })
+      } else if (itemType === 'docs' && item === 'new') {
+        addWindow({ ...content, item: 'new' })
+      } else if (itemType === 'docs' && item instanceof NDKEvent) {
+        addWindow(content)
+      } else {
+        addWindow(content)
       }
-    } else if (itemType === 'docs' && item === 'new') {
-      // New documentation - open in drawer
-      setIsCreatingDoc(true)
-      setEditingArticle(null)
-      setSelectedArticle(null)
-      setDrawerContent({ project, type: itemType, item: 'new' })
-    } else if (itemType === 'docs' && item instanceof NDKEvent) {
-      // Existing documentation
-      setIsCreatingDoc(false)
-      setEditingArticle(null)
-      setDrawerContent({ project, type: itemType, item })
-      setSelectedArticle(NDKArticle.from(item))
     } else {
-      setDrawerContent({ project, type: itemType, item })
+      // Open in drawer (original behavior)
+      if (itemType === 'conversations' && item === 'new') {
+        // New conversation
+        setSelectedThreadEvent(undefined)
+        setDrawerContent({ project, type: itemType, item: 'new' })
+      } else if (itemType === 'conversations' && item) {
+        // Existing conversation
+        const threadEvent = item;
+        if (threadEvent instanceof NDKEvent) {
+          setSelectedThreadEvent(threadEvent)
+          setDrawerContent({ project, type: itemType, item, data: threadEvent })
+        }
+      } else if (itemType === 'docs' && item === 'new') {
+        // New documentation - open in drawer
+        setIsCreatingDoc(true)
+        setEditingArticle(null)
+        setSelectedArticle(null)
+        setDrawerContent({ project, type: itemType, item: 'new' })
+      } else if (itemType === 'docs' && item instanceof NDKEvent) {
+        // Existing documentation
+        setIsCreatingDoc(false)
+        setEditingArticle(null)
+        setDrawerContent({ project, type: itemType, item })
+        setSelectedArticle(NDKArticle.from(item))
+      } else {
+        setDrawerContent({ project, type: itemType, item })
+      }
     }
   }
 
@@ -270,8 +298,13 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
       </div>
 
       {/* Drawer for detail views */}
-      <Sheet open={!!drawerContent} onOpenChange={(open) => !open && handleDrawerClose()}>
-        <SheetContent 
+      <Sheet open={!!drawerContent} onOpenChange={(open) => {
+        // Only allow closing via the close button, not outside clicks
+        if (!open) handleDrawerClose()
+      }} modal={false}>
+        <SheetContent
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()} 
           className={cn(
             "p-0 flex flex-col",
             // Use different widths based on content type

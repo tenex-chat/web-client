@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { useNDK, useEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useNDKCurrentUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { Package, Plus, Users, Copy, ArrowLeft } from "lucide-react";
+import { Package, Plus, Users, Copy, ArrowLeft, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -29,7 +29,9 @@ export function AgentPackDetailPage() {
   const profile = useProfileValue(pack?.pubkey);
 
 
-  const handleForkPack = () => {
+  const isAuthor = user?.hexpubkey === pack?.pubkey;
+
+  const handleForkOrEdit = () => {
     setForkDialogOpen(true);
   };
 
@@ -125,9 +127,18 @@ export function AgentPackDetailPage() {
             </p>
             <div className="flex gap-2">
               {user && (
-                <Button variant="outline" onClick={handleForkPack}>
-                  <Copy className="w-4 h-4 mr-2" />
-                  Fork Pack
+                <Button variant="outline" onClick={handleForkOrEdit}>
+                  {isAuthor ? (
+                    <>
+                      <Edit3 className="w-4 h-4 mr-2" />
+                      Edit
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Fork Pack
+                    </>
+                  )}
                 </Button>
               )}
               <Button onClick={handleAddToProject}>
@@ -173,7 +184,8 @@ export function AgentPackDetailPage() {
           <CreatePackDialog
             open={forkDialogOpen}
             onOpenChange={setForkDialogOpen}
-            forkFromPack={pack}
+            forkFromPack={isAuthor ? undefined : pack}
+            editPack={isAuthor ? pack : undefined}
           />
         </>
       )}

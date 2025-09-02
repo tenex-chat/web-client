@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks';
+import { useNDK, useSubscribe, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -38,14 +38,15 @@ export function AddPackToProjectDialog({
   pack
 }: AddPackToProjectDialogProps) {
   const { ndk } = useNDK();
+  const user = useNDKCurrentUser();
   const [selectedAgentIds, setSelectedAgentIds] = useState<Set<string>>(new Set());
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [isAdding, setIsAdding] = useState(false);
   const [selectAll, setSelectAll] = useState(true);
 
-  // Fetch user's projects
+  // Fetch only the current user's projects
   const { events: projectEvents } = useSubscribe(
-    [{ kinds: [NDKProject.kind as NDKKind] }],
+    user ? [{ kinds: [NDKProject.kind as NDKKind], authors: [user.pubkey] }] : [],
     {},
     []
   );
@@ -176,11 +177,13 @@ export function AddPackToProjectDialog({
                 <SelectValue placeholder="Choose a project..." />
               </SelectTrigger>
               <SelectContent>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.id || ''}>
-                    {project.title || 'Untitled Project'}
-                  </SelectItem>
-                ))}
+                {projects
+                  .filter((project) => project.id) // Only show projects with valid IDs
+                  .map((project) => (
+                    <SelectItem key={project.id} value={project.id!}>
+                      {project.title || 'Untitled Project'}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

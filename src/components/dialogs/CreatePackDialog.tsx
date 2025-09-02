@@ -28,11 +28,12 @@ interface CreatePackDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   forkFromPack?: NDKAgentDefinitionPack;
+  editPack?: NDKAgentDefinitionPack;
 }
 
 type WizardStep = 'info' | 'agents' | 'preview';
 
-export function CreatePackDialog({ open, onOpenChange, forkFromPack }: CreatePackDialogProps) {
+export function CreatePackDialog({ open, onOpenChange, forkFromPack, editPack }: CreatePackDialogProps) {
   const { ndk } = useNDK();
   const [isCreating, setIsCreating] = useState(false);
   const [currentStep, setCurrentStep] = useState<WizardStep>('info');
@@ -107,7 +108,7 @@ export function CreatePackDialog({ open, onOpenChange, forkFromPack }: CreatePac
     );
   }, [agents, searchQuery]);
 
-  // Load fork data when pack changes
+  // Load fork/edit data when pack changes
   useEffect(() => {
     if (forkFromPack) {
       setPackData({
@@ -116,8 +117,15 @@ export function CreatePackDialog({ open, onOpenChange, forkFromPack }: CreatePac
         image: forkFromPack.image || '',
         selectedAgentIds: new Set(forkFromPack.agentEventIds),
       });
+    } else if (editPack) {
+      setPackData({
+        title: editPack.title || '',
+        description: editPack.description || '',
+        image: editPack.image || '',
+        selectedAgentIds: new Set(editPack.agentEventIds),
+      });
     } else {
-      // Reset form when not forking
+      // Reset form when not forking or editing
       setPackData({
         title: '',
         description: '',
@@ -128,7 +136,7 @@ export function CreatePackDialog({ open, onOpenChange, forkFromPack }: CreatePac
     // Reset to first step when dialog opens/closes
     setCurrentStep('info');
     setSearchQuery('');
-  }, [forkFromPack, open]);
+  }, [forkFromPack, editPack, open]);
 
   const handleCreate = async () => {
     if (!ndk) {
@@ -150,27 +158,52 @@ export function CreatePackDialog({ open, onOpenChange, forkFromPack }: CreatePac
 
     setIsCreating(true);
     try {
-      const pack = new NDKAgentDefinitionPack(ndk);
-      pack.title = packData.title;
-      pack.description = packData.description;
-      pack.image = packData.image || undefined;
+      let pack: NDKAgentDefinitionPack;
       
-      // Add selected agents to the pack
-      packData.selectedAgentIds.forEach(agentId => {
-        const agent = agents.find(a => a.id === agentId);
-        if (agent) {
-          pack.addAgent(agent);
-        }
-      });
+      if (editPack) {
+        // When editing, use the existing pack instance
+        pack = editPack;
+        pack.title = packData.title;
+        pack.description = packData.description;
+        pack.image = packData.image || undefined;
+        
+        // Clear existing agent tags
+        pack.tags = pack.tags.filter(tag => tag[0] !== 'e' || tag[3] !== 'agent');
+        
+        // Add selected agents
+        packData.selectedAgentIds.forEach(agentId => {
+          const agent = agents.find(a => a.id === agentId);
+          if (agent) {
+            pack.addAgent(agent);
+          }
+        });
+      } else {
+        // Creating new or forking
+        pack = new NDKAgentDefinitionPack(ndk);
+        pack.title = packData.title;
+        pack.description = packData.description;
+        pack.image = packData.image || undefined;
+        
+        // Add selected agents to the pack
+        packData.selectedAgentIds.forEach(agentId => {
+          const agent = agents.find(a => a.id === agentId);
+          if (agent) {
+            pack.addAgent(agent);
+          }
+        });
 
-      // If forking, add an "e" tag to reference the previous pack
-      if (forkFromPack) {
-        pack.tags.push(['e', forkFromPack.id]);
+        // If forking, add an "e" tag to reference the previous pack
+        if (forkFromPack) {
+          pack.tags.push(['e', forkFromPack.id]);
+        }
       }
 
       await pack.publishReplaceable();
       
-      toast.success(forkFromPack ? 'Pack forked successfully!' : 'Pack created successfully!');
+      const message = editPack ? 'Pack updated successfully!' : 
+                     forkFromPack ? 'Pack forked successfully!' : 
+                     'Pack created successfully!';
+      toast.success(message);
       onOpenChange(false);
       
       // Reset form
@@ -182,7 +215,10 @@ export function CreatePackDialog({ open, onOpenChange, forkFromPack }: CreatePac
       });
     } catch (error) {
       console.error('Failed to save pack:', error);
-      toast.error(forkFromPack ? 'Failed to fork pack' : 'Failed to create pack');
+      const errorMessage = editPack ? 'Failed to update pack' : 
+                          forkFromPack ? 'Failed to fork pack' : 
+                          'Failed to create pack';
+      toast.error(errorMessage);
     } finally {
       setIsCreating(false);
     }
@@ -305,7 +341,7 @@ export function CreatePackDialog({ open, onOpenChange, forkFromPack }: CreatePac
       <DialogContent className={`${getDialogWidth()} max-h-[90vh] flex flex-col`}>
         <DialogHeader>
           <DialogTitle>
-            {forkFromPack ? 'Fork Agent Pack' : 'Create Agent Pack'}
+            {editPack ? 'Edit Agent Pack' : forkFromPack ? 'Fork Agent Pack' : 'Create Agent Pack'}
           </DialogTitle>
           <DialogDescription>
             {getStepTitle()} - {getStepDescription()}
@@ -465,10 +501,10 @@ export function CreatePackDialog({ open, onOpenChange, forkFromPack }: CreatePac
               {isCreating ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {forkFromPack ? 'Forking...' : 'Creating...'}
+                  {editPack ? 'Updating...' : forkFromPack ? 'Forking...' : 'Creating...'}
                 </>
               ) : currentStep === 'preview' ? (
-                forkFromPack ? 'Fork' : 'Create'
+                editPack ? 'Update' : forkFromPack ? 'Fork' : 'Create'
               ) : (
                 <>
                   Next

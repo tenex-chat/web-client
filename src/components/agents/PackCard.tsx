@@ -23,7 +23,7 @@ export function PackCard({ pack, onClick, className, selected }: PackCardProps) 
     return getPackColor(pack.id || pack.title || 'default');
   }, [pack.id, pack.title, pack.image]);
 
-  const truncateDescription = (text: string, maxLength: number = 100) => {
+  const truncateDescription = (text: string, maxLength: number = 80) => {
     if (text.length <= maxLength) return text;
     return text.slice(0, maxLength).trim() + '...';
   };
@@ -31,16 +31,16 @@ export function PackCard({ pack, onClick, className, selected }: PackCardProps) 
   return (
     <Card 
       className={cn(
-        "relative overflow-hidden cursor-pointer transition-all hover:scale-105 hover:shadow-lg",
-        "w-64 h-80 flex flex-col",
+        "relative overflow-hidden cursor-pointer transition-all hover:scale-105 hover:shadow-2xl",
+        "w-64 h-80",
         selected && "ring-2 ring-primary",
         className
       )}
       onClick={onClick}
     >
-      {/* Image or color background */}
+      {/* Full bleed image or color background */}
       <div 
-        className="relative h-40 w-full"
+        className="relative h-full w-full"
         style={pack.image ? undefined : { backgroundColor }}
       >
         {pack.image ? (
@@ -51,44 +51,43 @@ export function PackCard({ pack, onClick, className, selected }: PackCardProps) 
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package className="w-16 h-16 text-white/80" />
+            <Package className="w-24 h-24 text-white/20" />
           </div>
         )}
         
-        {/* Gradient overlay for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
         
         {/* Agent count badge */}
-        <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
-          <Users className="w-3 h-3 text-white" />
-          <span className="text-xs text-white font-medium">{agentCount}</span>
+        <div className="absolute top-4 right-4 bg-primary rounded-full px-2.5 py-1 flex items-center gap-1">
+          <span className="text-xs text-primary-foreground font-bold">{agentCount} AGENTS</span>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="flex-1 p-4 flex flex-col">
-        <h3 className="font-semibold text-lg mb-2 line-clamp-2">
-          {pack.title || 'Untitled Pack'}
-        </h3>
-        
-        <p className="text-sm text-muted-foreground flex-1 line-clamp-3">
-          {truncateDescription(pack.description) || 'No description available'}
-        </p>
-        
-        {/* Author */}
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t">
-          <Avatar className="h-6 w-6">
-            <AvatarImage 
-              src={profile?.image || profile?.picture} 
-              alt={profile?.name || 'Author'} 
-            />
-            <AvatarFallback className="text-xs">
-              {profile?.name?.[0]?.toUpperCase() || '?'}
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-xs text-muted-foreground truncate">
-            {profile?.name || profile?.displayName || 'Anonymous'}
-          </span>
+        {/* Content overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          <h3 className="text-3xl font-black text-white mb-2 uppercase">
+            {pack.title || 'Untitled Pack'}
+          </h3>
+          
+          <p className="text-sm text-gray-300 mb-4 line-clamp-2">
+            {truncateDescription(pack.description) || 'No description available'}
+          </p>
+          
+          {/* Author */}
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8 border-2 border-white/20">
+              <AvatarImage 
+                src={profile?.image || profile?.picture} 
+                alt={profile?.name || 'Author'} 
+              />
+              <AvatarFallback className="text-xs bg-white/20 text-white">
+                {profile?.name?.[0]?.toUpperCase() || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm font-medium text-white">
+              {profile?.name || profile?.displayName || 'Anonymous'}
+            </span>
+          </div>
         </div>
       </div>
 

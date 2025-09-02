@@ -30,7 +30,7 @@ import { isAudioEvent } from "@/lib/utils/audioEvents";
 
 interface ChatMessageListProps {
   messages: Message[];
-  project: NDKProject;
+  project: NDKProject | null | undefined;
   ndk: NDK | undefined;
   scrollAreaRef: React.RefObject<HTMLDivElement>;
   showScrollToBottom: boolean;

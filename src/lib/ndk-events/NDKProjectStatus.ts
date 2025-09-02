@@ -3,7 +3,7 @@ import type NDK from '@nostr-dev-kit/ndk'
 
 export interface ProjectAgent {
   pubkey: string
-  name: string      // Agent slug (e.g., "human-replica", "executor")
+  name: string
   isGlobal?: boolean  // true if agent is global
   model?: string      // Model slug this agent uses (e.g., "sonnet", "gpt-4o-mini")
   status?: string

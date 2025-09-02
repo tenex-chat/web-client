@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 
 interface MessageShellProps {
   event: NDKEvent
-  project: NDKProject
+  project: NDKProject | null | undefined
   children: ReactNode
   className?: string
   isNested?: boolean
@@ -37,8 +37,8 @@ export const MessageShell = memo(function MessageShell({
   
   // Get user status (external or belonging to another project)
   const userStatus = useMemo(() => {
-    return getUserStatus(event.pubkey, user?.pubkey, project.dTag)
-  }, [event.pubkey, user?.pubkey, project.dTag])
+    return getUserStatus(event.pubkey, user?.pubkey, project?.dTag)
+  }, [event.pubkey, user?.pubkey, project?.dTag])
   
   // Extract p-tags (recipients) from the event
   const recipientPubkeys = useMemo(() => {

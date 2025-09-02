@@ -91,12 +91,16 @@ export function ChatInterface({
     return navigationStack.length > 0;
   }, [navigationStack]);
 
+  // Get ONLINE agents for @mentions (moved up before thread management)
+  const onlineAgents = useProjectOnlineAgents(project?.dTag);
+
   // Thread management
   const threadManagement = useThreadManagement(
     project,
     localRootEvent,
     extraTags,
     onThreadCreated,
+    onlineAgents
   );
   const { sendMessage } = threadManagement;
 
@@ -108,9 +112,6 @@ export function ChatInterface({
 
   // Scroll management
   const scrollProps = useChatScroll(messages);
-
-  // Get ONLINE agents for @mentions
-  const onlineAgents = useProjectOnlineAgents(project?.dTag);
 
   // Input management - always include all projects
   const inputProps = useChatInput(

@@ -26,6 +26,7 @@ import { TaskContent } from './TaskContent'
 import { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { MessageHeaderContent } from './MessageHeaderContent'
 import { MessageActionsToolbar } from './MessageActionsToolbar'
+import { useStreamingResponses } from '@/hooks/useStreamingResponses'
 
 interface MessageWithRepliesProps {
   event: NDKEvent
@@ -123,22 +124,51 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 			[event.id],
 		);
 
-  // Sort replies by timestamp
+  // Get streaming replies to this event
+  const { streamingResponses: streamingReplies } = useStreamingResponses(
+    null, // No conversation ID
+    event.kind === NDKKind.GenericReply ? event.id : null // Only for GenericReply events
+  )
+
+  // Combine streaming and final replies
   const sortedReplies = useMemo(() => {
-    if (!directReplies || directReplies.length === 0) return []
+    const allReplies: NDKEvent[] = []
     
-    // Filter out events that have a "root" tag marker
-    // These are already shown in the main conversation thread
-    const filtered = directReplies.filter(reply => {
-      const eTags = reply.tags?.filter(tag => tag[0] === 'e')
-      // Check if any e-tag has "root" as its marker (4th element)
-      const hasRootMarker = eTags?.some(tag => tag[3] === 'root')
-      // Exclude replies that have a root marker (they're in the main thread)
-      return !hasRootMarker
-    })
+    // Add streaming replies as synthetic events
+    if (streamingReplies && streamingReplies.size > 0) {
+      streamingReplies.forEach((streamingResponse) => {
+        // Create a synthetic event for the streaming reply
+        const syntheticEvent = new NDKEvent(ndk)
+        syntheticEvent.kind = EVENT_KINDS.STREAMING_RESPONSE
+        syntheticEvent.pubkey = streamingResponse.agentPubkey
+        syntheticEvent.content = streamingResponse.content
+        syntheticEvent.created_at = Math.floor(Date.now() / 1000)
+        syntheticEvent.tags = [['e', event.id]]
+        syntheticEvent.id = `streaming-reply-${streamingResponse.agentPubkey}`
+        
+        allReplies.push(syntheticEvent)
+      })
+    }
     
-    return filtered.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0))
-  }, [directReplies])
+    // Add final replies, filtering out those from agents currently streaming
+    if (directReplies && directReplies.length > 0) {
+      const streamingAgents = new Set(Array.from(streamingReplies?.keys() || []))
+      
+      const filtered = directReplies.filter(reply => {
+        // Filter out events that have a "root" tag marker
+        const eTags = reply.tags?.filter(tag => tag[0] === 'e')
+        const hasRootMarker = eTags?.some(tag => tag[3] === 'root')
+        
+        // Exclude replies that have a root marker (they're in the main thread)
+        // Also exclude if we have a streaming reply from the same agent
+        return !hasRootMarker && !streamingAgents.has(reply.pubkey)
+      })
+      
+      allReplies.push(...filtered)
+    }
+    
+    return allReplies.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0))
+  }, [directReplies, streamingReplies, event.id, ndk])
 
   const handleReply = useCallback((targetEvent: NDKEvent) => {
     setReplyToEvent(targetEvent)

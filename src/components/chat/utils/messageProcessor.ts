@@ -1,10 +1,13 @@
 import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk-hooks'
 import { EVENT_KINDS } from '@/lib/constants'
 import type { Message } from '@/components/chat/hooks/useChatMessages'
+import { DeltaContentAccumulator } from '@/lib/deltaContentAccumulator'
 
 interface StreamingSession {
   syntheticId: string
   latestEvent: NDKEvent
+  accumulator: DeltaContentAccumulator
+  reconstructedContent: string
 }
 
 /**
@@ -43,23 +46,42 @@ export function processEvent(
     return
   }
   
-  if (
-    event.kind === EVENT_KINDS.STREAMING_RESPONSE ||
-    event.kind === EVENT_KINDS.TYPING_INDICATOR
-  ) {
-    // Update or create streaming session
+  if (event.kind === EVENT_KINDS.STREAMING_RESPONSE) {
+    // Handle delta-based streaming response
     let session = streamingSessions.get(event.pubkey)
     
     if (!session) {
-      // New streaming session - create stable synthetic ID
+      // New streaming session - create stable synthetic ID and accumulator
+      const accumulator = new DeltaContentAccumulator()
+      const reconstructedContent = accumulator.addEvent(event)
+      
       session = {
         syntheticId: `streaming-${event.pubkey}-${Date.now()}`,
-        latestEvent: event
+        latestEvent: event,
+        accumulator,
+        reconstructedContent
       }
       streamingSessions.set(event.pubkey, session)
     } else {
-      // Update existing session with latest event
+      // Add delta to existing session and reconstruct content
+      session.reconstructedContent = session.accumulator.addEvent(event)
       session.latestEvent = event
+    }
+  } else if (event.kind === EVENT_KINDS.TYPING_INDICATOR) {
+    // Handle typing indicator separately (not delta-based)
+    let session = streamingSessions.get(event.pubkey)
+    
+    if (!session) {
+      session = {
+        syntheticId: `streaming-${event.pubkey}-${Date.now()}`,
+        latestEvent: event,
+        accumulator: new DeltaContentAccumulator(), // Not used for typing
+        reconstructedContent: event.content
+      }
+      streamingSessions.set(event.pubkey, session)
+    } else {
+      session.latestEvent = event
+      session.reconstructedContent = event.content
     }
   } else if (event.kind === EVENT_KINDS.TYPING_INDICATOR_STOP) {
     const session = streamingSessions.get(event.pubkey)
@@ -82,10 +104,29 @@ export function streamingSessionsToMessages(
 ): Message[] {
   const messages: Message[] = []
   streamingSessions.forEach(session => {
-    messages.push({
-      id: session.syntheticId,
-      event: session.latestEvent,
-    })
+    // Create a synthetic event with reconstructed content for streaming responses
+    if (session.latestEvent.kind === EVENT_KINDS.STREAMING_RESPONSE) {
+      // Clone the latest event but use reconstructed content
+      const syntheticEvent = new NDKEvent(session.latestEvent.ndk)
+      syntheticEvent.kind = session.latestEvent.kind
+      syntheticEvent.pubkey = session.latestEvent.pubkey
+      syntheticEvent.created_at = session.latestEvent.created_at
+      syntheticEvent.tags = session.latestEvent.tags
+      syntheticEvent.content = session.reconstructedContent // Use reconstructed content
+      syntheticEvent.id = session.latestEvent.id
+      syntheticEvent.sig = session.latestEvent.sig
+      
+      messages.push({
+        id: session.syntheticId,
+        event: syntheticEvent,
+      })
+    } else {
+      // For non-streaming events (like typing indicators), use original event
+      messages.push({
+        id: session.syntheticId,
+        event: session.latestEvent,
+      })
+    }
   })
   return messages
 }

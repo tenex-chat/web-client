@@ -6,19 +6,20 @@ import { DocumentationViewer } from '@/components/documentation/DocumentationVie
 import { DocumentationEditorDrawer } from '@/components/documentation/DocumentationEditorDrawer'
 import { AgentProfilePage } from '@/components/agents/AgentProfilePage'
 import { ProjectGeneralSettings } from '@/components/settings/ProjectGeneralSettings'
+import { ProjectAgentsSettings } from '@/components/settings/ProjectAgentsSettings'
 import { ProjectAdvancedSettings } from '@/components/settings/ProjectAdvancedSettings'
 import { ProjectDangerZone } from '@/components/settings/ProjectDangerZone'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { NDKEvent, NDKArticle, NDKKind } from '@nostr-dev-kit/ndk'
 import { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetClose } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { CallView } from '@/components/call/CallView'
 import { WindowManager } from '@/components/windows/WindowManager'
 import { useWindowManager } from '@/stores/windowManager'
 import { useIsMobile, useIsDesktop } from '@/hooks/useMediaQuery'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { DrawerContent as FloatingWindowContent } from '@/components/windows/FloatingWindow'
 
@@ -310,6 +311,9 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
                   case 'general':
                     return <ProjectGeneralSettings project={project} />
                   
+                  case 'agents':
+                    return <ProjectAgentsSettings project={project} />
+                  
                   case 'advanced':
                     return <ProjectAdvancedSettings project={project} />
                   
@@ -367,7 +371,7 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()} 
           className={cn(
-            "p-0 flex flex-col",
+            "p-0 flex flex-col [&>button:first-child]:hidden",
             // Use different widths based on content type
             drawerContent?.type === 'docs' 
               ? "w-[65%] sm:max-w-[65%]"  // Narrower for documentation
@@ -375,19 +379,29 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
           )}
           side="right"
         >
-          {/* Add detach button in header for desktop only */}
+          {/* Custom header buttons for desktop */}
           {!isMobile && drawerContent && (
-            <div className="absolute top-4 right-16 z-[60]">
+            <div className="absolute top-4 right-4 z-[100] flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleDetachWindow}
                 disabled={!canAddWindow()}
                 title={canAddWindow() ? "Detach to floating window" : "Maximum windows reached (5)"}
-                className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                className="h-8 w-8 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
               >
                 <ExternalLink className="h-4 w-4" />
               </Button>
+              <SheetClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </SheetClose>
             </div>
           )}
           {drawerContent && renderDrawerContent()}

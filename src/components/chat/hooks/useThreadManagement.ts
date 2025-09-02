@@ -20,10 +20,11 @@ export interface ImageUpload {
  * Handles creating threads, sending replies, and NDK event tagging
  */
 export function useThreadManagement(
-  project: NDKProject,
+  project: NDKProject | null | undefined,
   initialRootEvent: NDKEvent | null,
   extraTags?: string[][],
-  onThreadCreated?: (thread: NDKEvent) => void
+  onThreadCreated?: (thread: NDKEvent) => void,
+  onlineAgents?: { pubkey: string; slug: string }[]
 ) {
   const { ndk } = useNDK()
   const user = useNDKCurrentUser()
@@ -70,6 +71,13 @@ export function useThreadManagement(
       newThreadEvent.tags.push(['p', agent.pubkey])
     })
     
+    // If no mentions, add first agent (PM) p-tag when starting new conversation
+    if (mentions.length === 0 && onlineAgents && onlineAgents.length > 0) {
+      // First agent in the list is the project manager
+      const projectManager = onlineAgents[0]
+      newThreadEvent.tags.push(['p', projectManager.pubkey])
+    }
+    
     // Log warning if there are unresolved mentions
     const hasUnresolvedMentions = /@[\w-]+/.test(content) && mentions.length === 0
     if (hasUnresolvedMentions) {
@@ -91,7 +99,7 @@ export function useThreadManagement(
     }
 
     return newThreadEvent
-  }, [ndk, user, project, extraTags, onThreadCreated])
+  }, [ndk, user, project, extraTags, onThreadCreated, onlineAgents])
 
   const sendReply = useCallback(async (
     content: string,
@@ -109,8 +117,10 @@ export function useThreadManagement(
     // Remove all p-tags that NDK's .reply() generated
     replyEvent.tags = replyEvent.tags.filter((tag) => tag[0] !== "p")
 
-    // Add project tag
-    replyEvent.tags.push(['a', project.tagId()])
+    // Add project tag if project exists
+    if (project) {
+      replyEvent.tags.push(['a', project.tagId()])
+    }
     
     // Add image tags for each uploaded image
     images.forEach(upload => {

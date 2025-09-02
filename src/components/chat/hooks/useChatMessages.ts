@@ -13,7 +13,7 @@ export interface Message {
  * Hook for managing chat messages including streaming sessions
  * Handles event subscription, streaming processing, and message sorting
  */
-export function useChatMessages(_project: NDKProject, rootEvent: NDKEvent | null) {
+export function useChatMessages(_project: NDKProject | null | undefined, rootEvent: NDKEvent | null) {
   const [messages, setMessages] = useState<Message[]>([])
   console.log('re-rendering useChatMessages', rootEvent?.id)
   

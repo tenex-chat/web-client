@@ -49,24 +49,36 @@ export function ProjectAdvancedSettings({ project }: ProjectAdvancedSettingsProp
 
       <Card>
         <CardHeader>
-          <CardTitle>Project Agents</CardTitle>
+          <CardTitle>Project Metadata</CardTitle>
           <CardDescription>
-            {project.agents.length} agent(s) assigned to this project
+            Additional project information
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {project.agents.length > 0 ? (
-            <div className="space-y-2">
-              {project.agents.map((agent, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <div className="h-2 w-2 rounded-full bg-green-500" />
-                  <span>{agent.ndkAgentEventId}</span>
-                </div>
-              ))}
+          <div className="space-y-4">
+            <div>
+              <Label>Tag Count</Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                {project.tags.length} tags
+              </p>
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No agents assigned</p>
-          )}
+            
+            <div>
+              <Label>Agent Count</Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                {project.agents.length} agent{project.agents.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+            
+            {project.sig && (
+              <div>
+                <Label>Signature</Label>
+                <p className="text-sm text-muted-foreground mt-1 font-mono text-xs break-all">
+                  {project.sig.slice(0, 20)}...
+                </p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

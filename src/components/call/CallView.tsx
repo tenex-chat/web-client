@@ -192,7 +192,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
   
   // Hooks
   const agentsRaw = useProjectOnlineAgents(project.dTag)
-  const threadManagement = useThreadManagement(project, localRootEvent, extraTags)
+  const threadManagement = useThreadManagement(project, localRootEvent, extraTags, undefined, agentsRaw)
   const messages = useChatMessages(project, localRootEvent)
   const { transcribe } = useSpeechToText()
   

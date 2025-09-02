@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { MessageSquare, FileText, Bot, Settings, Plus, ChevronRight, Shield, AlertTriangle, WifiOff, ArrowLeft, Crown, Users } from 'lucide-react'
+import { MessageSquare, FileText, Bot, Settings, Plus, ChevronRight, Shield, AlertTriangle, WifiOff, ArrowLeft, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
@@ -25,7 +25,6 @@ import { bringProjectOnline } from '@/lib/utils/projectStatusUtils'
 import { ProjectStatusIndicator } from '@/components/status/ProjectStatusIndicator'
 import { FABMenu } from '@/components/ui/fab-menu'
 import { CallView } from '@/components/call/CallView'
-import { toast } from 'sonner'
 
 type TabType = 'conversations' | 'docs' | 'agents' | 'settings'
 type ViewMode = 'column' | 'standalone'
@@ -50,117 +49,41 @@ function generateColorFromString(str: string): string {
 }
 
 // Agent list item component - moved to top level to avoid conditional hook usage
-const AgentListItem = React.memo(({ agent, isOnline, isProjectManager, onSetAsProjectManager, onClick }: { 
+const AgentListItem = React.memo(({ agent, isOnline, onClick }: { 
   agent: { pubkey: string; slug: string; status?: string; lastSeen?: number }
   isOnline: boolean
-  isProjectManager: boolean
-  onSetAsProjectManager?: () => void
   onClick: () => void 
 }) => {
   const profile = useProfile(agent.pubkey)
   const avatarUrl = profile?.image || profile?.picture
   const displayName = agent.slug || profile?.displayName || profile?.name || 'Unknown Agent'
-  const [isDragOver, setIsDragOver] = useState(false)
-  
-  const handleDragOver = (e: React.DragEvent) => {
-    if (!isProjectManager) {
-      e.preventDefault()
-      setIsDragOver(true)
-    }
-  }
-  
-  const handleDragLeave = () => {
-    setIsDragOver(false)
-  }
-  
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(false)
-    if (!isProjectManager && onSetAsProjectManager) {
-      onSetAsProjectManager()
-    }
-  }
   
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          className={cn(
-            "flex items-start gap-3 px-3 py-2.5 hover:bg-accent/50 cursor-pointer transition-colors border-b relative",
-            isDragOver && "bg-primary/10 ring-2 ring-primary/50"
-          )}
-          onClick={onClick}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          <div className="relative">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={avatarUrl} alt={displayName} />
-              <AvatarFallback>
-                <Bot className="h-4 w-4" />
-              </AvatarFallback>
-            </Avatar>
-            {isOnline && (
-              <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 border border-background" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-sm truncate flex items-center gap-2">
-              {displayName}
-              {isProjectManager && (
-                <div
-                  draggable
-                  onDragStart={(e) => {
-                    e.stopPropagation()
-                    e.dataTransfer.effectAllowed = 'move'
-                    e.dataTransfer.setData('text/plain', 'pm-badge')
-                  }}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary cursor-move"
-                  title="Drag to another agent to transfer Project Manager role"
-                >
-                  <Crown className="h-3 w-3" />
-                  <span className="text-[10px] font-semibold">PM</span>
-                </div>
-              )}
-            </div>
-            <div className="text-xs text-muted-foreground mt-0.5">
-              {isOnline ? 'Online' : 'Offline'}
-            </div>
-          </div>
-          {isDragOver && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-md text-xs font-medium">
-                Set as Project Manager
-              </div>
-            </div>
-          )}
-          <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-1.5" />
-        </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem onClick={onClick}>
-          View Profile
-        </ContextMenuItem>
-        {!isProjectManager && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem 
-              onClick={(e) => {
-                e.stopPropagation()
-                if (onSetAsProjectManager) {
-                  onSetAsProjectManager()
-                }
-              }}
-              className="flex items-center gap-2"
-            >
-              <Crown className="h-4 w-4" />
-              Make Project Manager
-            </ContextMenuItem>
-          </>
+    <div
+      className="flex items-start gap-3 px-3 py-2.5 hover:bg-accent/50 cursor-pointer transition-colors border-b"
+      onClick={onClick}
+    >
+      <div className="relative">
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={avatarUrl} alt={displayName} />
+          <AvatarFallback>
+            <Bot className="h-4 w-4" />
+          </AvatarFallback>
+        </Avatar>
+        {isOnline && (
+          <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 border border-background" />
         )}
-      </ContextMenuContent>
-    </ContextMenu>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-sm truncate">
+          {displayName}
+        </div>
+        <div className="text-xs text-muted-foreground mt-0.5">
+          {isOnline ? 'Online' : 'Offline'}
+        </div>
+      </div>
+      <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-1.5" />
+    </div>
   )
 })
 
@@ -251,35 +174,6 @@ export function ProjectColumn({
     await bringProjectOnline(project, ndk)
   }, [project, ndk])
 
-  const handleSetProjectManager = useCallback(async (newPMPubkey: string) => {
-    if (!ndk || !project) return
-    
-    try {
-      // Get current agent tags
-      const agentTags = project.tags.filter(tag => tag[0] === 'agent')
-      
-      // Find the new PM tag
-      const newPMTag = agentTags.find(tag => tag[1] === newPMPubkey)
-      if (!newPMTag) return
-      
-      // Reorder tags: new PM first, then others
-      const otherAgentTags = agentTags.filter(tag => tag[1] !== newPMPubkey)
-      const reorderedAgentTags = [newPMTag, ...otherAgentTags]
-      
-      // Create new tag array with reordered agent tags
-      const nonAgentTags = project.tags.filter(tag => tag[0] !== 'agent')
-      const newTags = [...nonAgentTags, ...reorderedAgentTags]
-      
-      // Update project
-      project.tags = newTags
-      await project.publishReplaceable()
-      
-      toast.success('Project Manager updated')
-    } catch (error) {
-      console.error('Failed to update Project Manager:', error)
-      toast.error('Failed to update Project Manager')
-    }
-  }, [ndk, project])
 
   const handleThreadSelectWrapper = useCallback(async (thread: NDKEvent) => {
     await handleThreadSelect(thread.id)
@@ -326,19 +220,14 @@ export function ProjectColumn({
               {agents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-32 gap-2 text-center px-3">
                   <Bot className="h-8 w-8 text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground">No agents available</p>
+                  <p className="text-sm text-muted-foreground">No agents online</p>
                 </div>
               ) : (
-                agents.map((agent, index) => (
+                agents.map((agent) => (
                   <AgentListItem
                     key={agent.pubkey}
                     agent={agent}
                     isOnline={true}
-                    isProjectManager={index === 0} // First agent is PM
-                    onSetAsProjectManager={async () => {
-                      // Reorder project tags to make this agent first
-                      await handleSetProjectManager(agent.pubkey)
-                    }}
                     onClick={() => handleAgentSelect(agent.pubkey)}
                   />
                 ))

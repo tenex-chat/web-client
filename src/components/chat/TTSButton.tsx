@@ -49,7 +49,7 @@ export function TTSButton({
   const tts = useMurfTTS(ttsConfig)
   
   // Don't render if TTS is not configured
-  if (!ttsConfig || !ttsConfig.enabled || !agentSlug || !content) return null
+  if (!ttsConfig?.enabled || !agentSlug || !content) return null
   
   const handleClick = () => {
     if (tts.isPlaying) {
@@ -57,7 +57,7 @@ export function TTSButton({
     } else {
       const ttsContent = extractTTSContent(content)
       if (ttsContent) {
-        tts.speak(ttsContent, ttsConfig.voiceId)
+        tts.play(ttsContent)
       }
     }
   }

@@ -11,15 +11,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Bot, AlertCircle, Wrench, Server } from 'lucide-react';
+import { Loader2, Bot, AlertCircle, Wrench, Server, Package } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition';
+import { NDKAgentDefinitionPack } from '@/lib/ndk-events/NDKAgentDefinitionPack';
 import { NDKProject } from '@/lib/ndk-events/NDKProject';
 import { AgentDefinitionCard } from '@/components/agents/AgentDefinitionCard';
+import { PackCard } from '@/components/agents/PackCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SearchBar } from '@/components/common/SearchBar';
 import { EmptyState } from '@/components/common/EmptyState';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getRoleColor } from '@/lib/utils/role-colors';
 
 interface AddAgentsToProjectDialogProps {
   open: boolean;
@@ -36,12 +40,22 @@ export function AddAgentsToProjectDialog({
 }: AddAgentsToProjectDialogProps) {
   const { ndk } = useNDK();
   const [selectedAgentIds, setSelectedAgentIds] = useState<Set<string>>(new Set());
+  const [selectedPackId, setSelectedPackId] = useState<string | null>(null);
+  const [packAgentSelection, setPackAgentSelection] = useState<Map<string, Set<string>>>(new Map());
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'agents' | 'packs'>('agents');
 
   // Fetch all agents (kind 4199)
   const { events: rawAgents } = useSubscribe(
     [{ kinds: [NDKAgentDefinition.kind as NDKKind] }],
+    {},
+    [],
+  );
+
+  // Fetch all packs (kind 34199)
+  const { events: rawPacks } = useSubscribe(
+    [{ kinds: [NDKAgentDefinitionPack.kind as NDKKind] }],
     {},
     [],
   );
@@ -91,6 +105,13 @@ export function AddAgentsToProjectDialog({
     return latestAgents.filter(agent => !existingAgentIds.includes(agent.id || ''));
   }, [rawAgents, ndk, existingAgentIds]);
 
+  // Convert raw pack events to NDKAgentDefinitionPack instances
+  const packs = useMemo(() => {
+    return (rawPacks || []).map(
+      (event) => new NDKAgentDefinitionPack(ndk || undefined, event.rawEvent())
+    );
+  }, [rawPacks, ndk]);
+
   // Filter agents based on search query
   const filteredAgents = useMemo(() => {
     if (!searchQuery) return agents;
@@ -104,8 +125,31 @@ export function AddAgentsToProjectDialog({
     );
   }, [agents, searchQuery]);
 
+  // Filter packs based on search query
+  const filteredPacks = useMemo(() => {
+    if (!searchQuery) return packs;
+    
+    const query = searchQuery.toLowerCase();
+    return packs.filter(
+      (pack) =>
+        pack.title?.toLowerCase().includes(query) ||
+        pack.description?.toLowerCase().includes(query)
+    );
+  }, [packs, searchQuery]);
+
   const handleAddAgents = async () => {
-    if (!ndk || selectedAgentIds.size === 0) return;
+    if (!ndk) return;
+    
+    // Collect all agent IDs to add (from direct selection and pack selections)
+    const allAgentIds = new Set(selectedAgentIds);
+    
+    // Add agents from selected packs
+    if (selectedPackId && packAgentSelection.has(selectedPackId)) {
+      const packAgents = packAgentSelection.get(selectedPackId)!;
+      packAgents.forEach(id => allAgentIds.add(id));
+    }
+    
+    if (allAgentIds.size === 0) return;
 
     setIsAdding(true);
     try {
@@ -128,7 +172,7 @@ export function AddAgentsToProjectDialog({
       });
 
       // Add each selected agent to the project
-      selectedAgentIds.forEach(agentId => {
+      allAgentIds.forEach(agentId => {
         if (!existingAgentIds.includes(agentId)) {
           project.addAgent(agentId);
         }
@@ -146,7 +190,7 @@ export function AddAgentsToProjectDialog({
       // Publish the updated project event
       await project.publishReplaceable();
       
-      let successMessage = `Added ${selectedAgentIds.size} agent${selectedAgentIds.size > 1 ? 's' : ''} to the project`;
+      let successMessage = `Added ${allAgentIds.size} agent${allAgentIds.size > 1 ? 's' : ''} to the project`;
       if (mcpServersToAdd.size > 0) {
         successMessage += ` and installed ${mcpServersToAdd.size} MCP server${mcpServersToAdd.size > 1 ? 's' : ''}`;
       }
@@ -154,7 +198,10 @@ export function AddAgentsToProjectDialog({
       
       // Reset and close
       setSelectedAgentIds(new Set());
+      setSelectedPackId(null);
+      setPackAgentSelection(new Map());
       setSearchQuery('');
+      setActiveTab('agents');
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to add agents to project:', error);
@@ -174,12 +221,47 @@ export function AddAgentsToProjectDialog({
     setSelectedAgentIds(newSelection);
   };
 
+  const handlePackSelection = async (pack: NDKAgentDefinitionPack) => {
+    if (selectedPackId === pack.id) {
+      // Deselect if already selected
+      setSelectedPackId(null);
+      packAgentSelection.delete(pack.id || '');
+    } else {
+      // Select this pack and initialize all its agents as selected
+      setSelectedPackId(pack.id || null);
+      const packAgents = new Set(pack.agentEventIds);
+      setPackAgentSelection(new Map([[pack.id || '', packAgents]]));
+    }
+  };
+
+  const togglePackAgentSelection = (agentId: string) => {
+    if (!selectedPackId) return;
+    
+    const currentSelection = packAgentSelection.get(selectedPackId) || new Set();
+    const newSelection = new Set(currentSelection);
+    
+    if (newSelection.has(agentId)) {
+      newSelection.delete(agentId);
+    } else {
+      newSelection.add(agentId);
+    }
+    
+    setPackAgentSelection(new Map([[selectedPackId, newSelection]]));
+  };
+
   // Calculate required tools and MCP servers for selected agents
   const selectedAgentsRequirements = useMemo(() => {
     const tools = new Set<string>();
     const mcpServers = new Set<string>();
     
-    selectedAgentIds.forEach(agentId => {
+    // Collect all selected agent IDs
+    const allSelectedIds = new Set(selectedAgentIds);
+    if (selectedPackId && packAgentSelection.has(selectedPackId)) {
+      const packAgents = packAgentSelection.get(selectedPackId)!;
+      packAgents.forEach(id => allSelectedIds.add(id));
+    }
+    
+    allSelectedIds.forEach(agentId => {
       const agent = agents.find(a => a.id === agentId);
       if (agent) {
         agent.tools?.forEach(tool => tools.add(tool));
@@ -189,20 +271,11 @@ export function AddAgentsToProjectDialog({
     
     return {
       tools: Array.from(tools),
-      mcpServers: Array.from(mcpServers)
+      mcpServers: Array.from(mcpServers),
+      totalCount: allSelectedIds.size
     };
-  }, [selectedAgentIds, agents]);
+  }, [selectedAgentIds, selectedPackId, packAgentSelection, agents]);
 
-  const getRoleColor = (role: string) => {
-    const roleColors: Record<string, string> = {
-      assistant: "bg-blue-500/10 text-blue-500",
-      developer: "bg-green-500/10 text-green-500",
-      researcher: "bg-purple-500/10 text-purple-500",
-      designer: "bg-pink-500/10 text-pink-500",
-      analyst: "bg-orange-500/10 text-orange-500",
-    };
-    return roleColors[role] || "bg-gray-500/10 text-gray-500";
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -215,17 +288,27 @@ export function AddAgentsToProjectDialog({
           </DialogDescription>
         </DialogHeader>
         
+        {/* Tabs */}
+        <div className="px-6">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'agents' | 'packs')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="agents">Individual Agents</TabsTrigger>
+              <TabsTrigger value="packs">Agent Packs</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        
         {/* Search Bar */}
-        <div className="px-6 pb-4">
+        <div className="px-6 pb-4 pt-4">
           <SearchBar
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Search agents by name, description, or role..."
+            placeholder={activeTab === 'agents' ? "Search agents by name, description, or role..." : "Search packs by name or description..."}
           />
         </div>
         
         {/* Show requirements alert if agents have tools or MCP requirements */}
-        {selectedAgentIds.size > 0 && (selectedAgentsRequirements.tools.length > 0 || selectedAgentsRequirements.mcpServers.length > 0) && (
+        {selectedAgentsRequirements.totalCount > 0 && (selectedAgentsRequirements.tools.length > 0 || selectedAgentsRequirements.mcpServers.length > 0) && (
           <div className="px-6 pb-4">
             <Alert>
               <AlertCircle className="h-4 w-4" />
@@ -260,60 +343,97 @@ export function AddAgentsToProjectDialog({
           </div>
         )}
         
-        {/* Agent Grid with proper scrolling */}
+        {/* Content based on active tab */}
         <ScrollArea className="flex-1 px-6">
           <div className="pb-6">
-            {filteredAgents.length === 0 ? (
-              <EmptyState
-                icon={<Bot className="w-12 h-12" />}
-                title={
-                  searchQuery
-                    ? "No agents found"
-                    : "No available agents"
-                }
-                description={
-                  searchQuery
-                    ? "Try adjusting your search query"
-                    : existingAgentIds.length > 0
-                      ? "All available agents are already added to this project"
-                      : "No agent definitions available"
-                }
-              />
+            {activeTab === 'agents' ? (
+              // Individual Agents Tab
+              filteredAgents.length === 0 ? (
+                <EmptyState
+                  icon={<Bot className="w-12 h-12" />}
+                  title={
+                    searchQuery
+                      ? "No agents found"
+                      : "No available agents"
+                  }
+                  description={
+                    searchQuery
+                      ? "Try adjusting your search query"
+                      : existingAgentIds.length > 0
+                        ? "All available agents are already added to this project"
+                        : "No agent definitions available"
+                  }
+                />
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredAgents.map((agent) => (
+                    <div
+                      key={agent.id}
+                      className={cn(
+                        "relative rounded-lg transition-all",
+                        selectedAgentIds.has(agent.id || '') && "ring-2 ring-primary"
+                      )}
+                    >
+                      <AgentDefinitionCard
+                        agent={agent}
+                        onClick={() => toggleAgentSelection(agent.id || '')}
+                      />
+                      {selectedAgentIds.has(agent.id || '') && (
+                        <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                          <svg
+                            className="w-4 h-4 text-primary-foreground"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={3}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredAgents.map((agent) => (
-                  <div
-                    key={agent.id}
-                    className={cn(
-                      "relative rounded-lg transition-all",
-                      selectedAgentIds.has(agent.id || '') && "ring-2 ring-primary"
-                    )}
-                  >
-                    <AgentDefinitionCard
-                      agent={agent}
-                      onClick={() => toggleAgentSelection(agent.id || '')}
-                      getRoleColor={getRoleColor}
-                    />
-                    {selectedAgentIds.has(agent.id || '') && (
-                      <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-4 h-4 text-primary-foreground"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={3}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+              // Agent Packs Tab
+              filteredPacks.length === 0 ? (
+                <EmptyState
+                  icon={<Package className="w-12 h-12" />}
+                  title={
+                    searchQuery
+                      ? "No packs found"
+                      : "No agent packs available"
+                  }
+                  description={
+                    searchQuery
+                      ? "Try adjusting your search query"
+                      : "No agent packs have been created yet"
+                  }
+                />
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredPacks.map((pack) => (
+                    <div
+                      key={pack.id}
+                      className={cn(
+                        "relative",
+                        selectedPackId === pack.id && "ring-2 ring-primary rounded-lg"
+                      )}
+                    >
+                      <PackCard
+                        pack={pack}
+                        onClick={() => handlePackSelection(pack)}
+                        selected={selectedPackId === pack.id}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )
             )}
           </div>
         </ScrollArea>
@@ -323,7 +443,10 @@ export function AddAgentsToProjectDialog({
             variant="outline"
             onClick={() => {
               setSelectedAgentIds(new Set());
+              setSelectedPackId(null);
+              setPackAgentSelection(new Map());
               setSearchQuery('');
+              setActiveTab('agents');
               onOpenChange(false);
             }}
             disabled={isAdding}
@@ -332,10 +455,10 @@ export function AddAgentsToProjectDialog({
           </Button>
           <Button
             onClick={handleAddAgents}
-            disabled={isAdding || selectedAgentIds.size === 0}
+            disabled={isAdding || selectedAgentsRequirements.totalCount === 0}
           >
             {isAdding && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Add {selectedAgentIds.size > 0 ? `${selectedAgentIds.size} ` : ''}Agent{selectedAgentIds.size !== 1 ? 's' : ''}
+            Add {selectedAgentsRequirements.totalCount > 0 ? `${selectedAgentsRequirements.totalCount} ` : ''}Agent{selectedAgentsRequirements.totalCount !== 1 ? 's' : ''}
           </Button>
         </DialogFooter>
       </DialogContent>

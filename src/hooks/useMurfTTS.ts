@@ -16,7 +16,7 @@ interface MurfTTSResult {
     error: string | null;
 }
 
-export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
+export function useMurfTTS(options?: MurfTTSOptions | null): MurfTTSResult {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -24,7 +24,7 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
 
     // Initialize or update service when options change
     useEffect(() => {
-        if (!options.enabled || !options.apiKey || !options.voiceId) {
+        if (!options?.enabled || !options?.apiKey || !options?.voiceId) {
             if (serviceRef.current) {
                 serviceRef.current.dispose();
                 serviceRef.current = null;
@@ -44,7 +44,7 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
                 serviceRef.current = null;
             }
         };
-    }, [options.enabled, options.apiKey, options.voiceId, options.style, options.rate, options.pitch, options.volume]);
+    }, [options?.enabled, options?.apiKey, options?.voiceId, options?.style, options?.rate, options?.pitch, options?.volume]);
 
     const pause = useCallback(() => {
         if (serviceRef.current) {
@@ -69,11 +69,11 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
     }, []);
 
     const play = useCallback(async (text: string): Promise<void> => {
-        if (!options.enabled) {
+        if (!options?.enabled) {
             return;
         }
 
-        if (!options.apiKey || !options.voiceId) {
+        if (!options?.apiKey || !options?.voiceId) {
             setError('API key and voice ID are required');
             return;
         }
@@ -97,7 +97,7 @@ export function useMurfTTS(options: MurfTTSOptions): MurfTTSResult {
             setIsPlaying(false);
             setIsPaused(false);
         }
-    }, [options.enabled, options.apiKey, options.voiceId]);
+    }, [options?.enabled, options?.apiKey, options?.voiceId]);
 
     return {
         isPlaying,

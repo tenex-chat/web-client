@@ -155,7 +155,6 @@ export const MessageWithReplies = memo(function MessageWithReplies({
       const streamingAgents = new Set(Array.from(streamingReplies?.keys() || []))
       
       const filtered = directReplies.filter(reply => {
-        // Filter out events that have a "root" tag marker
         const eTags = reply.tags?.filter(tag => tag[0] === 'e')
         const hasRootMarker = eTags?.some(tag => tag[3] === 'root')
         

@@ -1,31 +1,41 @@
 import { type NDKKind } from "@nostr-dev-kit/ndk";
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { Bot, Plus } from "lucide-react";
+import { Bot, Plus, Package, ChevronRight } from "lucide-react";
 import { SearchBar } from "@/components/common/SearchBar";
 import { useState, useMemo } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, Link } from "@tanstack/react-router";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
+import { NDKAgentDefinitionPack } from "@/lib/ndk-events/NDKAgentDefinitionPack";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { CreateAgentDialog } from "@/components/dialogs/CreateAgentDialog";
+import { CreatePackDialog } from "@/components/dialogs/CreatePackDialog";
 import { AgentDefinitionCard } from "./AgentDefinitionCard";
+import { PackCard } from "./PackCard";
+import { getRoleColor } from "@/lib/utils/role-colors";
 
-type TabType = "all" | "owned" | "subscribed";
+type FilterType = "all" | "owned" | "subscribed";
 
 export function AgentDefinitionsPage() {
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<TabType>("all");
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+  const [createAgentDialogOpen, setCreateAgentDialogOpen] = useState(false);
+  const [createPackDialogOpen, setCreatePackDialogOpen] = useState(false);
 
   // Fetch all agents (kind 4199)
   const { events: rawAgents } = useSubscribe(
     [{ kinds: [NDKAgentDefinition.kind as NDKKind] }]
+  );
+
+  // Fetch all packs (kind 34199)
+  const { events: rawPacks } = useSubscribe(
+    [{ kinds: [NDKAgentDefinitionPack.kind as NDKKind] }]
   );
 
   // Convert raw events to NDKAgentDefinition instances and filter to latest versions only
@@ -77,14 +87,21 @@ export function AgentDefinitionsPage() {
     return latestAgents;
   }, [rawAgents, ndk]);
 
-  // Filter agents based on search query and tab
+  // Convert raw pack events to NDKAgentDefinitionPack instances
+  const packs = useMemo(() => {
+    return (rawPacks || []).map(
+      (event) => new NDKAgentDefinitionPack(ndk || undefined, event.rawEvent())
+    ).slice(0, 10); // Limit to 10 for horizontal scroll
+  }, [rawPacks, ndk]);
+
+  // Filter agents based on search query and filter
   const filteredAgents = useMemo(() => {
     let filtered = agents;
 
-    // Filter by tab
-    if (activeTab === "owned" && user) {
+    // Filter by filter type
+    if (activeFilter === "owned" && user) {
       filtered = filtered.filter((agent) => agent.pubkey === user.pubkey);
-    } else if (activeTab === "subscribed" && user) {
+    } else if (activeFilter === "subscribed" && user) {
       // Show agents from other users (subscribed agents would be filtered here when subscription system is ready)
       filtered = filtered.filter((agent) => agent.pubkey !== user.pubkey);
     }
@@ -101,7 +118,7 @@ export function AgentDefinitionsPage() {
     }
 
     return filtered;
-  }, [agents, searchQuery, activeTab, user]);
+  }, [agents, searchQuery, activeFilter, user]);
 
   const handleAgentClick = (agent: NDKAgentDefinition) => {
     navigate({
@@ -111,19 +128,21 @@ export function AgentDefinitionsPage() {
   };
 
   const handleCreateAgent = () => {
-    setCreateDialogOpen(true);
+    setCreateAgentDialogOpen(true);
   };
 
-  const getRoleColor = (role: string) => {
-    const roleColors: Record<string, string> = {
-      assistant: "bg-blue-500/10 text-blue-500",
-      developer: "bg-green-500/10 text-green-500",
-      researcher: "bg-purple-500/10 text-purple-500",
-      designer: "bg-pink-500/10 text-pink-500",
-      analyst: "bg-orange-500/10 text-orange-500",
-    };
-    return roleColors[role] || "bg-gray-500/10 text-gray-500";
+  const handleCreatePack = () => {
+    setCreatePackDialogOpen(true);
   };
+
+  const handlePackClick = (pack: NDKAgentDefinitionPack) => {
+    const naddr = pack.encode();
+    navigate({
+      to: "/agents/packs/$naddr",
+      params: { naddr }
+    });
+  };
+
 
   return (
     <div className="flex-1 flex flex-col">
@@ -138,33 +157,76 @@ export function AgentDefinitionsPage() {
                 projects
               </p>
             </div>
-            {user && (
-              <Button onClick={handleCreateAgent}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Agent
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {user && (
+                <>
+                  <Button variant="outline" onClick={handleCreatePack}>
+                    <Package className="w-4 h-4 mr-2" />
+                    Create Pack
+                  </Button>
+                  <Button onClick={handleCreateAgent}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Agent
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
 
-          {/* Search and Tabs */}
-          <div className="space-y-4">
-            <SearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search agents by name, description, or role..."
-            />
+          {/* Featured Packs Section */}
+          {packs.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-medium text-muted-foreground">Featured Packs</h2>
+                <div className="flex items-center gap-2">
+                  <Link to="/agents/packs">
+                    <Button variant="ghost" size="sm">
+                      See all
+                      <ChevronRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              
+              {/* Horizontal scroll container */}
+              <div className="overflow-x-auto">
+                <div className="flex gap-4 pb-2">
+                  {packs.map((pack) => (
+                    <div key={pack.id} className="flex-shrink-0">
+                      <PackCard
+                        pack={pack}
+                        onClick={() => handlePackClick(pack)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
+          {/* Search and Filter */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search agents by name, description, or role..."
+              />
+            </div>
             {user && (
-              <Tabs
-                value={activeTab}
-                onValueChange={(v) => setActiveTab(v as TabType)}
+              <Select
+                value={activeFilter}
+                onValueChange={(v) => setActiveFilter(v as FilterType)}
               >
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="all">All Definitions</TabsTrigger>
-                  <TabsTrigger value="owned">My Definitions</TabsTrigger>
-                  <TabsTrigger value="subscribed">Subscribed</TabsTrigger>
-                </TabsList>
-              </Tabs>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Definitions</SelectItem>
+                  <SelectItem value="owned">My Definitions</SelectItem>
+                  <SelectItem value="subscribed">Subscribed</SelectItem>
+                </SelectContent>
+              </Select>
             )}
           </div>
         </div>
@@ -196,7 +258,6 @@ export function AgentDefinitionsPage() {
                   key={agent.id}
                   agent={agent}
                   onClick={() => handleAgentClick(agent)}
-                  getRoleColor={getRoleColor}
                 />
               ))}
             </div>
@@ -205,8 +266,12 @@ export function AgentDefinitionsPage() {
       </ScrollArea>
 
       <CreateAgentDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+        open={createAgentDialogOpen}
+        onOpenChange={setCreateAgentDialogOpen}
+      />
+      <CreatePackDialog
+        open={createPackDialogOpen}
+        onOpenChange={setCreatePackDialogOpen}
       />
     </div>
   );

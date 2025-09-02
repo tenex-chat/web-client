@@ -1,4 +1,4 @@
-import { useEvent } from "@nostr-dev-kit/ndk-hooks";
+import { useEvent, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { TIMING } from "@/lib/constants";
@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   Info,
   Users,
+  Wrench,
+  Server,
 } from "lucide-react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
@@ -30,6 +32,8 @@ import ReactMarkdown from "react-markdown";
 import { generateAgentColor } from "@/lib/utils/agent-colors";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AgentInstances } from "./AgentInstances";
+import { NDKMCPTool } from "@/lib/ndk-events/NDKMCPTool";
+import type { NDKKind } from "@nostr-dev-kit/ndk";
 
 // This component shows an NDKAgentDefinition definition (the "class" not the instance)
 export function AgentDefinitionDetailPage() {
@@ -43,12 +47,25 @@ export function AgentDefinitionDetailPage() {
   const [activeTab, setActiveTab] = useState("details");
 
   // Fetch the agent event by ID
-  // Fetch the agent event by ID
   const _agent = useEvent(agentDefinitionEventId);
   const agent = useMemo(
     () => _agent && NDKAgentDefinition.from(_agent),
     [_agent],
   );
+
+  // Fetch MCP servers linked to this agent
+  const mcpEventIds = agent?.mcpServers || [];
+  const { events: mcpEvents } = useSubscribe(
+    mcpEventIds.length > 0
+      ? [{ ids: mcpEventIds, kinds: [4200 as NDKKind] }]
+      : [],
+    { closeOnEose: true }
+  );
+
+  const mcpTools = useMemo(() => {
+    if (!mcpEvents || mcpEvents.length === 0) return [];
+    return mcpEvents.map(event => NDKMCPTool.from(event));
+  }, [mcpEvents]);
 
   const handleBack = () => {
     navigate({ to: "/agents" });
@@ -212,6 +229,92 @@ export function AgentDefinitionDetailPage() {
                     </CardContent>
                   </Card>
                 )}
+
+                {/* Tools & MCP Servers */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Tools & Capabilities</CardTitle>
+                    <CardDescription>
+                      Available tools and MCP server integrations
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Direct Tools */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Wrench className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Direct Tools</span>
+                      </div>
+                      {agent.tools.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {agent.tools.map((tool, idx) => (
+                            <Badge key={idx} variant="outline">
+                              {tool}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No direct tools configured</p>
+                      )}
+                    </div>
+
+                    {/* MCP Servers */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Server className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">MCP Servers</span>
+                      </div>
+                      {mcpTools.length > 0 ? (
+                        <div className="space-y-2">
+                          {mcpTools.map((mcp) => (
+                            <div
+                              key={mcp.id}
+                              className="border border-border rounded-lg p-3"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-sm">
+                                    {mcp.name || "Unnamed MCP Server"}
+                                  </h4>
+                                  {mcp.description && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {mcp.description}
+                                    </p>
+                                  )}
+                                  {mcp.command && (
+                                    <code className="text-xs bg-muted px-2 py-0.5 rounded mt-2 inline-block">
+                                      {mcp.command}
+                                    </code>
+                                  )}
+                                </div>
+                              </div>
+                              {mcp.capabilities.length > 0 && (
+                                <div className="mt-2">
+                                  <span className="text-xs text-muted-foreground">
+                                    Capabilities:
+                                  </span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {mcp.capabilities.map((cap, idx) => (
+                                      <Badge
+                                        key={idx}
+                                        variant="secondary"
+                                        className="text-xs py-0 h-5"
+                                      >
+                                        {cap}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No MCP servers configured</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Metadata */}
                 <Card>

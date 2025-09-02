@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useNDK } from '@nostr-dev-kit/ndk-hooks'
+import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { NDKKind } from '@nostr-dev-kit/ndk'
 import { toast } from 'sonner'
 import {
@@ -26,11 +26,14 @@ import {
   Bot,
   Wrench,
   FileText,
-  Check
+  Check,
+  Package
 } from 'lucide-react'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition'
+import { NDKAgentDefinitionPack } from '@/lib/ndk-events/NDKAgentDefinitionPack'
 import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
+import { PackCard } from '@/components/agents/PackCard'
 import { cn } from '@/lib/utils'
 
 interface CreateProjectDialogProps {
@@ -58,12 +61,27 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   // Selected items
   const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set())
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set())
+  const [selectedPackId, setSelectedPackId] = useState<string | null>(null)
 
   // Available items
   const [availableAgents, setAvailableAgents] = useState<NDKAgentDefinition[]>([])
   const [availableTools, setAvailableTools] = useState<NDKMCPTool[]>([])
   const [isLoadingAgents, setIsLoadingAgents] = useState(true)
   const [isLoadingTools, setIsLoadingTools] = useState(true)
+
+  // Fetch all packs (kind 34199)
+  const { events: rawPacks } = useSubscribe(
+    open ? [{ kinds: [NDKAgentDefinitionPack.kind as NDKKind] }] : undefined,
+    {},
+    []
+  )
+
+  // Convert raw pack events to NDKAgentDefinitionPack instances
+  const packs = useMemo(() => {
+    return (rawPacks || []).map(
+      (event) => new NDKAgentDefinitionPack(ndk || undefined, event.rawEvent())
+    )
+  }, [rawPacks, ndk])
 
   // Fetch agents
   useEffect(() => {
@@ -198,7 +216,24 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       project.picture = projectData.imageUrl || undefined
       project.repoUrl = projectData.repoUrl || undefined
 
-      // Add selected agents
+      // Add selected agents from pack if any
+      if (selectedPackId) {
+        const selectedPack = packs.find(p => p.id === selectedPackId)
+        if (selectedPack) {
+          selectedPack.agentEventIds.forEach(agentId => {
+            project.addAgent(agentId)
+            // Also add the MCP servers required by these agents
+            const agent = availableAgents.find(a => a.id === agentId)
+            if (agent?.mcpServers) {
+              agent.mcpServers.forEach(mcpId => {
+                project.addMCPTool(mcpId)
+              })
+            }
+          })
+        }
+      }
+
+      // Add individually selected agents
       selectedAgents.forEach(agentId => {
           project.addAgent(agentId)
       })
@@ -318,8 +353,57 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       case 'agents':
         return (
           <div className="space-y-4">
+            {/* Pack Selection Section */}
+            {packs.length > 0 && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Start from a Pack (optional)</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Select a pre-configured collection of agents
+                  </p>
+                </div>
+                <div className="overflow-x-auto">
+                  <div className="flex gap-4 pb-2">
+                    {packs.map((pack) => (
+                      <div key={pack.id} className="flex-shrink-0">
+                        <PackCard
+                          pack={pack}
+                          onClick={() => {
+                            if (selectedPackId === pack.id) {
+                              setSelectedPackId(null)
+                            } else {
+                              setSelectedPackId(pack.id)
+                            }
+                          }}
+                          selected={selectedPackId === pack.id}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {selectedPackId && (
+                  <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                    <Package className="w-4 h-4 inline mr-2" />
+                    Pack selected. All agents from this pack will be added to your project.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Divider */}
+            {packs.length > 0 && (
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or select individual agents</span>
+                </div>
+              </div>
+            )}
+
             <p className="text-sm text-muted-foreground">
-              Select the AI agents that will work on this project (optional)
+              Select individual agents to work on this project (optional)
             </p>
             
             <ScrollArea className="h-[300px] border rounded-lg p-4">

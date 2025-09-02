@@ -47,7 +47,6 @@ interface AgentInfo {
   pubkey: string;
   slug?: string;
   model?: string;  // Model slug from the agent - optional
-  lastMessageId?: string;
   tools?: string[];  // Tools are optional - agent might not use any
   isProjectAgent?: boolean; // Flag to indicate if this is a project agent
 }
@@ -283,6 +282,8 @@ export function ConversationAgents({
     [rootEvent?.id]
   );
 
+  console.log(onlineAgents)
+
   // Extract unique agents from the conversation
   const conversationAgents = useMemo(() => {
     const agentsMap = new Map<string, AgentInfo>();
@@ -293,20 +294,16 @@ export function ConversationAgents({
 
       // Check if this is a project agent
       const agentInfo = onlineAgents.find((a) => a.pubkey === pubkey);
+
       
       if (!agentsMap.has(pubkey)) {
         agentsMap.set(pubkey, {
           pubkey,
           slug: agentInfo?.slug,
           model: agentInfo?.model,
-          lastMessageId: message.id,
           tools: agentInfo?.tools,
           isProjectAgent: !!agentInfo,
         });
-      } else {
-        // Update last message ID
-        const existing = agentsMap.get(pubkey)!;
-        existing.lastMessageId = message.id;
       }
     });
 
@@ -321,7 +318,6 @@ export function ConversationAgents({
             pubkey,
             slug: agentInfo?.slug,
             model: agentInfo?.model,
-            lastMessageId: message.id,
             tools: agentInfo?.tools,
             isProjectAgent: !!agentInfo,
           });
@@ -345,7 +341,6 @@ export function ConversationAgents({
           pubkey,
           slug: agentInfo?.slug || 'Agent',
           model: agentInfo?.model,
-          lastMessageId: event.id,
           tools: agentInfo?.tools,
           isProjectAgent: !!agentInfo,
         });

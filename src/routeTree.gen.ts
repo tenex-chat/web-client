@@ -21,9 +21,12 @@ import { Route as AuthAgentsIndexRouteImport } from './routes/_auth/agents/index
 import { Route as AuthPPubkeyRouteImport } from './routes/_auth/p/$pubkey'
 import { Route as AuthLessonLessonIdRouteImport } from './routes/_auth/lesson.$lessonId'
 import { Route as AuthAgentsRequestsRouteImport } from './routes/_auth/agents/requests'
+import { Route as AuthAgentsPacksRouteImport } from './routes/_auth/agents/packs'
 import { Route as AuthAgentDefinitionAgentDefinitionEventIdRouteImport } from './routes/_auth/agent-definition/$agentDefinitionEventId'
 import { Route as AuthProjectsProjectIdIndexRouteImport } from './routes/_auth/projects/$projectId/index'
+import { Route as AuthAgentsPacksIndexRouteImport } from './routes/_auth/agents/packs/index'
 import { Route as AuthProjectsProjectIdSettingsRouteImport } from './routes/_auth/projects/$projectId/settings'
+import { Route as AuthAgentsPacksNaddrRouteImport } from './routes/_auth/agents/packs/$naddr'
 
 const McpToolsRoute = McpToolsRouteImport.update({
   id: '/mcp-tools',
@@ -84,6 +87,11 @@ const AuthAgentsRequestsRoute = AuthAgentsRequestsRouteImport.update({
   path: '/requests',
   getParentRoute: () => AuthAgentsRoute,
 } as any)
+const AuthAgentsPacksRoute = AuthAgentsPacksRouteImport.update({
+  id: '/packs',
+  path: '/packs',
+  getParentRoute: () => AuthAgentsRoute,
+} as any)
 const AuthAgentDefinitionAgentDefinitionEventIdRoute =
   AuthAgentDefinitionAgentDefinitionEventIdRouteImport.update({
     id: '/agent-definition/$agentDefinitionEventId',
@@ -96,12 +104,22 @@ const AuthProjectsProjectIdIndexRoute =
     path: '/$projectId/',
     getParentRoute: () => AuthProjectsRoute,
   } as any)
+const AuthAgentsPacksIndexRoute = AuthAgentsPacksIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthAgentsPacksRoute,
+} as any)
 const AuthProjectsProjectIdSettingsRoute =
   AuthProjectsProjectIdSettingsRouteImport.update({
     id: '/$projectId/settings',
     path: '/$projectId/settings',
     getParentRoute: () => AuthProjectsRoute,
   } as any)
+const AuthAgentsPacksNaddrRoute = AuthAgentsPacksNaddrRouteImport.update({
+  id: '/$naddr',
+  path: '/$naddr',
+  getParentRoute: () => AuthAgentsPacksRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -111,12 +129,15 @@ export interface FileRoutesByFullPath {
   '/projects': typeof AuthProjectsRouteWithChildren
   '/settings': typeof AuthSettingsRoute
   '/agent-definition/$agentDefinitionEventId': typeof AuthAgentDefinitionAgentDefinitionEventIdRoute
+  '/agents/packs': typeof AuthAgentsPacksRouteWithChildren
   '/agents/requests': typeof AuthAgentsRequestsRoute
   '/lesson/$lessonId': typeof AuthLessonLessonIdRoute
   '/p/$pubkey': typeof AuthPPubkeyRoute
   '/agents/': typeof AuthAgentsIndexRoute
   '/projects/': typeof AuthProjectsIndexRoute
+  '/agents/packs/$naddr': typeof AuthAgentsPacksNaddrRoute
   '/projects/$projectId/settings': typeof AuthProjectsProjectIdSettingsRoute
+  '/agents/packs/': typeof AuthAgentsPacksIndexRoute
   '/projects/$projectId': typeof AuthProjectsProjectIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -130,7 +151,9 @@ export interface FileRoutesByTo {
   '/p/$pubkey': typeof AuthPPubkeyRoute
   '/agents': typeof AuthAgentsIndexRoute
   '/projects': typeof AuthProjectsIndexRoute
+  '/agents/packs/$naddr': typeof AuthAgentsPacksNaddrRoute
   '/projects/$projectId/settings': typeof AuthProjectsProjectIdSettingsRoute
+  '/agents/packs': typeof AuthAgentsPacksIndexRoute
   '/projects/$projectId': typeof AuthProjectsProjectIdIndexRoute
 }
 export interface FileRoutesById {
@@ -143,12 +166,15 @@ export interface FileRoutesById {
   '/_auth/projects': typeof AuthProjectsRouteWithChildren
   '/_auth/settings': typeof AuthSettingsRoute
   '/_auth/agent-definition/$agentDefinitionEventId': typeof AuthAgentDefinitionAgentDefinitionEventIdRoute
+  '/_auth/agents/packs': typeof AuthAgentsPacksRouteWithChildren
   '/_auth/agents/requests': typeof AuthAgentsRequestsRoute
   '/_auth/lesson/$lessonId': typeof AuthLessonLessonIdRoute
   '/_auth/p/$pubkey': typeof AuthPPubkeyRoute
   '/_auth/agents/': typeof AuthAgentsIndexRoute
   '/_auth/projects/': typeof AuthProjectsIndexRoute
+  '/_auth/agents/packs/$naddr': typeof AuthAgentsPacksNaddrRoute
   '/_auth/projects/$projectId/settings': typeof AuthProjectsProjectIdSettingsRoute
+  '/_auth/agents/packs/': typeof AuthAgentsPacksIndexRoute
   '/_auth/projects/$projectId/': typeof AuthProjectsProjectIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -161,12 +187,15 @@ export interface FileRouteTypes {
     | '/projects'
     | '/settings'
     | '/agent-definition/$agentDefinitionEventId'
+    | '/agents/packs'
     | '/agents/requests'
     | '/lesson/$lessonId'
     | '/p/$pubkey'
     | '/agents/'
     | '/projects/'
+    | '/agents/packs/$naddr'
     | '/projects/$projectId/settings'
+    | '/agents/packs/'
     | '/projects/$projectId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -180,7 +209,9 @@ export interface FileRouteTypes {
     | '/p/$pubkey'
     | '/agents'
     | '/projects'
+    | '/agents/packs/$naddr'
     | '/projects/$projectId/settings'
+    | '/agents/packs'
     | '/projects/$projectId'
   id:
     | '__root__'
@@ -192,12 +223,15 @@ export interface FileRouteTypes {
     | '/_auth/projects'
     | '/_auth/settings'
     | '/_auth/agent-definition/$agentDefinitionEventId'
+    | '/_auth/agents/packs'
     | '/_auth/agents/requests'
     | '/_auth/lesson/$lessonId'
     | '/_auth/p/$pubkey'
     | '/_auth/agents/'
     | '/_auth/projects/'
+    | '/_auth/agents/packs/$naddr'
     | '/_auth/projects/$projectId/settings'
+    | '/_auth/agents/packs/'
     | '/_auth/projects/$projectId/'
   fileRoutesById: FileRoutesById
 }
@@ -294,6 +328,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthAgentsRequestsRouteImport
       parentRoute: typeof AuthAgentsRoute
     }
+    '/_auth/agents/packs': {
+      id: '/_auth/agents/packs'
+      path: '/packs'
+      fullPath: '/agents/packs'
+      preLoaderRoute: typeof AuthAgentsPacksRouteImport
+      parentRoute: typeof AuthAgentsRoute
+    }
     '/_auth/agent-definition/$agentDefinitionEventId': {
       id: '/_auth/agent-definition/$agentDefinitionEventId'
       path: '/agent-definition/$agentDefinitionEventId'
@@ -308,6 +349,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthProjectsProjectIdIndexRouteImport
       parentRoute: typeof AuthProjectsRoute
     }
+    '/_auth/agents/packs/': {
+      id: '/_auth/agents/packs/'
+      path: '/'
+      fullPath: '/agents/packs/'
+      preLoaderRoute: typeof AuthAgentsPacksIndexRouteImport
+      parentRoute: typeof AuthAgentsPacksRoute
+    }
     '/_auth/projects/$projectId/settings': {
       id: '/_auth/projects/$projectId/settings'
       path: '/$projectId/settings'
@@ -315,15 +363,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthProjectsProjectIdSettingsRouteImport
       parentRoute: typeof AuthProjectsRoute
     }
+    '/_auth/agents/packs/$naddr': {
+      id: '/_auth/agents/packs/$naddr'
+      path: '/$naddr'
+      fullPath: '/agents/packs/$naddr'
+      preLoaderRoute: typeof AuthAgentsPacksNaddrRouteImport
+      parentRoute: typeof AuthAgentsPacksRoute
+    }
   }
 }
 
+interface AuthAgentsPacksRouteChildren {
+  AuthAgentsPacksNaddrRoute: typeof AuthAgentsPacksNaddrRoute
+  AuthAgentsPacksIndexRoute: typeof AuthAgentsPacksIndexRoute
+}
+
+const AuthAgentsPacksRouteChildren: AuthAgentsPacksRouteChildren = {
+  AuthAgentsPacksNaddrRoute: AuthAgentsPacksNaddrRoute,
+  AuthAgentsPacksIndexRoute: AuthAgentsPacksIndexRoute,
+}
+
+const AuthAgentsPacksRouteWithChildren = AuthAgentsPacksRoute._addFileChildren(
+  AuthAgentsPacksRouteChildren,
+)
+
 interface AuthAgentsRouteChildren {
+  AuthAgentsPacksRoute: typeof AuthAgentsPacksRouteWithChildren
   AuthAgentsRequestsRoute: typeof AuthAgentsRequestsRoute
   AuthAgentsIndexRoute: typeof AuthAgentsIndexRoute
 }
 
 const AuthAgentsRouteChildren: AuthAgentsRouteChildren = {
+  AuthAgentsPacksRoute: AuthAgentsPacksRouteWithChildren,
   AuthAgentsRequestsRoute: AuthAgentsRequestsRoute,
   AuthAgentsIndexRoute: AuthAgentsIndexRoute,
 }

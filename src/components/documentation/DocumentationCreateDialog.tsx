@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { NDKArticle } from '@nostr-dev-kit/ndk'
+import { NDKArticle } from '@nostr-dev-kit/ndk-hooks'
 import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useProjectStatus } from '@/stores/projects'
 import { useProjectsStore } from '@/stores/projects'
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKKind } from '@nostr-dev-kit/ndk-hooks'
 import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
 
 /**

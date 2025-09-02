@@ -1,223 +1,90 @@
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
+import type { ProviderConfig } from '@/services/ai/provider-registry'
 
-// ============================================
-// TYPE DEFINITIONS
-// ============================================
-
-export type AIProvider = 'openai' | 'anthropic' | 'google' | 'openrouter' | 'groq' | 'ollama'
-
-export interface AIProviderConfig {
-  id: string
-  provider: AIProvider
-  apiKey?: string
-  model: string
-  enabled: boolean
-  temperature?: number
-  maxTokens?: number
-  isDefault?: boolean
-}
-
-export interface TTSConfig {
-  enabled: boolean
-  provider: 'murf'
-  apiKey?: string
-  voiceId?: string
-  style?: string
-  rate?: number
-  pitch?: number
-  volume?: number
-}
-
-export interface STTConfig {
-  enabled: boolean
-  provider: 'openai'
-  model: string
-}
-
-// ============================================
-// INTERNAL STORAGE FORMAT
-// ============================================
-
-// This is the internal storage format - components don't need to know about this
-interface InternalStorage {
-  providers: AIProviderConfig[]
-  tts: TTSConfig
-  stt: STTConfig
-  autoTTS: boolean
+// Simplified AI configuration
+export interface AIConfig {
+  activeProvider?: ProviderConfig
+  voiceSettings: {
+    enabled: boolean
+    provider: 'openai' | 'elevenlabs'
+    voiceId?: string
+    apiKey?: string // For ElevenLabs
+    speed: number
+    autoSpeak: boolean
+  }
+  sttSettings: {
+    enabled: boolean
+    model: string
+  }
 }
 
 // Default configuration
-const defaultStorage: InternalStorage = {
-  providers: [],
-  tts: {
-    enabled: false,
-    provider: 'murf',
-    style: 'Conversational',
-    rate: 1.0,
-    pitch: 1.0,
-    volume: 1.0,
-  },
-  stt: {
+const defaultConfig: AIConfig = {
+  activeProvider: undefined,
+  voiceSettings: {
     enabled: false,
     provider: 'openai',
+    voiceId: 'alloy',
+    speed: 1.0,
+    autoSpeak: false,
+  },
+  sttSettings: {
+    enabled: false,
     model: 'whisper-1',
   },
-  autoTTS: false,
 }
 
-// ============================================
-// STORAGE ATOMS - Implementation details hidden
-// ============================================
+// Main storage atom
+export const aiConfigAtom = atomWithStorage<AIConfig>('ai-config-v2', defaultConfig)
 
-// Main storage atom - single source of truth
-const storageAtom = atomWithStorage<InternalStorage>('ai-config', defaultStorage)
-
-// ============================================
-// PUBLIC ATOMS - Clean interfaces for components
-// ============================================
-
-// LLM Providers atom - for LLMSettings.tsx
-export const llmProvidersAtom = atom(
-  (get) => get(storageAtom).providers,
-  (get, set, providers: AIProviderConfig[]) => {
-    const storage = get(storageAtom)
-    set(storageAtom, { ...storage, providers })
+// Active provider atom
+export const activeProviderAtom = atom(
+  (get) => get(aiConfigAtom).activeProvider,
+  (get, set, provider: ProviderConfig | undefined) => {
+    const config = get(aiConfigAtom)
+    set(aiConfigAtom, { ...config, activeProvider: provider })
   }
 )
 
-// TTS Config atom - for TTSSettings.tsx and voice features
-export const ttsConfigAtom = atom(
-  (get) => get(storageAtom).tts,
-  (get, set, tts: Partial<TTSConfig>) => {
-    const storage = get(storageAtom)
-    set(storageAtom, { 
-      ...storage, 
-      tts: { ...storage.tts, ...tts }
+// Voice settings atom
+export const voiceSettingsAtom = atom(
+  (get) => get(aiConfigAtom).voiceSettings,
+  (get, set, settings: Partial<AIConfig['voiceSettings']>) => {
+    const config = get(aiConfigAtom)
+    set(aiConfigAtom, { 
+      ...config, 
+      voiceSettings: { ...config.voiceSettings, ...settings }
     })
   }
 )
 
-// STT Config atom - for STTSettings.tsx
-export const sttConfigAtom = atom(
-  (get) => get(storageAtom).stt,
-  (get, set, stt: Partial<STTConfig>) => {
-    const storage = get(storageAtom)
-    set(storageAtom, { 
-      ...storage, 
-      stt: { ...storage.stt, ...stt }
+// STT settings atom
+export const sttSettingsAtom = atom(
+  (get) => get(aiConfigAtom).sttSettings,
+  (get, set, settings: Partial<AIConfig['sttSettings']>) => {
+    const config = get(aiConfigAtom)
+    set(aiConfigAtom, { 
+      ...config, 
+      sttSettings: { ...config.sttSettings, ...settings }
     })
   }
 )
 
-// Auto-TTS atom - for chat interface
-export const autoTTSAtom = atom(
-  (get) => get(storageAtom).autoTTS,
-  (get, set, autoTTS: boolean) => {
-    const storage = get(storageAtom)
-    set(storageAtom, { ...storage, autoTTS })
-  }
-)
-
-// ============================================
-// COMPUTED ATOMS - Derived values
-// ============================================
-
-// Get the default/active provider
-export const activeProviderAtom = atom((get) => {
-  const providers = get(storageAtom).providers
-  return providers.find(p => p.isDefault && p.enabled) || 
-         providers.find(p => p.enabled) || 
-         null
-})
-
-// Get OpenAI provider specifically (needed for STT/TTS)
-export const openAIProviderAtom = atom((get) => {
-  const providers = get(storageAtom).providers
-  return providers.find(p => p.provider === 'openai' && p.enabled)
-})
-
-// Get OpenAI API key (from provider or env)
+// Helper atom to get OpenAI API key (from provider or voice settings)
 export const openAIApiKeyAtom = atom((get) => {
-  const openAI = get(openAIProviderAtom)
-  return openAI?.apiKey || import.meta.env.VITE_OPENAI_API_KEY
+  const activeProvider = get(activeProviderAtom)
+  const voiceSettings = get(voiceSettingsAtom)
+  
+  // If active provider is OpenAI, use its key
+  if (activeProvider?.provider === 'openai') {
+    return activeProvider.apiKey
+  }
+  
+  // Otherwise, check if we have a stored OpenAI key for voice
+  if (voiceSettings.provider === 'openai' && voiceSettings.apiKey) {
+    return voiceSettings.apiKey
+  }
+  
+  return undefined
 })
-
-// Get Murf API key (from TTS config or env)
-export const murfApiKeyAtom = atom((get) => {
-  const tts = get(storageAtom).tts
-  return tts.apiKey || import.meta.env.VITE_MURF_API_KEY
-})
-
-// ============================================
-// HOOKS - Single Responsibility
-// ============================================
-
-import { useAtom, useAtomValue } from 'jotai'
-
-// Hook for AI provider management
-export function useAIProviders() {
-  const [providers, setProviders] = useAtom(llmProvidersAtom)
-  const activeProvider = useAtomValue(activeProviderAtom)
-  const openAIProvider = useAtomValue(openAIProviderAtom)
-  
-  return {
-    providers,
-    setProviders,
-    activeProvider,
-    openAIProvider,
-    addProvider: (provider: AIProviderConfig) => {
-      setProviders([...providers, provider])
-    },
-    updateProvider: (id: string, updates: Partial<AIProviderConfig>) => {
-      setProviders(providers.map(p => 
-        p.id === id ? { ...p, ...updates } : p
-      ))
-    },
-    removeProvider: (id: string) => {
-      setProviders(providers.filter(p => p.id !== id))
-    },
-    setDefaultProvider: (id: string) => {
-      setProviders(providers.map(p => ({
-        ...p,
-        isDefault: p.id === id
-      })))
-    }
-  }
-}
-
-// Hook for TTS configuration
-export function useTTS() {
-  const [config, setConfig] = useAtom(ttsConfigAtom)
-  const apiKey = useAtomValue(murfApiKeyAtom)
-  
-  return {
-    config,
-    setConfig,
-    apiKey,
-    isEnabled: config.enabled,
-    enable: () => setConfig({ ...config, enabled: true }),
-    disable: () => setConfig({ ...config, enabled: false })
-  }
-}
-
-// Hook for STT configuration
-export function useSTT() {
-  const [config, setConfig] = useAtom(sttConfigAtom)
-  const openAIApiKey = useAtomValue(openAIApiKeyAtom)
-  
-  return {
-    config,
-    setConfig,
-    openAIApiKey,
-    isEnabled: config.enabled,
-    enable: () => setConfig({ ...config, enabled: true }),
-    disable: () => setConfig({ ...config, enabled: false })
-  }
-}
-
-// Hook for auto-TTS toggle
-export function useAutoTTS() {
-  return useAtom(autoTTSAtom)
-}
-

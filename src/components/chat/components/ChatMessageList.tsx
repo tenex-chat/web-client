@@ -23,8 +23,8 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import type NDK from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "@/components/chat/hooks/useChatMessages";
 import { EVENT_KINDS } from "@/lib/constants";
-import { useMurfTTS } from "@/hooks/useMurfTTS";
-import { useAgentTTSConfig } from "@/hooks/useAgentTTSConfig";
+import { useAI } from "@/hooks/useAI";
+import { useAgentVoiceConfig } from "@/hooks/useAgentVoiceConfig";
 import { extractTTSContent } from "@/lib/utils/extractTTSContent";
 import { isAudioEvent } from "@/lib/utils/audioEvents";
 
@@ -71,10 +71,8 @@ export const ChatMessageList = memo(function ChatMessageList({
   const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(null);
   
   // TTS configuration
-  const ttsOptions = useAgentTTSConfig();
-  const tts = useMurfTTS(
-    ttsOptions || { apiKey: "", voiceId: "", enabled: false },
-  );
+  const { speak, hasTTS } = useAI();
+  const [isPlaying, setIsPlaying] = useState(false);
 
   // Handle clicking on a message timestamp to navigate
   const handleTimeClick = useCallback((event: NDKEvent) => {
@@ -106,13 +104,21 @@ export const ChatMessageList = memo(function ChatMessageList({
 
     // Extract and play TTS content
     const ttsContent = extractTTSContent(latestMessage.event.content);
-    if (ttsContent && !tts.isPlaying) {
-      tts.play(ttsContent).catch(() => {
-        toast.error("TTS playback failed");
-      });
+    if (ttsContent && !isPlaying && hasTTS) {
+      setIsPlaying(true);
+      speak(ttsContent)
+        .then(async (audioBlob) => {
+          const audio = new Audio(URL.createObjectURL(audioBlob));
+          await audio.play();
+          audio.onended = () => setIsPlaying(false);
+        })
+        .catch(() => {
+          toast.error("TTS playback failed");
+          setIsPlaying(false);
+        });
       setLastPlayedMessageId(latestMessage.id);
     }
-  }, [latestMessageId, autoTTS, ttsOptions, lastPlayedMessageId, currentUserPubkey, tts, messages]);
+  }, [latestMessageId, autoTTS, hasTTS, lastPlayedMessageId, currentUserPubkey, isPlaying, speak, messages]);
   const USE_VIRTUAL_LIST_THRESHOLD = 50; // Use virtual list for more than 50 messages
 
   const renderMessage = (message: Message, index: number) => {

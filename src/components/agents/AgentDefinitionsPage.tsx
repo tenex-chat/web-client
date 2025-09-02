@@ -1,4 +1,4 @@
-import { type NDKKind } from "@nostr-dev-kit/ndk";
+import { type NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Bot, Plus, Package, ChevronRight } from "lucide-react";
 import { SearchBar } from "@/components/common/SearchBar";

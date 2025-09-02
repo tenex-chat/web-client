@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { DeltaContentAccumulator } from './deltaContentAccumulator'
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 
 describe('DeltaContentAccumulator', () => {
   it('should accumulate deltas in sequence order', () => {

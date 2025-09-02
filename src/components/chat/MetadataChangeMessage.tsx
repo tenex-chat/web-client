@@ -1,4 +1,4 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { memo, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils/time'

@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { NDKArticle } from '@nostr-dev-kit/ndk'
+import { NDKArticle } from '@nostr-dev-kit/ndk-hooks'
 import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { Button } from '@/components/ui/button'
 import { DocumentationEditor } from './DocumentationEditor'
 import { HashtagInput } from './HashtagInput'
 import { useToast } from '@/hooks/use-toast'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { ArrowLeft, Loader2, FileText, Trash2 } from 'lucide-react'
+import { ArrowLeft, Loader2, FileText, Trash2, ExternalLink } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import TurndownService from 'turndown'
 import { marked } from 'marked'
@@ -19,6 +19,7 @@ interface DocumentationEditorDrawerProps {
   existingArticle?: NDKArticle | null
   existingHashtags?: string[]
   onBack?: () => void
+  onDetach?: () => void
 }
 
 export function DocumentationEditorDrawer({
@@ -26,7 +27,8 @@ export function DocumentationEditorDrawer({
   projectTitle,
   existingArticle,
   existingHashtags = [],
-  onBack
+  onBack,
+  onDetach
 }: DocumentationEditorDrawerProps) {
   const { ndk } = useNDK()
   const { toast } = useToast()
@@ -219,6 +221,17 @@ export function DocumentationEditorDrawer({
               className="h-9 w-9"
             >
               <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
+          {onDetach && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onDetach}
+              className="h-9 w-9"
+              title="Detach to floating window"
+            >
+              <ExternalLink className="h-4 w-4" />
             </Button>
           )}
           <div>

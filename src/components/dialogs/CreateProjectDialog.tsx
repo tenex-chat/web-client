@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKKind } from '@nostr-dev-kit/ndk-hooks'
 import { toast } from 'sonner'
 import {
   Dialog,

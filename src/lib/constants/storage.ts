@@ -3,12 +3,11 @@
  */
 
 export const STORAGE_KEYS = {
-  // Murf TTS
-  MURF_VOICES_CACHE: 'murf_voices_cache',
-  MURF_API_KEY: 'murf_api_key',
-  
-  // Voice configuration
-  VOICE_CONFIG_PREFIX: 'agent-voice-',
+  // AI provider configuration
+  AI_PROVIDERS: 'ai-providers',
+  ACTIVE_PROVIDER: 'active-provider',
+  VOICE_SETTINGS: 'voice-settings',
+  AGENT_VOICE_CONFIGS: 'agent-voice-configs',
   
   // Speech-to-text settings
   STT_SETTINGS: 'stt-settings',

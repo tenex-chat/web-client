@@ -1,4 +1,4 @@
-import { type NDKKind } from "@nostr-dev-kit/ndk";
+import { type NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import {
   useNDK,
   useSubscribe,

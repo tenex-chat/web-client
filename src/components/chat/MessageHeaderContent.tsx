@@ -1,4 +1,4 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'
 import { RecipientAvatars } from '@/components/common/RecipientAvatars'
 import { formatRelativeTime, formatCompactTime } from '@/lib/utils/time'

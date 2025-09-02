@@ -1,47 +1,49 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { useNDK } from '@nostr-dev-kit/ndk-hooks'
-import { Crown, X, Plus, Bot, Loader2 } from 'lucide-react'
+import { useNDK, useSubscribe, useProfile } from '@nostr-dev-kit/ndk-hooks'
+import { Crown, X, Plus, Bot } from 'lucide-react'
 import { toast } from 'sonner'
 import { AddAgentsToProjectDialog } from '@/components/dialogs/AddAgentsToProjectDialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useProfile } from '@nostr-dev-kit/ndk-hooks'
 
-interface AgentWithDefinition {
-  projectAgent: { slug?: string; ndkAgentEventId: string }
-  definition: NDKAgentDefinition | null
-  loading: boolean
-}
-
-// Component to display agent info with fetched definition
+// Component to display agent info with real-time subscription
 function AgentDisplay({ 
-  agent, 
+  projectAgent,
   isProjectManager,
   onRemove,
   canRemove
 }: { 
-  agent: AgentWithDefinition
+  projectAgent: { slug?: string; ndkAgentEventId: string }
   isProjectManager: boolean
   onRemove: () => void
   canRemove: boolean
 }) {
-  const agentPubkey = agent.definition?.pubkey
+  // Subscribe to the agent definition event in real-time
+  const { events } = useSubscribe({
+    ids: [projectAgent.ndkAgentEventId],
+    closeOnEose: false
+  })
+  
+  const agentEvent = events[0]
+  const agentDefinition = agentEvent ? NDKAgentDefinition.from(agentEvent) : null
+  
+  const agentPubkey = agentDefinition?.pubkey
   const profile = useProfile(agentPubkey || '')
   
-  const displayName = agent.definition?.name || 
-                      agent.projectAgent.slug || 
+  const displayName = agentDefinition?.name || 
+                      projectAgent.slug || 
                       profile?.displayName || 
                       profile?.name || 
-                      'Loading...'
+                      ''
   
-  const description = agent.definition?.description || 
-                     agent.definition?.content || 
-                     'No description available'
+  const description = agentDefinition?.description || 
+                     agentDefinition?.content || 
+                     ''
   
   const avatarUrl = profile?.image || profile?.picture
   
@@ -51,18 +53,9 @@ function AgentDisplay({
     return `${eventId.slice(0, 12)}...${eventId.slice(-6)}`
   }
   
-  if (agent.loading) {
-    return (
-      <div className="flex items-center gap-3 p-3 rounded-md border bg-card">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        <div className="flex-1">
-          <div className="font-medium">Loading agent definition...</div>
-          <div className="text-xs text-muted-foreground">
-            Event ID: {truncateEventId(agent.projectAgent.ndkAgentEventId)}
-          </div>
-        </div>
-      </div>
-    )
+  // Don't show anything if no data yet (following NDK best practices)
+  if (!agentDefinition && !projectAgent.slug) {
+    return null
   }
   
   return (
@@ -85,16 +78,18 @@ function AgentDisplay({
             </div>
           )}
         </div>
-        {agent.projectAgent.slug && (
+        {projectAgent.slug && (
           <div className="text-sm text-muted-foreground">
-            Slug: {agent.projectAgent.slug}
+            Slug: {projectAgent.slug}
           </div>
         )}
-        <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-          {description}
-        </div>
+        {description && (
+          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            {description}
+          </div>
+        )}
         <div className="text-xs text-muted-foreground mt-1">
-          Event ID: {truncateEventId(agent.projectAgent.ndkAgentEventId)}
+          Event ID: {truncateEventId(projectAgent.ndkAgentEventId)}
         </div>
       </div>
       <Button
@@ -126,64 +121,30 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
   const [selectedPM, setSelectedPM] = useState<string>('')
   const [isUpdating, setIsUpdating] = useState(false)
   const [addAgentsDialogOpen, setAddAgentsDialogOpen] = useState(false)
-  const [agentsWithDefinitions, setAgentsWithDefinitions] = useState<AgentWithDefinition[]>([])
   
   // Get agent definitions from project tags
   const projectAgents = project.agents || []
   
-  // Fetch agent definitions
-  useEffect(() => {
-    if (!ndk || projectAgents.length === 0) {
-      setAgentsWithDefinitions([])
-      return
-    }
-    
-    const fetchAgentDefinitions = async () => {
-      // Initialize with loading state
-      const initialData: AgentWithDefinition[] = projectAgents.map(agent => ({
-        projectAgent: agent,
-        definition: null,
-        loading: true
-      }))
-      
-      setAgentsWithDefinitions(initialData)
-      
-      // Fetch all definitions in parallel
-      const definitionPromises = projectAgents.map(async (agent) => {
-        try {
-          const event = await ndk.fetchEvent(agent.ndkAgentEventId)
-          if (event) {
-            return NDKAgentDefinition.from(event)
-          }
-          return null
-        } catch (error) {
-          console.error('Failed to fetch agent definition:', error)
-          return null
-        }
-      })
-      
-      // Wait for all fetches to complete
-      const definitions = await Promise.all(definitionPromises)
-      
-      // Update state once with all results
-      const finalData: AgentWithDefinition[] = projectAgents.map((agent, index) => ({
-        projectAgent: agent,
-        definition: definitions[index],
-        loading: false
-      }))
-      
-      setAgentsWithDefinitions(finalData)
-    }
-    
-    fetchAgentDefinitions()
-  }, [ndk, project.dTag]) // Use project.dTag as dependency instead of projectAgents array
+  // Subscribe to all agent definition events at once
+  const agentEventIds = projectAgents.map(agent => agent.ndkAgentEventId).filter(Boolean)
+  const { events: agentEvents } = useSubscribe(
+    agentEventIds.length > 0 ? {
+      ids: agentEventIds,
+      closeOnEose: false
+    } : false
+  )
   
-  // Set initial PM (first agent)
-  useEffect(() => {
-    if (projectAgents.length > 0 && !selectedPM) {
-      setSelectedPM(projectAgents[0].slug || projectAgents[0].ndkAgentEventId)
-    }
-  }, [projectAgents, selectedPM])
+  // Map events to definitions
+  const agentDefinitionsMap = new Map<string, NDKAgentDefinition>()
+  agentEvents.forEach(event => {
+    const definition = NDKAgentDefinition.from(event)
+    agentDefinitionsMap.set(event.id, definition)
+  })
+  
+  // Set initial PM (first agent) when agents change
+  if (projectAgents.length > 0 && !selectedPM) {
+    setSelectedPM(projectAgents[0].slug || projectAgents[0].ndkAgentEventId)
+  }
 
   const handleUpdatePM = async () => {
     if (!ndk || !project || !selectedPM) return
@@ -215,9 +176,6 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
       await project.publishReplaceable()
       
       toast.success('Project Manager updated')
-      
-      // Refresh the agents list to reflect new order
-      window.location.reload()
     } catch (error) {
       console.error('Failed to update Project Manager:', error)
       toast.error('Failed to update Project Manager')
@@ -255,9 +213,6 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
       await project.publishReplaceable()
       
       toast.success('Agent removed from project')
-      
-      // Refresh to update the list
-      window.location.reload()
     } catch (error) {
       console.error('Failed to remove agent:', error)
       toast.error('Failed to remove agent')
@@ -266,6 +221,11 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
 
   const getAgentIdentifier = (agent: { slug?: string; ndkAgentEventId: string }) => {
     return agent.slug || agent.ndkAgentEventId
+  }
+  
+  const getAgentDisplayName = (agent: { slug?: string; ndkAgentEventId: string }) => {
+    const definition = agentDefinitionsMap.get(agent.ndkAgentEventId)
+    return definition?.name || agent.slug || 'Unknown Agent'
   }
 
   return (
@@ -278,20 +238,18 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {agentsWithDefinitions.length > 0 ? (
+          {projectAgents.length > 0 ? (
             <>
               <div className="space-y-2">
                 <Label>Current Project Manager</Label>
-                {agentsWithDefinitions[0] && (
-                  <div className="p-3 rounded-md bg-muted/50">
-                    <AgentDisplay 
-                      agent={agentsWithDefinitions[0]} 
-                      isProjectManager={true}
-                      onRemove={() => {}}
-                      canRemove={false}
-                    />
-                  </div>
-                )}
+                <div className="p-3 rounded-md bg-muted/50">
+                  <AgentDisplay 
+                    projectAgent={projectAgents[0]} 
+                    isProjectManager={true}
+                    onRemove={() => {}}
+                    canRemove={false}
+                  />
+                </div>
               </div>
               
               {projectAgents.length > 1 && (
@@ -303,11 +261,9 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
                         <SelectValue placeholder="Select new Project Manager" />
                       </SelectTrigger>
                       <SelectContent>
-                        {agentsWithDefinitions.map((agentData) => {
-                          const identifier = getAgentIdentifier(agentData.projectAgent)
-                          const displayName = agentData.definition?.name || 
-                                            agentData.projectAgent.slug || 
-                                            'Unknown Agent'
+                        {projectAgents.map((agent) => {
+                          const identifier = getAgentIdentifier(agent)
+                          const displayName = getAgentDisplayName(agent)
                           return (
                             <SelectItem key={identifier} value={identifier}>
                               <div className="flex items-center gap-2">
@@ -344,28 +300,21 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {agentsWithDefinitions.length > 0 ? (
-              agentsWithDefinitions.map((agentData, index) => {
-                const isProjectManager = index === 0
-                
-                return (
-                  <AgentDisplay
-                    key={getAgentIdentifier(agentData.projectAgent)}
-                    agent={agentData}
-                    isProjectManager={isProjectManager}
-                    onRemove={() => handleRemoveAgent(agentData.projectAgent)}
-                    canRemove={!(isProjectManager && projectAgents.length > 1) && projectAgents.length > 1}
-                  />
-                )
-              })
-            ) : projectAgents.length > 0 ? (
-              <div className="text-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">
-                  Loading agent definitions...
-                </p>
-              </div>
-            ) : (
+            {projectAgents.map((agent, index) => {
+              const isProjectManager = index === 0
+              
+              return (
+                <AgentDisplay
+                  key={getAgentIdentifier(agent)}
+                  projectAgent={agent}
+                  isProjectManager={isProjectManager}
+                  onRemove={() => handleRemoveAgent(agent)}
+                  canRemove={!(isProjectManager && projectAgents.length > 1) && projectAgents.length > 1}
+                />
+              )
+            })}
+            
+            {projectAgents.length === 0 && (
               <div className="text-center py-8">
                 <Bot className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground mb-4">

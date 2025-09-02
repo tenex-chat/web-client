@@ -18,7 +18,7 @@ import { useThreadManagement } from "./hooks/useThreadManagement";
 import { ChatHeader } from "./components/ChatHeader";
 import { ChatMessageList } from "./components/ChatMessageList";
 import { ChatInputArea } from "./components/ChatInputArea";
-import { useAutoTTS } from "@/stores/ai-config-store";
+import { useAI } from "@/hooks/useAI";
 
 interface ChatInterfaceProps {
   project?: NDKProject | null;
@@ -26,6 +26,7 @@ interface ChatInterfaceProps {
   extraTags?: string[][];
   className?: string;
   onBack?: () => void;
+  onDetach?: () => void;
   onTaskClick?: (task: NDKTask) => void;
   onThreadCreated?: (thread: NDKEvent) => void;
   onVoiceCallClick?: () => void;
@@ -41,6 +42,7 @@ export function ChatInterface({
   extraTags,
   className,
   onBack,
+  onDetach,
   onTaskClick,
   onThreadCreated,
   onVoiceCallClick,
@@ -52,7 +54,8 @@ export function ChatInterface({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // TTS state
-  const [autoTTS] = useAutoTTS();
+  const { voiceSettings } = useAI();
+  const autoTTS = voiceSettings.autoSpeak;
 
   // Local navigation state
   const [navigationStack, setNavigationStack] = useState<NDKEvent[]>([]);
@@ -208,6 +211,7 @@ export function ChatInterface({
         <ChatHeader
           rootEvent={localRootEvent}
           onBack={handleBackWithStack}
+          onDetach={onDetach}
           messages={messages}
           project={project}
           onVoiceCallClick={onVoiceCallClick}

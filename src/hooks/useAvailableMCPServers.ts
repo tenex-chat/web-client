@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
-import type { NDKKind } from '@nostr-dev-kit/ndk'
+import type { NDKKind } from '@nostr-dev-kit/ndk-hooks'
 
 export interface MCPServerInfo {
   id: string

@@ -10,27 +10,18 @@ import { ProjectAgentsSettings } from '@/components/settings/ProjectAgentsSettin
 import { ProjectAdvancedSettings } from '@/components/settings/ProjectAdvancedSettings'
 import { ProjectDangerZone } from '@/components/settings/ProjectDangerZone'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { NDKEvent, NDKArticle, NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKEvent, NDKArticle, NDKKind } from '@nostr-dev-kit/ndk-hooks'
 import { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { Sheet, SheetContent, SheetClose } from '@/components/ui/sheet'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { CallView } from '@/components/call/CallView'
 import { WindowManager } from '@/components/windows/WindowManager'
 import { useWindowManager } from '@/stores/windowManager'
 import { useIsMobile, useIsDesktop } from '@/hooks/useMediaQuery'
-import { ExternalLink, X } from 'lucide-react'
+import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { DrawerContent as FloatingWindowContent } from '@/components/windows/FloatingWindow'
-
-type TabType = 'conversations' | 'docs' | 'agents' | 'status' | 'settings' | 'tasks'
-
-interface DrawerContent {
-  project: NDKProject
-  type: TabType
-  item?: string | NDKEvent;
-  data?: any
-}
+import type { DrawerContent, TabType } from '@/components/windows/FloatingWindow'
 
 interface MultiProjectViewProps {
   openProjects: NDKProject[]
@@ -202,6 +193,7 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
             rootEvent={selectedThreadEvent}
             className="h-full"
             onBack={handleDrawerClose}
+            onDetach={!isMobile && canAddWindow() ? handleDetachWindow : undefined}
             onTaskClick={(task: NDKTask) => {
                 if (task) {
                   setSelectedThreadEvent(task)
@@ -217,7 +209,7 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
             onVoiceCallClick={() => {
               // On desktop, open in floating window; on mobile/tablet, use fullscreen overlay
               if (isDesktop) {
-                const callContent: FloatingWindowContent = {
+                const callContent: DrawerContent = {
                   project,
                   type: 'call',
                   data: {
@@ -262,6 +254,7 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
               existingArticle={editingArticle}
               existingHashtags={existingHashtags}
               onBack={handleDrawerClose}
+              onDetach={!isMobile && canAddWindow() ? handleDetachWindow : undefined}
             />
           )
         }
@@ -273,6 +266,7 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
               projectTitle={project.title}
               project={project}
               onBack={handleDrawerClose}
+              onDetach={!isMobile && canAddWindow() ? handleDetachWindow : undefined}
               onEdit={() => {
                 setEditingArticle(selectedArticle)
                 setIsCreatingDoc(false)
@@ -286,8 +280,36 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
         // The item should be the agent's pubkey
         if (typeof drawerContent.item === 'string') {
           return (
-            <div className="h-full overflow-hidden">
-              <AgentProfilePage pubkey={drawerContent.item} />
+            <div className="h-full flex flex-col">
+              {/* Agent Profile Header */}
+              <div className="flex items-center gap-2 p-4 border-b">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDrawerClose}
+                  className="h-9 w-9"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                {!isMobile && canAddWindow() && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleDetachWindow}
+                    className="h-9 w-9"
+                    title="Detach to floating window"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                )}
+                <div>
+                  <h2 className="text-lg font-semibold">Agent Profile</h2>
+                </div>
+              </div>
+              {/* Agent Profile Content */}
+              <div className="flex-1 overflow-hidden">
+                <AgentProfilePage pubkey={drawerContent.item} />
+              </div>
             </div>
           )
         }
@@ -304,28 +326,64 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
       case 'settings':
         // Render appropriate settings component based on item
         return (
-          <ScrollArea className="h-full">
-            <div className="p-6">
-              {(() => {
-                switch (drawerContent.item) {
-                  case 'general':
-                    return <ProjectGeneralSettings project={project} />
-                  
-                  case 'agents':
-                    return <ProjectAgentsSettings project={project} />
-                  
-                  case 'advanced':
-                    return <ProjectAdvancedSettings project={project} />
-                  
-                  case 'danger':
-                    return <ProjectDangerZone project={project} onDelete={handleDrawerClose} />
-                  
-                  default:
-                    return <ProjectGeneralSettings project={project} />
-                }
-              })()}
+          <div className="h-full flex flex-col">
+            {/* Settings Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDrawerClose}
+                  className="h-9 w-9"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                {!isMobile && canAddWindow() && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleDetachWindow}
+                    className="h-9 w-9"
+                    title="Detach to floating window"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                )}
+                <div>
+                  <h2 className="text-lg font-semibold">{project.title} Settings</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {drawerContent.item === 'agents' ? 'Agent Configuration' :
+                     drawerContent.item === 'advanced' ? 'Advanced Settings' :
+                     drawerContent.item === 'danger' ? 'Danger Zone' :
+                     'General Settings'}
+                  </p>
+                </div>
+              </div>
             </div>
-          </ScrollArea>
+            {/* Settings Content */}
+            <ScrollArea className="flex-1">
+              <div className="p-6">
+                {(() => {
+                  switch (drawerContent.item) {
+                    case 'general':
+                      return <ProjectGeneralSettings project={project} />
+                    
+                    case 'agents':
+                      return <ProjectAgentsSettings project={project} />
+                    
+                    case 'advanced':
+                      return <ProjectAdvancedSettings project={project} />
+                    
+                    case 'danger':
+                      return <ProjectDangerZone project={project} onDelete={handleDrawerClose} />
+                    
+                    default:
+                      return <ProjectGeneralSettings project={project} />
+                  }
+                })()}
+              </div>
+            </ScrollArea>
+          </div>
         )
 
       default:
@@ -379,31 +437,6 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
           )}
           side="right"
         >
-          {/* Custom header buttons for desktop */}
-          {!isMobile && drawerContent && (
-            <div className="absolute top-4 right-4 z-[100] flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleDetachWindow}
-                disabled={!canAddWindow()}
-                title={canAddWindow() ? "Detach to floating window" : "Maximum windows reached (5)"}
-                className="h-8 w-8 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-              <SheetClose asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
-                >
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Close</span>
-                </Button>
-              </SheetClose>
-            </div>
-          )}
           {drawerContent && renderDrawerContent()}
         </SheetContent>
       </Sheet>

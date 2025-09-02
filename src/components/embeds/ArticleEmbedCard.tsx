@@ -1,4 +1,4 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { FileText, Calendar, User } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'

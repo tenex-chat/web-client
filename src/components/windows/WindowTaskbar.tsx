@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, FileText, MessageSquare, Bot, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { WindowState } from '@/stores/windowManager'
-import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 
 interface WindowTaskbarProps {

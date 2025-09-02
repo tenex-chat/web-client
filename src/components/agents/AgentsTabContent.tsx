@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useNDK, useSubscribe, useProfile } from "@nostr-dev-kit/ndk-hooks";
-import { type NDKKind } from "@nostr-dev-kit/ndk";
+import { type NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { Bot, Plus, Settings, Volume2 } from "lucide-react";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
@@ -15,35 +15,49 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/EmptyState";
-import { getAgentVoiceConfig } from "@/lib/voice-config";
-import { useTTS } from "@/stores/ai-config-store";
+import { useAgentVoiceConfig } from "@/hooks/useAgentVoiceConfig";
 import { useNavigate } from "@tanstack/react-router";
 import { useProjectStatus } from "@/stores/projects";
 import { AddAgentsToProjectDialog } from "@/components/dialogs/AddAgentsToProjectDialog";
-import type { AgentData } from "@/types/agent";
 import { isAgentOnline } from "@/lib/utils/agentUtils";
 
 interface AgentsTabContentProps {
   project: NDKProject;
 }
 
+// Define AgentData interface locally
+interface AgentData {
+  id?: string;
+  pubkey: string;
+  name?: string;
+  description?: string;
+  picture?: string;
+  role?: string;
+  useCriteria?: string[];
+  status?: string;
+  lastSeen?: number;
+  fromStatus?: boolean;
+  fromNDK?: boolean;
+  fromProject?: boolean;
+}
+
 function AgentCard({ 
   agent, 
   onAgentClick, 
   onVoiceSettings,
-  voiceConfig,
-  isOnline,
-  murfApiKey 
+  hasVoice
 }: {
   agent: AgentData;
   onAgentClick: (agent: AgentData) => void;
   onVoiceSettings: (agent: AgentData, e: React.MouseEvent) => void;
-  voiceConfig: string | null;
-  isOnline: boolean;
-  murfApiKey?: string;
+  hasVoice: boolean;
 }) {
   const profile = useProfile(agent.pubkey);
   const avatarUrl = profile?.image || profile?.picture || agent.picture;
+  const isOnline = agent.status === "online";
+  
+  // Get voice config for this specific agent
+  const { hasCustomConfig, config } = useAgentVoiceConfig(agent.pubkey);
   
   return (
     <Card
@@ -104,16 +118,16 @@ function AgentCard({
         )}
 
         {/* Voice Configuration Status */}
-        {murfApiKey && (
+        {hasVoice && (
           <div className="flex items-center gap-2 text-sm">
             <Volume2 className="w-4 h-4 text-muted-foreground" />
-            {voiceConfig ? (
+            {hasCustomConfig ? (
               <span className="text-green-600 dark:text-green-500">
-                Voice: {voiceConfig}
+                Custom voice: {config.voiceId}
               </span>
             ) : (
               <span className="text-muted-foreground">
-                No voice configured
+                Using global voice
               </span>
             )}
           </div>
@@ -149,8 +163,11 @@ function AgentCard({
 export function AgentsTabContent({ project }: AgentsTabContentProps) {
   const { ndk } = useNDK();
   const navigate = useNavigate();
-  const { apiKey: murfApiKey } = useTTS();
   const [addAgentsDialogOpen, setAddAgentsDialogOpen] = useState(false);
+  
+  // Check if we have voice configured
+  const { config: globalVoiceConfig } = useAgentVoiceConfig(undefined);
+  const hasVoice = globalVoiceConfig.enabled && !!globalVoiceConfig.apiKey;
 
   // Get agents from project status (same as Status tab)
   const projectStatus = useProjectStatus(project?.dTag);
@@ -267,10 +284,6 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
     });
   };
 
-  const getVoiceStatus = (agent: AgentData) => {
-    const config = getAgentVoiceConfig(agent.name || agent.pubkey);
-    return config ? config.voiceName : null;
-  };
 
   if (allAgents.length === 0) {
     return (
@@ -304,22 +317,15 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
 
         {/* Agent Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {allAgents.map((agent) => {
-            const voiceConfig = getVoiceStatus(agent);
-            const isOnline = isAgentOnline(agent);
-
-            return (
-              <AgentCard
-                key={agent.pubkey}
-                agent={agent}
-                onAgentClick={handleAgentClick}
-                onVoiceSettings={handleVoiceSettings}
-                voiceConfig={voiceConfig}
-                isOnline={isOnline}
-                murfApiKey={murfApiKey}
-              />
-            );
-          })}
+          {allAgents.map((agent) => (
+            <AgentCard
+              key={agent.pubkey}
+              agent={agent}
+              onAgentClick={handleAgentClick}
+              onVoiceSettings={handleVoiceSettings}
+              hasVoice={hasVoice}
+            />
+          ))}
         </div>
       </div>
 

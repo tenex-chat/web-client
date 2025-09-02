@@ -1,4 +1,4 @@
-import { type NDKEvent, type NDKKind, NDKList } from "@nostr-dev-kit/ndk";
+import { type NDKEvent, type NDKKind, NDKList } from "@nostr-dev-kit/ndk-hooks";
 import {
   useNDK,
   useNDKSessionSigners,

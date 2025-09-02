@@ -1,4 +1,4 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { memo, ReactNode, useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ProfileDisplay } from '@/components/common/ProfileDisplay'

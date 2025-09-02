@@ -1,6 +1,6 @@
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks"
 import { useMemo } from "react"
-import { NDKKind } from "@nostr-dev-kit/ndk"
+import { NDKKind } from "@nostr-dev-kit/ndk-hooks"
 
 interface ConversationMetadata {
   title?: string

@@ -4,7 +4,7 @@ import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
 import { ItemSelector } from '@/components/common/ItemSelector'
 import { SelectableCard } from '@/components/common/SelectableCard'
 import { Code2, Terminal, Wrench } from 'lucide-react'
-import type { NDKKind } from '@nostr-dev-kit/ndk'
+import type { NDKKind } from '@nostr-dev-kit/ndk-hooks'
 
 interface MCPToolSelectorProps {
   selectedTools: Array<{ eventId: string; name: string; selected: boolean }>

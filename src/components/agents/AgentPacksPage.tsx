@@ -10,7 +10,7 @@ import { NDKAgentDefinitionPack } from "@/lib/ndk-events/NDKAgentDefinitionPack"
 import { PackCard } from "./PackCard";
 import { CreatePackDialog } from "@/components/dialogs/CreatePackDialog";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
-import { type NDKKind } from "@nostr-dev-kit/ndk";
+import { type NDKKind } from "@nostr-dev-kit/ndk-hooks";
 
 export function AgentPacksPage() {
   const { ndk } = useNDK();

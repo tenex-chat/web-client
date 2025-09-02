@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProjectCard } from './ProjectCard'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import NDK from '@nostr-dev-kit/ndk'
+import NDK from '@nostr-dev-kit/ndk-hooks'
 
 // Mock TanStack Router
 vi.mock('@tanstack/react-router', () => ({

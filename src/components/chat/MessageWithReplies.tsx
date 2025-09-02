@@ -1,5 +1,4 @@
-import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
-import { useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
+import { NDKEvent, NDKKind, useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { ChevronDown, ChevronRight, Send, Reply } from 'lucide-react'
 import { TypingIndicator } from './TypingIndicator'
 import { StreamingCaret } from './StreamingCaret'

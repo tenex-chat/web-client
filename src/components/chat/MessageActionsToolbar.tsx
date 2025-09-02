@@ -1,4 +1,4 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

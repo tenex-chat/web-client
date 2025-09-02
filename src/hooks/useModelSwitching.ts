@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { NDKEvent, NDKUser } from '@nostr-dev-kit/ndk'
+import { NDKEvent, NDKUser } from '@nostr-dev-kit/ndk-hooks'
 import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { toast } from 'sonner'
 import { EVENT_KINDS } from '@/lib/constants'

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NDKProject } from './NDKProject'
-import NDK from '@nostr-dev-kit/ndk'
+import NDK from '@nostr-dev-kit/ndk-hooks'
 
 // Mock NDK - using a class that can be extended
-vi.mock('@nostr-dev-kit/ndk', () => {
+vi.mock('@nostr-dev-kit/ndk-hooks', () => {
   class MockNDKEvent {
     kind = 31933
     content = ''

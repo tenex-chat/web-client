@@ -1,4 +1,4 @@
-import { NDKArticle, NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKArticle, NDKKind } from '@nostr-dev-kit/ndk-hooks'
 import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { FileText, Calendar, Clock, Hash } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

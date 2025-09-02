@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Play, Pause, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { getAudioURL, getAudioDuration, getAudioWaveform } from "@/lib/utils/audioEvents";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";

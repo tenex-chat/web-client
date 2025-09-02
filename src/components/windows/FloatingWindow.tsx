@@ -13,7 +13,7 @@ import { ProjectAdvancedSettings } from '@/components/settings/ProjectAdvancedSe
 import { ProjectDangerZone } from '@/components/settings/ProjectDangerZone'
 import { CallView } from '@/components/call/CallView'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { NDKEvent, NDKArticle } from '@nostr-dev-kit/ndk'
+import { NDKEvent, NDKArticle } from '@nostr-dev-kit/ndk-hooks'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
 

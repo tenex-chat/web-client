@@ -1,7 +1,6 @@
 import { useEvent, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { AgentDefinitionCard } from "./AgentDefinitionCard";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface PackAgentSelectorProps {
@@ -15,13 +14,7 @@ export function PackAgentSelector({ agentId, selected, onToggle }: PackAgentSele
   const event = useEvent(agentId);
   
   if (!event || !ndk) {
-    return (
-      <div className="space-y-2 p-4 border rounded-lg">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-3 w-full" />
-        <Skeleton className="h-3 w-2/3" />
-      </div>
-    );
+    return null;
   }
   
   const agent = new NDKAgentDefinition(ndk, event);

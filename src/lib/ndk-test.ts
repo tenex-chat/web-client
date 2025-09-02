@@ -4,7 +4,7 @@
  * Run with: bun run src/lib/ndk-test.ts
  */
 
-import NDK, { NDKPrivateKeySigner } from '@nostr-dev-kit/ndk'
+import NDK, { NDKPrivateKeySigner } from '@nostr-dev-kit/ndk-hooks'
 import { nip19 } from 'nostr-tools'
 import { logger } from './logger'
 

@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react'
-import { NDKEvent, NDKThread } from '@nostr-dev-kit/ndk'
-import { useNDK, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
+import { NDKEvent, NDKThread, useNDK, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 import type { Message } from './useChatMessages'
 import type { AgentInstance } from '@/types/agent'

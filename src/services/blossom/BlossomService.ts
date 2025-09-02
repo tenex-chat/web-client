@@ -1,4 +1,5 @@
-import NDK, { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
+import type NDK from '@nostr-dev-kit/ndk-hooks'
+import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk-hooks'
 import NDKBlossom from '@nostr-dev-kit/ndk-blossom'
 import imageCompression from 'browser-image-compression'
 import { encode } from 'blurhash'

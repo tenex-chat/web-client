@@ -1,4 +1,4 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { MessageCircle, Target, Play, CheckCircle, Settings, LucideIcon } from 'lucide-react'
 
 /**

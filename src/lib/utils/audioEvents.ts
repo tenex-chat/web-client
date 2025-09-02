@@ -1,4 +1,4 @@
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 
 // Maximum number of waveform samples to display in UI
 export const MAX_WAVEFORM_SAMPLES = 100;

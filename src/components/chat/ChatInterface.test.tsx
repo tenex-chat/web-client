@@ -80,19 +80,44 @@ vi.mock("@/hooks/useProjectOnlineAgents", () => ({
   }),
 }));
 
-vi.mock("@/hooks/useMurfTTS", () => ({
-  useMurfTTS: vi.fn().mockReturnValue({
-    generateSpeech: vi.fn(),
-    isGenerating: false,
-    error: null,
+vi.mock("@/hooks/useAI", () => ({
+  useAI: vi.fn().mockReturnValue({
+    cleanupText: vi.fn(),
+    transcribe: vi.fn(),
+    speak: vi.fn(),
+    hasProvider: false,
+    hasTTS: false,
+    hasSTT: false,
+    voiceSettings: {
+      enabled: false,
+      provider: 'openai',
+      voiceId: 'alloy',
+      apiKey: '',
+      speed: 1.0
+    },
+    activeProvider: null,
   }),
 }));
 
-vi.mock("@/hooks/useAgentTTSConfig", () => ({
-  useAgentTTSConfig: vi.fn().mockReturnValue({
-    getAgentVoice: vi.fn().mockReturnValue(null),
+vi.mock("@/hooks/useAgentVoiceConfig", () => ({
+  useAgentVoiceConfig: vi.fn().mockReturnValue({
+    config: {
+      voiceId: 'alloy',
+      provider: 'openai',
+      speed: 1.0,
+      pitch: 1.0,
+      enabled: false,
+      apiKey: ''
+    },
+    agentConfig: null,
+    availableVoices: [],
+    loadingVoices: false,
+    saveConfig: vi.fn(),
+    removeConfig: vi.fn(),
+    testVoice: vi.fn(),
+    hasCustomConfig: false,
   }),
-}));
+}))
 
 vi.mock("@/lib/utils/extractTTSContent", () => ({
   extractTTSContent: vi.fn().mockReturnValue(""),
@@ -110,7 +135,10 @@ vi.mock("@/components/upload/ImageUploadQueue", () => ({
   ImageUploadQueue: () => null,
 }));
 
-vi.mock("@/stores/llmConfig", () => ({
+vi.mock("@/stores/ai-config-store", () => ({
+  activeProviderAtom: vi.fn(),
+  voiceSettingsAtom: vi.fn(),
+  openAIApiKeyAtom: vi.fn(),
   autoTTSAtom: vi.fn(),
 }));
 

@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/context-menu'
 import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { useProfile, useNDK } from '@nostr-dev-kit/ndk-hooks'
-import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AddAgentsToProjectDialog } from '@/components/dialogs/AddAgentsToProjectDialog'
 import { useProjectStatus } from '@/stores/projects'

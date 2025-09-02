@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useNDK, useSubscribe, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
-import { NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKKind } from '@nostr-dev-kit/ndk-hooks'
 import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

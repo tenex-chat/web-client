@@ -1,5 +1,5 @@
-import { NDKArticle } from '@nostr-dev-kit/ndk'
-import { ArrowLeft, Calendar, Clock, Copy, Hash, MessageSquare, Plus, History, Edit, User } from 'lucide-react'
+import { NDKArticle } from '@nostr-dev-kit/ndk-hooks'
+import { ArrowLeft, Calendar, Clock, Copy, Hash, MessageSquare, Plus, History, Edit, User, ExternalLink } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
@@ -19,12 +19,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 interface DocumentationViewerProps {
   article: NDKArticle
   onBack?: () => void
+  onDetach?: () => void
   onEdit?: () => void
   projectTitle?: string
   project?: NDKProject
 }
 
-export function DocumentationViewer({ article, onBack, onEdit, projectTitle, project }: DocumentationViewerProps) {
+export function DocumentationViewer({ article, onBack, onDetach, onEdit, projectTitle, project }: DocumentationViewerProps) {
   const [showComments, setShowComments] = useState(false)
   const [showChangelog, setShowChangelog] = useState(false)
   const [chatThread, setChatThread] = useState<NDKEvent | undefined>(undefined)
@@ -77,16 +78,29 @@ export function DocumentationViewer({ article, onBack, onEdit, projectTitle, pro
         {/* Header */}
         <div className="border-b">
           <div className="flex items-center justify-between p-4">
-            {onBack && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onBack}
-                className="h-9 w-9 absolute left-4"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            )}
+            <div className="flex items-center gap-2 absolute left-4">
+              {onBack && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onBack}
+                  className="h-9 w-9"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              {onDetach && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onDetach}
+                  className="h-9 w-9"
+                  title="Detach to floating window"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             <div className="max-w-3xl mx-auto w-full flex items-center justify-between">
               <div>
                 {projectTitle && (

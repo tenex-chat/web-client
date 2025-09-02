@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { 
   findTagValue, 
   findAllTagValues, 

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NDKAgentDefinition } from './NDKAgentDefinition'
-import type NDK from '@nostr-dev-kit/ndk'
+import type NDK from '@nostr-dev-kit/ndk-hooks'
 
 // Mock NDKEvent
-vi.mock('@nostr-dev-kit/ndk', () => {
+vi.mock('@nostr-dev-kit/ndk-hooks', () => {
   class MockNDKEvent {
     kind = 4199
     content = ''

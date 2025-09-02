@@ -6,7 +6,7 @@ import { VirtualList } from '@/components/ui/virtual-list'
 import { cn } from '@/lib/utils'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { VIRTUAL_LIST_THRESHOLDS } from '@/lib/constants'
-import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk-hooks'
 import { ThreadItem } from './ThreadItem'
 
 interface ThreadListProps {

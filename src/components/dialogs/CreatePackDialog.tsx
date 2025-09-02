@@ -20,7 +20,7 @@ import { NDKAgentDefinitionPack } from '@/lib/ndk-events/NDKAgentDefinitionPack'
 import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition';
 import { AgentDefinitionCard } from '@/components/agents/AgentDefinitionCard';
 import { PackCard } from '@/components/agents/PackCard';
-import { type NDKKind } from '@nostr-dev-kit/ndk';
+import { type NDKKind } from '@nostr-dev-kit/ndk-hooks';
 import { cn } from '@/lib/utils'
 import { getRoleColor } from '@/lib/utils/role-colors';
 

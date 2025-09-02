@@ -1,5 +1,5 @@
 import React from 'react';
-import { NDKEvent } from '@nostr-dev-kit/ndk';
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/utils/time';

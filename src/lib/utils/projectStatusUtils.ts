@@ -1,5 +1,5 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk'
-import type NDK from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
+import type NDK from '@nostr-dev-kit/ndk-hooks'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { EVENT_KINDS } from '@/lib/constants'
 import { toast } from 'sonner'

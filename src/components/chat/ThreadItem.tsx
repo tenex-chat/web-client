@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { PhaseIndicator } from '@/components/ui/phase-indicator'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils/time'
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { useConversationMetadata } from '@/hooks/useConversationMetadata'
 
 interface ThreadItemProps {

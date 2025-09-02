@@ -1,4 +1,4 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 
 export const findTagValue = (event: NDKEvent, tagName: string): string | undefined => {
   return event.tags?.find(tag => tag[0] === tagName)?.[1]

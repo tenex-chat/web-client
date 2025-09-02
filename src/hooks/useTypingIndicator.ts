@@ -1,5 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react'
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { EVENT_KINDS, TIMING } from '@/lib/constants'
 import { logger } from '@/lib/logger'

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNDK, useNDKCurrentUser, useSubscribe, useProfile } from '@nostr-dev-kit/ndk-hooks'
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'

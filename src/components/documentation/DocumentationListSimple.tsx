@@ -1,4 +1,4 @@
-import { NDKArticle, NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKArticle, NDKKind } from '@nostr-dev-kit/ndk-hooks'
 import { useSubscribe, useProfile } from '@nostr-dev-kit/ndk-hooks'
 import { FileText, Clock, Hash } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'

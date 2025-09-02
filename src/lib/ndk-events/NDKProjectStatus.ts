@@ -1,5 +1,5 @@
-import { NDKEvent, type NDKKind, type NostrEvent } from '@nostr-dev-kit/ndk'
-import type NDK from '@nostr-dev-kit/ndk'
+import { NDKEvent, type NDKKind, type NostrEvent } from '@nostr-dev-kit/ndk-hooks'
+import type NDK from '@nostr-dev-kit/ndk-hooks'
 
 export interface ProjectAgent {
   pubkey: string

@@ -16,7 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { NDKAgentDefinitionPack } from '@/lib/ndk-events/NDKAgentDefinitionPack';
 import { NDKProject } from '@/lib/ndk-events/NDKProject';
 import { PackAgentSelector } from '@/components/agents/PackAgentSelector';
-import { type NDKKind } from '@nostr-dev-kit/ndk';
+import { type NDKKind } from '@nostr-dev-kit/ndk-hooks';
 import { cn } from '@/lib/utils';
 import {
   Select,

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { bringProjectOnline } from './projectStatusUtils'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { NDKEvent } from '@nostr-dev-kit/ndk'
-import type NDK from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
+import type NDK from '@nostr-dev-kit/ndk-hooks'
 
 // Mock sonner toast
 vi.mock('sonner', () => ({

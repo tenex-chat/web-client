@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, Phone, PhoneOff, Settings, Copy, Check, FileJson } from "lucide-react";
+import { ArrowLeft, Phone, PhoneOff, Settings, Copy, Check, FileJson, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMediaQuery";
@@ -23,11 +23,12 @@ import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { formatThreadAsMarkdown, formatThreadAsJSON } from "@/components/chat/utils/copyThread";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
 import { useConversationMetadata } from "@/hooks/useConversationMetadata";
-import { useAgentTTSConfig } from "@/hooks/useAgentTTSConfig";
+import { useAI } from "@/hooks/useAI";
 
 interface ChatHeaderProps {
   rootEvent: NDKEvent | null;
   onBack?: () => void;
+  onDetach?: () => void;
   messages?: Message[];
   project?: NDKProject | null;
   onVoiceCallClick?: () => void;
@@ -40,6 +41,7 @@ interface ChatHeaderProps {
 export function ChatHeader({
   rootEvent,
   onBack,
+  onDetach,
   messages,
   project,
   onVoiceCallClick,
@@ -47,8 +49,8 @@ export function ChatHeader({
   const isMobile = useIsMobile();
   const isNewThread = !rootEvent;
   const [showTTSInfo, setShowTTSInfo] = useState(false);
-  const ttsOptions = useAgentTTSConfig();
-  const ttsEnabled = !!ttsOptions;
+  const { hasTTS } = useAI();
+  const ttsEnabled = hasTTS;
   const [copiedFormat, setCopiedFormat] = useState<'markdown' | 'json' | null>(null);
   const { ndk } = useNDK();
 
@@ -170,6 +172,18 @@ export function ChatHeader({
               />
             </div>
           )}
+          {/* Detach button for drawer mode */}
+          {onDetach && !isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onDetach}
+              className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+              title="Detach to floating window"
+            >
+              <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
+            </Button>
+          )}
           {/* Copy thread dropdown */}
           {messages && messages.length > 0 && (
             <DropdownMenu>
@@ -244,7 +258,7 @@ export function ChatHeader({
                     To enable voice mode, you need to configure Text-to-Speech settings.
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Go to Settings → TTS and add your Murf.ai API key and select a voice.
+                    Go to Settings → AI and configure your text-to-speech settings.
                   </p>
                   <Button
                     variant="outline"

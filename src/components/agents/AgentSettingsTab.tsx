@@ -1,12 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
-import { Volume2, Save, Bot, Settings2, Wrench } from "lucide-react";
+import { Volume2, Save, Bot, Settings2, Wrench, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { getAgentVoiceConfig, saveAgentVoiceConfig } from "@/lib/voice-config";
-import { VoiceSelector } from "@/components/voice/VoiceSelector";
-import { useMurfVoices, getVoiceInfo } from "@/hooks/useMurfVoices";
-import { useTTS } from "@/stores/ai-config-store";
+import { useAgentVoiceConfig } from "@/hooks/useAgentVoiceConfig";
 import { useProjectStatusMap, useProjectsArray } from "@/stores/projects";
 import { useProjectOnlineModels } from "@/hooks/useProjectOnlineModels";
 import { useProjectAvailableTools } from "@/hooks/useProjectAvailableTools";
@@ -21,8 +18,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 
 interface AgentSettingsTabProps {
   agent?: NDKAgentDefinition;
@@ -39,73 +38,98 @@ interface ProjectAgentSettings {
 }
 
 export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
-  const [selectedVoice, setSelectedVoice] = useState<string>("");
-  const [isSaving, setIsSaving] = useState(false);
   const [projectSettings, setProjectSettings] = useState<Map<string, ProjectAgentSettings>>(new Map());
-  const { config: ttsConfig } = useTTS();
-  const apiKey = ttsConfig?.apiKey;
-  const { voices } = useMurfVoices(apiKey);
+  const [isSaving, setIsSaving] = useState(false);
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
   const projectStatusMap = useProjectStatusMap();
   const projects = useProjectsArray();
+  
+  // Use the agent's pubkey for voice config
+  const agentPubkey = agentSlug; // agentSlug is actually the pubkey in profile pages
+  const {
+    config: voiceConfig,
+    availableVoices,
+    loadingVoices,
+    saveConfig: saveVoiceConfig,
+    removeConfig: removeVoiceConfig,
+    testVoice,
+    hasCustomConfig
+  } = useAgentVoiceConfig(agentPubkey);
 
-  // Find all projects where this agent is active
-  const agentProjects = useMemo(() => {
-    const agentProjectsList: Array<{ dTag: string; title: string; agent: any }> = [];
-    
-    projectStatusMap.forEach((status, dTag) => {
-      const agent = status.agents.find(a => a.pubkey === agentSlug);
-      if (agent) {
-        // Get project title from the projects store
-        const project = projects.find(p => p.dTag === dTag);
-        const projectTitle = project?.title || dTag;
-        agentProjectsList.push({ dTag, title: projectTitle, agent });
-      }
+  // Filter projects where this agent is assigned
+  const agentProjects = projects.filter(project => {
+    const agentIds = project.agents?.map(a => a.ndkAgentEventId) || [];
+    return agentIds.some(id => {
+      const status = projectStatusMap.get(project.d_tag || '');
+      return status?.agentStatuses.some(as => as.ndkEventId === id && as.agentPubkey === agentPubkey);
     });
-    
-    return agentProjectsList;
-  }, [projectStatusMap, agentSlug, projects]);
+  });
 
-  // Load saved voice configuration and initialize project settings on mount
+  // Initialize project settings
   useEffect(() => {
-    if (agentSlug) {
-      const config = getAgentVoiceConfig(agentSlug);
-      if (config?.voiceId) {
-        setSelectedVoice(config.voiceId);
+    const newSettings = new Map<string, ProjectAgentSettings>();
+    
+    agentProjects.forEach(project => {
+      const projectStatus = projectStatusMap.get(project.d_tag || '');
+      const agentStatus = projectStatus?.agentStatuses.find(as => as.agentPubkey === agentPubkey);
+      
+      if (projectStatus && agentStatus) {
+        newSettings.set(project.d_tag || '', {
+          projectDTag: project.d_tag || '',
+          projectTitle: project.title || 'Untitled',
+          selectedModel: agentStatus.modelOverride || agentStatus.model || '',
+          selectedTools: new Set(agentStatus.toolOverrides || agentStatus.tools || []),
+          originalModel: agentStatus.model,
+          originalTools: agentStatus.tools,
+        });
       }
-    }
-
-    // Initialize project settings for each project where the agent is active
-    const initialSettings = new Map<string, ProjectAgentSettings>();
-    agentProjects.forEach(({ dTag, title, agent }) => {
-      initialSettings.set(dTag, {
-        projectDTag: dTag,
-        projectTitle: title,
-        selectedModel: agent.model || "",
-        selectedTools: new Set(agent.tools || []),
-        originalModel: agent.model,
-        originalTools: agent.tools,
-      });
     });
-    setProjectSettings(initialSettings);
-  }, [agentSlug, agentProjects]);
+    
+    setProjectSettings(newSettings);
+  }, [agentProjects, projectStatusMap, agentPubkey]);
 
-  const handleProjectModelChange = (projectDTag: string, model: string) => {
-    setProjectSettings((prev) => {
-      const updated = new Map(prev);
-      const settings = updated.get(projectDTag);
+  const handleVoiceChange = (voiceId: string) => {
+    saveVoiceConfig({ voiceId });
+  };
+
+  const handleSpeedChange = (speed: number[]) => {
+    saveVoiceConfig({ speed: speed[0] });
+  };
+
+  const handleProviderChange = (provider: 'openai' | 'elevenlabs') => {
+    saveVoiceConfig({ provider });
+  };
+
+  const handleTestVoice = async () => {
+    try {
+      await testVoice();
+      toast.success('Voice test successful');
+    } catch (error) {
+      toast.error('Failed to test voice');
+    }
+  };
+
+  const handleResetVoice = () => {
+    removeVoiceConfig();
+    toast.success('Reset to global voice settings');
+  };
+
+  const handleModelChange = (projectDTag: string, model: string) => {
+    setProjectSettings(prev => {
+      const newSettings = new Map(prev);
+      const settings = newSettings.get(projectDTag);
       if (settings) {
         settings.selectedModel = model;
       }
-      return updated;
+      return newSettings;
     });
   };
 
-  const handleProjectToolToggle = (projectDTag: string, tool: string) => {
-    setProjectSettings((prev) => {
-      const updated = new Map(prev);
-      const settings = updated.get(projectDTag);
+  const handleToolToggle = (projectDTag: string, tool: string) => {
+    setProjectSettings(prev => {
+      const newSettings = new Map(prev);
+      const settings = newSettings.get(projectDTag);
       if (settings) {
         const newTools = new Set(settings.selectedTools);
         if (newTools.has(tool)) {
@@ -115,315 +139,233 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
         }
         settings.selectedTools = newTools;
       }
-      return updated;
+      return newSettings;
     });
   };
 
-  const handleSaveProjectSettings = async (projectDTag: string) => {
-    const settings = projectSettings.get(projectDTag);
-    if (!settings || !ndk || !user) return;
+  const handleSaveProjectSettings = async () => {
+    if (!ndk || !user) {
+      toast.error("Not connected");
+      return;
+    }
 
+    setIsSaving(true);
+    
     try {
-      // Create a model/tools change event (kind 24020)
-      const changeEvent = new NDKEvent(ndk);
-      changeEvent.kind = 24020;
-      changeEvent.content = "";
-      changeEvent.tags = [
-        ["p", agentSlug], // Target agent pubkey
-        ["model", settings.selectedModel], // New model slug
-        ["a", `31333:${user.pubkey}:${projectDTag}`], // Project reference
-      ];
+      for (const [projectDTag, settings] of projectSettings) {
+        const hasChanges = 
+          settings.selectedModel !== settings.originalModel ||
+          JSON.stringify(Array.from(settings.selectedTools)) !== JSON.stringify(settings.originalTools || []);
+        
+        if (!hasChanges) continue;
 
-      // Add tool tags - one tag per tool
-      Array.from(settings.selectedTools).forEach(tool => {
-        changeEvent.tags.push(["tool", tool]);
-      });
+        const overrideEvent = new NDKEvent(ndk);
+        overrideEvent.kind = 12111; // Agent override event
+        overrideEvent.tags = [
+          ["d", projectDTag],
+          ["agent", agentPubkey],
+        ];
 
-      await changeEvent.publish();
-      toast.success(`Settings updated for ${settings.projectTitle}`);
-
-      // Update the original values to reflect the saved state
-      setProjectSettings((prev) => {
-        const updated = new Map(prev);
-        const updatedSettings = updated.get(projectDTag);
-        if (updatedSettings) {
-          updatedSettings.originalModel = updatedSettings.selectedModel;
-          updatedSettings.originalTools = Array.from(updatedSettings.selectedTools);
+        if (settings.selectedModel !== settings.originalModel) {
+          overrideEvent.tags.push(["model", settings.selectedModel]);
         }
-        return updated;
-      });
-    } catch (error) {
-      console.error("Failed to update project settings:", error);
-      toast.error("Failed to update project settings");
-    }
-  };
 
-  const handleSave = async () => {
-    if (!agentSlug) {
-      toast.error("Agent slug is required");
-      return;
-    }
+        const toolsArray = Array.from(settings.selectedTools);
+        if (JSON.stringify(toolsArray) !== JSON.stringify(settings.originalTools || [])) {
+          toolsArray.forEach(tool => {
+            overrideEvent.tags.push(["tool", tool]);
+          });
+        }
 
-    if (!selectedVoice) {
-      toast.error("Please select a voice");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const voiceInfo = getVoiceInfo(voices, selectedVoice);
-      if (voiceInfo) {
-        saveAgentVoiceConfig(agentSlug, {
-          voiceId: voiceInfo.voiceId,
-          voiceName: voiceInfo.displayName,
-          language: voiceInfo.displayLanguage || voiceInfo.locale,
-          gender: voiceInfo.gender,
-        });
-        toast.success("Voice settings saved successfully");
-      } else {
-        toast.error("Selected voice not found");
+        await overrideEvent.publish();
       }
+
+      toast.success("Settings saved successfully");
     } catch (error) {
-      console.error("Failed to save voice settings:", error);
-      toast.error("Failed to save voice settings");
+      console.error("Failed to save settings:", error);
+      toast.error("Failed to save settings");
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <ScrollArea className="h-[calc(100vh-16rem)]">
-      <div className="p-6">
-        <div className="max-w-4xl space-y-8">
-          {/* Voice Settings Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Volume2 className="w-5 h-5" />
-                Voice Settings
-              </CardTitle>
-              <CardDescription>
-                Configure the text-to-speech voice for this agent
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <VoiceSelector
-                value={selectedVoice}
-                onValueChange={setSelectedVoice}
-                apiKey={apiKey}
-              />
-              <p className="text-sm text-muted-foreground">
-                This voice will be used when playing text from this agent across all
-                projects.
-              </p>
+    <div className="space-y-6">
+      {/* Voice Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Volume2 className="h-5 w-5" />
+            Voice Settings
+          </CardTitle>
+          <CardDescription>
+            Configure the voice for this agent
+            {hasCustomConfig && (
+              <Badge variant="secondary" className="ml-2">Custom</Badge>
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Voice Provider */}
+          <div className="space-y-2">
+            <Label>Voice Provider</Label>
+            <Select value={voiceConfig.provider} onValueChange={handleProviderChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="openai">OpenAI</SelectItem>
+                <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
+          {/* Voice Selection */}
+          <div className="space-y-2">
+            <Label>Voice</Label>
+            <Select 
+              value={voiceConfig.voiceId} 
+              onValueChange={handleVoiceChange}
+              disabled={loadingVoices}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loadingVoices ? "Loading voices..." : "Select a voice"} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableVoices.map(voice => (
+                  <SelectItem key={voice.id} value={voice.id}>
+                    <div className="flex flex-col">
+                      <span>{voice.name}</span>
+                      {voice.description && (
+                        <span className="text-xs text-muted-foreground">{voice.description}</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Speed Control */}
+          <div className="space-y-2">
+            <Label>Speed: {voiceConfig.speed}x</Label>
+            <Slider
+              value={[voiceConfig.speed || 1.0]}
+              onValueChange={handleSpeedChange}
+              min={0.5}
+              max={2}
+              step={0.1}
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleTestVoice}
+              disabled={!voiceConfig.apiKey || !voiceConfig.voiceId}
+            >
+              <Volume2 className="h-4 w-4 mr-2" />
+              Test Voice
+            </Button>
+            {hasCustomConfig && (
               <Button
-                onClick={handleSave}
-                disabled={!selectedVoice || isSaving}
-                className="flex items-center gap-2"
+                variant="outline"
+                onClick={handleResetVoice}
               >
-                <Save className="w-4 h-4" />
-                {isSaving ? "Saving..." : "Save Voice Settings"}
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset to Global
               </Button>
-            </CardContent>
-          </Card>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-          {/* Project-specific Settings */}
-          {agentProjects.length > 0 && (
-            <div className="space-y-6">
-              {agentProjects.map(({ dTag, title }) => {
-                const settings = projectSettings.get(dTag);
-                if (!settings) return null;
-
-                const hasChanges = 
-                  settings.selectedModel !== settings.originalModel ||
-                  Array.from(settings.selectedTools).sort().join(',') !== 
-                  (settings.originalTools || []).sort().join(',');
-
-                return (
-                  <ProjectSettingsCard
-                    key={dTag}
-                    projectDTag={dTag}
-                    projectTitle={title}
-                    settings={settings}
-                    hasChanges={hasChanges}
-                    onModelChange={handleProjectModelChange}
-                    onToolToggle={handleProjectToolToggle}
-                    onSave={handleSaveProjectSettings}
-                  />
-                );
-              })}
+      {/* Project-specific Settings */}
+      {agentProjects.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5" />
+              Project Settings
+            </CardTitle>
+            <CardDescription>
+              Configure this agent's models and tools per project
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-4">
+                {agentProjects.map(project => {
+                  const settings = projectSettings.get(project.d_tag || '');
+                  const models = useProjectOnlineModels(project.d_tag);
+                  const tools = useProjectAvailableTools(project.d_tag);
+                  
+                  if (!settings) return null;
+                  
+                  return (
+                    <Card key={project.d_tag}>
+                      <CardHeader>
+                        <CardTitle className="text-base">{settings.projectTitle}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Model Selection */}
+                        <div className="space-y-2">
+                          <Label>Model</Label>
+                          <Select
+                            value={settings.selectedModel}
+                            onValueChange={(value) => handleModelChange(settings.projectDTag, value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a model" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {models.map(model => (
+                                <SelectItem key={model.id} value={model.id}>
+                                  {model.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {/* Tools Selection */}
+                        <div className="space-y-2">
+                          <Label>Tools</Label>
+                          <div className="space-y-2">
+                            {tools.map(tool => (
+                              <div key={tool.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`${project.d_tag}-${tool.id}`}
+                                  checked={settings.selectedTools.has(tool.id)}
+                                  onCheckedChange={() => handleToolToggle(settings.projectDTag, tool.id)}
+                                />
+                                <label
+                                  htmlFor={`${project.d_tag}-${tool.id}`}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                  {tool.name}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+            
+            <div className="mt-4">
+              <Button onClick={handleSaveProjectSettings} disabled={isSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? "Saving..." : "Save Project Settings"}
+              </Button>
             </div>
-          )}
-
-          {agentProjects.length === 0 && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Bot className="w-12 h-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground text-center">
-                  This agent is not currently active in any projects.
-                  <br />
-                  Add it to a project to configure model and tool settings.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
-    </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
-}
-
-// Component for individual project settings
-function ProjectSettingsCard({
-  projectDTag,
-  projectTitle,
-  settings,
-  hasChanges,
-  onModelChange,
-  onToolToggle,
-  onSave,
-}: {
-  projectDTag: string;
-  projectTitle: string;
-  settings: ProjectAgentSettings;
-  hasChanges: boolean;
-  onModelChange: (projectDTag: string, model: string) => void;
-  onToolToggle: (projectDTag: string, tool: string) => void;
-  onSave: (projectDTag: string) => Promise<void>;
-}) {
-  const availableModels = useProjectOnlineModels(projectDTag);
-  const availableTools = useProjectAvailableTools(projectDTag);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await onSave(projectDTag);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center justify-between">
-						<span className="flex items-center gap-2">
-							<Settings2 className="w-4 h-4" />
-							Project Settings
-						</span>
-						{hasChanges && (
-							<Badge variant="outline" className="text-xs">
-								Unsaved changes
-							</Badge>
-						)}
-					</CardTitle>
-					<CardDescription>
-						Configure how this agent works in the {projectTitle} project
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-6">
-					{/* Model Selection */}
-					<div className="space-y-2">
-						<label className="text-sm font-medium flex items-center gap-2">
-							<Settings2 className="w-4 h-4" />
-							Model
-						</label>
-						{availableModels.length === 0 ? (
-							<p className="text-sm text-muted-foreground">
-								No models available for this project
-							</p>
-						) : (
-							<Select
-								value={settings.selectedModel}
-								onValueChange={(value) => onModelChange(projectDTag, value)}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue placeholder="Select a model" />
-								</SelectTrigger>
-								<SelectContent>
-									{availableModels.map((model) => (
-										<SelectItem key={model.model} value={model.model}>
-											<div className="flex items-center justify-between w-full">
-												<span>{model.label}</span>
-												{model.provider && (
-													<span className="text-xs text-muted-foreground ml-2">
-														{model.provider}
-													</span>
-												)}
-											</div>
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						)}
-						{settings.originalModel &&
-							settings.selectedModel !== settings.originalModel && (
-								<p className="text-xs text-muted-foreground">
-									Previously: {settings.originalModel}
-								</p>
-							)}
-					</div>
-
-					{/* Tools Selection */}
-					<div className="space-y-2">
-						<label className="text-sm font-medium flex items-center gap-2">
-							<Wrench className="w-4 h-4" />
-							Tools
-							<Badge variant="secondary" className="text-xs">
-								{settings.selectedTools.size} selected
-							</Badge>
-						</label>
-
-						{availableTools.length === 0 ? (
-							<p className="text-sm text-muted-foreground">
-								No tools available for this project
-							</p>
-						) : (
-							<Card className="border bg-muted/10">
-								<ScrollArea className="h-48 p-4">
-									<div className="space-y-2">
-										{availableTools.map((tool) => (
-											<div
-												key={tool}
-												className="flex items-center space-x-3 py-1.5 px-2 rounded-md hover:bg-background/60 transition-colors"
-											>
-												<Checkbox
-													id={`${projectDTag}-tool-${tool}`}
-													checked={settings.selectedTools.has(tool)}
-													onCheckedChange={() =>
-														onToolToggle(projectDTag, tool)
-													}
-													className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-												/>
-												<label
-													htmlFor={`${projectDTag}-tool-${tool}`}
-													className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1 select-none"
-												>
-													{tool}
-												</label>
-											</div>
-										))}
-									</div>
-								</ScrollArea>
-							</Card>
-						)}
-					</div>
-
-					{/* Save Button */}
-					<div className="flex justify-end pt-4 border-t">
-						<Button
-							onClick={handleSave}
-							disabled={!hasChanges || isSaving}
-							size="sm"
-							className="flex items-center gap-2"
-						>
-							<Save className="w-4 h-4" />
-							{isSaving ? "Saving..." : "Save Changes"}
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
-		);
 }

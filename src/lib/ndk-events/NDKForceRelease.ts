@@ -1,4 +1,4 @@
-import NDK, { NDKEvent, NDKKind, NostrEvent } from '@nostr-dev-kit/ndk'
+import NDK, { NDKEvent, NDKKind, NostrEvent } from '@nostr-dev-kit/ndk-hooks'
 
 export class NDKForceRelease extends NDKEvent {
   static kind: NDKKind = 24019 as NDKKind

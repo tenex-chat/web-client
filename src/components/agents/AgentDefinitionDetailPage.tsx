@@ -33,7 +33,7 @@ import { generateAgentColor } from "@/lib/utils/agent-colors";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AgentInstances } from "./AgentInstances";
 import { NDKMCPTool } from "@/lib/ndk-events/NDKMCPTool";
-import type { NDKKind } from "@nostr-dev-kit/ndk";
+import type { NDKKind } from "@nostr-dev-kit/ndk-hooks";
 
 // This component shows an NDKAgentDefinition definition (the "class" not the instance)
 export function AgentDefinitionDetailPage() {

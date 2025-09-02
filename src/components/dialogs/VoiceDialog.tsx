@@ -5,9 +5,9 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import NDKBlossom from "@nostr-dev-kit/ndk-blossom";
 import { useNDK } from "@nostr-dev-kit/ndk-hooks";
-import { NDKEvent } from "@nostr-dev-kit/ndk";
+import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
-import { useLLM } from "@/hooks/useLLM";
+import { useAI } from "@/hooks/useAI";
 import { toast } from "sonner";
 import { UPLOAD_LIMITS } from "@/lib/constants";
 
@@ -59,7 +59,7 @@ export function VoiceDialog({
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const { transcribe } = useSpeechToText();
-    const { cleanupText } = useLLM();
+    const { cleanupText } = useAI();
 
     const updateDuration = useCallback(() => {
         if (isRecording && startTimeRef.current > 0) {

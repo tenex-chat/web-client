@@ -1,5 +1,5 @@
-import { NDK, NDKEvent, NDKKind } from "@nostr-dev-kit/ndk";
-import type { NostrEvent as NDKRawEvent } from "@nostr-dev-kit/ndk";
+import { NDK, NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
+import type { NostrEvent as NDKRawEvent } from "@nostr-dev-kit/ndk-hooks";
 
 /**
  * NDKAgentDefinitionPack represents a collection/pack of agent definitions.

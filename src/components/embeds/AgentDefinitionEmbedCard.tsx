@@ -1,4 +1,4 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import React, { useState } from 'react'
 import { Bot, Brain, Plus, Check, Loader2, ExternalLink, Sparkles } from 'lucide-react'
 import { Card } from '@/components/ui/card'

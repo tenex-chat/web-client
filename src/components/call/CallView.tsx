@@ -11,13 +11,12 @@ import { useSpeechToText } from '@/hooks/useSpeechToText'
 import { useThreadManagement } from '@/components/chat/hooks/useThreadManagement'
 import { useChatMessages } from '@/components/chat/hooks/useChatMessages'
 import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
-import { useMurfTTS } from '@/hooks/useMurfTTS'
-import { useTTS } from '@/stores/ai-config-store'
+import { useAI } from '@/hooks/useAI'
 import { extractTTSContent } from '@/lib/utils/extractTTSContent'
 import { isAudioEvent } from '@/lib/utils/audioEvents'
 import { useProfile, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
-import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk'
+import { NDKEvent, NDKKind } from '@nostr-dev-kit/ndk-hooks'
 import { useCallSettings } from '@/stores/call-settings-store'
 import { CallSettings } from './CallSettings'
 import { EVENT_KINDS } from '@/lib/constants'
@@ -252,40 +251,56 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
     }
   }, [messages, user?.pubkey, agentsRaw, targetAgent])
   
-  // TTS configuration - For voice calls, we ALWAYS want TTS enabled if credentials exist
-  const { config: ttsConfig, apiKey: ttsApiKey } = useTTS()
+  // TTS configuration from AI hook
+  const { speak, hasTTS, voiceSettings } = useAI()
+  const [isPlaying, setIsPlaying] = useState(false)
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   
-  // Force TTS enabled for voice calls, even if not globally enabled
-  const ttsOptions = useMemo(() => {
-    // If we have API credentials, force enable TTS for voice calls
-    if (ttsApiKey && ttsConfig?.voiceId) {
-      return {
-        apiKey: ttsApiKey,
-        voiceId: ttsConfig.voiceId,
-        style: ttsConfig.style || 'Conversational',
-        rate: ttsConfig.rate || 1.0,
-        pitch: ttsConfig.pitch || 1.0,
-        volume: ttsConfig.volume || 1.0,
-        enabled: true // ALWAYS enabled for voice calls when credentials exist
-      }
-    }
+  // Helper to play TTS audio
+  const playTTS = useCallback(async (text: string) => {
+    if (!hasTTS) return
     
-    return null
-  }, [ttsConfig, ttsApiKey, selectedAgent?.slug])
-  
-  const tts = useMurfTTS(ttsOptions || { apiKey: '', voiceId: '', enabled: false })
-  
-  // Apply output device to TTS audio when it plays
-  useEffect(() => {
-    if (audioSettings.outputDeviceId && 'audioElement' in tts && tts.audioElement) {
-      const audio = tts.audioElement as HTMLAudioElement
-      if (audio && typeof audio.setSinkId === 'function') {
-        audio.setSinkId(audioSettings.outputDeviceId).catch(() => {
-          toast.error('Failed to set audio output device')
+    try {
+      setIsPlaying(true)
+      const audioBlob = await speak(text)
+      const audioUrl = URL.createObjectURL(audioBlob)
+      
+      const audio = new Audio(audioUrl)
+      currentAudioRef.current = audio
+      
+      // Apply output device if set
+      if (audioSettings.outputDeviceId && typeof audio.setSinkId === 'function') {
+        await audio.setSinkId(audioSettings.outputDeviceId).catch(() => {
+          console.warn('Failed to set audio output device')
         })
       }
+      
+      // Set playback speed
+      audio.playbackRate = voiceSettings.speed || 1.0
+      
+      await audio.play()
+      
+      audio.onended = () => {
+        setIsPlaying(false)
+        currentAudioRef.current = null
+        URL.revokeObjectURL(audioUrl)
+      }
+    } catch (error) {
+      console.error('TTS playback error:', error)
+      setIsPlaying(false)
+      currentAudioRef.current = null
     }
-  }, [audioSettings.outputDeviceId, tts])
+  }, [speak, hasTTS, audioSettings.outputDeviceId, voiceSettings.speed])
+  
+  // Helper to stop TTS
+  const stopTTS = useCallback(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause()
+      currentAudioRef.current = null
+      setIsPlaying(false)
+    }
+  }, [])
+  
   
   // Sort agents to put project-manager first
   const agents = useMemo(() => {
@@ -610,7 +625,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
   
   // Auto-play new agent messages with TTS
   useEffect(() => {
-    if (!ttsOptions?.enabled || !user) {
+    if (!hasTTS || !user || isPlaying) {
       return
     }
     
@@ -621,7 +636,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
              !isAudioEvent(msg.event)
     )
     
-    if (agentMessages.length > 0 && !tts.isPlaying) {
+    if (agentMessages.length > 0) {
       const latestAgentMessage = agentMessages[agentMessages.length - 1]
       const ttsContent = extractTTSContent(latestAgentMessage.event.content)
       
@@ -636,7 +651,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
         setConversationState('agent_speaking')
         setSpeakingAgent(latestAgentMessage.event.pubkey)
         
-        tts.play(ttsContent).then(() => {
+        playTTS(ttsContent).then(() => {
           setPlayedMessageIds(prev => new Set(prev).add(latestAgentMessage.id))
           setCurrentAgentMessage(null)
           setSpeakingAgent(null)
@@ -659,7 +674,14 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
         })
       }
     }
-  }, [messages.length, ttsOptions?.enabled, user?.pubkey, playedMessageIds.size, tts.isPlaying, agentsRaw]) // Use primitive values instead of objects
+  }, [messages.length, hasTTS, user?.pubkey, playedMessageIds.size, isPlaying, agentsRaw, playTTS]) // Use primitive values instead of objects
+  
+  // Cleanup TTS on unmount
+  useEffect(() => {
+    return () => {
+      stopTTS()
+    }
+  }, [stopTTS])
   
   // Format duration display
   const formatDuration = (seconds: number) => {
@@ -856,7 +878,10 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
         <div className="flex items-center justify-center gap-6 p-6 pb-safe-bottom">
           <motion.button
             whileTap={{ scale: 0.95 }}
-            onClick={() => onClose(localRootEvent)}
+            onClick={() => {
+              stopTTS()
+              onClose(localRootEvent)
+            }}
             className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center shadow-xl hover:bg-red-700 transition-colors"
           >
             <PhoneOff className="h-7 w-7" />

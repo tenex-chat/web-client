@@ -1,5 +1,5 @@
 import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { NostrProfile } from '@/components/common/NostrProfile'
 import { RecipientAvatars } from '@/components/common/RecipientAvatars'
 import { formatRelativeTime, formatCompactTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
@@ -42,12 +42,11 @@ export function MessageHeaderContent({
             params={{ pubkey: event.pubkey }}
             className="hover:underline"
           >
-            <ProfileDisplay 
+            <NostrProfile 
               pubkey={event.pubkey} 
+              variant="name"
               size="sm" 
-              showName={true}
-              showAvatar={false}
-              nameClassName="text-[13px] font-semibold text-foreground"
+              className="text-[13px] font-semibold text-foreground"
             />
           </Link>
           {userStatus.isExternal && (
@@ -112,12 +111,11 @@ export function MessageHeaderContent({
         params={{ pubkey: event.pubkey }}
         className="hover:underline"
       >
-        <ProfileDisplay 
+        <NostrProfile 
           pubkey={event.pubkey} 
+          variant="name"
           size="md" 
-          showName={true}
-          showAvatar={false}
-          nameClassName="text-sm font-semibold text-foreground"
+          className="text-sm font-semibold text-foreground"
         />
       </Link>
       {userStatus.isExternal && (

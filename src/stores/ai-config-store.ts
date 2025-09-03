@@ -71,20 +71,33 @@ export const sttSettingsAtom = atom(
   }
 )
 
-// Helper atom to get OpenAI API key (from provider or voice settings)
-export const openAIApiKeyAtom = atom((get) => {
-  const activeProvider = get(activeProviderAtom)
-  const voiceSettings = get(voiceSettingsAtom)
-  
-  // If active provider is OpenAI, use its key
-  if (activeProvider?.provider === 'openai') {
-    return activeProvider.apiKey
+// Helper atom to get/set OpenAI API key for voice settings
+export const openAIApiKeyAtom = atom(
+  (get) => {
+    const activeProvider = get(activeProviderAtom)
+    const voiceSettings = get(voiceSettingsAtom)
+    
+    // If active provider is OpenAI, use its key
+    if (activeProvider?.provider === 'openai') {
+      return activeProvider.apiKey
+    }
+    
+    // Otherwise, check if we have a stored OpenAI key for voice
+    if (voiceSettings.provider === 'openai' && voiceSettings.apiKey) {
+      return voiceSettings.apiKey
+    }
+    
+    return undefined
+  },
+  (get, set, apiKey: string | undefined) => {
+    const config = get(aiConfigAtom)
+    // Store the OpenAI API key in voice settings
+    set(aiConfigAtom, {
+      ...config,
+      voiceSettings: {
+        ...config.voiceSettings,
+        apiKey: apiKey
+      }
+    })
   }
-  
-  // Otherwise, check if we have a stored OpenAI key for voice
-  if (voiceSettings.provider === 'openai' && voiceSettings.apiKey) {
-    return voiceSettings.apiKey
-  }
-  
-  return undefined
-})
+)

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, Phone, PhoneOff, Settings, Copy, Check, FileJson, ExternalLink } from "lucide-react";
+import { ArrowLeft, Phone, PhoneOff, Settings, Copy, Check, FileJson, ExternalLink, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMediaQuery";
@@ -114,170 +114,186 @@ export function ChatHeader({
   if (!rootEvent) return null;
 
   return (
-    <div className="bg-card border-b border-border/60 backdrop-blur-xl bg-card/95 sticky top-0 z-50">
-      <div
-        className={cn(
-          "flex items-center justify-between",
-          isMobile ? "px-3 py-2" : "px-3 sm:px-4 py-3 sm:py-4",
-        )}
-      >
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Always show back button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-            title="Go back"
-          >
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          </Button>
-          {/* Project Avatar */}
-          {project && (
-            <ProjectAvatar 
-              project={project} 
-              className="h-8 w-8 sm:h-9 sm:w-9 shrink-0"
-              fallbackClassName="text-xs"
-            />
-          )}
-          <div className="flex-1 min-w-0">
-            <h1
-              className={cn(
-                "font-semibold text-foreground truncate",
-                isMobile ? "text-base max-w-40" : "text-lg sm:text-xl max-w-48",
-              )}
-            >
-              {threadTitle}
-            </h1>
-            {project?.title && (
-              <p
-                className={cn(
-                  "text-muted-foreground",
-                  isMobile ? "text-[10px] mt-0" : "text-xs mt-0.5",
-                )}
-              >
-                {project.title}
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          {/* Conversation Agents - show inline but smaller on mobile */}
-          {messages && project && messages.length > 0 && (
-            <div className={cn(isMobile && "scale-75 -mr-1")}>
-              <ConversationAgents
-                messages={messages}
-                project={project}
-                rootEvent={rootEvent}
-              />
-            </div>
-          )}
-          {/* Detach button for drawer mode */}
-          {onDetach && !isMobile && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onDetach}
-              className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-              title="Detach to floating window"
-            >
-              <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
-            </Button>
-          )}
-          {/* Copy thread dropdown */}
-          {messages && messages.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-                  title="Copy thread"
-                >
-                  {copiedFormat ? (
-                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                  ) : (
-                    <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem 
-                  onClick={() => handleCopyThread('markdown')}
-                  className="cursor-pointer"
-                >
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copy as Markdown
-                  {copiedFormat === 'markdown' && (
-                    <Check className="w-4 h-4 ml-auto text-green-600" />
-                  )}
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => handleCopyThread('json')}
-                  className="cursor-pointer"
-                >
-                  <FileJson className="w-4 h-4 mr-2" />
-                  Copy as JSON
-                  {copiedFormat === 'json' && (
-                    <Check className="w-4 h-4 ml-auto text-green-600" />
-                  )}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          {/* Voice call button - always visible */}
-          {ttsEnabled ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onVoiceCallClick}
-              className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-              title="Start voice call"
-            >
-              <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
-            </Button>
-          ) : (
-            <Popover open={showTTSInfo} onOpenChange={setShowTTSInfo}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-                  title="Voice mode not configured"
-                >
-                  <PhoneOff className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80">
-                <div className="space-y-2">
-                  <div className="font-semibold flex items-center gap-2">
-                    <Settings className="w-4 h-4" />
-                    Voice Mode Not Configured
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    To enable voice mode, you need to configure Text-to-Speech settings.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Go to Settings → AI and configure your text-to-speech settings.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setShowTTSInfo(false);
-                      // Navigate to settings - this would need to be passed as a prop or use routing
-                      window.location.href = '/settings?tab=tts';
-                    }}
-                  >
-                    Go to Settings
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+			<div className="bg-card border-b border-border/60 backdrop-blur-xl bg-card/95 sticky top-0 z-50">
+				<div
+					className={cn(
+						"flex items-center justify-between",
+						isMobile ? "px-3 py-2" : "px-3 sm:px-4 py-3 sm:py-4",
+					)}
+				>
+					<div className="flex items-center gap-2 sm:gap-3">
+						{/* Always show back button */}
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={onBack}
+							className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+							title="Go back"
+						>
+							<ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+						</Button>
+						{/* Project Avatar */}
+						{project && (
+							<ProjectAvatar
+								project={project}
+								className="h-8 w-8 sm:h-9 sm:w-9 shrink-0"
+								fallbackClassName="text-xs"
+							/>
+						)}
+						<div className="flex-1 min-w-0">
+							<h1
+								className={cn(
+									"font-semibold text-foreground truncate",
+									isMobile
+										? "text-base max-w-40"
+										: "text-lg sm:text-xl max-w-48",
+								)}
+							>
+								{threadTitle}
+							</h1>
+							{project?.title && (
+								<p
+									className={cn(
+										"text-muted-foreground",
+										isMobile ? "text-[10px] mt-0" : "text-xs mt-0.5",
+									)}
+								>
+									{project.title}
+								</p>
+							)}
+						</div>
+					</div>
+					<div className="flex items-center gap-1">
+						{/* Conversation Agents - show inline but smaller on mobile */}
+						{messages && project && messages.length > 0 && (
+							<div className={cn(isMobile && "scale-75 -mr-1")}>
+								<ConversationAgents
+									messages={messages}
+									project={project}
+									rootEvent={rootEvent}
+								/>
+							</div>
+						)}
+						{/* Copy thread dropdown */}
+						{messages && messages.length > 0 && (
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+										title="Copy thread"
+									>
+										{copiedFormat ? (
+											<Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+										) : (
+											<Copy className="w-4 h-4 sm:w-5 sm:h-5" />
+										)}
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end">
+									<DropdownMenuItem
+										onClick={() => handleCopyThread("markdown")}
+										className="cursor-pointer"
+									>
+										<Copy className="w-4 h-4 mr-2" />
+										Copy as Markdown
+										{copiedFormat === "markdown" && (
+											<Check className="w-4 h-4 ml-auto text-green-600" />
+										)}
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={() => handleCopyThread("json")}
+										className="cursor-pointer"
+									>
+										<FileJson className="w-4 h-4 mr-2" />
+										Copy as JSON
+										{copiedFormat === "json" && (
+											<Check className="w-4 h-4 ml-auto text-green-600" />
+										)}
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+						)}
+						{/* Voice call button - always visible */}
+						{ttsEnabled ? (
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={onVoiceCallClick}
+								className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+								title="Start voice call"
+							>
+								<Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+							</Button>
+						) : (
+							<Popover open={showTTSInfo} onOpenChange={setShowTTSInfo}>
+								<PopoverTrigger asChild>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+										title="Voice mode not configured"
+									>
+										<PhoneOff className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-80">
+									<div className="space-y-2">
+										<div className="font-semibold flex items-center gap-2">
+											<Settings className="w-4 h-4" />
+											Voice Mode Not Configured
+										</div>
+										<p className="text-sm text-muted-foreground">
+											To enable voice mode, you need to configure Text-to-Speech
+											settings.
+										</p>
+										<p className="text-sm text-muted-foreground">
+											Go to Settings → AI and configure your text-to-speech
+											settings.
+										</p>
+										<Button
+											variant="outline"
+											size="sm"
+											className="w-full"
+											onClick={() => {
+												setShowTTSInfo(false);
+												// Navigate to settings - this would need to be passed as a prop or use routing
+												window.location.href = "/settings?tab=tts";
+											}}
+										>
+											Go to Settings
+										</Button>
+									</div>
+								</PopoverContent>
+							</Popover>
+						)}
+						{/* Detach button for drawer mode */}
+						{onDetach && !isMobile && (
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={onDetach}
+								className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+								title="Detach to floating window"
+							>
+								<ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
+							</Button>
+						)}
+						{/* Close button for drawer mode */}
+						{onBack && (
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={onBack}
+								className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+								title="Close"
+							>
+								<X className="w-4 h-4 sm:w-5 sm:h-5" />
+							</Button>
+						)}
+					</div>
+				</div>
+			</div>
+		);
 }

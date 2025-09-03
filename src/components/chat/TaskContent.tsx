@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import type { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { NDKProjectStatus } from '@/lib/ndk-events/NDKProjectStatus'
 import { logger } from '@/lib/logger'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { NostrProfile } from '@/components/common/NostrProfile'
 
 interface TaskContentProps {
   task: NDKTask
@@ -183,11 +183,11 @@ export const TaskContent = memo(function TaskContent({
             {task.assignedTo && (
               <div className="flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-muted-foreground" />
-                <ProfileDisplay 
+                <NostrProfile 
                   pubkey={task.assignedTo} 
-                  showName={true}
-                  showAvatar={false}
-                  nameClassName="text-xs text-muted-foreground"
+                  variant="name"
+                  size="xs"
+                  className="text-muted-foreground"
                 />
               </div>
             )}

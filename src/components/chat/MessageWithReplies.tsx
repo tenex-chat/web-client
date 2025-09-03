@@ -13,7 +13,7 @@ import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { EVENT_KINDS } from '@/lib/constants'
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
 import { LLMMetadataDialog } from '@/components/dialogs/LLMMetadataDialog'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { NostrProfile } from '@/components/common/NostrProfile'
 import { Link } from '@tanstack/react-router'
 import { useMarkdownComponents } from '@/lib/markdown/config'
 import { extractLLMMetadata, getEventPhase, getEventPhaseFrom } from '@/lib/utils/event-metadata'
@@ -377,12 +377,11 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                 params={{ pubkey: event.pubkey }}
                 className="flex-shrink-0"
               >
-                <ProfileDisplay 
+                <NostrProfile 
                   pubkey={event.pubkey} 
                   size="sm" 
-                  showName={false}
-                  showAvatar={true}
-                  avatarClassName="h-7 w-7 rounded-md"
+                  variant="avatar"
+                  className="h-7 w-7 rounded-md"
                 />
               </Link>
             )}
@@ -487,12 +486,11 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               params={{ pubkey: event.pubkey }}
               className="block hover:opacity-80 transition-opacity"
             >
-              <ProfileDisplay 
+              <NostrProfile 
                 pubkey={event.pubkey} 
                 size="md" 
-                showName={false}
-                showAvatar={true}
-                avatarClassName="h-9 w-9 rounded-md"
+                variant="avatar"
+                className="h-9 w-9 rounded-md"
               />
             </Link>
           </div>
@@ -615,7 +613,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               {/* Show up to 20 user avatars who replied */}
               {sortedReplies.slice(0, 20).map((reply, idx) => (
                 <div key={reply.id} style={{ zIndex: 20 - idx }}>
-                  <ProfileDisplay pubkey={reply.pubkey} showName={false} avatarClassName="w-5 h-5 border-2 border-background rounded" />
+                  <NostrProfile pubkey={reply.pubkey} variant="avatar" className="w-5 h-5 border-2 border-background rounded" />
                 </div>
               ))}
               {sortedReplies.length > 20 && (

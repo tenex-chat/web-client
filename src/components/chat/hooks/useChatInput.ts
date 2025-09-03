@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useImageUpload } from '@/hooks/useImageUpload';
+import { useBlossomUpload } from '@/hooks/useBlossomUpload';
 import { useMentions } from '@/hooks/useMentions';
 import { useDraftPersistence } from '@/hooks/useDraftPersistence';
 import type { NDKProject } from '@/lib/ndk-events/NDKProject';
@@ -56,21 +56,31 @@ export function useChatInput(
     return () => clearTimeout(timeoutId);
   }, [messageInput, saveDraft, rootEvent?.id]);
 
-  // Image upload functionality
+  // Image upload functionality using Blossom
   const {
-    pendingImageUrls,
-    uploadQueue,
-    uploadStats,
-    showUploadProgress,
-    setShowUploadProgress,
     uploadFiles,
-    handlePaste,
-    removeImageUrl,
+    uploadQueue,
+    isUploading,
     cancelUpload,
     retryUpload,
-    getCompletedUploads,
-    clearUploads,
-  } = useImageUpload();
+    clearCompleted,
+    handlePaste,
+    uploadStats,
+  } = useBlossomUpload();
+  
+  // Derived values from Blossom upload
+  const pendingImageUrls = uploadQueue
+    .filter(item => item.status === 'completed' && item.url)
+    .map(item => item.url!);
+  const showUploadProgress = uploadQueue.length > 0;
+  const setShowUploadProgress = () => {}; // No-op for compatibility
+  const removeImageUrl = (url: string) => {
+    // Find and cancel/remove the upload with this URL
+    const item = uploadQueue.find(i => i.url === url);
+    if (item) cancelUpload(item.id);
+  };
+  const getCompletedUploads = () => uploadQueue.filter(item => item.status === 'completed');
+  const clearUploads = clearCompleted;
 
   // Mentions functionality - make agents optional
   const mentionProps = useMentions({

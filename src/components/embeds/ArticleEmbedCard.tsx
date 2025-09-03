@@ -3,7 +3,7 @@ import { FileText, Calendar, User } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils/time'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { NostrProfile } from '@/components/common/NostrProfile'
 import { BaseEmbedCard } from './BaseEmbedCard'
 
 interface ArticleEmbedCardProps {
@@ -48,7 +48,7 @@ export function ArticleEmbedCard({ event, compact, className, onClick }: Article
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5">
                     <User className="w-3 h-3" />
-                    <ProfileDisplay pubkey={event.pubkey} />
+                    <NostrProfile pubkey={event.pubkey} />
                   </div>
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
@@ -91,7 +91,7 @@ export function ArticleEmbedCard({ event, compact, className, onClick }: Article
       metadata={
         <>
           <span className="text-muted-foreground">•</span>
-          <ProfileDisplay pubkey={event.pubkey} />
+          <NostrProfile pubkey={event.pubkey} />
         </>
       }
     />

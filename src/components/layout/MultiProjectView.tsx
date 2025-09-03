@@ -19,7 +19,7 @@ import { CallView } from '@/components/call/CallView'
 import { WindowManager } from '@/components/windows/WindowManager'
 import { useWindowManager } from '@/stores/windowManager'
 import { useIsMobile, useIsDesktop } from '@/hooks/useMediaQuery'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
+import { ArrowLeft, ExternalLink, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { DrawerContent, TabType } from '@/components/windows/FloatingWindow'
 
@@ -282,28 +282,40 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
           return (
             <div className="h-full flex flex-col">
               {/* Agent Profile Header */}
-              <div className="flex items-center gap-2 p-4 border-b">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleDrawerClose}
-                  className="h-9 w-9"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                {!isMobile && canAddWindow() && (
+              <div className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={handleDetachWindow}
+                    onClick={handleDrawerClose}
                     className="h-9 w-9"
-                    title="Detach to floating window"
                   >
-                    <ExternalLink className="h-4 w-4" />
+                    <ArrowLeft className="h-4 w-4" />
                   </Button>
-                )}
-                <div>
-                  <h2 className="text-lg font-semibold">Agent Profile</h2>
+                  <div>
+                    <h2 className="text-lg font-semibold">Agent Profile</h2>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {!isMobile && canAddWindow() && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleDetachWindow}
+                      className="h-9 w-9"
+                      title="Detach to floating window"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleDrawerClose}
+                    className="h-9 w-9"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
               {/* Agent Profile Content */}
@@ -338,6 +350,17 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold">{project.title} Settings</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {drawerContent.item === 'agents' ? 'Agent Configuration' :
+                     drawerContent.item === 'advanced' ? 'Advanced Settings' :
+                     drawerContent.item === 'danger' ? 'Danger Zone' :
+                     'General Settings'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
                 {!isMobile && canAddWindow() && (
                   <Button
                     variant="ghost"
@@ -349,15 +372,14 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 )}
-                <div>
-                  <h2 className="text-lg font-semibold">{project.title} Settings</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {drawerContent.item === 'agents' ? 'Agent Configuration' :
-                     drawerContent.item === 'advanced' ? 'Advanced Settings' :
-                     drawerContent.item === 'danger' ? 'Danger Zone' :
-                     'General Settings'}
-                  </p>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDrawerClose}
+                  className="h-9 w-9"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </div>
             {/* Settings Content */}

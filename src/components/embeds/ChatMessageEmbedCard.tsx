@@ -3,7 +3,7 @@ import { MessageSquare, ChevronRight, Hash } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils/time'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { NostrProfile } from '@/components/common/NostrProfile'
 import { Badge } from '@/components/ui/badge'
 
 interface ChatMessageEmbedCardProps {
@@ -80,11 +80,10 @@ export function ChatMessageEmbedCard({ event, compact, className, onClick }: Cha
           )}
           
           <div className="flex items-center gap-2 mb-2">
-            <ProfileDisplay 
+            <NostrProfile 
               pubkey={event.pubkey} 
               size="sm"
-              showName={true}
-              showAvatar={true}
+              variant="full"
               avatarClassName="h-6 w-6"
               nameClassName="text-sm font-medium"
             />

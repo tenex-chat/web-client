@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils/time'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { NostrProfile } from '@/components/common/NostrProfile'
 
 interface DefaultEmbedCardProps {
   event: NDKEvent
@@ -79,7 +79,7 @@ export function DefaultEmbedCard({ event, compact, className, onClick }: Default
           
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <ProfileDisplay pubkey={event.pubkey} />
+              <NostrProfile pubkey={event.pubkey} />
             </div>
             
             {event.created_at && (

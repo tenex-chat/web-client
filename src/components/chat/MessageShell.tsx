@@ -1,7 +1,7 @@
 import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { memo, ReactNode, useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { NostrProfile } from '@/components/common/NostrProfile'
 import { RecipientAvatars } from '@/components/common/RecipientAvatars'
 import { formatRelativeTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
@@ -69,12 +69,11 @@ export const MessageShell = memo(function MessageShell({
             params={{ pubkey: event.pubkey }}
             className="block hover:opacity-80 transition-opacity"
           >
-            <ProfileDisplay 
+            <NostrProfile 
               pubkey={event.pubkey} 
               size="md" 
-              showName={false}
-              showAvatar={true}
-              avatarClassName="h-9 w-9 rounded-md"
+              variant="avatar"
+              className="h-9 w-9 rounded-md"
             />
           </Link>
         </div>
@@ -89,12 +88,11 @@ export const MessageShell = memo(function MessageShell({
                 params={{ pubkey: event.pubkey }}
                 className="hover:underline"
               >
-                <ProfileDisplay 
+                <NostrProfile 
                   pubkey={event.pubkey} 
                   size="md" 
-                  showName={true}
-                  showAvatar={false}
-                  nameClassName="text-sm font-semibold text-foreground"
+                  variant="name"
+                  className="text-sm font-semibold text-foreground"
                 />
               </Link>
               {userStatus.isExternal && (

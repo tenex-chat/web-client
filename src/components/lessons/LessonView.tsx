@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { formatRelativeTime } from '@/lib/utils/time'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { NostrProfile } from '@/components/common/NostrProfile'
 import { toast } from 'sonner'
 import { useMarkdownComponents } from '@/lib/markdown/config'
 
@@ -203,18 +203,16 @@ export function LessonView() {
 								comments.map((comment) => (
 									<div key={comment.id} className="space-y-2">
 										<div className="flex gap-3">
-											<ProfileDisplay
+											<NostrProfile
 												pubkey={comment.pubkey}
-												showName={false}
-												showAvatar={true}
+												variant="avatar"
 												size="sm"
 											/>
 											<div className="flex-1 space-y-1">
 												<div className="flex items-center gap-2">
-													<ProfileDisplay
+													<NostrProfile
 														pubkey={comment.pubkey}
-														showAvatar={false}
-														showName={true}
+														variant="name"
 														className="font-medium text-sm"
 													/>
 													<span className="text-xs text-muted-foreground">

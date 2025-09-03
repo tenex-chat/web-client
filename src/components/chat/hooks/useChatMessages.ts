@@ -14,7 +14,6 @@ export interface Message {
  */
 export function useChatMessages(_project: NDKProject | null | undefined, rootEvent: NDKEvent | null) {
   const [messages, setMessages] = useState<Message[]>([])
-  console.log('re-rendering useChatMessages', rootEvent?.id)
   
   // Subscribe to thread messages using NIP-22 threading
   const { events } = useSubscribe(

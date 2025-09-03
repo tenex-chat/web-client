@@ -3,7 +3,7 @@ import { useEvent } from '@nostr-dev-kit/ndk-hooks'
 import { ExternalLink } from 'lucide-react'
 import { useState } from 'react'
 import { Card } from '@/components/ui/card'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { NostrProfile } from '@/components/common/NostrProfile'
 import { InlineProfileMention } from '@/components/common/InlineProfileMention'
 import { cn } from '@/lib/utils'
 import { NDKTask } from '@/lib/ndk-events/NDKTask'
@@ -80,7 +80,7 @@ export function NostrEntityCard({
           "inline-flex items-center gap-2",
           className
         )}>
-          <ProfileDisplay pubkey={user.pubkey} />
+          <NostrProfile pubkey={user.pubkey} />
         </Card>
       )
   }

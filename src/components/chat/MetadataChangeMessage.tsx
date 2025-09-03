@@ -2,7 +2,7 @@ import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
 import { memo, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils/time'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { NostrProfile } from '@/components/common/NostrProfile'
 import { Edit3, MessageSquareText, Users, Settings, Info } from 'lucide-react'
 
 interface MetadataChangeMessageProps {
@@ -124,12 +124,11 @@ export const MetadataChangeMessage = memo(function MetadataChangeMessage({
         <Icon className="h-3.5 w-3.5 text-muted-foreground/70" />
         
         <div className="flex items-center gap-1.5">
-          <ProfileDisplay 
+          <NostrProfile 
             pubkey={event.pubkey} 
             size="sm" 
-            showName={true}
-            showAvatar={false}
-            nameClassName="font-medium text-foreground/80 hover:text-foreground text-xs"
+            variant="name"
+            className="font-medium text-foreground/80 hover:text-foreground text-xs"
           />
           
           <span className="text-muted-foreground/70 text-xs">

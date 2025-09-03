@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { ProfileDisplay } from "@/components/common/ProfileDisplay";
+import { NostrProfile } from "@/components/common/NostrProfile";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import type { AgentInstance, ProjectGroup } from "@/types/agent";
 
@@ -50,10 +50,10 @@ export function ChatMentionMenu({
                       )}
                       onClick={() => insertMention(agent)}
                     >
-                      <ProfileDisplay
+                      <NostrProfile
                         pubkey={agent.pubkey}
-                        showName={false}
-                        avatarClassName="h-5 w-5"
+                        variant="avatar"
+                        className="h-5 w-5"
                       />
                       <span className="text-sm truncate">{agent.slug}</span>
                     </button>
@@ -91,10 +91,10 @@ export function ChatMentionMenu({
                           )}
                           onClick={() => insertMention(agent)}
                         >
-                          <ProfileDisplay
+                          <NostrProfile
                             pubkey={agent.pubkey}
-                            showName={false}
-                            avatarClassName="h-5 w-5"
+                            variant="avatar"
+                            className="h-5 w-5"
                           />
                           <span className="text-sm truncate">{agent.slug}</span>
                         </button>
@@ -127,10 +127,10 @@ export function ChatMentionMenu({
           onClick={() => insertMention(agent)}
         >
           <div className="flex items-center gap-2">
-            <ProfileDisplay
+            <NostrProfile
               pubkey={agent.pubkey}
-              showName={false}
-              avatarClassName="h-6 w-6"
+              variant="avatar"
+              className="h-6 w-6"
             />
             <span className="text-sm font-medium truncate">{agent.slug}</span>
           </div>

@@ -3,7 +3,7 @@ import { MessageSquare, Heart, Repeat2, Zap } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils/time'
-import { ProfileDisplay } from '@/components/common/ProfileDisplay'
+import { NostrProfile } from '@/components/common/NostrProfile'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -61,7 +61,7 @@ export function NoteEmbedCard({ event, compact, className, onClick }: NoteEmbedC
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <ProfileDisplay pubkey={event.pubkey} />
+            <NostrProfile pubkey={event.pubkey} />
             <span className="text-xs text-muted-foreground">
               {event.created_at && formatRelativeTime(event.created_at * 1000)}
             </span>

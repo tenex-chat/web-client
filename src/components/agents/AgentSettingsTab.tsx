@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
-import { Volume2, Save, Bot, Settings2, Wrench, RotateCcw } from "lucide-react";
+import { Volume2, Save, Settings2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAgentVoiceConfig } from "@/hooks/useAgentVoiceConfig";
@@ -37,6 +37,69 @@ interface ProjectAgentSettings {
   originalTools?: string[];
 }
 
+interface ProjectSettingsCardProps {
+  project: any;
+  settings: ProjectAgentSettings;
+  onModelChange: (projectDTag: string, model: string) => void;
+  onToolToggle: (projectDTag: string, tool: string) => void;
+}
+
+function ProjectSettingsCard({ project, settings, onModelChange, onToolToggle }: ProjectSettingsCardProps) {
+  const models = useProjectOnlineModels(project.dTag);
+  const tools = useProjectAvailableTools(project.dTag);
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{settings.projectTitle}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Model Selection */}
+        <div className="space-y-2">
+          <Label>Model</Label>
+          <Select
+            value={settings.selectedModel}
+            onValueChange={(value) => onModelChange(settings.projectDTag, value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a model" />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map(model => (
+                <SelectItem key={model.model} value={model.model}>
+                  {model.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* Tools Selection */}
+        <div className="space-y-2">
+          <Label>Tools</Label>
+          <div className="space-y-2">
+            {tools.map(tool => (
+              <div key={tool} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`${project.dTag}-${tool}`}
+                  checked={settings.selectedTools.has(tool)}
+                  onCheckedChange={() => onToolToggle(settings.projectDTag, tool)}
+                />
+                <label
+                  htmlFor={`${project.dTag}-${tool}`}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  {tool}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
   const [projectSettings, setProjectSettings] = useState<Map<string, ProjectAgentSettings>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
@@ -61,8 +124,8 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
   const agentProjects = projects.filter(project => {
     const agentIds = project.agents?.map(a => a.ndkAgentEventId) || [];
     return agentIds.some(id => {
-      const status = projectStatusMap.get(project.d_tag || '');
-      return status?.agentStatuses.some(as => as.ndkEventId === id && as.agentPubkey === agentPubkey);
+      const status = projectStatusMap.get(project.dTag || '');
+      return status?.agentAssignments?.some((as: any) => as.ndkEventId === id && as.agentPubkey === agentPubkey);
     });
   });
 
@@ -71,12 +134,12 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
     const newSettings = new Map<string, ProjectAgentSettings>();
     
     agentProjects.forEach(project => {
-      const projectStatus = projectStatusMap.get(project.d_tag || '');
-      const agentStatus = projectStatus?.agentStatuses.find(as => as.agentPubkey === agentPubkey);
+      const projectStatus = projectStatusMap.get(project.dTag || '');
+      const agentStatus = projectStatus?.agentAssignments?.find((as: any) => as.agentPubkey === agentPubkey);
       
       if (projectStatus && agentStatus) {
-        newSettings.set(project.d_tag || '', {
-          projectDTag: project.d_tag || '',
+        newSettings.set(project.dTag || '', {
+          projectDTag: project.dTag || '',
           projectTitle: project.title || 'Untitled',
           selectedModel: agentStatus.modelOverride || agentStatus.model || '',
           selectedTools: new Set(agentStatus.toolOverrides || agentStatus.tools || []),
@@ -297,61 +360,18 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
             <ScrollArea className="h-[400px] pr-4">
               <div className="space-y-4">
                 {agentProjects.map(project => {
-                  const settings = projectSettings.get(project.d_tag || '');
-                  const models = useProjectOnlineModels(project.d_tag);
-                  const tools = useProjectAvailableTools(project.d_tag);
+                  const settings = projectSettings.get(project.dTag || '');
                   
                   if (!settings) return null;
                   
                   return (
-                    <Card key={project.d_tag}>
-                      <CardHeader>
-                        <CardTitle className="text-base">{settings.projectTitle}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {/* Model Selection */}
-                        <div className="space-y-2">
-                          <Label>Model</Label>
-                          <Select
-                            value={settings.selectedModel}
-                            onValueChange={(value) => handleModelChange(settings.projectDTag, value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a model" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {models.map(model => (
-                                <SelectItem key={model.id} value={model.id}>
-                                  {model.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        {/* Tools Selection */}
-                        <div className="space-y-2">
-                          <Label>Tools</Label>
-                          <div className="space-y-2">
-                            {tools.map(tool => (
-                              <div key={tool.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`${project.d_tag}-${tool.id}`}
-                                  checked={settings.selectedTools.has(tool.id)}
-                                  onCheckedChange={() => handleToolToggle(settings.projectDTag, tool.id)}
-                                />
-                                <label
-                                  htmlFor={`${project.d_tag}-${tool.id}`}
-                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                >
-                                  {tool.name}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <ProjectSettingsCard
+                      key={project.dTag}
+                      project={project}
+                      settings={settings}
+                      onModelChange={handleModelChange}
+                      onToolToggle={handleToolToggle}
+                    />
                   );
                 })}
               </div>

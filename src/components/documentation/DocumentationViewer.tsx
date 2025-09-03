@@ -1,5 +1,5 @@
 import { NDKArticle } from '@nostr-dev-kit/ndk-hooks'
-import { ArrowLeft, Calendar, Clock, Copy, Hash, MessageSquare, Plus, History, Edit, User, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, Copy, Hash, MessageSquare, Plus, History, Edit, User, ExternalLink, X } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
@@ -89,17 +89,6 @@ export function DocumentationViewer({ article, onBack, onDetach, onEdit, project
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               )}
-              {onDetach && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onDetach}
-                  className="h-9 w-9"
-                  title="Detach to floating window"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              )}
             </div>
             <div className="max-w-3xl mx-auto w-full flex items-center justify-between">
               <div>
@@ -156,6 +145,28 @@ export function DocumentationViewer({ article, onBack, onDetach, onEdit, project
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
+                {onDetach && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onDetach}
+                    className="h-9 w-9"
+                    title="Detach to floating window"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                )}
+                {onBack && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onBack}
+                    className="h-9 w-9"
+                    title="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </div>

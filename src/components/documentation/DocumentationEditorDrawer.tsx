@@ -8,7 +8,7 @@ import { DocumentationEditor } from './DocumentationEditor'
 import { HashtagInput } from './HashtagInput'
 import { useToast } from '@/hooks/use-toast'
 import type { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { ArrowLeft, Loader2, FileText, Trash2, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Loader2, FileText, Trash2, ExternalLink, X } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import TurndownService from 'turndown'
 import { marked } from 'marked'
@@ -270,6 +270,17 @@ export function DocumentationEditorDrawer({
               isEditMode ? 'Update' : 'Publish'
             )}
           </Button>
+          {onBack && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              className="h-9 w-9"
+              title="Close"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
       

@@ -307,24 +307,6 @@ export function ConversationAgents({
       }
     });
 
-    // Also check E-tags in messages to find all participants
-    messages.forEach((message) => {
-      const eTags = message.event.tags.filter(tag => tag[0] === 'E');
-      eTags.forEach(tag => {
-        const pubkey = tag[1];
-        if (pubkey && pubkey !== user?.pubkey && !agentsMap.has(pubkey)) {
-          const agentInfo = onlineAgents.find((a) => a.pubkey === pubkey);
-          agentsMap.set(pubkey, {
-            pubkey,
-            slug: agentInfo?.slug,
-            model: agentInfo?.model,
-            tools: agentInfo?.tools,
-            isProjectAgent: !!agentInfo,
-          });
-        }
-      });
-    });
-
     // If root event doesn't have an "e" tag, also include participants from #E tag references
     if (rootEvent && !rootEvent.tagValue("e") && threadParticipants) {
       threadParticipants.forEach((event) => {
@@ -339,7 +321,7 @@ export function ConversationAgents({
         const agentInfo = onlineAgents.find((a) => a.pubkey === pubkey);
         agentsMap.set(pubkey, {
           pubkey,
-          slug: agentInfo?.slug || 'Agent',
+          slug: agentInfo?.slug,
           model: agentInfo?.model,
           tools: agentInfo?.tools,
           isProjectAgent: !!agentInfo,

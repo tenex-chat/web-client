@@ -47,10 +47,10 @@ export function AgentDefinitionDetailPage() {
   const [activeTab, setActiveTab] = useState("details");
 
   // Fetch the agent event by ID
-  const _agent = useEvent(agentDefinitionEventId);
+  const agentEvent = useEvent(agentDefinitionEventId);
   const agent = useMemo(
-    () => _agent && NDKAgentDefinition.from(_agent),
-    [_agent],
+    () => agentEvent && NDKAgentDefinition.from(agentEvent),
+    [agentEvent],
   );
 
   // Fetch MCP servers linked to this agent

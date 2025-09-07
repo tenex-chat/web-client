@@ -138,7 +138,7 @@ export function CallSettings({ className }: CallSettingsProps) {
       
       updateLevel()
       
-    } catch (error) {
+    } catch {
       toast.error('Failed to access microphone')
       setIsTestingInput(false)
     }

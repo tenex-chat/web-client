@@ -47,12 +47,6 @@ export function useDraftPersistence({
   // Generate a unique key for this draft
   const draftKey = threadId ? `thread:${threadId}` : taskId ? `task:${taskId}` : null
 
-  // Get the current draft
-  const getDraft = useCallback((): string => {
-    if (!draftKey || !enabled) return ''
-    return drafts.get(draftKey) || ''
-  }, [draftKey, drafts, enabled])
-
   // Save a draft
   const saveDraft = useCallback((content: string) => {
     if (!draftKey || !enabled) return

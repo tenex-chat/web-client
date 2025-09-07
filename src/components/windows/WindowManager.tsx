@@ -17,7 +17,7 @@ export function WindowManager({ onAttach }: WindowManagerProps) {
     attachToDrawer
   } = useWindowManager()
   
-  const handleAttach = (windowId: string, content: DrawerContent) => {
+  const handleAttach = (windowId: string) => {
     if (onAttach) {
       attachToDrawer(windowId, onAttach)
     }

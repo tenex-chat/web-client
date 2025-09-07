@@ -1,7 +1,6 @@
 import React, { memo, useCallback, useState, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { VirtualList } from "@/components/ui/virtual-list";
 import { ArrowDown, Reply, MoreVertical, Cpu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MessageWithReplies } from "@/components/chat/MessageWithReplies";
@@ -24,7 +23,6 @@ import type NDK from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "@/components/chat/hooks/useChatMessages";
 import { EVENT_KINDS } from "@/lib/constants";
 import { useAI } from "@/hooks/useAI";
-import { useAgentVoiceConfig } from "@/hooks/useAgentVoiceConfig";
 import { extractTTSContent } from "@/lib/utils/extractTTSContent";
 import { isAudioEvent } from "@/lib/utils/audioEvents";
 
@@ -89,7 +87,7 @@ export const ChatMessageList = memo(function ChatMessageList({
   const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
   
   useEffect(() => {
-    if (!autoTTS || !ttsOptions || !latestMessageId || messages.length === 0) return;
+    if (!autoTTS || !latestMessageId || messages.length === 0) return;
 
     const latestMessage = messages[messages.length - 1];
 
@@ -119,11 +117,8 @@ export const ChatMessageList = memo(function ChatMessageList({
       setLastPlayedMessageId(latestMessage.id);
     }
   }, [latestMessageId, autoTTS, hasTTS, lastPlayedMessageId, currentUserPubkey, isPlaying, speak, messages]);
-  const USE_VIRTUAL_LIST_THRESHOLD = 50; // Use virtual list for more than 50 messages
 
   const renderMessage = (message: Message, index: number) => {
-    console.log(message.event.content)
-    
     // Check if this is a metadata change event (kind 513)
     if (message.event.kind === EVENT_KINDS.CONVERSATION_METADATA) {
       return (
@@ -141,7 +136,8 @@ export const ChatMessageList = memo(function ChatMessageList({
     
     // Check if this is a task event
     if (message.event.kind === NDKTask.kind) {
-      const task = new NDKTask(ndk!, message.event.rawEvent());
+      if (!ndk) return null;
+      const task = new NDKTask(ndk, message.event.rawEvent());
       const isFirstMessage = index === 0;
       
       // Check for LLM metadata tags
@@ -302,18 +298,7 @@ export const ChatMessageList = memo(function ChatMessageList({
         <div className="flex items-center justify-center min-h-[200px] text-muted-foreground">
           No messages yet. Start the conversation!
         </div>
-      ) : messages.length > USE_VIRTUAL_LIST_THRESHOLD ? (
-        // Use VirtualList for large message lists
-        <VirtualList
-          items={messages}
-          renderItem={(message, index) => renderMessage(message, index)}
-          estimateSize={120} // Estimated average message height
-          overscan={5}
-          containerClassName="h-full pb-4"
-          className={isMobile ? "py-0 pb-28" : "py-2 pb-28"}
-        />
       ) : (
-        // Use regular ScrollArea for small message lists
         <ScrollArea
           ref={scrollAreaRef}
           className="h-full pb-4"

@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
+import { NDKProject } from "@/lib/ndk-events/NDKProject";
+import type { ProjectAgent } from "@/lib/ndk-events/NDKProjectStatus";
 import { Volume2, Save, Settings2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -38,13 +40,13 @@ interface ProjectAgentSettings {
 }
 
 interface ProjectSettingsCardProps {
-  project: any;
+  project: NDKProject;
   settings: ProjectAgentSettings;
   onModelChange: (projectDTag: string, model: string) => void;
   onToolToggle: (projectDTag: string, tool: string) => void;
 }
 
-function ProjectSettingsCard({ project, settings, onModelChange, onToolToggle }: ProjectSettingsCardProps) {
+const ProjectSettingsCard = memo(function ProjectSettingsCard({ project, settings, onModelChange, onToolToggle }: ProjectSettingsCardProps) {
   const models = useProjectOnlineModels(project.dTag);
   const tools = useProjectAvailableTools(project.dTag);
   
@@ -98,7 +100,7 @@ function ProjectSettingsCard({ project, settings, onModelChange, onToolToggle }:
       </CardContent>
     </Card>
   );
-}
+});
 
 export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
   const [projectSettings, setProjectSettings] = useState<Map<string, ProjectAgentSettings>>(new Map());
@@ -123,9 +125,9 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
   // Filter projects where this agent is assigned
   const agentProjects = projects.filter(project => {
     const agentIds = project.agents?.map(a => a.ndkAgentEventId) || [];
-    return agentIds.some(id => {
+    return agentIds.some(() => {
       const status = projectStatusMap.get(project.dTag || '');
-      return status?.agentAssignments?.some((as: any) => as.ndkEventId === id && as.agentPubkey === agentPubkey);
+      return status?.agents?.some((as: ProjectAgent) => as.pubkey === agentPubkey);
     });
   });
 
@@ -135,7 +137,7 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
     
     agentProjects.forEach(project => {
       const projectStatus = projectStatusMap.get(project.dTag || '');
-      const agentStatus = projectStatus?.agentAssignments?.find((as: any) => as.agentPubkey === agentPubkey);
+      const agentStatus = projectStatus?.agents?.find((as: ProjectAgent) => as.pubkey === agentPubkey);
       
       if (projectStatus && agentStatus) {
         newSettings.set(project.dTag || '', {
@@ -152,23 +154,23 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
     setProjectSettings(newSettings);
   }, [agentProjects, projectStatusMap, agentPubkey]);
 
-  const handleVoiceChange = (voiceId: string) => {
+  const handleVoiceChange = useCallback((voiceId: string) => {
     saveVoiceConfig({ voiceId });
-  };
+  }, [saveVoiceConfig]);
 
-  const handleSpeedChange = (speed: number[]) => {
+  const handleSpeedChange = useCallback((speed: number[]) => {
     saveVoiceConfig({ speed: speed[0] });
-  };
+  }, [saveVoiceConfig]);
 
-  const handleProviderChange = (provider: 'openai' | 'elevenlabs') => {
+  const handleProviderChange = useCallback((provider: 'openai' | 'elevenlabs') => {
     saveVoiceConfig({ provider });
-  };
+  }, [saveVoiceConfig]);
 
   const handleTestVoice = async () => {
     try {
       await testVoice();
       toast.success('Voice test successful');
-    } catch (error) {
+    } catch {
       toast.error('Failed to test voice');
     }
   };
@@ -178,7 +180,7 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
     toast.success('Reset to global voice settings');
   };
 
-  const handleModelChange = (projectDTag: string, model: string) => {
+  const handleModelChange = useCallback((projectDTag: string, model: string) => {
     setProjectSettings(prev => {
       const newSettings = new Map(prev);
       const settings = newSettings.get(projectDTag);
@@ -187,9 +189,9 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
       }
       return newSettings;
     });
-  };
+  }, []);
 
-  const handleToolToggle = (projectDTag: string, tool: string) => {
+  const handleToolToggle = useCallback((projectDTag: string, tool: string) => {
     setProjectSettings(prev => {
       const newSettings = new Map(prev);
       const settings = newSettings.get(projectDTag);
@@ -204,7 +206,7 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
       }
       return newSettings;
     });
-  };
+  }, []);
 
   const handleSaveProjectSettings = async () => {
     if (!ndk || !user) {
@@ -272,7 +274,10 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
           {/* Voice Provider */}
           <div className="space-y-2">
             <Label>Voice Provider</Label>
-            <Select value={voiceConfig.provider} onValueChange={handleProviderChange}>
+            <Select 
+              value={voiceConfig.provider} 
+              onValueChange={(value) => handleProviderChange(value as 'openai' | 'elevenlabs')}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

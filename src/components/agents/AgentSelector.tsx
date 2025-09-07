@@ -42,7 +42,10 @@ export function AgentSelector({
       if (!agentGroups.has(groupKey)) {
         agentGroups.set(groupKey, []);
       }
-      agentGroups.get(groupKey)!.push(agent);
+      const group = agentGroups.get(groupKey);
+      if (group) {
+        group.push(agent);
+      }
     });
 
     // For each group, keep only the latest version

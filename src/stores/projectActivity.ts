@@ -69,8 +69,11 @@ export const useProjectActivityStore = create<ProjectActivityState>()(
       }),
       // Custom deserialization for Map
       onRehydrateStorage: () => (state) => {
-        if (state && Array.isArray((state as any).activityTimestamps)) {
-          state.activityTimestamps = new Map((state as any).activityTimestamps)
+        interface SerializedState {
+          activityTimestamps?: [string, number][];
+        }
+        if (state && Array.isArray((state as SerializedState).activityTimestamps)) {
+          state.activityTimestamps = new Map((state as SerializedState).activityTimestamps)
         }
       }
     }

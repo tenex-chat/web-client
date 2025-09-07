@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, RefObject } from 'react'
+import React, { useState, useCallback, useMemo, RefObject } from 'react'
 import type { AgentInstance, ProjectGroup } from '@/types/agent'
 
 export { type AgentInstance, type ProjectGroup } from '@/types/agent'

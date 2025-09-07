@@ -24,6 +24,7 @@ import { formatThreadAsMarkdown, formatThreadAsJSON } from "@/components/chat/ut
 import { ProjectAvatar } from "@/components/ui/project-avatar";
 import { useConversationMetadata } from "@/hooks/useConversationMetadata";
 import { useAI } from "@/hooks/useAI";
+import { ConversationStopButton } from "@/components/chat/ConversationStopButton";
 
 interface ChatHeaderProps {
   rootEvent: NDKEvent | null;
@@ -105,7 +106,7 @@ export function ChatHeader({
         await navigator.clipboard.writeText(content);
         setCopiedFormat(format);
         setTimeout(() => setCopiedFormat(null), 2000);
-      } catch (error) {
+      } catch {
         toast.error(`Failed to copy thread as ${format}`);
       }
     }
@@ -215,6 +216,12 @@ export function ChatHeader({
 								</DropdownMenuContent>
 							</DropdownMenu>
 						)}
+						{/* Conversation-level stop button */}
+						<ConversationStopButton 
+							conversationRootId={rootEvent?.id}
+							projectId={project?.tagId()}
+						/>
+						
 						{/* Voice call button - always visible */}
 						{ttsEnabled ? (
 							<Button

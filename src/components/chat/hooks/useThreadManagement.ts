@@ -118,7 +118,10 @@ export function useThreadManagement(
 
     // Add project tag if project exists
     if (project) {
-      replyEvent.tags.push(['a', project.tagId()])
+      const tagId = project.tagId()
+      if (tagId) {
+        replyEvent.tags.push(['a', tagId])
+      }
     }
     
     // Add image tags for each uploaded image

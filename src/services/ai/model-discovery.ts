@@ -59,9 +59,16 @@ export class ModelDiscovery {
     
     const data = await response.json()
     
+    interface OpenAIModel {
+      id: string;
+      object?: string;
+      created?: number;
+      owned_by?: string;
+    }
+    
     return data.data
-      .filter((m: any) => m.id.includes('gpt') || m.id.includes('whisper') || m.id.includes('tts'))
-      .map((m: any) => ({
+      .filter((m: OpenAIModel) => m.id.includes('gpt') || m.id.includes('whisper') || m.id.includes('tts'))
+      .map((m: OpenAIModel) => ({
         id: m.id,
         name: m.id,
         category: this.categorizeOpenAIModel(m.id)
@@ -97,7 +104,16 @@ export class ModelDiscovery {
     
     const data = await response.json()
     
-    return data.data.map((m: any) => ({
+    interface OpenRouterModel {
+      id: string;
+      name: string;
+      pricing: {
+        prompt: number;
+        completion?: number;
+      };
+    }
+    
+    return data.data.map((m: OpenRouterModel) => ({
       id: m.id,
       name: `${m.name} ($${m.pricing.prompt}/1M tokens)`,
       contextLength: m.context_length,

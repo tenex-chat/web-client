@@ -1,3 +1,4 @@
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
@@ -59,9 +60,9 @@ vi.mock("jotai", () => ({
 
 vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>,
   },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@/hooks/useKeyboardHeight", () => ({
@@ -146,6 +147,8 @@ vi.mock("@/stores/ai-config-store", () => ({
 import { ChatInterface } from "./ChatInterface";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { useNDK, useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKUser } from "@nostr-dev-kit/ndk-hooks";
+import type NDK from "@nostr-dev-kit/ndk-hooks";
 
 describe("ChatInterface", () => {
   const mockNdk = {
@@ -173,8 +176,8 @@ describe("ChatInterface", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useNDK).mockReturnValue({ ndk: mockNdk as any });
-    vi.mocked(useNDKCurrentUser).mockReturnValue(mockUser as any);
+    vi.mocked(useNDK).mockReturnValue({ ndk: mockNdk as unknown as NDK });
+    vi.mocked(useNDKCurrentUser).mockReturnValue(mockUser as unknown as NDKUser);
     vi.mocked(useSubscribe).mockReturnValue({ events: [], eose: false });
   });
 

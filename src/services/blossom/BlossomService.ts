@@ -36,7 +36,6 @@ export interface FileMetadata {
   originalName: string
 }
 
-
 export interface BatchUploadOptions {
   files: File[]
   onProgress?: (fileIndex: number, progress: number) => void
@@ -252,7 +251,6 @@ export class BlossomService {
     this.uploadAbortControllers.forEach(controller => controller.abort())
     this.uploadAbortControllers.clear()
   }
-
 
   private validateFile(file: File): void {
     const result = validateFile(file, {

@@ -12,14 +12,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NostrAvatar } from "@/components/ui/nostr-avatar";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { useAgentVoiceConfig } from "@/hooks/useAgentVoiceConfig";
 import { useNavigate } from "@tanstack/react-router";
 import { useProjectStatus } from "@/stores/projects";
 import { AddAgentsToProjectDialog } from "@/components/dialogs/AddAgentsToProjectDialog";
-import { isAgentOnline } from "@/lib/utils/agentUtils";
 
 interface AgentsTabContentProps {
   project: NDKProject;
@@ -77,12 +76,13 @@ function AgentCard({
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <Avatar className="w-10 h-10">
-              <AvatarImage src={avatarUrl} alt={agent.name} />
-              <AvatarFallback>
-                <Bot className="w-5 h-5" />
-              </AvatarFallback>
-            </Avatar>
+            <NostrAvatar
+              pubkey={agent.pubkey}
+              src={avatarUrl}
+              alt={agent.name || "Agent"}
+              fallback={<Bot className="w-5 h-5" />}
+              className="w-10 h-10"
+            />
             <div>
               <CardTitle className="text-base">
                 {agent.name || "Unnamed Agent"}
@@ -171,7 +171,7 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
 
   // Get agents from project status (same as Status tab)
   const projectStatus = useProjectStatus(project?.dTag);
-  const statusAgents = projectStatus?.agents || [];
+  const statusAgents = useMemo(() => projectStatus?.agents || [], [projectStatus]);
 
   // Get agent event IDs from project tags
   const projectAgentEventIds = useMemo(() => {
@@ -283,7 +283,6 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
       params: { pubkey: agent.pubkey },
     });
   };
-
 
   if (allAgents.length === 0) {
     return (

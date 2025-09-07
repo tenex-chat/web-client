@@ -251,7 +251,9 @@ export function useBlossomUpload(): UseBlossomUploadReturn {
 
     // Remove completed items from queue
     // This would need a new atom action in blossomStore
-    toast.info(`Cleared ${completedIds.length} completed uploads`)
+    if (completedIds.length > 0) {
+      toast.info(`Cleared ${completedIds.length} completed uploads`)
+    }
   }, [uploadQueue])
 
   // Drag and Drop handlers

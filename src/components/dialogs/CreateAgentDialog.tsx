@@ -52,11 +52,11 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
   useEffect(() => {
     if (forkFromAgent) {
       // Parse existing version and bump it
-      const existingVersion = parseInt(forkFromAgent.version || '1')
-      const newVersion = isNaN(existingVersion) ? 2 : existingVersion + 1
+      const existingVersion = Number.parseInt(forkFromAgent.version || '1')
+      const newVersion = Number.isNaN(existingVersion) ? 2 : existingVersion + 1
       
       setAgentData({
-        name: `${forkFromAgent.name || 'Unnamed'} (Fork)`,
+        name: `${forkFromAgent.name || 'Unnamed'}`,
         description: forkFromAgent.description || '',
         role: forkFromAgent.role || '',
         instructions: forkFromAgent.instructions || '',
@@ -149,8 +149,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         tools: [],
         mcpServers: [],
       })
-    } catch (error) {
-      console.error('Failed to save agent:', error)
+    } catch {
+      console.error('Failed to save agent')
       toast.error(forkFromAgent ? 'Failed to fork agent definition' : 'Failed to create agent definition')
     } finally {
       setIsCreating(false)
@@ -427,7 +427,7 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <Server className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium text-sm">{server.name}</span>
+                            <span className="font-medium text-sm">{server.name || 'Unnamed MCP Server'}</span>
                           </div>
                           {server.description && (
                             <p className="text-xs text-muted-foreground mt-1">{server.description}</p>

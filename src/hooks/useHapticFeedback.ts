@@ -36,8 +36,8 @@ export function useHapticFeedback() {
       } else {
         navigator.vibrate(intensity ? pattern.map(p => p * (intensity / 100)) : pattern)
       }
-    } catch (error) {
-      console.debug('Haptic feedback not available:', error)
+    } catch {
+      // Haptic feedback not available - fail silently
     }
   }, [isSupported])
 

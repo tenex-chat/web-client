@@ -38,8 +38,6 @@ export function processEvent(
   streamingSessions: Map<string, StreamingSession>,
   finalMessages: Message[]
 ): void {
-  console.log('process', event.content)
-  
   // Metadata events should always be shown as final messages
   if (event.kind === EVENT_KINDS.CONVERSATION_METADATA) {
     finalMessages.push({ id: event.id, event: event })
@@ -169,10 +167,10 @@ export function processEventsToMessages(events: NDKEvent[], rootEvent: NDKEvent 
   const streamingMessages = streamingSessionsToMessages(streamingSessions)
   finalMessages.push(...streamingMessages)
   
-  // Sort everything by timestamp
-  finalMessages.sort((a, b) => 
-    a.event.created_at! - b.event.created_at!
-  )
+  // Sort everything by timestamp (filter out messages without timestamps)
+  const messagesWithTime = finalMessages
+    .filter(msg => msg.event.created_at !== undefined)
+    .sort((a, b) => a.event.created_at - b.event.created_at)
   
-  return finalMessages
+  return messagesWithTime
 }

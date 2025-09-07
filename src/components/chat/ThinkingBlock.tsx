@@ -4,7 +4,6 @@ import { cn } from '@/lib/utils'
 
 interface ThinkingBlockProps {
   content: string
-  index: number
   isExpanded: boolean
   onToggle: () => void
   isMobile?: boolean
@@ -12,7 +11,6 @@ interface ThinkingBlockProps {
 
 export const ThinkingBlock = memo(function ThinkingBlock({
   content,
-  index,
   isExpanded,
   onToggle,
   isMobile = false

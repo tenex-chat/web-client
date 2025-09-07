@@ -83,7 +83,7 @@ export function BlossomSettings() {
       } else {
         toast.error('Server returned an error')
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to reach server')
     } finally {
       setIsTesting(null)

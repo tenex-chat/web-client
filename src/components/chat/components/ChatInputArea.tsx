@@ -86,10 +86,12 @@ export const ChatInputArea = memo(function ChatInputArea({
     const content = buildMessageContent();
     const mentions = mentionProps.extractMentions(content);
     const completedUploads = getCompletedUploads();
-    const imageUploads = completedUploads.map((upload) => ({
-      url: upload.url!,
-      metadata: upload.metadata,
-    }));
+    const imageUploads = completedUploads
+      .filter((upload) => upload.url !== undefined)
+      .map((upload) => ({
+        url: upload.url,
+        metadata: upload.metadata,
+      }));
 
     onSend(content, mentions, imageUploads);
     clearInput();

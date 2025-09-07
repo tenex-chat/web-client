@@ -64,7 +64,6 @@ function AgentAvatar({
   availableTools: string[];
   onSaveChanges: (
     agentPubkey: string,
-    agentSlug: string,
     newModel: string,
     tools: string[],
   ) => Promise<void>;
@@ -135,12 +134,11 @@ function AgentAvatar({
     try {
       await onSaveChanges(
         agent.pubkey,
-        agent.slug,
         selectedModel,
         Array.from(selectedTools),
       );
       setPopoverOpen(false);
-    } catch (error) {
+    } catch {
       toast.error("Failed to save agent changes");
     }
   };
@@ -282,8 +280,6 @@ export function ConversationAgents({
     [rootEvent?.id]
   );
 
-  console.log(onlineAgents)
-
   // Extract unique agents from the conversation
   const conversationAgents = useMemo(() => {
     const agentsMap = new Map<string, AgentInfo>();
@@ -294,7 +290,6 @@ export function ConversationAgents({
 
       // Check if this is a project agent
       const agentInfo = onlineAgents.find((a) => a.pubkey === pubkey);
-
       
       if (!agentsMap.has(pubkey)) {
         agentsMap.set(pubkey, {
@@ -332,7 +327,7 @@ export function ConversationAgents({
     return Array.from(agentsMap.values());
   }, [messages, onlineAgents, user?.pubkey, rootEvent, threadParticipants]);
 
-  const handleSaveChanges = async (agentPubkey: string, _agentName: string, newModel: string, tools: string[]) => {
+  const handleSaveChanges = async (agentPubkey: string, newModel: string, tools: string[]) => {
     if (!ndk || !user || !rootEvent) return;
 
     try {
@@ -343,7 +338,7 @@ export function ConversationAgents({
       changeEvent.tags = [
         ["p", agentPubkey], // Target agent
         ["model", newModel], // New model slug
-        ["a", project.tagId()], // Project reference
+        ["a", project.tagId() || ""], // Project reference
       ];
 
       // Add tool tags - one tag per tool
@@ -353,7 +348,7 @@ export function ConversationAgents({
 
       await changeEvent.publish();
       toast.success(`Agent settings updated`);
-    } catch (error) {
+    } catch {
       toast.error("Failed to update agent settings");
       toast.error("Failed to update agent settings");
     }

@@ -70,7 +70,6 @@ export function MCPToolEmbedCard({ event, compact, className, onClick }: MCPTool
 
   // Convert event to NDKMCPTool
   const tool = NDKMCPTool.from(event)
-  
 
   const getToolIcon = (command?: string) => {
     if (!command) return <Wrench className="h-5 w-5" />
@@ -142,66 +141,13 @@ export function MCPToolEmbedCard({ event, compact, className, onClick }: MCPTool
     }
   }
   
-  // Debug logging
-  React.useEffect(() => {
-    if (modalOpen) {
-      console.log('[MCPToolEmbedCard] Modal opened:', {
-        hasUser: !!user,
-        userId: user?.pubkey,
-        hasProjectFromUrl: !!projectIdFromUrl,
-        projectIdFromUrl,
-        hasSelectedProject: !!selectedProjectId,
-        selectedProjectId,
-        hasProject: !!project,
-        projectId,
-        projectTitle: project?.title,
-        projectMCPTools: project?.mcpTools,
-        projectCount: allProjects.length,
-        filteredProjectCount: allProjects.filter(p => p.dTag).length,
-        willShowInstallButton: !!(user && (projectIdFromUrl || selectedProjectId) && project),
-        willShowProjectSelector: !!(user && !project && allProjects.filter(p => p.dTag).length > 0),
-        toolName: tool.name,
-        eventId: event.id,
-        // Detailed install button condition breakdown
-        installButtonConditions: {
-          hasUser: !!user,
-          hasProjectIdFromUrlOrSelected: !!(projectIdFromUrl || selectedProjectId),
-          hasProject: !!project,
-          combined: !!(user && (projectIdFromUrl || selectedProjectId) && project)
-        },
-        // Detailed selector condition breakdown
-        selectorConditions: {
-          hasUser: !!user,
-          noProject: !project,
-          hasProjectsWithDTag: allProjects.filter(p => p.dTag).length > 0,
-          combined: !!(user && !project && allProjects.filter(p => p.dTag).length > 0)
-        },
-        // Compare with same logic as Agent Definition
-        COMPARISON: 'This should match AgentDefinitionEmbedCard exactly'
-      })
-      
-      // Log the actual JSX conditions being rendered
-      console.log('[MCPToolEmbedCard] JSX conditions:', {
-        'Will show project selector': user && !project && allProjects.filter(p => p.dTag).length > 0,
-        'Will show install button': user && (projectIdFromUrl || selectedProjectId) && project,
-        'Will show no projects message': user && !projectIdFromUrl && allProjects.filter(p => p.dTag).length === 0,
-        'Will show sign in message': !user
-      })
-    }
-  }, [modalOpen, user, projectIdFromUrl, selectedProjectId, project, projectId, allProjects.length, tool.name, event.id])
 
   // Check installation status when project loads
   React.useEffect(() => {
     if (project) {
       checkIfInstalled()
-      console.log('[MCPToolEmbedCard] Project loaded, checking installation:', {
-        projectDTag: project.dTag,
-        projectTitle: project.title,
-        isInstalled: project.mcpTools.includes(event.id),
-        mcpEventId: event.id
-      })
     }
-  }, [project, event.id])
+  }, [project, event.id, checkIfInstalled])
 
   if (compact) {
     return (

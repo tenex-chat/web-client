@@ -136,7 +136,6 @@ export function useMentions({
     while ((match = mentionRegex.exec(textToSearch)) !== null) {
       const mentionSlug = match[1];
       
-      
       // Find matching agent - case insensitive comparison
       const agent = agents.find(a => 
         a.slug.toLowerCase() === mentionSlug.toLowerCase()

@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NostrAvatar } from "@/components/ui/nostr-avatar";
 import { Badge } from "@/components/ui/badge";
 import { generateAgentColor } from "@/lib/utils/agent-colors";
 
@@ -31,12 +31,17 @@ export function AgentDefinitionCard({
     >
       <CardHeader>
         <div className="flex items-start gap-3">
-          <Avatar className="w-12 h-12">
-            <AvatarImage src={agent.picture} />
-            <AvatarFallback style={{ backgroundColor: agentColor }}>
-              <Bot className="w-6 h-6 text-white" />
-            </AvatarFallback>
-          </Avatar>
+          <NostrAvatar
+            pubkey={agent.pubkey}
+            src={agent.picture}
+            alt={agent.name || "Agent"}
+            fallback={
+              <div style={{ backgroundColor: agentColor }} className="flex h-full w-full items-center justify-center rounded-full">
+                <Bot className="w-6 h-6 text-white" />
+              </div>
+            }
+            className="w-12 h-12"
+          />
           <div className="flex-1 min-w-0">
             <CardTitle className="text-lg truncate">
               {agent.name || "Unnamed Agent Definition"}
@@ -51,12 +56,17 @@ export function AgentDefinitionCard({
 
         {/* Author info */}
         <div className="mt-3 pt-3 border-t flex items-center gap-2">
-          <Avatar className="w-6 h-6">
-            <AvatarImage src={authorProfile?.image || authorProfile?.picture} />
-            <AvatarFallback className="text-xs">
-              {authorProfile?.name?.[0] || agent.pubkey.slice(0, 2)}
-            </AvatarFallback>
-          </Avatar>
+          <NostrAvatar
+            pubkey={agent.pubkey}
+            src={authorProfile?.image || authorProfile?.picture}
+            alt={authorProfile?.name || "Author"}
+            fallback={
+              <span className="text-xs">
+                {authorProfile?.name?.[0] || agent.pubkey.slice(0, 2)}
+              </span>
+            }
+            className="w-6 h-6"
+          />
           <span className="text-xs text-muted-foreground truncate">
             {authorProfile?.name ||
               authorProfile?.displayName ||

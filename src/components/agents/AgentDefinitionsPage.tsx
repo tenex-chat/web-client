@@ -15,7 +15,6 @@ import { CreateAgentDialog } from "@/components/dialogs/CreateAgentDialog";
 import { CreatePackDialog } from "@/components/dialogs/CreatePackDialog";
 import { AgentDefinitionCard } from "./AgentDefinitionCard";
 import { PackCard } from "./PackCard";
-import { getRoleColor } from "@/lib/utils/role-colors";
 
 type FilterType = "all" | "owned" | "subscribed";
 
@@ -55,7 +54,10 @@ export function AgentDefinitionsPage() {
       if (!agentGroups.has(groupKey)) {
         agentGroups.set(groupKey, []);
       }
-      agentGroups.get(groupKey)!.push(agent);
+      const group = agentGroups.get(groupKey);
+      if (group) {
+        group.push(agent);
+      }
     });
 
     // For each group, keep only the latest version
@@ -142,7 +144,6 @@ export function AgentDefinitionsPage() {
       params: { naddr }
     });
   };
-
 
   return (
     <div className="flex-1 flex flex-col">

@@ -46,7 +46,7 @@ import {
 } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useNDKCurrentPubkey, useProfileValue, useNDKSessionLogout, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
-import { openProjectsAtom, toggleProjectAtom } from '@/stores/openProjects'
+import { openProjectsAtom, toggleProjectAtom, isProjectOpenAtom } from '@/stores/openProjects'
 
 interface CollapsibleProjectsSidebarProps {
   className?: string
@@ -101,6 +101,7 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
   const { theme, setTheme } = useTheme()
   const [openProjects] = useAtom(openProjectsAtom)
   const [, toggleProject] = useAtom(toggleProjectAtom)
+  const isProjectOpen = useAtom(isProjectOpenAtom)[0]
   
   // Add keyboard shortcut for global search
   useGlobalSearchShortcut(() => setSearchDialogOpen(true))
@@ -185,7 +186,7 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                       ) : (
                         sortedProjects.map(({ project, status }) => {
                           const projectIdentifier = project.dTag || project.encode()
-                          const isOpen = openProjects.some(p => (p.dTag || p.encode()) === projectIdentifier)
+                          const isOpen = isProjectOpen(projectIdentifier)
                           return (
                             <SidebarMenuItem key={projectIdentifier}>
                               <Tooltip>
@@ -194,10 +195,8 @@ export function CollapsibleProjectsSidebar({ onProjectSelect }: CollapsibleProje
                                     onClick={(e) => {
                                       e.preventDefault()
                                       toggleProject(project)
-                                      if (!isOpen && openProjects.length === 0) {
-                                        // If no projects open, navigate to the multi-project view
-                                        navigate({ to: '/projects' })
-                                      }
+                                      // Always navigate to projects view when toggling projects
+                                      navigate({ to: '/projects' })
                                       onProjectSelect?.()
                                     }}
                                     isActive={isOpen}

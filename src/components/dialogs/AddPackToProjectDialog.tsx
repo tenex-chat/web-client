@@ -10,14 +10,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Bot, AlertCircle, Wrench, Server, Package } from 'lucide-react';
+import { Loader2, AlertCircle, Wrench, Server, Package } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { NDKAgentDefinitionPack } from '@/lib/ndk-events/NDKAgentDefinitionPack';
 import { NDKProject } from '@/lib/ndk-events/NDKProject';
 import { PackAgentSelector } from '@/components/agents/PackAgentSelector';
 import { type NDKKind } from '@nostr-dev-kit/ndk-hooks';
-import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -81,7 +80,6 @@ export function AddPackToProjectDialog({
       
       // Collect all MCP servers needed by selected agents
       const mcpServersToAdd = new Set<string>();
-      const toolsRequiredByAgents = new Set<string>();
       
       // Note: We'll need to fetch agent details if we want to show MCP requirements
       // For now, we'll just add the agents without checking their requirements
@@ -154,7 +152,6 @@ export function AddPackToProjectDialog({
     };
   }, [selectedAgentIds]);
 
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0">
@@ -178,9 +175,9 @@ export function AddPackToProjectDialog({
               </SelectTrigger>
               <SelectContent>
                 {projects
-                  .filter((project) => project.id) // Only show projects with valid IDs
+                  .filter((project): project is typeof project & { id: string } => Boolean(project.id))
                   .map((project) => (
-                    <SelectItem key={project.id} value={project.id!}>
+                    <SelectItem key={project.id} value={project.id}>
                       {project.title || 'Untitled Project'}
                     </SelectItem>
                   ))}

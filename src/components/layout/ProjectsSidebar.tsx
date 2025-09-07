@@ -239,7 +239,6 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
         </div>
       </ScrollArea>
 
-
       {/* Create Project Dialog */}
       <CreateProjectDialog 
         open={createDialogOpen} 

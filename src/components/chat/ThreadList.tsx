@@ -39,9 +39,12 @@ export const ThreadList = memo(function ThreadList({
   const sortedThreads = useMemo(() => {
     if (!threadEvents || threadEvents.length === 0) return []
     
-    return [...threadEvents].sort((a, b) => 
-      b.created_at! - a.created_at!
-    )
+    return [...threadEvents]
+      .filter(thread => thread.created_at !== undefined)
+      .sort((a, b) => {
+        // TypeScript now knows both have created_at
+        return b.created_at - a.created_at
+      })
   }, [threadEvents])
 
   const renderThread = useCallback((thread: typeof sortedThreads[0]) => (

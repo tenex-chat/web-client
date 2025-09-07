@@ -14,11 +14,13 @@ export interface ProviderConfig {
   baseURL?: string
 }
 
+type AIProvider = ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createOpenRouter>;
+
 export class ProviderRegistry {
-  private providers = new Map<string, any>()
+  private providers = new Map<string, AIProvider>()
 
   createProvider(config: ProviderConfig) {
-    let provider: any
+    let provider: AIProvider
 
     switch (config.provider) {
       case 'openai':

@@ -53,7 +53,10 @@ function isSameContent(a: DrawerContent, b: DrawerContent): boolean {
   if (a.type === 'docs' && b.type === 'docs') {
     if (a.item === 'new' && b.item === 'new') return true
     if (a.item instanceof Object && b.item instanceof Object) {
-      return (a.item as any).id === (b.item as any).id
+      interface ItemWithId {
+        id?: string;
+      }
+      return (a.item as ItemWithId).id === (b.item as ItemWithId).id
     }
   }
   

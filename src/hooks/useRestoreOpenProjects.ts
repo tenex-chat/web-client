@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useAtomValue } from 'jotai'
+import { useAtom } from 'jotai'
 import { useProjectsArray } from '@/stores/projects'
 import { openProjectsAtom } from '@/stores/openProjects'
 
@@ -9,17 +9,18 @@ import { openProjectsAtom } from '@/stores/openProjects'
  */
 export function useRestoreOpenProjects() {
   const projects = useProjectsArray()
-  const openProjects = useAtomValue(openProjectsAtom)
+  const [openProjects, setOpenProjects] = useAtom(openProjectsAtom)
   const hasRestoredRef = useRef(false)
   
   useEffect(() => {
     // Only trigger restoration once when projects are loaded
     if (projects.length > 0 && !hasRestoredRef.current) {
       hasRestoredRef.current = true
-      // The openProjectsAtom will automatically restore from localStorage
-      // when it's first accessed, so we just need to trigger a read
+      // Force a re-read of the open projects atom to ensure proper restoration
+      // This triggers the atom to re-evaluate with the now-loaded projects
+      setOpenProjects(prev => [...prev])
     }
-  }, [projects.length])
+  }, [projects.length, setOpenProjects])
   
   // Return the current open projects for convenience
   return openProjects

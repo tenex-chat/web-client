@@ -11,23 +11,18 @@ import { TIMING } from "@/lib/constants";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { NDKAgentLesson } from "@/lib/ndk-events/NDKAgentLesson";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/common/EmptyState";
-import { formatRelativeTime } from "@/lib/utils/time";
 import { AgentSettingsTab } from "./AgentSettingsTab";
+import { AgentEventsFeed } from "./AgentEventsFeed";
+import { LessonCard } from "./LessonCard";
 // Dialog components removed - using route navigation instead
 
-type TabType = "details" | "lessons" | "settings";
+type TabType = "feed" | "details" | "lessons" | "settings";
 
 interface AgentProfilePageProps {
   pubkey?: string;
@@ -39,13 +34,13 @@ export function AgentProfilePage({ pubkey: propPubkey }: AgentProfilePageProps =
   try {
     const params = useParams({ strict: false });
     routePubkey = params?.pubkey;
-  } catch (e) {
+  } catch {
     // Not in a route context, that's okay
   }
   const pubkey = propPubkey || routePubkey;
   const { ndk } = useNDK();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabType>("details");
+  const [activeTab, setActiveTab] = useState<TabType>("feed");
   const [copiedPubkey, setCopiedPubkey] = useState(false);
   // Dialog state removed - using route navigation instead
 
@@ -180,7 +175,8 @@ export function AgentProfilePage({ pubkey: propPubkey }: AgentProfilePageProps =
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as TabType)}
           >
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="feed">Feed</TabsTrigger>
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="lessons">
                 Lessons {lessons.length > 0 && `(${lessons.length})`}
@@ -195,6 +191,10 @@ export function AgentProfilePage({ pubkey: propPubkey }: AgentProfilePageProps =
       <ScrollArea className="flex-1">
         <div className="max-w-4xl mx-auto p-4">
           <Tabs value={activeTab} className="w-full">
+            <TabsContent value="feed" className="space-y-4">
+              <AgentEventsFeed pubkey={pubkey} />
+            </TabsContent>
+
             <TabsContent value="details" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -251,90 +251,11 @@ export function AgentProfilePage({ pubkey: propPubkey }: AgentProfilePageProps =
                 />
               ) : (
                 lessons.map((lesson) => (
-                  <Card
+                  <LessonCard
                     key={lesson.id}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    lesson={lesson}
                     onClick={() => handleLessonClick(lesson)}
-                  >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg">
-                            {lesson.title || "Untitled Lesson"}
-                          </CardTitle>
-                          <div className="flex items-center gap-2 mt-1">
-                            <CardDescription>
-                              {formatRelativeTime(lesson.created_at || 0)}
-                            </CardDescription>
-                            {lesson.category && (
-                              <span className="text-xs bg-muted px-2 py-1 rounded">
-                                {lesson.category}
-                              </span>
-                            )}
-                            {lesson.detailed && (
-                              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                                Detailed
-                              </span>
-                            )}
-                          </div>
-                          {lesson.hashtags && lesson.hashtags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {lesson.hashtags.map((tag, idx) => (
-                                <span
-                                  key={idx}
-                                  className="text-xs text-muted-foreground"
-                                >
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <h4 className="font-medium mb-2">
-                          Lesson{" "}
-                          {lesson.detailed && (
-                            <span className="text-xs font-normal text-muted-foreground">
-                              (summary)
-                            </span>
-                          )}
-                        </h4>
-                        <p className="text-muted-foreground line-clamp-3">
-                          {lesson.lesson}
-                        </p>
-                      </div>
-
-                      {lesson.reasoning && (
-                        <div>
-                          <h4 className="font-medium mb-2">Reasoning</h4>
-                          <p className="text-muted-foreground line-clamp-2">
-                            {lesson.reasoning}
-                          </p>
-                        </div>
-                      )}
-
-                      {lesson.metacognition && (
-                        <div>
-                          <h4 className="font-medium mb-2">Metacognition</h4>
-                          <p className="text-muted-foreground line-clamp-2">
-                            {lesson.metacognition}
-                          </p>
-                        </div>
-                      )}
-
-                      {lesson.reflection && (
-                        <div>
-                          <h4 className="font-medium mb-2">Reflection</h4>
-                          <p className="text-muted-foreground line-clamp-2">
-                            {lesson.reflection}
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                  />
                 ))
               )}
             </TabsContent>

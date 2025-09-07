@@ -1,4 +1,4 @@
-import { useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +11,7 @@ export function InlineProfileMention({
     pubkey,
     className = "",
 }: InlineProfileMentionProps) {
-    const userProfile = useProfile(pubkey);
+    const userProfile = useProfileValue(pubkey);
 
     const displayName = userProfile?.displayName || userProfile?.name || pubkey.slice(0, 8);
     const avatarUrl = userProfile?.image || userProfile?.picture;

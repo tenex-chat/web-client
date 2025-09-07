@@ -122,7 +122,7 @@ export class BlossomServerRegistry {
         server.metrics.averageLatency =
           server.metrics.averageLatency * 0.7 + latency * 0.3
       }
-    } catch (error) {
+    } catch {
       // Server is not available
       server.metrics.lastChecked = Date.now()
       server.metrics.isAvailable = false

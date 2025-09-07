@@ -33,7 +33,7 @@ interface MessageActionsToolbarProps {
   project?: NDKProject | null
   onReply?: () => void
   onMetadataClick?: () => void
-  llmMetadata?: Record<string, any> | null
+  llmMetadata?: Record<string, unknown> | null
   isMobile: boolean
   isHovered?: boolean
 }

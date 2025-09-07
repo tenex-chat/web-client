@@ -3,7 +3,8 @@ import { ChevronDown, ChevronRight, Send, Reply } from 'lucide-react'
 import { TypingIndicator } from './TypingIndicator'
 import { StreamingCaret } from './StreamingCaret'
 import { ThinkingBlock } from './ThinkingBlock'
-import { memo, useCallback, useMemo, useState } from 'react'
+import React, { memo, useCallback, useMemo, useState } from 'react'
+import { processEventsToMessages } from '@/components/chat/utils/messageProcessor'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
@@ -25,7 +26,6 @@ import { TaskContent } from './TaskContent'
 import { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { MessageHeaderContent } from './MessageHeaderContent'
 import { MessageActionsToolbar } from './MessageActionsToolbar'
-import { useStreamingResponses } from '@/hooks/useStreamingResponses'
 
 interface MessageWithRepliesProps {
   event: NDKEvent
@@ -35,7 +35,6 @@ interface MessageWithRepliesProps {
   onTimeClick?: (event: NDKEvent) => void
   onConversationNavigate?: (event: NDKEvent) => void
 }
-
 
 export const MessageWithReplies = memo(function MessageWithReplies({
   event,
@@ -111,7 +110,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 			event.kind === NDKKind.GenericReply
 				? [
 						{
-							kinds: [NDKKind.GenericReply, 1934], // Include task events as replies
+							kinds: [NDKKind.GenericReply, 1934, EVENT_KINDS.STREAMING_RESPONSE], // Include streaming responses
 							"#e": [event.id],
 						},
 					]
@@ -123,50 +122,20 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 			[event.id],
 		);
 
-  // Get streaming replies to this event
-  const { streamingResponses: streamingReplies } = useStreamingResponses(
-    null, // No conversation ID
-    event.kind === NDKKind.GenericReply ? event.id : null // Only for GenericReply events
-  )
-
-  // Combine streaming and final replies
-  const sortedReplies = useMemo(() => {
-    const allReplies: NDKEvent[] = []
+  // Process replies into messages with streaming session management
+  const replyMessages = useMemo(() => {
+    if (!directReplies || directReplies.length === 0) return []
     
-    // Add streaming replies as synthetic events
-    if (streamingReplies && streamingReplies.size > 0) {
-      streamingReplies.forEach((streamingResponse) => {
-        // Create a synthetic event for the streaming reply
-        const syntheticEvent = new NDKEvent(ndk)
-        syntheticEvent.kind = EVENT_KINDS.STREAMING_RESPONSE
-        syntheticEvent.pubkey = streamingResponse.agentPubkey
-        syntheticEvent.content = streamingResponse.content
-        syntheticEvent.created_at = Math.floor(Date.now() / 1000)
-        syntheticEvent.tags = [['e', event.id]]
-        syntheticEvent.id = `streaming-reply-${streamingResponse.agentPubkey}`
-        
-        allReplies.push(syntheticEvent)
-      })
-    }
+    // Filter out replies with root marker (they're in the main thread)
+    const filtered = directReplies.filter(reply => {
+      const eTags = reply.tags?.filter(tag => tag[0] === 'e')
+      const hasRootMarker = eTags?.some(tag => tag[3] === 'root')
+      return !hasRootMarker
+    })
     
-    // Add final replies, filtering out those from agents currently streaming
-    if (directReplies && directReplies.length > 0) {
-      const streamingAgents = new Set(Array.from(streamingReplies?.keys() || []))
-      
-      const filtered = directReplies.filter(reply => {
-        const eTags = reply.tags?.filter(tag => tag[0] === 'e')
-        const hasRootMarker = eTags?.some(tag => tag[3] === 'root')
-        
-        // Exclude replies that have a root marker (they're in the main thread)
-        // Also exclude if we have a streaming reply from the same agent
-        return !hasRootMarker && !streamingAgents.has(reply.pubkey)
-      })
-      
-      allReplies.push(...filtered)
-    }
-    
-    return allReplies.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0))
-  }, [directReplies, streamingReplies, event.id, ndk])
+    // Use the same processor that ChatInterface uses
+    return processEventsToMessages(filtered, null)
+  }, [directReplies])
 
   const handleReply = useCallback((targetEvent: NDKEvent) => {
     setReplyToEvent(targetEvent)
@@ -194,7 +163,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
       
       setReplyInput("")
       setReplyToEvent(null)
-    } catch (error) {
+    } catch {
       toast.error("Failed to send reply")
     } finally {
       setIsSending(false)
@@ -213,8 +182,8 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 
   // Count for replies display
   const replyCount = useMemo(() => {
-    return sortedReplies.length
-  }, [sortedReplies])
+    return replyMessages.length
+  }, [replyMessages])
 
   // Check if this is a typing indicator event
   const isTypingEvent = event.kind === EVENT_KINDS.TYPING_INDICATOR || event.kind === EVENT_KINDS.STREAMING_RESPONSE
@@ -346,7 +315,6 @@ export const MessageWithReplies = memo(function MessageWithReplies({
     return Object.keys(metadata).length > 0 ? metadata : null
   }, [event])
 
-
   // Responsive padding and margins
   const paddingClass = isMobile ? "px-3 py-1" : "px-4 py-1"
   const nestedMargin = isMobile ? "ml-4" : "ml-4"
@@ -394,6 +362,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
               onTimeClick={onTimeClick}
               isMobile={isMobile}
               hideTimestamp={false} // Show timestamp in header
+              projectId={project?.tagId()}
             />
           </div>
           
@@ -460,7 +429,6 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             </div>
           </div>
           
-          
           {/* Mobile footer with actions only */}
           {!showTypingIndicator && (
             <div className={cn("flex items-center justify-end mt-1", isNested && "ml-9")}>
@@ -507,6 +475,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
                 phaseFrom={phaseFrom}
                 onTimeClick={onTimeClick}
                 isMobile={isMobile}
+                projectId={project?.tagId()}
               />
               
               {/* Action buttons - desktop hover */}
@@ -611,14 +580,14 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 transition-colors font-medium hover:bg-blue-50 dark:hover:bg-blue-950/30 px-2 py-1 rounded">
             <div className="flex -space-x-1.5">
               {/* Show up to 20 user avatars who replied */}
-              {sortedReplies.slice(0, 20).map((reply, idx) => (
-                <div key={reply.id} style={{ zIndex: 20 - idx }}>
-                  <NostrProfile pubkey={reply.pubkey} variant="avatar" className="w-5 h-5 border-2 border-background rounded" />
+              {replyMessages.slice(0, 20).map((message, idx) => (
+                <div key={message.id} style={{ zIndex: 20 - idx }}>
+                  <NostrProfile pubkey={message.event.pubkey} variant="avatar" className="w-5 h-5 border-2 border-background rounded" />
                 </div>
               ))}
-              {sortedReplies.length > 20 && (
+              {replyMessages.length > 20 && (
                 <span className="ml-1 text-[10px] text-muted-foreground">
-                  +{sortedReplies.length - 20}
+                  +{replyMessages.length - 20}
                 </span>
               )}
             </div>
@@ -635,20 +604,21 @@ export const MessageWithReplies = memo(function MessageWithReplies({
       )}
 
       {/* Thread replies - responsive indentation */}
-      {showReplies && sortedReplies.length > 0 && (
+      {showReplies && replyMessages.length > 0 && (
         <div className={cn(
           "border-l-2 border-muted mt-2",
           isMobile ? "ml-3" : "ml-[18px]"
         )}>
-          {sortedReplies.map(reply => {
+          {replyMessages.map(message => {
             // Check if this is a task event
-            if (reply.kind === 1934) {
-              const task = new NDKTask(ndk!, reply.rawEvent())
+            if (message.event.kind === 1934) {
+              const task = ndk ? new NDKTask(ndk, message.event.rawEvent()) : null
+              if (!task) return null
               return (
-                <div key={reply.id} className="ml-3 mt-2">
+                <div key={message.id} className="ml-3 mt-2">
                   <TaskContent 
                     task={task}
-                    onClick={() => onTimeClick?.(reply)}
+                    onClick={() => onTimeClick?.(message.event)}
                   />
                 </div>
               )
@@ -656,9 +626,9 @@ export const MessageWithReplies = memo(function MessageWithReplies({
             
             // Regular message reply
             return (
-              <div key={reply.id}>
+              <div key={message.id}>
                 <MessageWithReplies
-                  event={reply}
+                  event={message.event}
                   project={project}
                   onReply={onReply}
                   isNested={true}

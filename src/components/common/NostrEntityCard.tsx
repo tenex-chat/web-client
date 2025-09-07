@@ -32,7 +32,6 @@ import { AgentDefinitionEmbedCard } from '@/components/embeds/AgentDefinitionEmb
 import { DefaultEmbedCard } from '@/components/embeds/DefaultEmbedCard'
 import { ChatMessageEmbedCard } from '@/components/embeds/ChatMessageEmbedCard'
 import { DocumentationViewer } from '@/components/documentation/DocumentationViewer'
-import { ChatInterface } from '@/components/chat/ChatInterface'
 
 interface NostrEntityCardProps {
   bech32: string

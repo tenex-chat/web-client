@@ -98,8 +98,8 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                 if (bech32) {
                     newBech32Map.set(bech32, dTag);
                 }
-            } catch (e) {
-                logger.warn('[ProjectStore] Failed to encode project to bech32', e);
+            } catch {
+                logger.warn('[ProjectStore] Failed to encode project to bech32');
             }
             
             // Add tagId mapping for legacy compatibility
@@ -137,7 +137,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                 if (bech32) {
                     newBech32Map.delete(bech32);
                 }
-            } catch (e) {
+            } catch {
                 // Ignore encoding errors
             }
             
@@ -186,8 +186,8 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                         if (bech32) {
                             newBech32Map.set(bech32, dTag);
                         }
-                    } catch (e) {
-                        logger.warn('[ProjectStore] Failed to encode project to bech32', e);
+                    } catch {
+                        logger.warn('[ProjectStore] Failed to encode project to bech32');
                     }
                     
                     // Add tagId mapping for legacy compatibility
@@ -259,7 +259,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         
         getProjectByIdentifier: (identifier: string) => {
             // Try direct dTag lookup first
-            let project = get().projects.get(identifier);
+            const project = get().projects.get(identifier);
             if (project) return project;
             
             // Try bech32 lookup
@@ -311,7 +311,6 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             });
         },
         
-        
         /**
          * Updates the status of a project based on an NDKEvent
          * @param event - The NDKEvent containing project status information
@@ -320,7 +319,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
             if (!event.ndk) return;
 
             const { projects, tagIdMap, projectStatus, notifiedAgents } = get();
-            const status = new NDKProjectStatus(event.ndk, event);
+            const status = NDKProjectStatus.from(event);
             const projectTagId = status.projectId;
             
             if (!projectTagId) {
@@ -379,7 +378,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
                                         agentUser.profile?.name || 
                                         newAgent.name;
                         toast.success(`Agent ${agentName} has joined ${projectName}`);
-                    } catch (e) {
+                    } catch {
                         // Fallback to using the slug name if profile fetch fails
                         toast.success(`Agent ${newAgent.name} has joined ${projectName}`);
                     }

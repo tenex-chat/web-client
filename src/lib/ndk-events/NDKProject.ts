@@ -183,6 +183,14 @@ export class NDKProject extends NDKEvent {
 		}
 
 		/**
+		 * Generate the NIP-33 tag ID (same as nip33TagReference but following NDKEvent pattern)
+		 * Format: kind:pubkey:d-tag
+		 */
+		override tagId(): string {
+			return this.nip33TagReference() || ""
+		}
+
+		/**
 		 * Create an NDKProject from an existing event
 		 */
 		static from(event: NDKEvent): NDKProject {

@@ -15,6 +15,7 @@ import { bringProjectOnline } from '@/lib/utils/projectStatusUtils'
 import { DocumentationList } from '@/components/documentation/DocumentationList'
 import { DocumentationViewer } from '@/components/documentation/DocumentationViewer'
 import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk-hooks'
+import { NDKTask } from '@/lib/ndk-events/NDKTask'
 import { ProjectStatusIndicator } from '@/components/status/ProjectStatusIndicator'
 import { useProjectStatus } from '@/stores/projects'
 import { useIsMobile, useIsDesktop } from '@/hooks/useMediaQuery'
@@ -119,11 +120,9 @@ function ProjectDetailPage() {
     if (!ndk || !project) return
     await bringProjectOnline(project, ndk)
   }
-  
-
 
   // Render full content callback for mobile - must be called before conditional returns
-  const renderFullContent = useCallback((project: NDKProject | null, itemType: string, item?: any, onBack?: () => void, onVoiceCallClick?: () => void) => {
+  const renderFullContent = useCallback((project: NDKProject | null, itemType: string, item?: NDKEvent | NDKTask | null, onBack?: () => void, onVoiceCallClick?: () => void) => {
     if (!project) return null;
     switch (itemType) {
       case 'conversations':

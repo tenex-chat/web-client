@@ -11,13 +11,11 @@ interface TypingIndicatorProps {
   className?: string
 }
 
-
 export const TypingIndicator = memo(function TypingIndicator({
   users,
   className,
 }: TypingIndicatorProps) {
   if (users.length === 0) return null
-
 
   return (
     <div className={cn('flex items-center gap-1.5 text-sm text-muted-foreground', className)}>

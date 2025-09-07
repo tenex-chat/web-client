@@ -179,7 +179,6 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
   // Audio settings
   const { audioSettings } = useCallSettings()
   
-  
   // Refs
   const callStartTimeRef = useRef<number>(Date.now())
   const selectedAgentRef = useRef<AgentInstance | null>(null)
@@ -192,7 +191,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
   // Hooks
   const agentsRaw = useProjectOnlineAgents(project.dTag)
   const threadManagement = useThreadManagement(project, localRootEvent, extraTags, undefined, agentsRaw)
-  const messages = useChatMessages(project, localRootEvent)
+  const messages = useChatMessages(localRootEvent)
   const { transcribe } = useSpeechToText()
   
   // Subscribe to typing indicators
@@ -301,7 +300,6 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
     }
   }, [])
   
-  
   // Sort agents to put project-manager first
   const agents = useMemo(() => {
     const sorted = [...agentsRaw]
@@ -346,7 +344,6 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
     return () => clearInterval(interval)
   }, [])
   
-  
   // Handle sending user message
   const handleSendMessage = useCallback(async (transcript: string) => {
     if (!transcript.trim()) return
@@ -385,7 +382,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
       }
       
       setConversationState('idle')
-    } catch (error) {
+    } catch {
       // Error sending message
       toast.error('Failed to send message')
       setConversationState('error')
@@ -454,7 +451,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
       mediaRecorder.start(1000)
       setConversationState('user_speaking')
       setIsRecording(true)
-    } catch (error) {
+    } catch {
       toast.error('Failed to access microphone')
     }
   }, [audioSettings])
@@ -480,7 +477,6 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
       resetTranscript()
     }
   }, [fullTranscript, isListening, stopListening, handleSendMessage, resetTranscript])
-  
   
   // Track if we've initialized to prevent double initialization
   const initializedRef = useRef(false)
@@ -512,7 +508,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
           if (isChromeTranscriptionSupported) {
             try {
               startListening(handleSilenceDetected)
-            } catch (error) {
+            } catch {
               // Fallback to MediaRecorder silently
               startRecording()
             }
@@ -520,7 +516,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
             startRecording()
           }
         }, 500) // Increased delay to ensure everything is ready
-      } catch (error) {
+      } catch {
         toast.error('Microphone access required for voice calls')
         setConversationState('error')
         // Reset initialized flag on error so user can retry
@@ -531,8 +527,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
     if (conversationState === 'initializing') {
       initializeAudio()
     }
-  }, [selectedAgent]) // Only depend on selectedAgent being available
-  
+  }, [selectedAgent, conversationState, handleSilenceDetected, isChromeTranscriptionSupported, startListening, startRecording])
   
   // Cleanup on unmount
   useEffect(() => {
@@ -593,7 +588,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
             toast.error('Failed to transcribe audio')
             setConversationState('idle')
           }
-        } catch (error) {
+        } catch {
           toast.error('Failed to transcribe audio')
           setConversationState('idle')
         } finally {
@@ -614,7 +609,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
           toast.error('Failed to transcribe audio')
           setConversationState('idle')
         }
-      } catch (error) {
+      } catch {
         toast.error('Failed to transcribe audio')
         setConversationState('idle')
       } finally {
@@ -674,7 +669,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
         })
       }
     }
-  }, [messages.length, hasTTS, user?.pubkey, playedMessageIds.size, isPlaying, agentsRaw, playTTS]) // Use primitive values instead of objects
+  }, [messages.length, hasTTS, user?.pubkey, playedMessageIds.size, isPlaying, agentsRaw, playTTS, handleSilenceDetected, isChromeTranscriptionSupported, messages, playedMessageIds, resetTranscript, startListening, startRecording, user])
   
   // Cleanup TTS on unmount
   useEffect(() => {

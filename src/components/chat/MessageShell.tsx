@@ -105,13 +105,15 @@ export const MessageShell = memo(function MessageShell({
                   {toolName}
                 </Badge>
               )}
-              <button
-                onClick={() => onTimeClick?.(event)}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer hover:underline"
-                title="Open as root conversation"
-              >
-                {formatRelativeTime(event.created_at!)}
-              </button>
+              {event.created_at && (
+                <button
+                  onClick={() => onTimeClick?.(event)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer hover:underline"
+                  title="Open as root conversation"
+                >
+                  {formatRelativeTime(event.created_at)}
+                </button>
+              )}
               {recipientPubkeys.length > 0 && (
                 <>
                   <span className="text-xs text-muted-foreground">→</span>

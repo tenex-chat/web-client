@@ -103,7 +103,18 @@ export class VoiceDiscovery {
     
     const data = await response.json()
     
-    return data.voices.map((v: any) => ({
+    interface ElevenLabsVoice {
+      voice_id: string;
+      name: string;
+      labels?: {
+        age?: string;
+        gender?: string;
+        accent?: string;
+      };
+      preview_url?: string;
+    }
+    
+    return data.voices.map((v: ElevenLabsVoice) => ({
       id: v.voice_id,
       name: v.name,
       description: `${v.labels?.age || ''} ${v.labels?.gender || ''} ${v.labels?.accent || ''}`.trim(),

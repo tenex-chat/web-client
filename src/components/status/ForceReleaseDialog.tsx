@@ -39,8 +39,11 @@ export function ForceReleaseDialog({
 
     setIsSubmitting(true);
     try {
-      // Create the project reference (NIP-33 format)
-      const projectReference = `${project.kind}:${project.pubkey}:${project.dTag}`;
+      // Create the project reference using the project's method
+      const projectReference = project.nip33TagReference();
+      if (!projectReference) {
+        throw new Error('Project does not have a valid tag reference');
+      }
       
       // Create and sign the force release event
       const forceReleaseEvent = NDKForceRelease.create(projectReference, reason || undefined);

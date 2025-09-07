@@ -7,7 +7,10 @@ import { useProjectsStore } from './projects'
 const OPEN_PROJECTS_STORAGE_KEY = 'tenex:openProjects'
 
 // Store project identifiers (dTag or bech32) in localStorage
-const openProjectIdsAtom = atomWithStorage<string[]>(OPEN_PROJECTS_STORAGE_KEY, [])
+export const openProjectIdsAtom = atomWithStorage<string[]>(OPEN_PROJECTS_STORAGE_KEY, [])
+
+// Track whether we've restored projects after the store was populated
+let hasRestoredProjects = false
 
 // Derived atom that converts stored IDs back to NDKProject instances
 export const openProjectsAtom = atom<NDKProject[], [NDKProject[] | ((prev: NDKProject[]) => NDKProject[])], void>(
@@ -18,6 +21,10 @@ export const openProjectsAtom = atom<NDKProject[], [NDKProject[] | ((prev: NDKPr
     // Ensure projectIds is an array (handle corrupted localStorage)
     const safeProjectIds = Array.isArray(projectIds) ? projectIds : []
     
+    // If we have stored IDs but no projects loaded yet, return the stored IDs
+    // This prevents the UI from thinking there are no open projects
+    const storeHasProjects = projectsStore.projectsArray.length > 0
+    
     // Map stored IDs to actual project instances
     const projects: NDKProject[] = []
     for (const id of safeProjectIds) {
@@ -26,6 +33,12 @@ export const openProjectsAtom = atom<NDKProject[], [NDKProject[] | ((prev: NDKPr
         projects.push(project)
       }
     }
+    
+    // Mark that we've successfully restored projects
+    if (storeHasProjects && projects.length > 0) {
+      hasRestoredProjects = true
+    }
+    
     return projects
   },
   (get, set, newProjects: NDKProject[] | ((prev: NDKProject[]) => NDKProject[])) => {
@@ -60,8 +73,10 @@ export const openProjectsAtom = atom<NDKProject[], [NDKProject[] | ((prev: NDKPr
 // Helper atom to check if a project is open
 export const isProjectOpenAtom = atom(
   (get) => (projectId: string) => {
-    const openProjects = get(openProjectsAtom)
-    return openProjects.some(p => (p.dTag || p.encode()) === projectId)
+    // Check directly against the stored IDs to avoid issues with project loading
+    const projectIds = get(openProjectIdsAtom)
+    const safeProjectIds = Array.isArray(projectIds) ? projectIds : []
+    return safeProjectIds.includes(projectId)
   }
 )
 
@@ -73,6 +88,9 @@ export const toggleProjectAtom = atom(
     // Ensure projectIds is an array
     const safeProjectIds = Array.isArray(projectIds) ? projectIds : []
     const projectId = project.dTag || project.encode()
+    
+    // Check if this project ID is already in the stored list
+    // This is the source of truth for whether a project is open
     const isOpen = safeProjectIds.includes(projectId)
     
     if (isOpen) {

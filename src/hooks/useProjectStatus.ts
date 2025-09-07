@@ -42,7 +42,7 @@ export function useProjectStatus(projectTagId?: string): ProjectStatus | undefin
 
     // Find the most recent status event for this project
     const statusEvents = events
-      .map(event => new NDKProjectStatus(ndk || undefined, event.rawEvent()))
+      .map(event => NDKProjectStatus.from(event))
       .filter(status => status.projectId === projectTagId)
       .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
 

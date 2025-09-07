@@ -18,18 +18,11 @@ export interface Kind24133Snapshot {
 
 /**
  * Normalize project ID to consistent a-coordinate format
- * If project looks like naddr1..., decode to a-coordinate if available via existing utilities
- * If project already matches /^\d+:[0-9a-f]{64}:.+$/, return as-is
- * Otherwise, return as-is (ensure publisher/subscriber use the same form)
+ * Trust NDK for validation - just return as-is to ensure publisher/subscriber use the same form
  */
 export function normalizeProjectA(project: string): string {
-  // If already in a-coordinate format, return as-is
-  if (/^\d+:[0-9a-f]{64}:.+$/.test(project)) {
-    return project
-  }
-  
-  // TODO: If project looks like naddr1..., decode to a-coordinate if available via existing utilities
-  // For now, pass-through to ensure publisher/subscriber use the same form
+  // Trust NDK validation - no manual hex checks
+  // Just pass through to ensure consistency between publisher and subscriber
   return project
 }
 

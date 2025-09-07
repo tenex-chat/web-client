@@ -21,13 +21,11 @@ export function AgentPackDetailPage() {
   const [addToProjectOpen, setAddToProjectOpen] = useState(false);
   const [forkDialogOpen, setForkDialogOpen] = useState(false);
 
-
   // Fetch the pack event directly using useEvent hook with bech32 address
   const packEvent = useEvent(naddr);
   const pack = packEvent ? new NDKAgentDefinitionPack(ndk, packEvent) : null;
 
   const profile = useProfileValue(pack?.pubkey);
-
 
   const isAuthor = user?.hexpubkey === pack?.pubkey;
 

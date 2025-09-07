@@ -147,7 +147,10 @@ export class NDKProjectStatus extends NDKEvent {
         if (!modelMap.has(agent.model)) {
           modelMap.set(agent.model, [])
         }
-        modelMap.get(agent.model)!.push(agent.name)
+        const modelAgents = modelMap.get(agent.model)
+        if (modelAgents) {
+          modelAgents.push(agent.name)
+        }
       }
     }
     
@@ -164,7 +167,10 @@ export class NDKProjectStatus extends NDKEvent {
           if (!toolMap.has(tool)) {
             toolMap.set(tool, [])
           }
-          toolMap.get(tool)!.push(agent.name)
+          const toolAgents = toolMap.get(tool)
+          if (toolAgents) {
+            toolAgents.push(agent.name)
+          }
         }
       }
     }
@@ -258,11 +264,7 @@ export class NDKProjectStatus extends NDKEvent {
     }
   }
 
-  static from(ndk: NDK, projectId: string, agents: ProjectAgent[], models: ProjectModel[]): NDKProjectStatus {
-    const event = new NDKProjectStatus(ndk)
-    event.projectId = projectId
-    event.agents = agents
-    event.models = models
-    return event
+  static from(event: NDKEvent): NDKProjectStatus {
+    return new NDKProjectStatus(event.ndk, event.rawEvent())
   }
 }

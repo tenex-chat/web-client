@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { MessageSquare, FileText, Bot, Settings, Plus, ChevronRight, Shield, AlertTriangle, WifiOff, ArrowLeft, Users } from 'lucide-react'
+import { MessageSquare, FileText, Bot, Settings, Plus, ChevronRight, Shield, AlertTriangle, WifiOff, ArrowLeft, Users, Wrench } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { ProjectAvatar } from '@/components/ui/project-avatar'
@@ -8,13 +8,6 @@ import { ThreadList } from '@/components/chat/ThreadList'
 import { DocumentationListSimple } from '@/components/documentation/DocumentationListSimple'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu'
 import { useProjectOnlineAgents } from '@/hooks/useProjectOnlineAgents'
 import { useProfile, useNDK } from '@nostr-dev-kit/ndk-hooks'
 import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk-hooks'
@@ -159,7 +152,6 @@ export function ProjectColumn({
     }
   }, [mode, onItemClick, project])
 
-
   const handleAgentSelect = useCallback((agentPubkey: string) => {
     setSelectedItem(agentPubkey)
     if (mode === 'standalone') {
@@ -173,7 +165,6 @@ export function ProjectColumn({
     if (!ndk) return
     await bringProjectOnline(project, ndk)
   }, [project, ndk])
-
 
   const handleThreadSelectWrapper = useCallback(async (thread: NDKEvent) => {
     await handleThreadSelect(thread.id)
@@ -264,6 +255,20 @@ export function ProjectColumn({
                   <div className="flex-1 text-left">
                     <div className="text-sm font-medium">Agents</div>
                     <div className="text-xs text-muted-foreground">Manage project agents</div>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                </div>
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start p-2 h-auto"
+                onClick={() => onItemClick?.(project, 'settings', 'tools')}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <Wrench className="h-4 w-4 shrink-0" />
+                  <div className="flex-1 text-left">
+                    <div className="text-sm font-medium">Tools</div>
+                    <div className="text-xs text-muted-foreground">MCP tools configuration</div>
                   </div>
                   <ChevronRight className="h-3.5 w-3.5 shrink-0" />
                 </div>

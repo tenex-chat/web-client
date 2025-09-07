@@ -109,7 +109,10 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
           if (!agentGroups.has(groupKey)) {
             agentGroups.set(groupKey, [])
           }
-          agentGroups.get(groupKey)!.push(agent)
+          const group = agentGroups.get(groupKey)
+          if (group) {
+            group.push(agent)
+          }
         })
         
         // For each group, keep only the latest version
@@ -242,7 +245,6 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       selectedTools.forEach(toolId => {
         project.tags.push(['mcp', toolId])
       })
-
 
       await project.publish()
       
@@ -526,7 +528,6 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
             </ScrollArea>
           </div>
         )
-
 
       case 'review':
         return (

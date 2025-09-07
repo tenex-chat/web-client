@@ -1,32 +1,16 @@
 import { cn } from '@/lib/utils'
+import { getPhaseIndicatorColor } from '@/lib/utils/phase-colors'
 
 interface PhaseIndicatorProps {
   phase?: string | null
   className?: string
 }
 
-const phaseColors = {
-  chat: 'bg-blue-500',
-  plan: 'bg-purple-500',
-  execute: 'bg-green-500',
-  review: 'bg-orange-500',
-  chores: 'bg-gray-500',
-} as const
-
-const phaseNames = {
-  chat: 'Chat',
-  plan: 'Plan',
-  execute: 'Execute',
-  review: 'Review',
-  chores: 'Chores',
-} as const
-
 export function PhaseIndicator({ phase, className }: PhaseIndicatorProps) {
   if (!phase) return null
   
-  const normalizedPhase = phase.toLowerCase() as keyof typeof phaseColors
-  const color = phaseColors[normalizedPhase] || 'bg-gray-400'
-  const phaseName = phaseNames[normalizedPhase] || phase
+  const color = getPhaseIndicatorColor(phase)
+  const phaseName = phase.charAt(0).toUpperCase() + phase.slice(1).toLowerCase()
   
   return (
     <div

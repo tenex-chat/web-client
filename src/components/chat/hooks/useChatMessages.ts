@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { NDKEvent, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import type { NDKProject } from '@/lib/ndk-events/NDKProject'
+import { type NDKEvent, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { processEventsToMessages } from '@/components/chat/utils/messageProcessor'
 
 export interface Message {
@@ -12,7 +11,7 @@ export interface Message {
  * Hook for managing chat messages including streaming sessions
  * Handles event subscription, streaming processing, and message sorting
  */
-export function useChatMessages(_project: NDKProject | null | undefined, rootEvent: NDKEvent | null) {
+export function useChatMessages(rootEvent: NDKEvent | null) {
   const [messages, setMessages] = useState<Message[]>([])
   
   // Subscribe to thread messages using NIP-22 threading

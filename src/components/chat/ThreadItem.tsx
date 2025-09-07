@@ -69,17 +69,19 @@ export const ThreadItem = memo(function ThreadItem({ thread, isSelected, onSelec
         uniqueParticipants.add(reply.pubkey)
       }
       
-      const replyTime = reply.created_at!
-      if (replyTime > latestReplyTime) {
-        latestReplyTime = replyTime
-        latestReplyContent = reply.content
-      }
+      if (reply.created_at) {
+        const replyTime = reply.created_at
+        if (replyTime > latestReplyTime) {
+          latestReplyTime = replyTime
+          latestReplyContent = reply.content
+        }
 
-      // Check for phase tags in this reply (from any event kind)
-      const phaseTag = reply.tags.find(t => t[0] === 'phase')
-      if (phaseTag && phaseTag[1] && replyTime > latestPhaseTime) {
-        latestPhaseTime = replyTime
-        latestPhase = phaseTag[1]
+        // Check for phase tags in this reply (from any event kind)
+        const phaseTag = reply.tags.find(t => t[0] === 'phase')
+        if (phaseTag && phaseTag[1] && replyTime > latestPhaseTime) {
+          latestPhaseTime = replyTime
+          latestPhase = phaseTag[1]
+        }
       }
     })
 
@@ -95,7 +97,7 @@ export const ThreadItem = memo(function ThreadItem({ thread, isSelected, onSelec
   // Use processed data instead of state
   const { replyCount, participants, lastReplyAt, lastMessage, currentPhase } = processedReplyData
 
-  const lastActivityTime = lastReplyAt ?? thread.created_at!
+  const lastActivityTime = lastReplyAt ?? thread.created_at
 
   return (
     <button
@@ -117,9 +119,11 @@ export const ThreadItem = memo(function ThreadItem({ thread, isSelected, onSelec
             <h3 className="text-sm font-normal truncate">
               {title}
             </h3>
-            <span className="text-xs text-muted-foreground shrink-0">
-              {formatRelativeTime(lastActivityTime)}
-            </span>
+            {lastActivityTime && (
+              <span className="text-xs text-muted-foreground shrink-0">
+                {formatRelativeTime(lastActivityTime)}
+              </span>
+            )}
           </div>
 
           {/* T-tags display */}

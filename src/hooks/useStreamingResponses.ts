@@ -66,7 +66,10 @@ export function useStreamingResponses(
       if (!eventsByAgent.has(agentPubkey)) {
         eventsByAgent.set(agentPubkey, [])
       }
-      eventsByAgent.get(agentPubkey)!.push(event)
+      const events = eventsByAgent.get(agentPubkey)
+      if (events) {
+        events.push(event)
+      }
     }
 
     // Process each agent's events
@@ -75,7 +78,8 @@ export function useStreamingResponses(
       if (!accumulatorsRef.current.has(agentPubkey)) {
         accumulatorsRef.current.set(agentPubkey, new DeltaContentAccumulator())
       }
-      const accumulator = accumulatorsRef.current.get(agentPubkey)!
+      const accumulator = accumulatorsRef.current.get(agentPubkey)
+      if (!accumulator) continue
       
       // Sort events by sequence
       const sortedEvents = [...agentEvents].sort((a, b) => {

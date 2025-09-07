@@ -52,7 +52,7 @@ export function useProjectsWithStatus(projects: NDKProject[]) {
       logger.debug(`[Sidebar] Found ${events.length} total status events, filtering for ${projects.length} projects`)
       
       events.forEach(event => {
-        const status = new NDKProjectStatus(ndk || undefined, event.rawEvent())
+        const status = NDKProjectStatus.from(event)
         const projectId = status.projectId
         
         // Only process status events for OUR projects

@@ -12,7 +12,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Opened cache');
+        // Cache opened successfully
         return cache.addAll(urlsToCache);
       })
       .catch((error) => {
@@ -30,7 +30,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
+            // Deleting old cache
             return caches.delete(cacheName);
           }
         })
@@ -112,7 +112,7 @@ self.addEventListener('sync', (event) => {
 
 async function syncMessages() {
   // Implement syncing of offline messages when back online
-  console.log('Syncing offline messages...');
+  // Syncing offline messages
   // This would integrate with IndexedDB to sync queued Nostr events
 }
 

@@ -78,7 +78,7 @@ export function AddProviderDialog({ open, onClose, onAdd }: AddProviderDialogPro
       } else {
         toast.error(result.error || 'Connection failed')
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to test connection')
     } finally {
       setTesting(false)

@@ -87,7 +87,6 @@ describe('Logger', () => {
     })
   })
 
-
   describe('timestamp formatting', () => {
     it('should use ISO string format for timestamps', () => {
       const testDate = new Date('2024-12-25T18:30:45.123Z')

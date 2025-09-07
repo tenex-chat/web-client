@@ -78,14 +78,16 @@ async function formatMessageWithReplies(
   lines.push('')
   
   // Find direct replies to this event
-  const directReplies = allEvents.filter(e => {
+  let directReplies = allEvents.filter(e => {
     if (e.id === event.id) return false
     const eTags = e.tags?.filter(tag => tag[0] === 'e') || []
     return eTags.some(tag => tag[1] === event.id)
   })
   
-  // Sort replies by timestamp
-  directReplies.sort((a, b) => a.created_at! - b.created_at!)
+  // Sort replies by timestamp (filter out those without timestamps)
+  directReplies = directReplies
+    .filter(reply => reply.created_at !== undefined)
+    .sort((a, b) => a.created_at - b.created_at)
   
   // Process each reply recursively
   if (directReplies.length > 0) {
@@ -248,14 +250,16 @@ async function formatMessageAsJSON(
   }
   
   // Find direct replies to this event
-  const directReplies = allEvents.filter(e => {
+  let directReplies = allEvents.filter(e => {
     if (e.id === event.id) return false
     const eTags = e.tags?.filter(tag => tag[0] === 'e') || []
     return eTags.some(tag => tag[1] === event.id)
   })
   
-  // Sort replies by timestamp
-  directReplies.sort((a, b) => a.created_at! - b.created_at!)
+  // Sort replies by timestamp (filter out those without timestamps)
+  directReplies = directReplies
+    .filter(reply => reply.created_at !== undefined)
+    .sort((a, b) => a.created_at - b.created_at)
   
   // Process replies recursively
   if (directReplies.length > 0) {

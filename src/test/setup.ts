@@ -28,7 +28,17 @@ if (typeof window !== 'undefined') {
 }
 
 // Mock window.nostr for tests
-(window as any).nostr = {
+interface NostrExtension {
+  getPublicKey: () => Promise<string>;
+  signEvent: (event: unknown) => Promise<unknown>;
+  getRelays: () => Promise<unknown>;
+  nip04: {
+    encrypt: (pubkey: string, text: string) => Promise<string>;
+    decrypt: (pubkey: string, ciphertext: string) => Promise<string>;
+  };
+}
+
+(window as unknown as { nostr: NostrExtension }).nostr = {
   getPublicKey: vi.fn(),
   signEvent: vi.fn(),
   getRelays: vi.fn(),

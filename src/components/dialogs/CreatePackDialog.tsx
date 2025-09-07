@@ -15,14 +15,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SearchBar } from '@/components/common/SearchBar';
-import { Loader2, ChevronLeft, ChevronRight, Package, Bot } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Bot } from 'lucide-react';
 import { NDKAgentDefinitionPack } from '@/lib/ndk-events/NDKAgentDefinitionPack';
 import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition';
 import { AgentDefinitionCard } from '@/components/agents/AgentDefinitionCard';
 import { PackCard } from '@/components/agents/PackCard';
 import { type NDKKind } from '@nostr-dev-kit/ndk-hooks';
 import { cn } from '@/lib/utils'
-import { getRoleColor } from '@/lib/utils/role-colors';
 
 interface CreatePackDialogProps {
   open: boolean;
@@ -68,7 +67,10 @@ export function CreatePackDialog({ open, onOpenChange, forkFromPack, editPack }:
       if (!agentGroups.has(groupKey)) {
         agentGroups.set(groupKey, []);
       }
-      agentGroups.get(groupKey)!.push(agent);
+      const group = agentGroups.get(groupKey);
+      if (group) {
+        group.push(agent);
+      }
     });
 
     // For each group, keep only the latest version
@@ -310,7 +312,6 @@ export function CreatePackDialog({ open, onOpenChange, forkFromPack, editPack }:
         return 'max-w-2xl';
     }
   };
-
 
   // Create a temporary pack for preview
   const previewPack = useMemo(() => {

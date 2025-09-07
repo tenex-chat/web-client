@@ -1,5 +1,5 @@
 import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { Users, Package } from "lucide-react";
+import { Package } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import type { NDKAgentDefinitionPack } from "@/lib/ndk-events/NDKAgentDefinitionPack";

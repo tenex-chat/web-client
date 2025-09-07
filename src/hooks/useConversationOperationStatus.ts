@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
+import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
 import { parseKind24133, normalizeProjectA } from '@/lib/ndk-events/operations'
 
 /**
@@ -7,7 +7,6 @@ import { parseKind24133, normalizeProjectA } from '@/lib/ndk-events/operations'
  * Subscribes to 24133 events for specific project and tracks conversation root
  */
 export function useConversationOperationStatus(conversationRootId?: string, projectId?: string) {
-  const { ndk } = useNDK()
   
   // Normalize project ID for consistent filtering
   const normalizedProjectId = projectId ? normalizeProjectA(projectId) : undefined

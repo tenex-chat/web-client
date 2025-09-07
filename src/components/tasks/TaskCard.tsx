@@ -19,7 +19,6 @@ interface TaskCardProps {
   unreadCount?: number
 }
 
-
 export const TaskCard = memo(
   function TaskCard({ task, onClick, className, showUnread, unreadCount = 0 }: TaskCardProps) {
     const { ndk } = useNDK()
@@ -61,24 +60,12 @@ export const TaskCard = memo(
 
     const isCodeTask = task.tags?.some(tag => tag[0] === 'tool' && tag[1] === 'claude_code')
 
-    // Handle abort button click
+    // TODO: Implement proper 24134 stop request with project context
+    // For now, removing incorrect 24133 publishing
     const handleAbort = async (e: React.MouseEvent) => {
       e.stopPropagation()
-      if (!ndk) return
-
-      // Create ephemeral abort event
-      const abortEvent = new NDKEvent(ndk)
-      abortEvent.kind = 24133 // Ephemeral event for task abort
-      abortEvent.tags = [
-        ['e', task.id, '', 'task'],
-      ]
-      abortEvent.content = 'abort'
-
-      try {
-        await abortEvent.publish()
-      } catch (error) {
-        logger.error('Failed to publish abort event:', error)
-      }
+      // Functionality temporarily disabled - needs project context for proper 24134 implementation
+      logger.warn('Task abort not implemented - needs project context for 24134 stop request')
     }
 
     const taskContent = task.content || ''

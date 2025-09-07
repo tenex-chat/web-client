@@ -42,7 +42,6 @@ export function ProjectStatusPanel({
   const userPubkey = ndk?.activeUser?.pubkey
   const canForceRelease = userPubkey === project.pubkey
 
-
   const overallStatus = getOverallStatus()
   const agentCount = getAgentCount()
   const modelCount = getModelCount()

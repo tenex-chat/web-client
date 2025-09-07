@@ -33,7 +33,6 @@ export function ProjectCard({ project, isActive, isOnline = false, onClick }: Pr
     await bringProjectOnline(project, ndk)
   }
 
-
   return (
     <Link
       to="/projects/$projectId"

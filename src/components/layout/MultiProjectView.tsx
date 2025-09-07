@@ -7,6 +7,7 @@ import { DocumentationEditorDrawer } from '@/components/documentation/Documentat
 import { AgentProfilePage } from '@/components/agents/AgentProfilePage'
 import { ProjectGeneralSettings } from '@/components/settings/ProjectGeneralSettings'
 import { ProjectAgentsSettings } from '@/components/settings/ProjectAgentsSettings'
+import { ProjectToolsSettings } from '@/components/settings/ProjectToolsSettings'
 import { ProjectAdvancedSettings } from '@/components/settings/ProjectAdvancedSettings'
 import { ProjectDangerZone } from '@/components/settings/ProjectDangerZone'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
@@ -392,6 +393,9 @@ export function MultiProjectView({ openProjects, className }: MultiProjectViewPr
                     
                     case 'agents':
                       return <ProjectAgentsSettings project={project} />
+                    
+                    case 'tools':
+                      return <ProjectToolsSettings project={project} />
                     
                     case 'advanced':
                       return <ProjectAdvancedSettings project={project} />

@@ -60,7 +60,6 @@ export function useChatInput(
   const {
     uploadFiles,
     uploadQueue,
-    isUploading,
     cancelUpload,
     retryUpload,
     clearCompleted,
@@ -71,7 +70,8 @@ export function useChatInput(
   // Derived values from Blossom upload
   const pendingImageUrls = uploadQueue
     .filter(item => item.status === 'completed' && item.url)
-    .map(item => item.url!);
+    .map(item => item.url)
+    .filter((url): url is string => url !== undefined);
   const showUploadProgress = uploadQueue.length > 0;
   const setShowUploadProgress = () => {}; // No-op for compatibility
   const removeImageUrl = (url: string) => {

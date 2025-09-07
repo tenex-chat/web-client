@@ -128,7 +128,7 @@ export function useChromeSpeechRecognition() {
             if (recognitionRef.current && isListeningRef.current) {
               try {
                 recognitionRef.current.start()
-              } catch (e) {
+              } catch {
                 // Failed to restart recognition
               }
             }
@@ -144,7 +144,7 @@ export function useChromeSpeechRecognition() {
             if (isListeningRef.current && recognitionRef.current) {
               try {
                 recognitionRef.current.start()
-              } catch (e) {
+              } catch {
                 setIsListening(false)
                 isListeningRef.current = false
               }
@@ -180,7 +180,7 @@ export function useChromeSpeechRecognition() {
       recognitionRef.current.start()
       setIsListening(true)
       isListeningRef.current = true
-    } catch (error) {
+    } catch {
       setError('Failed to start recognition')
       setIsListening(false)
       isListeningRef.current = false
@@ -199,7 +199,7 @@ export function useChromeSpeechRecognition() {
           silenceTimerRef.current = null
         }
         onSilenceCallbackRef.current = null
-      } catch (error) {
+      } catch {
         recognitionRef.current.abort()
         setIsListening(false)
         isListeningRef.current = false

@@ -24,10 +24,12 @@ function AgentDisplay({
   canRemove: boolean
 }) {
   // Subscribe to the agent definition event in real-time
-  const { events } = useSubscribe({
-    ids: [projectAgent.ndkAgentEventId],
-    closeOnEose: false
-  })
+  const { events } = useSubscribe(
+    projectAgent.ndkAgentEventId ? [{ 
+      "#e": [projectAgent.ndkAgentEventId]
+    }] : [],
+    { closeOnEose: false }
+  )
   
   const agentEvent = events[0]
   const agentDefinition = agentEvent ? NDKAgentDefinition.from(agentEvent) : null
@@ -119,7 +121,6 @@ interface ProjectAgentsSettingsProps {
 export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
   const { ndk } = useNDK()
   const [selectedPM, setSelectedPM] = useState<string>('')
-  const [isUpdating, setIsUpdating] = useState(false)
   const [addAgentsDialogOpen, setAddAgentsDialogOpen] = useState(false)
   
   // Get agent definitions from project tags
@@ -128,10 +129,10 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
   // Subscribe to all agent definition events at once
   const agentEventIds = projectAgents.map(agent => agent.ndkAgentEventId).filter(Boolean)
   const { events: agentEvents } = useSubscribe(
-    agentEventIds.length > 0 ? {
-      ids: agentEventIds,
-      closeOnEose: false
-    } : false
+    agentEventIds.length > 0 ? [{
+      "#e": agentEventIds
+    }] : [],
+    { closeOnEose: false }
   )
   
   // Map events to definitions

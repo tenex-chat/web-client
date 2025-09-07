@@ -20,7 +20,8 @@ describe('cn utility', () => {
   })
 
   it('should ignore falsy values', () => {
-    const result = cn('text-red-500', false && 'text-blue-500', null, undefined, '')
+    const condition = false
+    const result = cn('text-red-500', condition && 'text-blue-500', null, undefined, '')
     expect(result).toBe('text-red-500')
   })
 

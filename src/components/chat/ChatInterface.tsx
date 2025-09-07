@@ -9,6 +9,7 @@ import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { toast } from "sonner";
+import type { AgentInstance } from "@/types/agent";
 
 // Import new hooks and components
 import { useChatMessages } from "./hooks/useChatMessages";
@@ -97,6 +98,7 @@ export function ChatInterface({
   // Get ONLINE agents for @mentions (moved up before thread management)
   const onlineAgents = useProjectOnlineAgents(project?.dTag);
 
+
   // Thread management
   const threadManagement = useThreadManagement(
     project,
@@ -108,7 +110,7 @@ export function ChatInterface({
   const { sendMessage } = threadManagement;
 
   // Message management
-  const messages = useChatMessages(project, localRootEvent);
+  const messages = useChatMessages(localRootEvent);
 
   // Check if the root event is a task
   const isRootEventTask = localRootEvent?.kind === NDKTask.kind;
@@ -132,7 +134,7 @@ export function ChatInterface({
 
   // Stable callback for sending messages - only pass what ChatInputArea needs
   const handleSendMessage = useCallback(
-    async (content: string, mentions: any[], imageUploads: any[]) => {
+    async (content: string, mentions: AgentInstance[], imageUploads: { url: string; metadata?: unknown }[]) => {
       if (!ndk || !user) {
         console.error('ChatInterface: Cannot send message without NDK or user');
         return;
@@ -145,7 +147,7 @@ export function ChatInterface({
         setTimeout(() => {
           scrollProps.scrollToBottom(true);
         }, 100);
-      } catch (error) {
+      } catch {
         toast.error("Failed to send message");
       }
     },
@@ -161,17 +163,18 @@ export function ChatInterface({
         const content = data.transcription;
         const mentions = inputProps.mentionProps.extractMentions(content);
         const completedUploads = inputProps.getCompletedUploads();
-        const imageUploads = completedUploads.map((upload) => ({
-          url: upload.url!,
-          metadata: upload.metadata,
-        }));
+        const imageUploads = completedUploads
+          .filter((upload) => upload.url !== undefined)
+          .map((upload) => ({
+            url: upload.url,
+            metadata: upload.metadata,
+          }));
         await handleSendMessage(content, mentions, imageUploads);
         inputProps.clearInput();
       }
     },
     [inputProps, handleSendMessage],
   );
-
 
   // Enhanced back handler with navigation stack
   const handleBackWithStack = useCallback(() => {
@@ -190,9 +193,6 @@ export function ChatInterface({
       onBack();
     }
   }, [canGoBack, popFromStack, onBack]);
-
-
-  console.log('rendering <ChatInterface>')
 
   const isNewThread = !localRootEvent;
 

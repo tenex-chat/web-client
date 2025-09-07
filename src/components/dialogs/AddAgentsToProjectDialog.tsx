@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks';
 import { toast } from 'sonner';
-import { type NDKKind } from '@nostr-dev-kit/ndk';
+import { type NDKKind } from '@nostr-dev-kit/ndk-hooks';
 import {
   Dialog,
   DialogContent,
@@ -22,8 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { SearchBar } from '@/components/common/SearchBar';
 import { EmptyState } from '@/components/common/EmptyState';
 import { cn } from '@/lib/utils';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getRoleColor } from '@/lib/utils/role-colors';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface AddAgentsToProjectDialogProps {
   open: boolean;
@@ -76,7 +75,10 @@ export function AddAgentsToProjectDialog({
       if (!agentGroups.has(groupKey)) {
         agentGroups.set(groupKey, []);
       }
-      agentGroups.get(groupKey)!.push(agent);
+      const group = agentGroups.get(groupKey);
+      if (group) {
+        group.push(agent);
+      }
     });
 
     // For each group, keep only the latest version
@@ -145,8 +147,10 @@ export function AddAgentsToProjectDialog({
     
     // Add agents from selected packs
     if (selectedPackId && packAgentSelection.has(selectedPackId)) {
-      const packAgents = packAgentSelection.get(selectedPackId)!;
-      packAgents.forEach(id => allAgentIds.add(id));
+      const packAgents = packAgentSelection.get(selectedPackId);
+      if (packAgents) {
+        packAgents.forEach(id => allAgentIds.add(id));
+      }
     }
     
     if (allAgentIds.size === 0) return;
@@ -234,21 +238,6 @@ export function AddAgentsToProjectDialog({
     }
   };
 
-  const togglePackAgentSelection = (agentId: string) => {
-    if (!selectedPackId) return;
-    
-    const currentSelection = packAgentSelection.get(selectedPackId) || new Set();
-    const newSelection = new Set(currentSelection);
-    
-    if (newSelection.has(agentId)) {
-      newSelection.delete(agentId);
-    } else {
-      newSelection.add(agentId);
-    }
-    
-    setPackAgentSelection(new Map([[selectedPackId, newSelection]]));
-  };
-
   // Calculate required tools and MCP servers for selected agents
   const selectedAgentsRequirements = useMemo(() => {
     const tools = new Set<string>();
@@ -257,8 +246,10 @@ export function AddAgentsToProjectDialog({
     // Collect all selected agent IDs
     const allSelectedIds = new Set(selectedAgentIds);
     if (selectedPackId && packAgentSelection.has(selectedPackId)) {
-      const packAgents = packAgentSelection.get(selectedPackId)!;
-      packAgents.forEach(id => allSelectedIds.add(id));
+      const packAgents = packAgentSelection.get(selectedPackId);
+      if (packAgents) {
+        packAgents.forEach(id => allSelectedIds.add(id));
+      }
     }
     
     allSelectedIds.forEach(agentId => {
@@ -275,7 +266,6 @@ export function AddAgentsToProjectDialog({
       totalCount: allSelectedIds.size
     };
   }, [selectedAgentIds, selectedPackId, packAgentSelection, agents]);
-
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

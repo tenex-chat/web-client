@@ -1,6 +1,6 @@
-import { useProfile } from "@nostr-dev-kit/ndk-hooks";
-import { NDKUser } from "@nostr-dev-kit/ndk";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
+import { NDKUser } from "@nostr-dev-kit/ndk-hooks";
+import { NostrAvatar } from "@/components/ui/nostr-avatar";
 import { cn } from "@/lib/utils";
 
 interface NostrProfileProps {
@@ -22,7 +22,7 @@ export function NostrProfile({
   nameClassName = "",
   avatarClassName = "",
 }: NostrProfileProps) {
-  const userProfile = useProfile(pubkey);
+  const userProfile = useProfileValue(pubkey);
 
   const sizeClasses = {
     xs: { avatar: "w-5 h-5", text: "text-xs" },
@@ -64,24 +64,26 @@ export function NostrProfile({
 
   if (variant === 'avatar') {
     return (
-      <Avatar className={cn(sizeClasses[size].avatar, avatarClassName, className)}>
-        <AvatarImage src={avatarUrl} alt={displayName} />
-        <AvatarFallback className="text-xs">
-          {getInitials(displayName)}
-        </AvatarFallback>
-      </Avatar>
+      <NostrAvatar
+        pubkey={pubkey}
+        src={avatarUrl}
+        alt={displayName}
+        fallback={<span className="text-xs">{getInitials(displayName)}</span>}
+        className={cn(sizeClasses[size].avatar, avatarClassName, className)}
+      />
     );
   }
 
   if (variant === 'compact') {
     return (
       <div className={cn("inline-flex items-center gap-1", className)}>
-        <Avatar className={cn(sizeClasses.xs.avatar, avatarClassName)}>
-          <AvatarImage src={avatarUrl} alt={displayName} />
-          <AvatarFallback className="text-xs">
-            {getInitials(displayName)}
-          </AvatarFallback>
-        </Avatar>
+        <NostrAvatar
+          pubkey={pubkey}
+          src={avatarUrl}
+          alt={displayName}
+          fallback={<span className="text-xs">{getInitials(displayName)}</span>}
+          className={cn(sizeClasses.xs.avatar, avatarClassName)}
+        />
         <span className={cn(sizeClasses.xs.text, "truncate", nameClassName)}>
           {displayName}
         </span>
@@ -92,12 +94,13 @@ export function NostrProfile({
   // Default 'full' variant
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <Avatar className={cn(sizeClasses[size].avatar, avatarClassName)}>
-        <AvatarImage src={avatarUrl} alt={displayName} />
-        <AvatarFallback className="text-xs">
-          {getInitials(displayName)}
-        </AvatarFallback>
-      </Avatar>
+      <NostrAvatar
+        pubkey={pubkey}
+        src={avatarUrl}
+        alt={displayName}
+        fallback={<span className="text-xs">{getInitials(displayName)}</span>}
+        className={cn(sizeClasses[size].avatar, avatarClassName)}
+      />
       <span className={cn(sizeClasses[size].text, "truncate", nameClassName)}>
         {displayName}
       </span>

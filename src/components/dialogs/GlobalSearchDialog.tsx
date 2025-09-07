@@ -1,4 +1,4 @@
-import type { NDKEvent } from "@nostr-dev-kit/ndk";
+import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useNavigate } from "@tanstack/react-router";
 import { FileText, FolderOpen, MessageCircle } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";

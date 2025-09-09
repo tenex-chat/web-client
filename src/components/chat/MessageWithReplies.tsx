@@ -1,15 +1,14 @@
 import { NDKEvent, NDKKind, useSubscribe, useNDK } from '@nostr-dev-kit/ndk-hooks'
-import { ChevronDown, ChevronRight, Send, Reply } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { TypingIndicator } from './TypingIndicator'
 import { StreamingCaret } from './StreamingCaret'
 import { ThinkingBlock } from './ThinkingBlock'
-import React, { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { useReply } from './contexts/ReplyContext'
 import { processEventsToMessages } from '@/components/chat/utils/messageProcessor'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
 import { NDKProject } from '@/lib/ndk-events/NDKProject'
 import { EVENT_KINDS } from '@/lib/constants'
 import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
@@ -47,10 +46,8 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   const { ndk } = useNDK()
   const user = useNDKCurrentUser()
   const [showReplies, setShowReplies] = useState(false)
-  const [replyToEvent, setReplyToEvent] = useState<NDKEvent | null>(null)
-  const [replyInput, setReplyInput] = useState("")
-  const [isSending, setIsSending] = useState(false)
   const [showMetadataDialog, setShowMetadataDialog] = useState(false)
+  const { replyingTo, setReplyingTo } = useReply()
   const [, setLightboxImage] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
   const hoveredMessageId = useAtomValue(hoveredMessageIdAtom)
@@ -58,6 +55,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   const isMobile = useIsMobile()
   
   const isHovered = hoveredMessageId === event.id
+  const isBeingRepliedTo = replyingTo?.id === event.id
   
   const handleMouseEnter = useCallback(() => {
     if (!isMobile) {
@@ -138,47 +136,10 @@ export const MessageWithReplies = memo(function MessageWithReplies({
   }, [directReplies])
 
   const handleReply = useCallback((targetEvent: NDKEvent) => {
-    setReplyToEvent(targetEvent)
-    setShowReplies(true)
+    setReplyingTo(targetEvent)
     onReply?.(targetEvent)
-  }, [onReply])
+  }, [setReplyingTo, onReply])
 
-  const handleSendReply = useCallback(async () => {
-    if (!replyInput.trim() || !ndk?.signer || isSending || !replyToEvent) return
-
-    setIsSending(true)
-    try {
-      const replyEvent = replyToEvent.reply()
-      replyEvent.content = replyInput.trim()
-      
-      // Remove all p-tags that NDK's .reply() generated
-      replyEvent.tags = replyEvent.tags.filter((tag) => tag[0] !== "p")
-      
-      // Add project tag if we have a project
-      if (project) {
-        replyEvent.tags.push(['a', project.tagId()])
-      }
-      
-      await replyEvent.publish()
-      
-      setReplyInput("")
-      setReplyToEvent(null)
-    } catch {
-      toast.error("Failed to send reply")
-    } finally {
-      setIsSending(false)
-    }
-  }, [replyInput, ndk, replyToEvent, isSending, project])
-
-  const handleKeyPress = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault()
-        handleSendReply()
-      }
-    },
-    [handleSendReply]
-  )
 
   // Count for replies display
   const replyCount = useMemo(() => {
@@ -327,6 +288,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
         paddingClass,
         isNested && nestedMargin,
         isHovered && "bg-muted/30",
+        isBeingRepliedTo && "ring-2 ring-primary/50 bg-primary/5",
         isMobile && "border-b border-border"
       )}
       onMouseEnter={handleMouseEnter}
@@ -641,50 +603,6 @@ export const MessageWithReplies = memo(function MessageWithReplies({
         </div>
       )}
 
-      {/* Reply input - responsive inline */}
-      {replyToEvent && (
-        <div className={cn(
-          "mt-2 border-l-2 border-muted pl-3",
-          isMobile ? "ml-3" : "ml-[18px]"
-        )}>
-          <div className="bg-muted/30 p-2 rounded-md mb-2">
-            <div className="text-xs text-muted-foreground flex items-center gap-1">
-              <Reply className="w-3 h-3" />
-              Replying to {replyToEvent.id === event.id ? "this message" : "a reply"}
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <textarea
-              value={replyInput}
-              onChange={(e) => setReplyInput(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder="Write a reply..."
-              className="flex-1 min-h-[50px] p-2 text-sm bg-background border border-muted rounded-md resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
-            />
-            <div className="flex flex-col gap-1">
-              <Button
-                size="sm"
-                onClick={handleSendReply}
-                disabled={!replyInput.trim() || isSending}
-                className="h-8"
-              >
-                <Send className="w-3.5 h-3.5" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setReplyToEvent(null)
-                  setReplyInput("")
-                }}
-                className="h-8 text-xs"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
       
       {/* LLM Metadata Dialog */}
       {llmMetadata && (

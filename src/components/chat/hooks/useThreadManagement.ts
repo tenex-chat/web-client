@@ -23,7 +23,8 @@ export function useThreadManagement(
   initialRootEvent: NDKEvent | null,
   extraTags?: string[][],
   onThreadCreated?: (thread: NDKEvent) => void,
-  onlineAgents?: { pubkey: string; slug: string }[]
+  onlineAgents?: { pubkey: string; slug: string }[],
+  replyingTo?: NDKEvent | null
 ) {
   const { ndk } = useNDK()
   const user = useNDKCurrentUser()
@@ -109,8 +110,12 @@ export function useThreadManagement(
   ) => {
     if (!ndk || !user || !localRootEvent) return null
 
-    // Send a reply to the existing thread
-    const replyEvent = localRootEvent.reply()
+    // If replying to a specific message, use that as the reply target
+    // Otherwise reply to the thread root
+    const targetEvent = replyingTo || localRootEvent
+    
+    // Send a reply to the target event
+    const replyEvent = targetEvent.reply()
     replyEvent.content = content
 
     // Remove all p-tags that NDK's .reply() generated
@@ -169,7 +174,7 @@ export function useThreadManagement(
     await replyEvent.publish()
 
     return replyEvent
-  }, [ndk, user, localRootEvent, project])
+  }, [ndk, user, localRootEvent, project, replyingTo])
 
   const sendMessage = useCallback(async (
     content: string,

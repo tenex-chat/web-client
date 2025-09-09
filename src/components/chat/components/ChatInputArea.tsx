@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, memo, useState } from "react";
-import { Send, Mic, Paperclip, X } from "lucide-react";
+import { Send, Mic, Paperclip, X, Reply } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,8 @@ import { VoiceDialog } from "@/components/dialogs/VoiceDialog";
 import { ImageUploadQueue } from "@/components/upload/ImageUploadQueue";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import { useReply } from "../contexts/ReplyContext";
+import { NostrProfile } from "@/components/common/NostrProfile";
 
 interface ChatInputAreaProps {
   project?: NDKProject | null;
@@ -42,6 +44,7 @@ export const ChatInputArea = memo(function ChatInputArea({
   onVoiceComplete,
 }: ChatInputAreaProps) {
   const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false);
+  const { replyingTo, clearReply } = useReply();
   // Focus input on reply (exposed through parent)
   React.useImperativeHandle(inputProps.inputRef, () => ({
     focus: () => textareaRef.current?.focus(),
@@ -87,8 +90,8 @@ export const ChatInputArea = memo(function ChatInputArea({
     const mentions = mentionProps.extractMentions(content);
     const completedUploads = getCompletedUploads();
     const imageUploads = completedUploads
-      .filter((upload) => upload.url !== undefined)
-      .map((upload) => ({
+      .filter((upload: any) => upload.url !== undefined)
+      .map((upload: any) => ({
         url: upload.url,
         metadata: upload.metadata,
       }));
@@ -123,6 +126,13 @@ export const ChatInputArea = memo(function ChatInputArea({
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle escape to cancel reply
+    if (e.key === "Escape" && replyingTo) {
+      e.preventDefault();
+      clearReply();
+      return;
+    }
+    
     // First check for mention autocomplete
     if (mentionPropsWithRef.showAgentMenu) {
       mentionPropsWithRef.handleKeyDown(e);
@@ -149,6 +159,43 @@ export const ChatInputArea = memo(function ChatInputArea({
           "shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)]",
         )}
       >
+        {/* Reply preview */}
+        <AnimatePresence>
+          {replyingTo && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className={cn(
+                "flex items-center justify-between border-b border-border/30",
+                isMobile ? "p-2 pb-2" : "p-3 pb-3"
+              )}>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Reply className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <span className="text-xs text-muted-foreground">Replying to</span>
+                  <NostrProfile 
+                    pubkey={replyingTo.pubkey} 
+                    variant="name"
+                    className="text-xs text-primary font-medium"
+                  />
+                  <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                    "{replyingTo.content?.substring(0, 50)}{replyingTo.content && replyingTo.content.length > 50 ? '...' : ''}"
+                  </span>
+                </div>
+                <Button
+                  onClick={clearReply}
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6 rounded-full hover:bg-muted"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {/* Enhanced pending images display with animation */}
         <AnimatePresence>
           {pendingImageUrls.length > 0 && (
@@ -164,9 +211,9 @@ export const ChatInputArea = memo(function ChatInputArea({
                   isMobile ? "p-2 pb-3" : "p-3 pb-4",
                 )}
               >
-                {pendingImageUrls.map((url, index) => {
+                {pendingImageUrls.map((url: any, index: any) => {
                   const uploadItem = uploadQueue.find(
-                    (item) => item.url === url,
+                    (item: any) => item.url === url,
                   );
                   return (
                     <motion.div

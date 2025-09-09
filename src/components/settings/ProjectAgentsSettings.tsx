@@ -122,6 +122,7 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
   const { ndk } = useNDK()
   const [selectedPM, setSelectedPM] = useState<string>('')
   const [addAgentsDialogOpen, setAddAgentsDialogOpen] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
   
   // Get agent definitions from project tags
   const projectAgents = project.agents || []

@@ -38,6 +38,11 @@ export function processEvent(
   streamingSessions: Map<string, StreamingSession>,
   finalMessages: Message[]
 ): void {
+  // Skip operations status events (24133) and stop request events (24134)
+  if (event.kind === 24133 || event.kind === 24134) {
+    return
+  }
+  
   // Metadata events should always be shown as final messages
   if (event.kind === EVENT_KINDS.CONVERSATION_METADATA) {
     finalMessages.push({ id: event.id, event: event })

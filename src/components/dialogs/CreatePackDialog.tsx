@@ -193,11 +193,6 @@ export function CreatePackDialog({ open, onOpenChange, forkFromPack, editPack }:
             pack.addAgent(agent);
           }
         });
-
-        // If forking, add an "e" tag to reference the previous pack
-        if (forkFromPack) {
-          pack.tags.push(['e', forkFromPack.id]);
-        }
       }
 
       await pack.publishReplaceable();

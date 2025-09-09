@@ -27,7 +27,7 @@ export function AgentPackDetailPage() {
 
   const profile = useProfileValue(pack?.pubkey);
 
-  const isAuthor = user?.hexpubkey === pack?.pubkey;
+  const isAuthor = user?.pubkey === pack?.pubkey;
 
   const handleForkOrEdit = () => {
     setForkDialogOpen(true);

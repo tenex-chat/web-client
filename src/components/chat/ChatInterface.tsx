@@ -20,6 +20,7 @@ import { ChatHeader } from "./components/ChatHeader";
 import { ChatMessageList } from "./components/ChatMessageList";
 import { ChatInputArea } from "./components/ChatInputArea";
 import { useAI } from "@/hooks/useAI";
+import { ReplyProvider, useReply } from "./contexts/ReplyContext";
 
 interface ChatInterfaceProps {
   project?: NDKProject | null;
@@ -34,10 +35,9 @@ interface ChatInterfaceProps {
 }
 
 /**
- * Refactored ChatInterface component
- * Now serves as an orchestrator, delegating responsibilities to specialized components and hooks
+ * Inner component that uses the Reply context
  */
-export function ChatInterface({
+function ChatInterfaceInner({
   project,
   rootEvent,
   extraTags,
@@ -53,6 +53,7 @@ export function ChatInterface({
   const isMobile = useIsMobile();
   const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { replyingTo, clearReply } = useReply();
 
   // TTS state
   const { voiceSettings } = useAI();
@@ -98,14 +99,14 @@ export function ChatInterface({
   // Get ONLINE agents for @mentions (moved up before thread management)
   const onlineAgents = useProjectOnlineAgents(project?.dTag);
 
-
   // Thread management
   const threadManagement = useThreadManagement(
     project,
     localRootEvent,
     extraTags,
     onThreadCreated,
-    onlineAgents
+    onlineAgents,
+    replyingTo
   );
   const { sendMessage } = threadManagement;
 
@@ -142,6 +143,11 @@ export function ChatInterface({
 
       try {
         await sendMessage(content, mentions, imageUploads, autoTTS, messages);
+        
+        // Clear reply context after sending
+        if (replyingTo) {
+          clearReply();
+        }
 
         // Auto-scroll to bottom after sending
         setTimeout(() => {
@@ -151,7 +157,7 @@ export function ChatInterface({
         toast.error("Failed to send message");
       }
     },
-    [ndk, user, sendMessage, autoTTS, messages, scrollProps]
+    [ndk, user, sendMessage, autoTTS, messages, scrollProps, replyingTo, clearReply]
   );
 
   // Handle voice dialog completion
@@ -248,8 +254,22 @@ export function ChatInterface({
           localRootEvent={localRootEvent}
           onVoiceComplete={handleVoiceComplete}
         />
-
       </div>
     </ChatDropZone>
+  );
+}
+
+/**
+ * Refactored ChatInterface component
+ * Now serves as an orchestrator, delegating responsibilities to specialized components and hooks
+ */
+export function ChatInterface({
+  ...props
+}: ChatInterfaceProps) {
+
+  return (
+    <ReplyProvider>
+      <ChatInterfaceInner {...props} />
+    </ReplyProvider>
   );
 }

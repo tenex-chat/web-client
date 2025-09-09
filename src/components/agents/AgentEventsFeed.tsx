@@ -49,9 +49,12 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
   const sortedEvents = useMemo(() => {
     return [...events]
       .filter((event) => {
-        // Filter out ephemeral events (kinds 20000-29999)
         const kind = event.kind as number;
-        return kind < 20000 || kind > 29999;
+        // Filter out ephemeral events (kinds 20000-29999)
+        if (kind >= 20000 && kind <= 29999) return false;
+        // Filter out operations status (24133) and stop request (24134) events
+        if (kind === 24133 || kind === 24134) return false;
+        return true;
       })
       .sort((a, b) => {
         const aTime = a.created_at || 0;

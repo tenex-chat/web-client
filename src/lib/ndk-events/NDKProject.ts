@@ -191,6 +191,34 @@ export class NDKProject extends NDKEvent {
 		}
 
 		/**
+		 * Override delete method for replaceable events
+		 * For NIP-33 replaceable events, we:
+		 * 1. Publish a deletion event (kind 5) for compatibility
+		 * 2. Republish the replaceable event with a ["deleted"] tag
+		 */
+		async delete(reason?: string, publish = true): Promise<NDKEvent> {
+			if (!this.ndk) throw new Error("No NDK instance found");
+			
+			this.ndk.assertSigner();
+			
+			// First, create and publish the deletion event (kind 5) using parent method
+			const deletionEvent = await super.delete(reason, publish);
+			
+			// Then, add "deleted" tag to the replaceable event and republish it
+			this.removeTag("deleted");
+			this.tags.push(["deleted"]);
+			
+			// Update timestamp to ensure this replaces the previous version
+			this.created_at = Math.floor(Date.now() / 1000);
+			
+			if (publish) {
+				await this.publish();
+			}
+			
+			return deletionEvent;
+		}
+
+		/**
 		 * Create an NDKProject from an existing event
 		 */
 		static from(event: NDKEvent): NDKProject {

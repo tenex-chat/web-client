@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ArrowLeft, Phone, PhoneOff, Settings, Copy, Check, FileJson, ExternalLink, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -58,6 +58,18 @@ export function ChatHeader({
   // Subscribe to metadata updates for this conversation
   const metadata = useConversationMetadata(rootEvent?.id);
 
+  // Add ESC key handler to close drawer
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && onBack) {
+        onBack();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscKey);
+    return () => document.removeEventListener('keydown', handleEscKey);
+  }, [onBack]);
+
   // Get thread title
   const threadTitle = useMemo(() => {
     // First priority: metadata title from kind 513 event
@@ -77,7 +89,7 @@ export function ChatHeader({
       return firstLine.length > 50 ? `${firstLine.slice(0, 50)}...` : firstLine;
     }
     
-    return isNewThread ? "New Thread" : "Thread";
+    return isNewThread ? "New Conversation" : "Thread";
   }, [rootEvent, isNewThread, metadata?.title]);
 
   // Subscribe to ALL thread replies (not just direct replies) to get nested replies for copying

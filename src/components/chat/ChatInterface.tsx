@@ -135,14 +135,14 @@ function ChatInterfaceInner({
 
   // Stable callback for sending messages - only pass what ChatInputArea needs
   const handleSendMessage = useCallback(
-    async (content: string, mentions: AgentInstance[], imageUploads: { url: string; metadata?: unknown }[]) => {
+    async (content: string, mentions: AgentInstance[], imageUploads: { url: string; metadata?: unknown }[], targetAgent: string | null) => {
       if (!ndk || !user) {
         console.error('ChatInterface: Cannot send message without NDK or user');
         return;
       }
 
       try {
-        await sendMessage(content, mentions, imageUploads, autoTTS, messages);
+        await sendMessage(content, mentions, imageUploads, autoTTS, messages, targetAgent);
         
         // Clear reply context after sending
         if (replyingTo) {
@@ -175,7 +175,7 @@ function ChatInterfaceInner({
             url: upload.url,
             metadata: upload.metadata,
           }));
-        await handleSendMessage(content, mentions, imageUploads);
+        await handleSendMessage(content, mentions, imageUploads, null);
         inputProps.clearInput();
       }
     },
@@ -253,6 +253,8 @@ function ChatInterfaceInner({
           canSend={!!ndk && !!user}
           localRootEvent={localRootEvent}
           onVoiceComplete={handleVoiceComplete}
+          onlineAgents={onlineAgents}
+          recentMessages={messages}
         />
       </div>
     </ChatDropZone>

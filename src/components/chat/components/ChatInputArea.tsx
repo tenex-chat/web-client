@@ -13,18 +13,23 @@ import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useReply } from "../contexts/ReplyContext";
 import { NostrProfile } from "@/components/common/NostrProfile";
+import { AgentSelector } from "./AgentSelector";
+import type { AgentInstance } from "@/types/agent";
+import type { Message } from "../hooks/useChatMessages";
 
 interface ChatInputAreaProps {
   project?: NDKProject | null;
   inputProps: any; // The entire inputProps object from useChatInput
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-  onSend: (content: string, mentions: any[], imageUploads: any[]) => void;
+  onSend: (content: string, mentions: any[], imageUploads: any[], targetAgent: string | null) => void;
   isNewThread: boolean;
   disabled?: boolean;
   showVoiceButton?: boolean;
   canSend: boolean;
   localRootEvent: NDKEvent | null;
   onVoiceComplete: (data: { transcription: string }) => void;
+  onlineAgents?: AgentInstance[] | null;
+  recentMessages?: Message[];
 }
 
 /**
@@ -42,9 +47,39 @@ export const ChatInputArea = memo(function ChatInputArea({
   canSend,
   localRootEvent,
   onVoiceComplete,
+  onlineAgents,
+  recentMessages = [],
 }: ChatInputAreaProps) {
   const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const { replyingTo, clearReply } = useReply();
+  
+  // Reset agent selection when conversation (localRootEvent) changes
+  React.useEffect(() => {
+    setSelectedAgent(null);
+  }, [localRootEvent?.id]);
+  
+  // Detect @ mentions in the message input
+  const mentionedAgents = React.useMemo(() => {
+    if (!onlineAgents || !inputProps.messageInput) return [];
+    const mentionRegex = /@([\w-]+)/g;
+    const matches = [];
+    let match;
+    while ((match = mentionRegex.exec(inputProps.messageInput)) !== null) {
+      const mentionSlug = match[1].toLowerCase();
+      const agent = onlineAgents.find(a => 
+        a.slug.toLowerCase() === mentionSlug
+      );
+      if (agent) {
+        matches.push(agent);
+      }
+    }
+    return matches;
+  }, [inputProps.messageInput, onlineAgents]);
+  
+  // Hide selector if there are @ mentions in the input
+  const showAgentSelector = mentionedAgents.length === 0;
+  
   // Focus input on reply (exposed through parent)
   React.useImperativeHandle(inputProps.inputRef, () => ({
     focus: () => textareaRef.current?.focus(),
@@ -96,9 +131,11 @@ export const ChatInputArea = memo(function ChatInputArea({
         metadata: upload.metadata,
       }));
 
-    onSend(content, mentions, imageUploads);
+    onSend(content, mentions, imageUploads, selectedAgent);
     clearInput();
-  }, [canSend, messageInput, pendingImageUrls, buildMessageContent, mentionProps, getCompletedUploads, onSend, clearInput]);
+    // Clear agent selection after sending
+    setSelectedAgent(null);
+  }, [canSend, messageInput, pendingImageUrls, buildMessageContent, mentionProps, getCompletedUploads, onSend, clearInput, selectedAgent]);
 
   // Handle file selection from input
   const handleFileSelect = useCallback(
@@ -196,6 +233,7 @@ export const ChatInputArea = memo(function ChatInputArea({
             </motion.div>
           )}
         </AnimatePresence>
+        
         {/* Enhanced pending images display with animation */}
         <AnimatePresence>
           {pendingImageUrls.length > 0 && (
@@ -283,49 +321,128 @@ export const ChatInputArea = memo(function ChatInputArea({
           )}
         </AnimatePresence>
 
+        {/* Textarea area */}
+        <div className={cn("relative w-full", isMobile ? "p-2 pb-1" : "p-3 pb-2")}>
+          {/* Mention Autocomplete Menu */}
+          <ChatMentionMenu
+            showAgentMenu={mentionPropsWithRef.showAgentMenu}
+            filteredAgents={mentionPropsWithRef.filteredAgents}
+            filteredProjectGroups={mentionPropsWithRef.filteredProjectGroups}
+            selectedAgentIndex={mentionPropsWithRef.selectedAgentIndex}
+            insertMention={mentionPropsWithRef.insertMention}
+          />
+
+          <Textarea
+            ref={textareaRef}
+            value={messageInput}
+            onChange={(e) =>
+              mentionPropsWithRef.handleInputChange(e.target.value)
+            }
+            onKeyDown={handleKeyDown}
+            placeholder={
+              isNewThread
+                ? "Start a new conversation..."
+                : "Type a message..."
+            }
+            disabled={disabled}
+            className={cn(
+              "resize-none bg-transparent border-0 !focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+              "placeholder:text-muted-foreground/60",
+              "transition-all duration-200 !shadow-none w-full",
+              isMobile
+                ? "min-h-[40px] text-[15px] py-2.5 px-2 leading-relaxed"
+                : "min-h-[56px] text-base py-3 px-3",
+            )}
+          />
+        </div>
+
+        {/* Bottom controls row */}
         <div
           className={cn(
-            "flex items-end w-full",
-            isMobile ? "gap-1.5 p-2" : "gap-2 p-3",
+            "flex items-center justify-between w-full border-t border-border/30",
+            isMobile ? "gap-1.5 p-2 pt-2" : "gap-2 p-3 pt-3",
           )}
         >
-          <div className="flex-1 relative">
-            {/* Mention Autocomplete Menu */}
-            <ChatMentionMenu
-              showAgentMenu={mentionPropsWithRef.showAgentMenu}
-              filteredAgents={mentionPropsWithRef.filteredAgents}
-              filteredProjectGroups={mentionPropsWithRef.filteredProjectGroups}
-              selectedAgentIndex={mentionPropsWithRef.selectedAgentIndex}
-              insertMention={mentionPropsWithRef.insertMention}
-            />
+          {/* Left side controls */}
+          <div className={cn("flex items-center", isMobile ? "gap-1" : "gap-2")}>
+            {/* Agent selector or mentioned agents display */}
+            {onlineAgents && onlineAgents.length > 0 && (
+              showAgentSelector ? (
+                <AgentSelector
+                  onlineAgents={onlineAgents}
+                  recentMessages={recentMessages}
+                  selectedAgent={selectedAgent}
+                  onAgentSelect={setSelectedAgent}
+                  disabled={disabled}
+                  className="flex-shrink-0"
+                />
+              ) : (
+                /* Show mentioned agents as chips */
+                <div className="flex items-center gap-1.5">
+                  {mentionedAgents.map((agent) => (
+                    <div
+                      key={agent.pubkey}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
+                        "bg-accent/50 border border-border/50",
+                        "text-sm"
+                      )}
+                    >
+                      <NostrProfile 
+                        pubkey={agent.pubkey} 
+                        variant="avatar"
+                        size="xs"
+                        fallback={agent.slug}
+                        className="flex-shrink-0"
+                      />
+                      <span className="text-xs font-medium">@{agent.slug}</span>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
 
-            <Textarea
-              ref={textareaRef}
-              value={messageInput}
-              onChange={(e) =>
-                mentionPropsWithRef.handleInputChange(e.target.value)
-              }
-              onKeyDown={handleKeyDown}
-              placeholder={
-                isNewThread
-                  ? "Start a new conversation..."
-                  : "Type a message..."
-              }
+            {/* Attach button */}
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              size="icon"
+              variant="ghost"
               disabled={disabled}
               className={cn(
-                "resize-none bg-transparent border-0 !focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
-                "placeholder:text-muted-foreground/60",
-                "transition-all duration-200 !shadow-none",
-                isMobile
-                  ? "min-h-[40px] text-[15px] py-2.5 px-1 leading-relaxed"
-                  : "min-h-[56px] text-base py-3 px-2",
+                "rounded-full transition-all duration-200",
+                "hover:bg-accent/80",
+                isMobile ? "h-8 w-8" : "h-9 w-9",
               )}
-            />
+              title="Attach image"
+            >
+              <Paperclip
+                className={cn(
+                  "transition-colors",
+                  isMobile ? "h-3.5 w-3.5" : "h-4 w-4",
+                )}
+              />
+            </Button>
+
+            {/* Voice button */}
+            {!isMobile && showVoiceButton && (
+              <Button
+                onClick={() => setIsVoiceDialogOpen(true)}
+                size="icon"
+                variant="ghost"
+                disabled={disabled}
+                className={cn(
+                  "rounded-full transition-all duration-200",
+                  "hover:bg-accent/80",
+                  "h-9 w-9",
+                )}
+              >
+                <Mic className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
-          <div
-            className={cn("flex items-center", isMobile ? "gap-1" : "gap-2")}
-          >
+          {/* Right side send button */}
+          <div className="flex items-center">
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
@@ -337,44 +454,6 @@ export const ChatInputArea = memo(function ChatInputArea({
             />
 
             <Button
-              onClick={() => fileInputRef.current?.click()}
-              size="icon"
-              variant="ghost"
-              disabled={disabled}
-              className={cn(
-                "rounded-full transition-all duration-200",
-                "hover:bg-accent/80 hover:scale-110",
-                "active:scale-95",
-                isMobile ? "h-9 w-9" : "h-10 w-10",
-              )}
-              title="Attach image"
-            >
-              <Paperclip
-                className={cn(
-                  "transition-colors",
-                  isMobile ? "h-4 w-4" : "h-4.5 w-4.5",
-                )}
-              />
-            </Button>
-
-            {!isMobile && showVoiceButton && (
-              <Button
-                onClick={() => setIsVoiceDialogOpen(true)}
-                size="icon"
-                variant="ghost"
-                disabled={disabled}
-                className={cn(
-                  "rounded-full transition-all duration-200",
-                  "hover:bg-accent/80 hover:scale-110",
-                  "active:scale-95",
-                  "h-10 w-10",
-                )}
-              >
-                <Mic className="h-4.5 w-4.5" />
-              </Button>
-            )}
-
-            <Button
               onClick={handleSend}
               disabled={disabled || !messageInput.trim() && pendingImageUrls.length === 0}
               size="icon"
@@ -384,14 +463,14 @@ export const ChatInputArea = memo(function ChatInputArea({
                 "hover:scale-110 active:scale-95",
                 "disabled:opacity-50 disabled:hover:scale-100",
                 "shadow-sm hover:shadow-md",
-                isMobile ? "h-9 w-9" : "h-10 w-10",
+                isMobile ? "h-8 w-8" : "h-9 w-9",
               )}
             >
               <Send
                 className={cn(
                   "transition-transform",
                   canSend ? "translate-x-0.5" : "",
-                  isMobile ? "h-4 w-4" : "h-4.5 w-4.5",
+                  isMobile ? "h-3.5 w-3.5" : "h-4 w-4",
                 )}
               />
             </Button>

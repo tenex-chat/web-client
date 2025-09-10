@@ -34,7 +34,8 @@ export function useThreadManagement(
     content: string,
     mentions: AgentInstance[],
     images: ImageUpload[],
-    autoTTS: boolean
+    autoTTS: boolean,
+    targetAgent: string | null
   ) => {
     if (!ndk || !user) return null
 
@@ -71,8 +72,12 @@ export function useThreadManagement(
       newThreadEvent.tags.push(['p', agent.pubkey])
     })
     
-    // If no mentions, add first agent (PM) p-tag when starting new conversation
-    if (mentions.length === 0 && onlineAgents && onlineAgents.length > 0) {
+    // If a specific agent is targeted, add their p-tag
+    if (targetAgent && mentions.every(m => m.pubkey !== targetAgent)) {
+      newThreadEvent.tags.push(['p', targetAgent])
+    }
+    // If no mentions and no target, add first agent (PM) p-tag when starting new conversation
+    else if (mentions.length === 0 && !targetAgent && onlineAgents && onlineAgents.length > 0) {
       // First agent in the list is the project manager
       const projectManager = onlineAgents[0]
       newThreadEvent.tags.push(['p', projectManager.pubkey])
@@ -106,7 +111,8 @@ export function useThreadManagement(
     mentions: AgentInstance[],
     images: ImageUpload[],
     autoTTS: boolean,
-    recentMessages: Message[]
+    recentMessages: Message[],
+    targetAgent: string | null
   ) => {
     if (!ndk || !user || !localRootEvent) return null
 
@@ -153,9 +159,13 @@ export function useThreadManagement(
     // Check if there are @ mentions in the content that weren't resolved
     const hasUnresolvedMentions = /@[\w-]+/.test(content) && mentions.length === 0
     
+    // If a specific agent is targeted, add their p-tag
+    if (targetAgent && mentions.every(m => m.pubkey !== targetAgent)) {
+      replyEvent.tags.push(['p', targetAgent])
+    }
     // Only auto-tag the most recent non-user if there are NO @ mentions at all
-    // (resolved or unresolved) in the content
-    if (!hasUnresolvedMentions && mentions.length === 0 && recentMessages.length > 0) {
+    // (resolved or unresolved) in the content and no target agent
+    else if (!hasUnresolvedMentions && mentions.length === 0 && !targetAgent && recentMessages.length > 0) {
       const mostRecentNonUserMessage = [...recentMessages]
         .reverse()
         .find(msg => msg.event.pubkey !== user.pubkey)
@@ -181,12 +191,13 @@ export function useThreadManagement(
     mentions: AgentInstance[],
     images: ImageUpload[],
     autoTTS: boolean,
-    recentMessages: Message[]
+    recentMessages: Message[],
+    targetAgent: string | null = null
   ) => {
     if (!localRootEvent) {
-      return createThread(content, mentions, images, autoTTS)
+      return createThread(content, mentions, images, autoTTS, targetAgent)
     } else {
-      return sendReply(content, mentions, images, autoTTS, recentMessages)
+      return sendReply(content, mentions, images, autoTTS, recentMessages, targetAgent)
     }
   }, [localRootEvent, createThread, sendReply])
 

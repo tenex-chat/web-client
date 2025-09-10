@@ -112,8 +112,6 @@ export function ChatHeader({
     }
   };
 
-  if (!rootEvent) return null;
-
   return (
 			<div className="bg-card border-b border-border/60 backdrop-blur-xl bg-card/95 sticky top-0 z-50">
 				<div
@@ -124,15 +122,17 @@ export function ChatHeader({
 				>
 					<div className="flex items-center gap-2 sm:gap-3">
 						{/* Always show back button */}
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={onBack}
-							className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-							title="Go back"
-						>
-							<ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-						</Button>
+						{onBack && (
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={onBack}
+								className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+								aria-label="Go back"
+							>
+								<ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+							</Button>
+						)}
 						{/* Project Avatar */}
 						{project && (
 							<ProjectAvatar
@@ -166,7 +166,7 @@ export function ChatHeader({
 					</div>
 					<div className="flex items-center gap-1">
 						{/* Conversation Agents - show inline but smaller on mobile */}
-						{messages && project && messages.length > 0 && (
+						{rootEvent && messages && project && messages.length > 0 && (
 							<div className={cn(isMobile && "scale-75 -mr-1")}>
 								<ConversationAgents
 									messages={messages}
@@ -176,14 +176,14 @@ export function ChatHeader({
 							</div>
 						)}
 						{/* Copy thread dropdown */}
-						{messages && messages.length > 0 && (
+						{rootEvent && messages && messages.length > 0 && (
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
 									<Button
 										variant="ghost"
 										size="icon"
 										className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-										title="Copy thread"
+										aria-label="Copy thread"
 									>
 										{copiedFormat ? (
 											<Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
@@ -217,10 +217,12 @@ export function ChatHeader({
 							</DropdownMenu>
 						)}
 						{/* Conversation-level stop button */}
-						<ConversationStopButton 
-							conversationRootId={rootEvent?.id}
-							projectId={project?.tagId()}
-						/>
+						{rootEvent && (
+							<ConversationStopButton 
+								conversationRootId={rootEvent.id}
+								projectId={project?.tagId()}
+							/>
+						)}
 						
 						{/* Voice call button - always visible */}
 						{ttsEnabled ? (
@@ -229,7 +231,7 @@ export function ChatHeader({
 								size="icon"
 								onClick={onVoiceCallClick}
 								className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-								title="Start voice call"
+								aria-label="Start voice call"
 							>
 								<Phone className="w-4 h-4 sm:w-5 sm:h-5" />
 							</Button>
@@ -240,7 +242,7 @@ export function ChatHeader({
 										variant="ghost"
 										size="icon"
 										className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-										title="Voice mode not configured"
+										aria-label="Voice mode not configured"
 									>
 										<PhoneOff className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
 									</Button>
@@ -282,7 +284,7 @@ export function ChatHeader({
 								size="icon"
 								onClick={onDetach}
 								className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-								title="Detach to floating window"
+								aria-label="Detach to floating window"
 							>
 								<ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
 							</Button>
@@ -293,8 +295,8 @@ export function ChatHeader({
 								variant="ghost"
 								size="icon"
 								onClick={onBack}
-								className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-								title="Close"
+								className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent lg:hidden"
+								aria-label="Close drawer"
 							>
 								<X className="w-4 h-4 sm:w-5 sm:h-5" />
 							</Button>

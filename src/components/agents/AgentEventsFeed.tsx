@@ -1,6 +1,6 @@
 import { type NDKKind, type NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useSubscribe, useNDK } from "@nostr-dev-kit/ndk-hooks";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -13,6 +13,7 @@ import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { MessageShell } from "@/components/chat/MessageShell";
 import { NDKAgentLesson } from "@/lib/ndk-events/NDKAgentLesson";
 import { LessonCard } from "./LessonCard";
+import { useNavigate } from "@tanstack/react-router";
 
 interface AgentEventsFeedProps {
   pubkey: string;
@@ -33,6 +34,7 @@ const EVENT_KIND_NAMES: Record<number, string> = {
 
 export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
   const { ndk } = useNDK();
+  const navigate = useNavigate();
   
   // Subscribe to all events from this agent pubkey
   const { events } = useSubscribe(
@@ -97,6 +99,20 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
       return "Unable to parse content";
     }
   };
+  
+  // Handle conversation navigation - find the project from the event tags
+  const handleConversationNavigate = useCallback((event: NDKEvent) => {
+    // Find project tag (d-tag) from the event
+    const projectTag = event.tags?.find(tag => tag[0] === 'd' && tag[1]);
+    if (projectTag && projectTag[1]) {
+      // Navigate to the project conversation with this event selected
+      navigate({
+        to: '/projects/$projectId',
+        params: { projectId: projectTag[1] },
+        search: { threadId: event.id }
+      });
+    }
+  }, [navigate]);
 
   if (sortedEvents.length === 0) {
     return (
@@ -118,6 +134,7 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
           key={event.id}
           event={event}
           project={null}
+          onConversationNavigate={handleConversationNavigate}
         />
       );
     }
@@ -148,7 +165,11 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
     
     // Default card rendering for other events
     return (
-      <Card key={event.id} className="hover:bg-muted/50 transition-colors">
+      <Card 
+        key={event.id} 
+        className="hover:bg-muted/50 transition-colors cursor-pointer"
+        onClick={() => handleConversationNavigate(event)}
+      >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">

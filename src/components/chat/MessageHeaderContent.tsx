@@ -23,6 +23,7 @@ interface MessageHeaderContentProps {
   isMobile: boolean
   hideTimestamp?: boolean
   projectId?: string
+  isConsecutive?: boolean
 }
 
 export function MessageHeaderContent({
@@ -34,7 +35,8 @@ export function MessageHeaderContent({
   onTimeClick,
   isMobile,
   hideTimestamp = false,
-  projectId
+  projectId,
+  isConsecutive = false
 }: MessageHeaderContentProps) {
   if (isMobile) {
     // Mobile layout: Name + time on left, recipients on right
@@ -104,7 +106,36 @@ export function MessageHeaderContent({
     )
   }
 
-  // Desktop layout: Original side-by-side design
+  // Desktop layout: Adjust for consecutive messages
+  if (isConsecutive) {
+    // For consecutive messages, show timestamp and recipients if any
+    return (
+      <div className="flex items-center gap-2">
+        {event.created_at && (
+          <button
+            onClick={() => onTimeClick?.(event)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer hover:underline"
+            title="Open as root conversation"
+          >
+            {formatRelativeTime(event.created_at)}
+          </button>
+        )}
+        {/* Show recipients for consecutive messages with p-tags */}
+        {recipientPubkeys.length > 0 && (
+          <>
+            <span className="text-xs text-muted-foreground">→</span>
+            <RecipientAvatars 
+              pubkeys={recipientPubkeys}
+              className="scale-90"
+            />
+          </>
+        )}
+        <EventOperationIndicator eventId={event.id} projectId={projectId} />
+      </div>
+    )
+  }
+
+  // Original layout for first message in group
   return (
     <div className="flex items-baseline gap-2 flex-wrap flex-1">
       <Link 

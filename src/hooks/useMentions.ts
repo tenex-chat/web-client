@@ -158,7 +158,7 @@ export function useMentions({
     return mentions;
   }, [messageInput, agents, filteredProjectGroups]);
 
-  return {
+  return useMemo(() => ({
     showAgentMenu,
     filteredAgents,
     filteredProjectGroups,
@@ -167,5 +167,14 @@ export function useMentions({
     handleKeyDown,
     handleInputChange,
     extractMentions,
-  };
+  }), [
+    showAgentMenu,
+    filteredAgents,
+    filteredProjectGroups,
+    selectedAgentIndex,
+    insertMention,
+    handleKeyDown,
+    handleInputChange,
+    extractMentions,
+  ]);
 }

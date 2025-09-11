@@ -28,46 +28,76 @@ export const TaskContent = memo(function TaskContent({
   showUnread, 
   unreadCount = 0 
 }: TaskContentProps) {
-  const { ndk } = useNDK()
-
   // Subscribe to task updates
   const { events: updates } = useSubscribe(
-    useMemo(
-      () => [{
+      [{
         kinds: [NDKKind.GenericReply as number, NDKProjectStatus.kind],
         '#e': [task.id],
         limit: 10
       }],
-      [task.id]
-    ),
-    { closeOnEose: false, groupable: true }
+    { closeOnEose: false, groupable: true },
+    [task.id]
   )
 
   // Get the latest update (for display purposes)
   const latestUpdate = useMemo(() => {
     if (!updates || updates.length === 0) return null
-    return updates.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0]
+    return updates.sort((a, b) => {
+      const timeDiff = (b.created_at ?? 0) - (a.created_at ?? 0)
+      // If timestamps are equal, apply priority rules
+      if (timeDiff === 0) {
+        const aStatus = a.tagValue('status')
+        const bStatus = b.tagValue('status')
+        const aHasReasoning = a.hasTag('reasoning')
+        const bHasReasoning = b.hasTag('reasoning')
+        
+        // Priority 1: Events with "reasoning" tag (show on top)
+        if (bHasReasoning && !aHasReasoning) return -1
+        if (aHasReasoning && !bHasReasoning) return 1
+        
+        // Priority 2: Events with "complete" status
+        if (bStatus === 'complete' && aStatus !== 'complete') return 1
+        if (aStatus === 'complete' && bStatus !== 'complete') return -1
+      }
+      return timeDiff
+    })[0]
   }, [updates])
 
   // Get current status from the latest update that has a status tag
   const currentStatus = useMemo(() => {
     if (!updates || updates.length === 0) return 'pending'
     
-    // Sort updates by timestamp and find the latest one with a status tag
-    const sortedUpdates = [...updates].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
+    // Sort updates by timestamp, prioritizing "reasoning" tag and "complete" status for same timestamps
+    const sortedUpdates = [...updates].sort((a, b) => {
+      const timeDiff = (b.created_at ?? 0) - (a.created_at ?? 0)
+      // If timestamps are equal, apply priority rules
+      if (timeDiff === 0) {
+        const aStatus = a.tagValue('status')
+        const bStatus = b.tagValue('status')
+        const aHasReasoning = a.hasTag('reasoning')
+        const bHasReasoning = b.hasTag('reasoning')
+        
+        // Priority 1: Events with "reasoning" tag (show on top)
+        if (bHasReasoning && !aHasReasoning) return -1
+        if (aHasReasoning && !bHasReasoning) return 1
+        
+        // Priority 2: Events with "complete" status
+        if (bStatus === 'complete' && aStatus !== 'complete') return 1
+        if (aStatus === 'complete' && bStatus !== 'complete') return -1
+      }
+      return timeDiff
+    })
     
     for (const update of sortedUpdates) {
-      const statusTag = update.tags?.find(tag => tag[0] === 'status')
-      if (statusTag && statusTag[1]) {
-        return statusTag[1]
+      const status = update.tagValue('status')
+      if (status) {
+        return status
       }
     }
     
     // Default to pending if no status found in any update
     return 'pending'
   }, [updates])
-
-  const isCodeTask = task.tags?.some(tag => tag[0] === 'tool' && tag[1] === 'claude_code')
 
   // TODO: Implement proper 24134 stop request with project context
   // For now, removing incorrect 24133 publishing
@@ -92,7 +122,7 @@ export const TaskContent = memo(function TaskContent({
         <div className="mt-0.5">
           <CheckSquare className={cn(
             'w-5 h-5',
-            currentStatus === 'completed' ? 'text-green-500' : 
+            currentStatus === 'complete' ? 'text-green-500' : 
             currentStatus === 'in-progress' ? 'text-blue-500' : 
             'text-muted-foreground'
           )} />
@@ -159,12 +189,12 @@ export const TaskContent = memo(function TaskContent({
                 variant="secondary" 
                 className={cn(
                   "text-xs px-2 py-0.5",
-                  currentStatus === 'completed' && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                  currentStatus === 'complete' && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
                   currentStatus === 'in-progress' && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
                   currentStatus === 'pending' && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                 )}
               >
-                {currentStatus === 'completed' ? '✓ Completed' : 
+                {currentStatus === 'complete' ? '✓ Completed' : 
                  currentStatus === 'in-progress' ? '⚡ In Progress' : 
                  '⏳ ' + currentStatus}
               </Badge>
@@ -180,12 +210,6 @@ export const TaskContent = memo(function TaskContent({
                   className="text-muted-foreground"
                 />
               </div>
-            )}
-            
-            {isCodeTask && (
-              <Badge variant="outline" className="text-xs px-2 py-0.5 border-blue-200 text-blue-600 dark:border-blue-800 dark:text-blue-400">
-                🤖 Claude Code
-              </Badge>
             )}
           </div>
         </div>

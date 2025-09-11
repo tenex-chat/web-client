@@ -1,5 +1,5 @@
 import { useProfile } from "@nostr-dev-kit/ndk-hooks";
-import { Bot } from "lucide-react";
+import { Bot, Layers } from "lucide-react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import {
   Card,
@@ -53,6 +53,16 @@ export function AgentDefinitionCard({
         <CardDescription className="line-clamp-3">
           {agent.description || "No description provided"}
         </CardDescription>
+
+        {/* Phase count */}
+        {agent.phases && agent.phases.length > 0 && (
+          <div className="mt-2 flex items-center gap-2">
+            <Badge variant="secondary" className="text-xs">
+              <Layers className="w-3 h-3 mr-1" />
+              {agent.phases.length} phase{agent.phases.length !== 1 ? 's' : ''}
+            </Badge>
+          </div>
+        )}
 
         {/* Author info */}
         <div className="mt-3 pt-3 border-t flex items-center gap-2">

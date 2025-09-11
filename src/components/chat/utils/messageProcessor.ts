@@ -175,7 +175,19 @@ export function processEventsToMessages(events: NDKEvent[], rootEvent: NDKEvent 
   // Sort everything by timestamp (filter out messages without timestamps)
   const messagesWithTime = finalMessages
     .filter(msg => msg.event.created_at !== undefined)
-    .sort((a, b) => a.event.created_at - b.event.created_at)
+    .sort((a, b) => {
+      const timeDiff = a.event.created_at - b.event.created_at
+      // If timestamps are equal, prioritize "reasoning" events to show them first
+      if (timeDiff === 0) {
+        const aHasReasoning = a.event.hasTag('reasoning')
+        const bHasReasoning = b.event.hasTag('reasoning')
+        
+        // Events with "reasoning" tag should come first (on top)
+        if (aHasReasoning && !bHasReasoning) return -1
+        if (!aHasReasoning && bHasReasoning) return 1
+      }
+      return timeDiff
+    })
   
   return messagesWithTime
 }

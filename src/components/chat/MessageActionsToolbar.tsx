@@ -26,7 +26,7 @@ import {
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { formatCost } from '@/lib/utils/formatCost'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface MessageActionsToolbarProps {
   event: NDKEvent
@@ -36,6 +36,7 @@ interface MessageActionsToolbarProps {
   llmMetadata?: Record<string, unknown> | null
   isMobile: boolean
   isHovered?: boolean
+  isConsecutive?: boolean
 }
 
 export function MessageActionsToolbar({
@@ -45,9 +46,21 @@ export function MessageActionsToolbar({
   onMetadataClick,
   llmMetadata,
   isMobile,
-  isHovered = false
+  isHovered = false,
+  isConsecutive = false
 }: MessageActionsToolbarProps) {
   const [showRawEventDialog, setShowRawEventDialog] = useState(false)
+  
+  // Fix for Radix UI Dialog not properly cleaning up body styles
+  useEffect(() => {
+    if (!showRawEventDialog) {
+      // Small delay to ensure dialog animation completes
+      const timeout = setTimeout(() => {
+        document.body.style.removeProperty('pointer-events')
+      }, 200)
+      return () => clearTimeout(timeout)
+    }
+  }, [showRawEventDialog])
   // Mobile layout: Inline actions integrated with message
   if (isMobile) {
     return (
@@ -56,7 +69,7 @@ export function MessageActionsToolbar({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onReply}
+          onClick={(e) => { e.stopPropagation(); onReply?.(); }}
           className="h-5 px-1 text-[10px] text-muted-foreground hover:text-foreground"
         >
           <Reply className="h-2.5 w-2.5" />
@@ -103,6 +116,16 @@ export function MessageActionsToolbar({
             >
               <User className="h-3 w-3 mr-2" />
               Copy Author
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              className="cursor-pointer text-xs"
+              onClick={() => {
+                navigator.clipboard.writeText(event.content)
+                toast.success('Content copied')
+              }}
+            >
+              <Copy className="h-3 w-3 mr-2" />
+              Copy Content
             </DropdownMenuItem>
             <DropdownMenuItem 
               className="cursor-pointer text-xs"
@@ -174,7 +197,7 @@ export function MessageActionsToolbar({
       <Button
         variant="ghost"
         size="sm"
-        onClick={onReply}
+        onClick={(e) => { e.stopPropagation(); onReply?.(); }}
         className="h-7 w-7 p-0 hover:bg-muted"
         title="Reply to this message"
       >
@@ -186,7 +209,7 @@ export function MessageActionsToolbar({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onMetadataClick}
+          onClick={(e) => { e.stopPropagation(); onMetadataClick?.(); }}
           className="h-7 w-7 p-0 hover:bg-muted"
           title="View LLM metadata"
         >
@@ -216,6 +239,16 @@ export function MessageActionsToolbar({
           >
             <User className="h-3.5 w-3.5 mr-2" />
             Copy Author
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            className="cursor-pointer"
+            onClick={() => {
+              navigator.clipboard.writeText(event.content)
+              toast.success('Content copied')
+            }}
+          >
+            <Copy className="h-3.5 w-3.5 mr-2" />
+            Copy Content
           </DropdownMenuItem>
           <DropdownMenuItem 
             className="cursor-pointer"

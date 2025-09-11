@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useBlossomUpload } from '@/hooks/useBlossomUpload';
 import { useMentions } from '@/hooks/useMentions';
 import { useDraftPersistence } from '@/hooks/useDraftPersistence';
@@ -95,8 +95,8 @@ export function useChatInput(
   const buildMessageContent = useCallback(() => {
     let content = messageInput;
     
-    // Add image URLs to content if any
-    const completedUploads = getCompletedUploads();
+    // Add image URLs to content if any - use uploadQueue directly to avoid dependency on getCompletedUploads
+    const completedUploads = uploadQueue.filter(item => item.status === 'completed');
     if (completedUploads.length > 0) {
       const imageUrls = completedUploads
         .map(upload => upload.url)
@@ -109,16 +109,16 @@ export function useChatInput(
     }
     
     return content;
-  }, [messageInput, getCompletedUploads]);
+  }, [messageInput, uploadQueue]);
 
-  // Clear all input
+  // Clear all input - memoized with stable dependencies
   const clearInput = useCallback(() => {
     setMessageInput('');
-    clearUploads();
+    clearCompleted(); // Use the stable clearCompleted reference
     clearDraft(); // Clear the draft when sending message
-  }, [clearUploads, clearDraft]);
+  }, [clearCompleted, clearDraft]);
 
-  // Handle submit
+  // Handle submit - optimized dependencies
   const handleSubmit = useCallback(async (onSubmit: (message: string) => Promise<void>) => {
     if (!messageInput.trim() && pendingImageUrls.length === 0) return;
     if (isSubmitting) return;
@@ -131,14 +131,12 @@ export function useChatInput(
     } finally {
       setIsSubmitting(false);
     }
-  }, [messageInput, pendingImageUrls, isSubmitting, buildMessageContent, clearInput]);
+  }, [messageInput, pendingImageUrls.length, isSubmitting, buildMessageContent, clearInput]);
 
-  return {
+  return useMemo(() => ({
     messageInput,
     setMessageInput,
     pendingImageUrls,
-    uploadQueue,
-    uploadStats,
     showUploadProgress,
     setShowUploadProgress,
     uploadFiles,
@@ -152,5 +150,22 @@ export function useChatInput(
     clearInput,
     handleSubmit,
     isSubmitting
-  };
+  }), [
+    messageInput,
+    setMessageInput,
+    pendingImageUrls,
+    showUploadProgress,
+    setShowUploadProgress,
+    uploadFiles,
+    handlePaste,
+    removeImageUrl,
+    cancelUpload,
+    retryUpload,
+    getCompletedUploads,
+    mentionProps,
+    buildMessageContent,
+    clearInput,
+    handleSubmit,
+    isSubmitting
+  ]);
 }

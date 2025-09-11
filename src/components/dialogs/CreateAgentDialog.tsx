@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, ChevronLeft, ChevronRight, Wrench, Server } from 'lucide-react'
+import { Loader2, ChevronLeft, ChevronRight, Wrench, Server, Plus, X, Layers } from 'lucide-react'
 import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition'
 import ReactMarkdown from 'react-markdown'
 import { ToolSelector } from '@/components/common/ToolSelector'
@@ -26,7 +26,7 @@ interface CreateAgentDialogProps {
   forkFromAgent?: NDKAgentDefinition
 }
 
-type WizardStep = 'basics' | 'prompt' | 'preview' | 'tools' | 'criteria'
+type WizardStep = 'basics' | 'prompt' | 'preview' | 'tools' | 'phases' | 'criteria'
 
 export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateAgentDialogProps) {
   const { ndk } = useNDK()
@@ -46,6 +46,7 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
     slug: '',
     tools: [] as string[],
     mcpServers: [] as string[],
+    phases: [] as Array<{ name: string; instructions: string }>,
   })
 
   // Load fork data when agent changes
@@ -65,6 +66,7 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         slug: forkFromAgent.slug || '',
         tools: forkFromAgent.tools || [],
         mcpServers: forkFromAgent.mcpServers || [],
+        phases: forkFromAgent.phases || [],
       })
     } else {
       // Reset form when not forking
@@ -78,6 +80,7 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         slug: '',
         tools: [],
         mcpServers: [],
+        phases: [],
       })
     }
     // Reset to first step when dialog opens/closes
@@ -126,6 +129,7 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
       agent.slug = agentData.slug || undefined
       agent.tools = agentData.tools
       agent.mcpServers = agentData.mcpServers
+      agent.phases = agentData.phases
 
       // If forking, add an "e" tag to reference the previous version
       if (forkFromAgent) {
@@ -148,6 +152,7 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         slug: '',
         tools: [],
         mcpServers: [],
+        phases: [],
       })
     } catch {
       console.error('Failed to save agent')
@@ -166,6 +171,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
       case 'preview':
         return true
       case 'tools':
+        return true
+      case 'phases':
         return true
       case 'criteria':
         return true
@@ -188,6 +195,9 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         setCurrentStep('tools')
         break
       case 'tools':
+        setCurrentStep('phases')
+        break
+      case 'phases':
         setCurrentStep('criteria')
         break
       case 'criteria':
@@ -207,8 +217,11 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
       case 'tools':
         setCurrentStep('preview')
         break
-      case 'criteria':
+      case 'phases':
         setCurrentStep('tools')
+        break
+      case 'criteria':
+        setCurrentStep('phases')
         break
     }
   }
@@ -223,6 +236,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         return 'Preview System Prompt'
       case 'tools':
         return 'Tools & MCP Servers'
+      case 'phases':
+        return 'Phase Definitions'
       case 'criteria':
         return 'Use Criteria & Version'
       default:
@@ -240,6 +255,8 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         return 'Review how your system prompt will be displayed'
       case 'tools':
         return 'Select tools and MCP servers this agent requires'
+      case 'phases':
+        return 'Define project phases for PM agents (optional)'
       case 'criteria':
         return 'Define when this agent should be used and set version'
       default:
@@ -442,6 +459,83 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
                     <p className="text-sm text-muted-foreground text-center py-4">
                       No MCP servers available. Create MCP tool events first.
                     </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 'phases' && (
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label>Phase Definitions</Label>
+                <div className="text-sm text-muted-foreground mb-2">
+                  Define project phases for PM agents. Each phase has a name and instructions.
+                </div>
+                
+                <div className="space-y-3">
+                  {agentData.phases.map((phase, index) => (
+                    <div key={index} className="border border-border rounded-lg p-4 space-y-3">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 space-y-3">
+                          <Input
+                            value={phase.name}
+                            onChange={(e) => {
+                              const newPhases = [...agentData.phases]
+                              newPhases[index].name = e.target.value
+                              setAgentData({ ...agentData, phases: newPhases })
+                            }}
+                            placeholder="Phase name (e.g., Discovery, Development, Testing)"
+                            className="font-medium"
+                          />
+                          <Textarea
+                            value={phase.instructions}
+                            onChange={(e) => {
+                              const newPhases = [...agentData.phases]
+                              newPhases[index].instructions = e.target.value
+                              setAgentData({ ...agentData, phases: newPhases })
+                            }}
+                            placeholder="Instructions for this phase..."
+                            rows={3}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const newPhases = agentData.phases.filter((_, i) => i !== index)
+                            setAgentData({ ...agentData, phases: newPhases })
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setAgentData({
+                        ...agentData,
+                        phases: [...agentData.phases, { name: '', instructions: '' }]
+                      })
+                    }}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Phase
+                  </Button>
+                  
+                  {agentData.phases.length === 0 && (
+                    <div className="text-center py-6 border border-dashed rounded-lg">
+                      <Layers className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        No phases defined. Phases are optional and typically used for PM agents.
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>

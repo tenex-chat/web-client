@@ -18,7 +18,7 @@ function AgentDisplay({
   onRemove,
   canRemove
 }: { 
-  projectAgent: { slug?: string; ndkAgentEventId: string }
+  projectAgent: { ndkAgentEventId: string }
   isProjectManager: boolean
   onRemove: () => void
   canRemove: boolean
@@ -26,7 +26,7 @@ function AgentDisplay({
   // Subscribe to the agent definition event in real-time
   const { events } = useSubscribe(
     projectAgent.ndkAgentEventId ? [{ 
-      "#e": [projectAgent.ndkAgentEventId]
+      "ids": [projectAgent.ndkAgentEventId]
     }] : [],
     { closeOnEose: false }
   )
@@ -38,7 +38,6 @@ function AgentDisplay({
   const profile = useProfile(agentPubkey || '')
   
   const displayName = agentDefinition?.name || 
-                      projectAgent.slug || 
                       profile?.displayName || 
                       profile?.name || 
                       ''
@@ -47,27 +46,14 @@ function AgentDisplay({
                      agentDefinition?.content || 
                      ''
   
-  const avatarUrl = profile?.image || profile?.picture
-  
   const truncateEventId = (eventId: string) => {
     if (!eventId) return 'Unknown'
     if (eventId.length <= 20) return eventId
     return `${eventId.slice(0, 12)}...${eventId.slice(-6)}`
   }
   
-  // Don't show anything if no data yet (following NDK best practices)
-  if (!agentDefinition && !projectAgent.slug) {
-    return null
-  }
-  
   return (
     <div className="flex items-start gap-3 p-3 rounded-md border bg-card hover:bg-accent/50 transition-colors">
-      <Avatar className="h-10 w-10 mt-0.5">
-        <AvatarImage src={avatarUrl} alt={displayName} />
-        <AvatarFallback>
-          <Bot className="h-5 w-5" />
-        </AvatarFallback>
-      </Avatar>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <div className="font-medium truncate">
@@ -80,11 +66,6 @@ function AgentDisplay({
             </div>
           )}
         </div>
-        {projectAgent.slug && (
-          <div className="text-sm text-muted-foreground">
-            Slug: {projectAgent.slug}
-          </div>
-        )}
         {description && (
           <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
             {description}
@@ -131,7 +112,7 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
   const agentEventIds = projectAgents.map(agent => agent.ndkAgentEventId).filter(Boolean)
   const { events: agentEvents } = useSubscribe(
     agentEventIds.length > 0 ? [{
-      "#e": agentEventIds
+      "ids": agentEventIds
     }] : [],
     { closeOnEose: false }
   )
@@ -145,7 +126,7 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
   
   // Set initial PM (first agent) when agents change
   if (projectAgents.length > 0 && !selectedPM) {
-    setSelectedPM(projectAgents[0].slug || projectAgents[0].ndkAgentEventId)
+    setSelectedPM(projectAgents[0].ndkAgentEventId)
   }
 
   const handleUpdatePM = async () => {
@@ -156,7 +137,6 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
       // Get current agent tags
       const agentTags = project.tags.filter(tag => tag[0] === 'agent')
       
-      // Find the new PM tag by matching slug or event ID
       const newPMTagIndex = agentTags.findIndex(tag => 
         tag[2] === selectedPM || tag[1] === selectedPM
       )
@@ -186,7 +166,7 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
     }
   }
 
-  const handleRemoveAgent = async (agentToRemove: { slug?: string; ndkAgentEventId: string }) => {
+  const handleRemoveAgent = async (agentToRemove: { ndkAgentEventId: string }) => {
     if (!ndk || !project) return
     
     // Can't remove the PM without reassigning first
@@ -206,8 +186,7 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
       // Filter out the agent tag to remove
       const newTags = project.tags.filter(tag => {
         if (tag[0] !== 'agent') return true
-        // Check both slug and event ID
-        return tag[2] !== agentToRemove.slug && tag[1] !== agentToRemove.ndkAgentEventId
+        return tag[1] !== agentToRemove.ndkAgentEventId
       })
       
       // Update project
@@ -221,13 +200,13 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
     }
   }
 
-  const getAgentIdentifier = (agent: { slug?: string; ndkAgentEventId: string }) => {
-    return agent.slug || agent.ndkAgentEventId
+  const getAgentIdentifier = (agent: { ndkAgentEventId: string }) => {
+    return agent.ndkAgentEventId
   }
   
-  const getAgentDisplayName = (agent: { slug?: string; ndkAgentEventId: string }) => {
+  const getAgentDisplayName = (agent: { ndkAgentEventId: string }) => {
     const definition = agentDefinitionsMap.get(agent.ndkAgentEventId)
-    return definition?.name || agent.slug || 'Unknown Agent'
+    return definition?.name || 'Unknown Agent'
   }
 
   return (

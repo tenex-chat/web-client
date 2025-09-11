@@ -6,7 +6,6 @@ import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
 import { ChatDropZone } from "./ChatDropZone";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
-import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { toast } from "sonner";
 import type { AgentInstance } from "@/types/agent";
@@ -29,7 +28,6 @@ interface ChatInterfaceProps {
   className?: string;
   onBack?: () => void;
   onDetach?: () => void;
-  onTaskClick?: (task: NDKTask) => void;
   onThreadCreated?: (thread: NDKEvent) => void;
   onVoiceCallClick?: () => void;
 }
@@ -44,7 +42,6 @@ function ChatInterfaceInner({
   className,
   onBack,
   onDetach,
-  onTaskClick,
   onThreadCreated,
   onVoiceCallClick,
 }: ChatInterfaceProps) {
@@ -112,9 +109,6 @@ function ChatInterfaceInner({
 
   // Message management
   const messages = useChatMessages(localRootEvent);
-
-  // Check if the root event is a task
-  const isRootEventTask = localRootEvent?.kind === NDKTask.kind;
 
   // Scroll management
   const scrollProps = useChatScroll(messages);
@@ -202,6 +196,8 @@ function ChatInterfaceInner({
 
   const isNewThread = !localRootEvent;
 
+  console.log('🔄 ChatInterface render - messages count:', messages?.length || 0, 'localRootEvent:', localRootEvent?.id?.slice(0,8) || 'none');
+
   return (
     <ChatDropZone
       className={cn("flex flex-col h-full overflow-hidden", className)}
@@ -227,16 +223,13 @@ function ChatInterfaceInner({
         <ChatMessageList
           messages={messages}
           project={project}
-          ndk={ndk ?? undefined}
           scrollAreaRef={scrollProps.scrollAreaRef}
           showScrollToBottom={scrollProps.showScrollToBottom}
           unreadCount={scrollProps.unreadCount}
           scrollToBottom={scrollProps.scrollToBottom}
           onScroll={scrollProps.handleScroll}
-          onTaskClick={onTaskClick}
           onReplyFocus={() => textareaRef.current?.focus()}
           isNewThread={isNewThread}
-          isRootEventTask={isRootEventTask}
           autoTTS={autoTTS}
           currentUserPubkey={user?.pubkey}
           onNavigate={pushToStack}

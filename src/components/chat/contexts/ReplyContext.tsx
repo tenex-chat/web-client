@@ -26,7 +26,15 @@ export function ReplyProvider({ children }: { children: ReactNode }) {
 export function useReply() {
   const context = useContext(ReplyContext);
   if (!context) {
-    throw new Error('useReply must be used within a ReplyProvider');
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('useReply used outside ReplyProvider — reply actions will be no-ops.');
+    }
+    return {
+      replyingTo: null,
+      setReplyingTo: () => {},
+      clearReply: () => {}
+    };
   }
   return context;
 }

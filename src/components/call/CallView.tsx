@@ -364,7 +364,8 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
           transcript,
           [agentToTag],
           [],
-          true // Auto-TTS enabled for voice mode
+          true, // Auto-TTS enabled for voice mode
+          agentToTag.pubkey // Target agent
         )
         
         if (newThread) {
@@ -377,7 +378,8 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
           [agentToTag],
           [],
           true,
-          messages
+          messages,
+          agentToTag.pubkey // Target agent
         )
       }
       

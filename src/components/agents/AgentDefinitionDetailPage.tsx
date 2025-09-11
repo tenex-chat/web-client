@@ -12,6 +12,7 @@ import {
   Users,
   Wrench,
   Server,
+  Layers,
 } from "lucide-react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
@@ -172,6 +173,15 @@ export function AgentDefinitionDetailPage() {
                   <Users className="w-4 h-4 mr-2" />
                   Agent Instances
                 </TabsTrigger>
+                {agent.phases && agent.phases.length > 0 && (
+                  <TabsTrigger
+                    value="phases"
+                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-12"
+                  >
+                    <Layers className="w-4 h-4 mr-2" />
+                    Phases ({agent.phases.length})
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
           </div>
@@ -342,6 +352,40 @@ export function AgentDefinitionDetailPage() {
                     </div>
                   </CardContent>
                 </Card>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="phases" className="flex-1 mt-0">
+            <ScrollArea className="h-full">
+              <div className="max-w-4xl mx-auto p-4">
+                {agent.phases && agent.phases.length > 0 ? (
+                  <div className="space-y-4">
+                    {agent.phases.map((phase, index) => (
+                      <Card key={index}>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              Phase {index + 1}
+                            </Badge>
+                            {phase.name}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown>{phase.instructions}</ReactMarkdown>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<Layers className="w-12 h-12" />}
+                    title="No phases defined"
+                    description="This agent does not have any phase definitions."
+                  />
+                )}
               </div>
             </ScrollArea>
           </TabsContent>

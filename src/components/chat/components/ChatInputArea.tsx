@@ -11,6 +11,8 @@ import { VoiceDialog } from "@/components/dialogs/VoiceDialog";
 import { ImageUploadQueue } from "@/components/upload/ImageUploadQueue";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import { useAtom } from "jotai";
+import { uploadQueueAtom, uploadStatisticsAtom } from "@/stores/blossomStore";
 import { useReply } from "../contexts/ReplyContext";
 import { NostrProfile } from "@/components/common/NostrProfile";
 import { AgentSelector } from "./AgentSelector";
@@ -54,6 +56,10 @@ export const ChatInputArea = memo(function ChatInputArea({
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const { replyingTo, clearReply } = useReply();
   
+  // Use atoms directly for upload queue and stats
+  const [uploadQueue] = useAtom(uploadQueueAtom);
+  const [uploadStats] = useAtom(uploadStatisticsAtom);
+  
   // Reset agent selection when conversation (localRootEvent) changes
   React.useEffect(() => {
     setSelectedAgent(null);
@@ -91,7 +97,6 @@ export const ChatInputArea = memo(function ChatInputArea({
     setMessageInput,
     pendingImageUrls,
     removeImageUrl,
-    uploadQueue,
     uploadFiles,
     handlePaste,
     cancelUpload,
@@ -161,6 +166,8 @@ export const ChatInputArea = memo(function ChatInputArea({
     },
     [handlePaste, setShowUploadProgress],
   );
+
+  console.log('🔄 ChatInputArea render - messageInput changed:', messageInput?.length || 0, 'chars')
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Handle escape to cancel reply
@@ -491,7 +498,7 @@ export const ChatInputArea = memo(function ChatInputArea({
       {/* Upload Queue Overlay */}
       <AnimatePresence>
         {inputProps.showUploadProgress &&
-          inputProps.uploadStats.total > 0 && (
+          uploadStats.total > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

@@ -1,13 +1,17 @@
-import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Bot, LogOut, Settings } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { useNDKCurrentUser, useNDKSessionLogout, useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AISettings } from '@/components/settings/AISettings';
-import { AppearanceSettings } from '@/components/settings/AppearanceSettings';
-import { NotificationSettings } from '@/components/settings/NotificationSettings';
-import { BlossomSettings } from '@/components/settings/BlossomSettings'
+import { useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Bot, LogOut, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  useNDKCurrentUser,
+  useNDKSessionLogout,
+  useCurrentUserProfile,
+} from "@nostr-dev-kit/ndk-hooks";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AISettings } from "@/components/settings/AISettings";
+import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
+import { NotificationSettings } from "@/components/settings/NotificationSettings";
+import { BlossomSettings } from "@/components/settings/BlossomSettings";
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -16,14 +20,14 @@ export function SettingsPage() {
   const userProfile = useCurrentUserProfile();
 
   const handleBack = () => {
-    navigate({ to: '/' });
+    navigate({ to: "/" });
   };
 
   const handleLogout = () => {
     if (user) {
       ndkLogout(user.pubkey);
     }
-    navigate({ to: '/login' });
+    navigate({ to: "/login" });
   };
 
   return (
@@ -32,11 +36,7 @@ export function SettingsPage() {
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-            >
+            <Button variant="ghost" size="icon" onClick={handleBack}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-2xl font-bold">Settings</h1>
@@ -59,26 +59,38 @@ export function SettingsPage() {
           {/* Account Settings */}
           <TabsContent value="account" className="space-y-6">
             <Card className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Account Information</h2>
-              
+              <h2 className="text-lg font-semibold mb-4">
+                Account Information
+              </h2>
+
               {/* User Profile */}
               {userProfile && (
                 <div className="space-y-4">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Display Name</p>
-                    <p className="font-medium">{userProfile.name || userProfile.displayName || 'Anonymous'}</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Display Name
+                    </p>
+                    <p className="font-medium">
+                      {userProfile.name ||
+                        userProfile.displayName ||
+                        "Anonymous"}
+                    </p>
                   </div>
-                  
+
                   {userProfile.nip05 && (
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">NIP-05 Identifier</p>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        NIP-05 Identifier
+                      </p>
                       <p className="font-medium">{userProfile.nip05}</p>
                     </div>
                   )}
-                  
+
                   {userProfile.lud16 && (
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Lightning Address</p>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Lightning Address
+                      </p>
                       <p className="font-medium">{userProfile.lud16}</p>
                     </div>
                   )}
@@ -89,7 +101,9 @@ export function SettingsPage() {
               {user && (
                 <div className="mt-6 space-y-4">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Public Key</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Public Key
+                    </p>
                     <p className="font-mono text-xs break-all bg-muted p-2 rounded">
                       {user.npub}
                     </p>
@@ -140,20 +154,20 @@ export function SettingsPage() {
               <p className="text-muted-foreground mb-6">
                 Manage your AI agents and their configurations
               </p>
-              
+
               <div className="space-y-4">
                 <Button
                   variant="outline"
-                  onClick={() => navigate({ to: '/agents' })}
+                  onClick={() => navigate({ to: "/agents" })}
                   className="w-full justify-start"
                 >
                   <Bot className="h-4 w-4 mr-2" />
                   View All Agents
                 </Button>
-                
+
                 <Button
                   variant="outline"
-                  onClick={() => navigate({ to: '/agents/requests' })}
+                  onClick={() => navigate({ to: "/agents/requests" })}
                   className="w-full justify-start"
                 >
                   <Settings className="h-4 w-4 mr-2" />

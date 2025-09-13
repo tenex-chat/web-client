@@ -3,32 +3,32 @@
  */
 
 export interface FileValidationOptions {
-  maxSizeMB?: number
-  allowedTypes?: string[]
-  imageOnly?: boolean
+  maxSizeMB?: number;
+  allowedTypes?: string[];
+  imageOnly?: boolean;
 }
 
 export interface FileValidationResult {
-  valid: boolean
-  error?: string
+  valid: boolean;
+  error?: string;
 }
 
-export const DEFAULT_MAX_SIZE_MB = 50 // Standardized to 50MB across the app
+export const DEFAULT_MAX_SIZE_MB = 50; // Standardized to 50MB across the app
 export const SUPPORTED_IMAGE_TYPES = [
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'image/svg+xml',
-  'image/bmp'
-]
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/svg+xml",
+  "image/bmp",
+];
 
 /**
  * Check if a file is an image
  */
 export function isImageFile(file: File): boolean {
-  return file.type.startsWith('image/')
+  return file.type.startsWith("image/");
 }
 
 /**
@@ -36,40 +36,40 @@ export function isImageFile(file: File): boolean {
  */
 export function validateFile(
   file: File,
-  options: FileValidationOptions = {}
+  options: FileValidationOptions = {},
 ): FileValidationResult {
   const {
     maxSizeMB = DEFAULT_MAX_SIZE_MB,
     allowedTypes = SUPPORTED_IMAGE_TYPES,
-    imageOnly = true
-  } = options
+    imageOnly = true,
+  } = options;
 
   // Check file size
-  const maxSizeBytes = maxSizeMB * 1024 * 1024
+  const maxSizeBytes = maxSizeMB * 1024 * 1024;
   if (file.size > maxSizeBytes) {
     return {
       valid: false,
-      error: `File is too large (max ${maxSizeMB}MB)`
-    }
+      error: `File is too large (max ${maxSizeMB}MB)`,
+    };
   }
 
   // Check if image-only mode
   if (imageOnly && !isImageFile(file)) {
     return {
       valid: false,
-      error: 'File is not an image'
-    }
+      error: "File is not an image",
+    };
   }
 
   // Check allowed types
   if (allowedTypes.length > 0 && !allowedTypes.includes(file.type)) {
     return {
       valid: false,
-      error: `Unsupported file type: ${file.type}`
-    }
+      error: `Unsupported file type: ${file.type}`,
+    };
   }
 
-  return { valid: true }
+  return { valid: true };
 }
 
 /**
@@ -77,35 +77,35 @@ export function validateFile(
  */
 export function validateFiles(
   files: File[],
-  options: FileValidationOptions = {}
+  options: FileValidationOptions = {},
 ): {
-  validFiles: File[]
-  errors: Array<{ file: string; error: string }>
+  validFiles: File[];
+  errors: Array<{ file: string; error: string }>;
 } {
-  const validFiles: File[] = []
-  const errors: Array<{ file: string; error: string }> = []
+  const validFiles: File[] = [];
+  const errors: Array<{ file: string; error: string }> = [];
 
   for (const file of files) {
-    const result = validateFile(file, options)
+    const result = validateFile(file, options);
     if (result.valid) {
-      validFiles.push(file)
+      validFiles.push(file);
     } else {
       errors.push({
         file: file.name,
-        error: result.error || 'Invalid file'
-      })
+        error: result.error || "Invalid file",
+      });
     }
   }
 
-  return { validFiles, errors }
+  return { validFiles, errors };
 }
 
 /**
  * Get human-readable file size
  */
 export function getFileSize(bytes: number): string {
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  if (bytes === 0) return '0 Bytes'
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  if (bytes === 0) return "0 Bytes";
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + " " + sizes[i];
 }

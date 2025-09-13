@@ -6,11 +6,11 @@
 export function slugify(text: string): string {
   const slug = text
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .trim()
-  
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .trim();
+
   // Remove leading and trailing hyphens
-  return slug.replace(/^-+|-+$/g, '')
+  return slug.replace(/^-+|-+$/g, "");
 }

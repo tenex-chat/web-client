@@ -20,26 +20,26 @@ export function AgentPacksPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // Fetch all packs (kind 34199)
-  const { events: rawPacks } = useSubscribe(
-    [{ kinds: [NDKAgentDefinitionPack.kind as NDKKind] }]
-  );
+  const { events: rawPacks } = useSubscribe([
+    { kinds: [NDKAgentDefinitionPack.kind as NDKKind] },
+  ]);
 
   // Convert raw events to NDKAgentDefinitionPack instances
   const packs = useMemo(() => {
     return (rawPacks || []).map(
-      (event) => new NDKAgentDefinitionPack(ndk || undefined, event.rawEvent())
+      (event) => new NDKAgentDefinitionPack(ndk || undefined, event.rawEvent()),
     );
   }, [rawPacks, ndk]);
 
   // Filter packs based on search query
   const filteredPacks = useMemo(() => {
     if (!searchQuery) return packs;
-    
+
     const query = searchQuery.toLowerCase();
     return packs.filter(
       (pack) =>
         pack.title?.toLowerCase().includes(query) ||
-        pack.description?.toLowerCase().includes(query)
+        pack.description?.toLowerCase().includes(query),
     );
   }, [packs, searchQuery]);
 
@@ -47,7 +47,7 @@ export function AgentPacksPage() {
     const naddr = pack.encode();
     navigate({
       to: "/agents/packs/$naddr",
-      params: { naddr }
+      params: { naddr },
     });
   };
 
@@ -90,11 +90,7 @@ export function AgentPacksPage() {
           {filteredPacks.length === 0 ? (
             <EmptyState
               icon={<Package className="w-12 h-12" />}
-              title={
-                searchQuery
-                  ? "No packs found"
-                  : "No agent packs yet"
-              }
+              title={searchQuery ? "No packs found" : "No agent packs yet"}
               description={
                 searchQuery
                   ? "Try adjusting your search query"

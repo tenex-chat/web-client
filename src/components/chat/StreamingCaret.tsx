@@ -1,7 +1,7 @@
-import { cn } from '@/lib/utils'
+import { cn } from "@/lib/utils";
 
 interface StreamingCaretProps {
-  className?: string
+  className?: string;
 }
 
 /**
@@ -16,15 +16,15 @@ export function StreamingCaret({ className }: StreamingCaretProps) {
           51%, 100% { opacity: 0; }
         }
       `}</style>
-      <span 
+      <span
         className={cn(
           "inline-block w-0.5 h-4 bg-foreground/70 align-text-bottom",
-          className
+          className,
         )}
         style={{
-          animation: 'blink-caret 1s infinite',
+          animation: "blink-caret 1s infinite",
         }}
       />
     </>
-  )
+  );
 }

@@ -3,10 +3,12 @@
  */
 export function getRoleColor(role: string | undefined): string {
   if (!role) return "bg-gray-500/10 text-gray-500";
-  
+
   // Generate a hash from the role string
-  const hash = role.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  
+  const hash = role
+    .split("")
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
   // Define color classes
   const colors = [
     "bg-blue-500/10 text-blue-500",
@@ -19,7 +21,7 @@ export function getRoleColor(role: string | undefined): string {
     "bg-red-500/10 text-red-500",
     "bg-teal-500/10 text-teal-500",
   ];
-  
+
   // Use modulo to select a color deterministically
   return colors[hash % colors.length];
 }

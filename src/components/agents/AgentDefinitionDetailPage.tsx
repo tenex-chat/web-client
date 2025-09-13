@@ -60,12 +60,12 @@ export function AgentDefinitionDetailPage() {
     mcpEventIds.length > 0
       ? [{ ids: mcpEventIds, kinds: [4200 as NDKKind] }]
       : [],
-    { closeOnEose: true }
+    { closeOnEose: true },
   );
 
   const mcpTools = useMemo(() => {
     if (!mcpEvents || mcpEvents.length === 0) return [];
-    return mcpEvents.map(event => NDKMCPTool.from(event));
+    return mcpEvents.map((event) => NDKMCPTool.from(event));
   }, [mcpEvents]);
 
   const handleBack = () => {
@@ -253,7 +253,9 @@ export function AgentDefinitionDetailPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <Wrench className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Direct Tools</span>
+                        <span className="text-sm font-medium">
+                          Direct Tools
+                        </span>
                       </div>
                       {agent.tools.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
@@ -264,7 +266,9 @@ export function AgentDefinitionDetailPage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No direct tools configured</p>
+                        <p className="text-sm text-muted-foreground">
+                          No direct tools configured
+                        </p>
                       )}
                     </div>
 
@@ -320,7 +324,9 @@ export function AgentDefinitionDetailPage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No MCP servers configured</p>
+                        <p className="text-sm text-muted-foreground">
+                          No MCP servers configured
+                        </p>
                       )}
                     </div>
                   </CardContent>

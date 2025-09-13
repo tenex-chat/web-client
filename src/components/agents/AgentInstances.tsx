@@ -28,27 +28,29 @@ export function AgentInstances({ agentDefinitionId }: AgentInstancesProps) {
   // Parse profile events to get agent instances with their projects
   const agentInstances = useMemo(() => {
     const projectsMap = useProjectsStore.getState().projects;
-    
+
     return profileEvents.map((event) => {
       // Extract project from "a" tags (NIP-33 reference format: kind:pubkey:d-tag)
-      const projectTag = event.tags.find(tag => tag[0] === 'a' && tag[1]?.startsWith('31933:'));
+      const projectTag = event.tags.find(
+        (tag) => tag[0] === "a" && tag[1]?.startsWith("31933:"),
+      );
       let projectInfo = null;
-      
+
       if (projectTag) {
         // Parse the NIP-33 reference
-        const [, , dTag] = projectTag[1].split(':');
+        const [, , dTag] = projectTag[1].split(":");
         if (dTag) {
           const project = projectsMap.get(dTag);
           if (project) {
             projectInfo = {
               dTag,
               title: project.title,
-              picture: project.picture
+              picture: project.picture,
             };
           }
         }
       }
-      
+
       try {
         const profile = JSON.parse(event.content);
         return {
@@ -121,7 +123,7 @@ export function AgentInstances({ agentDefinitionId }: AgentInstancesProps) {
                     </p>
                   )}
                   {agent.project && (
-                    <div 
+                    <div
                       className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded hover:bg-muted/70 transition-colors cursor-pointer"
                       onClick={(e) => handleProjectClick(e, agent.project.dTag)}
                     >

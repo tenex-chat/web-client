@@ -1,11 +1,11 @@
-import { toast } from 'sonner'
+import { toast } from "sonner";
 
 interface AsyncHandlerOptions {
-  loadingMessage?: string
-  successMessage?: string
-  errorMessage?: string
-  onSuccess?: () => void
-  onError?: (error: Error) => void
+  loadingMessage?: string;
+  successMessage?: string;
+  errorMessage?: string;
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
 }
 
 /**
@@ -16,41 +16,41 @@ interface AsyncHandlerOptions {
  */
 export async function handleAsync<T>(
   fn: () => Promise<T>,
-  options: AsyncHandlerOptions = {}
+  options: AsyncHandlerOptions = {},
 ): Promise<T | undefined> {
   const {
     loadingMessage,
-    successMessage = 'Operation completed successfully',
-    errorMessage = 'Operation failed',
+    successMessage = "Operation completed successfully",
+    errorMessage = "Operation failed",
     onSuccess,
-    onError
-  } = options
+    onError,
+  } = options;
 
-  const toastId = loadingMessage ? toast.loading(loadingMessage) : undefined
+  const toastId = loadingMessage ? toast.loading(loadingMessage) : undefined;
 
   try {
-    const result = await fn()
-    
+    const result = await fn();
+
     if (toastId) {
-      toast.success(successMessage, { id: toastId })
+      toast.success(successMessage, { id: toastId });
     } else if (successMessage) {
-      toast.success(successMessage)
+      toast.success(successMessage);
     }
-    
-    onSuccess?.()
-    return result
+
+    onSuccess?.();
+    return result;
   } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error))
-    
+    const err = error instanceof Error ? error : new Error(String(error));
+
     if (toastId) {
-      toast.error(errorMessage, { id: toastId })
+      toast.error(errorMessage, { id: toastId });
     } else {
-      toast.error(errorMessage)
+      toast.error(errorMessage);
     }
-    
-    console.error(errorMessage, err)
-    onError?.(err)
-    return undefined
+
+    console.error(errorMessage, err);
+    onError?.(err);
+    return undefined;
   }
 }
 
@@ -60,19 +60,18 @@ export async function handleAsync<T>(
  * @param delay Debounce delay in milliseconds
  * @returns A debounced version of the function
  */
-export function createDebouncedAsync<T extends (...args: any[]) => Promise<any>>(
-  fn: T,
-  delay: number = 300
-): (...args: Parameters<T>) => void {
-  let timeoutId: NodeJS.Timeout | undefined
+export function createDebouncedAsync<
+  T extends (...args: any[]) => Promise<any>,
+>(fn: T, delay: number = 300): (...args: Parameters<T>) => void {
+  let timeoutId: NodeJS.Timeout | undefined;
 
   return (...args: Parameters<T>) => {
     if (timeoutId) {
-      clearTimeout(timeoutId)
+      clearTimeout(timeoutId);
     }
 
     timeoutId = setTimeout(() => {
-      fn(...args)
-    }, delay)
-  }
+      fn(...args);
+    }, delay);
+  };
 }

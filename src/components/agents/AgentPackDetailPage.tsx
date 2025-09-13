@@ -49,7 +49,9 @@ export function AgentPackDetailPage() {
     );
   }
 
-  const backgroundColor = pack.image ? undefined : getPackColor(pack.id || pack.title || 'default');
+  const backgroundColor = pack.image
+    ? undefined
+    : getPackColor(pack.id || pack.title || "default");
 
   return (
     <div className="flex-1 flex flex-col">
@@ -57,15 +59,15 @@ export function AgentPackDetailPage() {
       <div className="relative h-64 overflow-hidden">
         {pack.image ? (
           <>
-            <img 
-              src={pack.image} 
-              alt={pack.title || 'Pack cover'} 
+            <img
+              src={pack.image}
+              alt={pack.title || "Pack cover"}
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
           </>
         ) : (
-          <div 
+          <div
             className="w-full h-full flex items-center justify-center"
             style={{ backgroundColor }}
           >
@@ -88,27 +90,28 @@ export function AgentPackDetailPage() {
         <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
           <div className="max-w-6xl mx-auto">
             <h1 className="text-3xl font-bold mb-2">
-              {pack.title || 'Untitled Pack'}
+              {pack.title || "Untitled Pack"}
             </h1>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8 border-2 border-white/20">
-                  <AvatarImage 
-                    src={profile?.image || profile?.picture} 
-                    alt={profile?.name || 'Author'} 
+                  <AvatarImage
+                    src={profile?.image || profile?.picture}
+                    alt={profile?.name || "Author"}
                   />
                   <AvatarFallback className="text-xs bg-white/20">
-                    {profile?.name?.[0]?.toUpperCase() || '?'}
+                    {profile?.name?.[0]?.toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>
                 <span className="font-medium">
-                  {profile?.name || profile?.displayName || 'Anonymous'}
+                  {profile?.name || profile?.displayName || "Anonymous"}
                 </span>
               </div>
               <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
                 <span className="text-sm">
-                  {pack.agentEventIds.length} agent{pack.agentEventIds.length !== 1 ? 's' : ''}
+                  {pack.agentEventIds.length} agent
+                  {pack.agentEventIds.length !== 1 ? "s" : ""}
                 </span>
               </div>
             </div>
@@ -121,7 +124,7 @@ export function AgentPackDetailPage() {
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <p className="text-muted-foreground">
-              {pack.description || 'No description available'}
+              {pack.description || "No description available"}
             </p>
             <div className="flex gap-2">
               {user && (
@@ -161,10 +164,7 @@ export function AgentPackDetailPage() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {pack.agentEventIds.map((agentId) => (
-                <AgentDefinitionFromId
-                  key={agentId}
-                  eventId={agentId}
-                />
+                <AgentDefinitionFromId key={agentId} eventId={agentId} />
               ))}
             </div>
           )}

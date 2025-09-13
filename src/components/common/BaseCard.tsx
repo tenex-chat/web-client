@@ -1,6 +1,6 @@
-import React from 'react';
-import { Card } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import React from "react";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface BaseCardProps {
   onClick?: () => void;
@@ -32,9 +32,9 @@ export function BaseCard({
   return (
     <Card
       className={cn(
-        'p-4 transition-all',
-        onClick && 'cursor-pointer hover:shadow-md hover:scale-[1.01]',
-        className
+        "p-4 transition-all",
+        onClick && "cursor-pointer hover:shadow-md hover:scale-[1.01]",
+        className,
       )}
       onClick={onClick}
     >
@@ -48,7 +48,7 @@ export function BaseCard({
             )}
           </div>
         )}
-        
+
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -63,24 +63,26 @@ export function BaseCard({
                 )}
               </div>
               {subtitle && (
-                <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {subtitle}
+                </p>
               )}
             </div>
             {rightContent}
           </div>
-          
+
           {description && (
             <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
               {description}
             </p>
           )}
-          
+
           {metadata && (
             <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
               {metadata}
             </div>
           )}
-          
+
           {footer}
         </div>
       </div>

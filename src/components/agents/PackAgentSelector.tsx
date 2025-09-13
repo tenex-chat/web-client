@@ -9,21 +9,25 @@ interface PackAgentSelectorProps {
   onToggle: () => void;
 }
 
-export function PackAgentSelector({ agentId, selected, onToggle }: PackAgentSelectorProps) {
+export function PackAgentSelector({
+  agentId,
+  selected,
+  onToggle,
+}: PackAgentSelectorProps) {
   const { ndk } = useNDK();
   const event = useEvent(agentId);
-  
+
   if (!event || !ndk) {
     return null;
   }
-  
+
   const agent = new NDKAgentDefinition(ndk, event);
-  
+
   return (
     <div
       className={cn(
         "relative rounded-lg transition-all cursor-pointer",
-        selected && "ring-2 ring-primary"
+        selected && "ring-2 ring-primary",
       )}
       onClick={onToggle}
     >

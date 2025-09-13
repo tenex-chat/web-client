@@ -1,90 +1,103 @@
-import { useCallback, useEffect } from 'react'
-import { useAtomValue } from 'jotai'
-import { activeProviderAtom, voiceSettingsAtom, openAIApiKeyAtom } from '@/stores/ai-config-store'
-import { aiService } from '@/services/ai/ai-service'
-import { toast } from 'sonner'
+import { useCallback, useEffect } from "react";
+import { useAtomValue } from "jotai";
+import {
+  activeProviderAtom,
+  voiceSettingsAtom,
+  openAIApiKeyAtom,
+} from "@/stores/ai-config-store";
+import { aiService } from "@/services/ai/ai-service";
+import { toast } from "sonner";
 
 export function useAI() {
-  const activeProvider = useAtomValue(activeProviderAtom)
-  const voiceSettings = useAtomValue(voiceSettingsAtom)
-  const openAIApiKey = useAtomValue(openAIApiKeyAtom)
+  const activeProvider = useAtomValue(activeProviderAtom);
+  const voiceSettings = useAtomValue(voiceSettingsAtom);
+  const openAIApiKey = useAtomValue(openAIApiKeyAtom);
 
   // Update AI service when provider changes
   useEffect(() => {
     if (activeProvider) {
-      aiService.setProvider(activeProvider)
+      aiService.setProvider(activeProvider);
     }
-  }, [activeProvider])
+  }, [activeProvider]);
 
   const cleanupText = useCallback(async (text: string): Promise<string> => {
     try {
-      return await aiService.cleanText(text)
+      return await aiService.cleanText(text);
     } catch (error) {
-      console.error('Text cleanup error:', error)
-      toast.error('Failed to clean up text')
+      console.error("Text cleanup error:", error);
+      toast.error("Failed to clean up text");
       // Return original text on error
-      return text
+      return text;
     }
-  }, [])
+  }, []);
 
-  const transcribe = useCallback(async (audio: Blob): Promise<string> => {
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key required for speech-to-text')
-    }
-    
-    try {
-      return await aiService.transcribe(audio, openAIApiKey)
-    } catch (error) {
-      console.error('Transcription error:', error)
-      throw error
-    }
-  }, [openAIApiKey])
+  const transcribe = useCallback(
+    async (audio: Blob): Promise<string> => {
+      if (!openAIApiKey) {
+        throw new Error("OpenAI API key required for speech-to-text");
+      }
 
-  const speak = useCallback(async (text: string): Promise<Blob> => {
-    if (!voiceSettings.enabled) {
-      throw new Error('Text-to-speech is disabled')
-    }
+      try {
+        return await aiService.transcribe(audio, openAIApiKey);
+      } catch (error) {
+        console.error("Transcription error:", error);
+        throw error;
+      }
+    },
+    [openAIApiKey],
+  );
 
-    const apiKey = voiceSettings.provider === 'openai' 
-      ? openAIApiKey 
-      : voiceSettings.apiKey
+  const speak = useCallback(
+    async (text: string): Promise<Blob> => {
+      if (!voiceSettings.enabled) {
+        throw new Error("Text-to-speech is disabled");
+      }
 
-    if (!apiKey) {
-      throw new Error(`${voiceSettings.provider} API key required for text-to-speech`)
-    }
+      const apiKey =
+        voiceSettings.provider === "openai"
+          ? openAIApiKey
+          : voiceSettings.apiKey;
 
-    if (!voiceSettings.voiceId) {
-      throw new Error('No voice selected')
-    }
+      if (!apiKey) {
+        throw new Error(
+          `${voiceSettings.provider} API key required for text-to-speech`,
+        );
+      }
 
-    try {
-      return await aiService.speak(
-        text, 
-        voiceSettings.voiceId, 
-        voiceSettings.provider,
-        apiKey
-      )
-    } catch (error) {
-      console.error('TTS error:', error)
-      throw error
-    }
-  }, [voiceSettings, openAIApiKey])
+      if (!voiceSettings.voiceId) {
+        throw new Error("No voice selected");
+      }
+
+      try {
+        return await aiService.speak(
+          text,
+          voiceSettings.voiceId,
+          voiceSettings.provider,
+          apiKey,
+        );
+      } catch (error) {
+        console.error("TTS error:", error);
+        throw error;
+      }
+    },
+    [voiceSettings, openAIApiKey],
+  );
 
   return {
     // Text operations
     cleanupText,
-    
+
     // Voice operations
     transcribe,
     speak,
-    
+
     // Configuration state
     hasProvider: !!activeProvider,
     hasTTS: voiceSettings.enabled && !!voiceSettings.voiceId,
     hasSTT: !!openAIApiKey,
-    
+
     // Settings
     voiceSettings,
-    activeProvider
-  }
+    activeProvider,
+  };
 }

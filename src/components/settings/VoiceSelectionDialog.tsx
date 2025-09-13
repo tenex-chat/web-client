@@ -1,21 +1,26 @@
-import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
-import { Loader2, Volume2 } from 'lucide-react'
-import { toast } from 'sonner'
-import { voiceDiscovery, type Voice } from '@/services/ai/voice-discovery'
-import { useAtomValue } from 'jotai'
-import { openAIApiKeyAtom } from '@/stores/ai-config-store'
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Loader2, Volume2 } from "lucide-react";
+import { toast } from "sonner";
+import { voiceDiscovery, type Voice } from "@/services/ai/voice-discovery";
+import { useAtomValue } from "jotai";
+import { openAIApiKeyAtom } from "@/stores/ai-config-store";
 
 interface VoiceSelectionDialogProps {
-  open: boolean
-  onClose: () => void
-  currentVoiceId: string | null
-  provider: 'openai' | 'elevenlabs'
-  apiKey?: string
-  onSelect: (voiceId: string) => void
+  open: boolean;
+  onClose: () => void;
+  currentVoiceId: string | null;
+  provider: "openai" | "elevenlabs";
+  apiKey?: string;
+  onSelect: (voiceId: string) => void;
 }
 
 export function VoiceSelectionDialog({
@@ -24,75 +29,80 @@ export function VoiceSelectionDialog({
   currentVoiceId,
   provider,
   apiKey,
-  onSelect
+  onSelect,
 }: VoiceSelectionDialogProps) {
-  const [voices, setVoices] = useState<Voice[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedVoiceId, setSelectedVoiceId] = useState<string>(currentVoiceId || '')
-  const [previewing, setPreviewingId] = useState<string | null>(null)
-  const openAIApiKey = useAtomValue(openAIApiKeyAtom)
+  const [voices, setVoices] = useState<Voice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>(
+    currentVoiceId || "",
+  );
+  const [previewing, setPreviewingId] = useState<string | null>(null);
+  const openAIApiKey = useAtomValue(openAIApiKeyAtom);
 
   // Use appropriate API key based on provider
-  const effectiveApiKey = provider === 'openai' ? openAIApiKey : apiKey
+  const effectiveApiKey = provider === "openai" ? openAIApiKey : apiKey;
 
   useEffect(() => {
     async function loadVoices() {
       if (!effectiveApiKey) {
-        toast.error(`${provider} API key is required`)
-        setLoading(false)
-        return
+        toast.error(`${provider} API key is required`);
+        setLoading(false);
+        return;
       }
 
       try {
-        setLoading(true)
-        const fetchedVoices = await voiceDiscovery.fetchVoices(provider, effectiveApiKey)
-        setVoices(fetchedVoices)
+        setLoading(true);
+        const fetchedVoices = await voiceDiscovery.fetchVoices(
+          provider,
+          effectiveApiKey,
+        );
+        setVoices(fetchedVoices);
       } catch (error) {
-        console.error('Failed to load voices:', error)
-        toast.error('Failed to load voices')
+        console.error("Failed to load voices:", error);
+        toast.error("Failed to load voices");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
     if (open) {
-      loadVoices()
+      loadVoices();
     }
-  }, [open, provider, effectiveApiKey])
+  }, [open, provider, effectiveApiKey]);
 
   const handlePreview = async (voiceId: string) => {
-    if (!effectiveApiKey) return
+    if (!effectiveApiKey) return;
 
-    setPreviewingId(voiceId)
+    setPreviewingId(voiceId);
     try {
       const audioBlob = await voiceDiscovery.previewVoice(
         provider,
         voiceId,
-        'Hello! This is a preview of my voice.',
-        effectiveApiKey
-      )
-      
-      const audioUrl = URL.createObjectURL(audioBlob)
-      const audio = new Audio(audioUrl)
-      await audio.play()
-      
+        "Hello! This is a preview of my voice.",
+        effectiveApiKey,
+      );
+
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      await audio.play();
+
       audio.onended = () => {
-        URL.revokeObjectURL(audioUrl)
-        setPreviewingId(null)
-      }
+        URL.revokeObjectURL(audioUrl);
+        setPreviewingId(null);
+      };
     } catch (error) {
-      console.error('Failed to preview voice:', error)
-      toast.error('Failed to preview voice')
-      setPreviewingId(null)
+      console.error("Failed to preview voice:", error);
+      toast.error("Failed to preview voice");
+      setPreviewingId(null);
     }
-  }
+  };
 
   const handleConfirm = () => {
     if (selectedVoiceId) {
-      onSelect(selectedVoiceId)
-      onClose()
+      onSelect(selectedVoiceId);
+      onClose();
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
@@ -111,14 +121,22 @@ export function VoiceSelectionDialog({
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-4">
-            <RadioGroup value={selectedVoiceId} onValueChange={setSelectedVoiceId}>
+            <RadioGroup
+              value={selectedVoiceId}
+              onValueChange={setSelectedVoiceId}
+            >
               {voices.map((voice) => (
-                <div key={voice.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50">
+                <div
+                  key={voice.id}
+                  className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50"
+                >
                   <RadioGroupItem value={voice.id} id={voice.id} />
                   <Label htmlFor={voice.id} className="flex-1 cursor-pointer">
                     <div className="font-medium">{voice.name}</div>
                     {voice.description && (
-                      <div className="text-sm text-muted-foreground">{voice.description}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {voice.description}
+                      </div>
                     )}
                     {voice.labels && (
                       <div className="flex gap-2 mt-1">
@@ -168,5 +186,5 @@ export function VoiceSelectionDialog({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

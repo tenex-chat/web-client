@@ -36,7 +36,10 @@ export function AgentDefinitionCard({
             src={agent.picture}
             alt={agent.name || "Agent"}
             fallback={
-              <div style={{ backgroundColor: agentColor }} className="flex h-full w-full items-center justify-center rounded-full">
+              <div
+                style={{ backgroundColor: agentColor }}
+                className="flex h-full w-full items-center justify-center rounded-full"
+              >
                 <Bot className="w-6 h-6 text-white" />
               </div>
             }
@@ -59,7 +62,7 @@ export function AgentDefinitionCard({
           <div className="mt-2 flex items-center gap-2">
             <Badge variant="secondary" className="text-xs">
               <Layers className="w-3 h-3 mr-1" />
-              {agent.phases.length} phase{agent.phases.length !== 1 ? 's' : ''}
+              {agent.phases.length} phase{agent.phases.length !== 1 ? "s" : ""}
             </Badge>
           </div>
         )}

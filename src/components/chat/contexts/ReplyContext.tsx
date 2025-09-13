@@ -1,5 +1,11 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+} from "react";
+import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 
 interface ReplyContextType {
   replyingTo: NDKEvent | null;
@@ -26,14 +32,16 @@ export function ReplyProvider({ children }: { children: ReactNode }) {
 export function useReply() {
   const context = useContext(ReplyContext);
   if (!context) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
-      console.warn('useReply used outside ReplyProvider — reply actions will be no-ops.');
+      console.warn(
+        "useReply used outside ReplyProvider — reply actions will be no-ops.",
+      );
     }
     return {
       replyingTo: null,
       setReplyingTo: () => {},
-      clearReply: () => {}
+      clearReply: () => {},
     };
   }
   return context;

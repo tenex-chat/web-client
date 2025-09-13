@@ -1,33 +1,36 @@
-import { StopCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { useConversationOperationStatus } from '@/hooks/useConversationOperationStatus'
-import { useStopOperations } from '@/hooks/useStopOperations'
+import { StopCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useConversationOperationStatus } from "@/hooks/useConversationOperationStatus";
+import { useStopOperations } from "@/hooks/useStopOperations";
 
 interface ConversationStopButtonProps {
-  conversationRootId?: string
-  projectId?: string
-  size?: "sm" | "default" | "icon"
+  conversationRootId?: string;
+  projectId?: string;
+  size?: "sm" | "default" | "icon";
 }
 
 /**
  * Optional conversation-level stop button
  * Only shows when there are active operations for the conversation
  */
-export function ConversationStopButton({ 
-  conversationRootId, 
-  projectId, 
-  size = "icon" 
+export function ConversationStopButton({
+  conversationRootId,
+  projectId,
+  size = "icon",
 }: ConversationStopButtonProps) {
-  const { stopConversation } = useStopOperations(projectId)
-  const { hasActiveOperations } = useConversationOperationStatus(conversationRootId, projectId)
+  const { stopConversation } = useStopOperations(projectId);
+  const { hasActiveOperations } = useConversationOperationStatus(
+    conversationRootId,
+    projectId,
+  );
 
-  if (!conversationRootId) return null
+  if (!conversationRootId) return null;
 
-  if (!hasActiveOperations) return null
+  if (!hasActiveOperations) return null;
 
   const handleStop = () => {
-    stopConversation(conversationRootId)
-  }
+    stopConversation(conversationRootId);
+  };
 
   return (
     <Button
@@ -39,5 +42,5 @@ export function ConversationStopButton({
     >
       <StopCircle className="h-4 w-4" />
     </Button>
-  )
+  );
 }

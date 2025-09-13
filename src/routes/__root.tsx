@@ -1,49 +1,53 @@
-import { createRootRoute, Outlet } from '@tanstack/react-router'
-import { Provider as JotaiProvider } from 'jotai'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Toaster } from 'sonner'
-import { Toaster as ShadcnToaster } from '@/components/ui/toaster'
-import { NDKHeadless, NDKSessionLocalStorage, registerEventClass } from '@nostr-dev-kit/ndk-hooks'
-import NDKCacheDexie from '@nostr-dev-kit/ndk-cache-dexie'
-import { useRef, useEffect } from 'react'
-import { DEFAULT_RELAYS } from '@/lib/constants'
-import type { NDKCacheAdapter } from '@nostr-dev-kit/ndk-hooks'
-import { registerServiceWorker } from '@/lib/pwa/registerSW'
-import { ThemeProvider } from '@/components/providers/ThemeProvider'
-import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition'
-import { NDKTask } from '@/lib/ndk-events/NDKTask'
-import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
-import { NDKAgentLesson } from '@/lib/ndk-events/NDKAgentLesson'
+import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { Provider as JotaiProvider } from "jotai";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Toaster } from "sonner";
+import { Toaster as ShadcnToaster } from "@/components/ui/toaster";
+import {
+  NDKHeadless,
+  NDKSessionLocalStorage,
+  registerEventClass,
+} from "@nostr-dev-kit/ndk-hooks";
+import NDKCacheDexie from "@nostr-dev-kit/ndk-cache-dexie";
+import { useRef, useEffect } from "react";
+import { DEFAULT_RELAYS } from "@/lib/constants";
+import type { NDKCacheAdapter } from "@nostr-dev-kit/ndk-hooks";
+import { registerServiceWorker } from "@/lib/pwa/registerSW";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { NDKProject } from "@/lib/ndk-events/NDKProject";
+import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
+import { NDKTask } from "@/lib/ndk-events/NDKTask";
+import { NDKMCPTool } from "@/lib/ndk-events/NDKMCPTool";
+import { NDKAgentLesson } from "@/lib/ndk-events/NDKAgentLesson";
 
 export const Route = createRootRoute({
   component: RootComponent,
-})
+});
 
 function RootComponent() {
-  const sessionStorage = useRef(new NDKSessionLocalStorage())
-  
+  const sessionStorage = useRef(new NDKSessionLocalStorage());
+
   // Initialize cache synchronously instead of in useEffect
   const cache = useRef<NDKCacheAdapter>(
     new NDKCacheDexie({
-      dbName: 'tenex-cache',
-    })
-  )
-  
+      dbName: "tenex-cache",
+    }),
+  );
+
   // Register custom event classes
   useEffect(() => {
-    registerEventClass(NDKProject)
-    registerEventClass(NDKAgentDefinition)
-    registerEventClass(NDKAgentLesson)
-    registerEventClass(NDKTask)
-    registerEventClass(NDKMCPTool)
-  }, [])
-  
+    registerEventClass(NDKProject);
+    registerEventClass(NDKAgentDefinition);
+    registerEventClass(NDKAgentLesson);
+    registerEventClass(NDKTask);
+    registerEventClass(NDKMCPTool);
+  }, []);
+
   // Register service worker for PWA functionality
   useEffect(() => {
-    registerServiceWorker()
-  }, [])
-  
+    registerServiceWorker();
+  }, []);
+
   return (
     <>
       <NDKHeadless
@@ -63,11 +67,11 @@ function RootComponent() {
           <ErrorBoundary>
             <div className="min-h-screen bg-background">
               <Outlet />
-              <Toaster 
-                richColors 
+              <Toaster
+                richColors
                 position="top-center"
                 toastOptions={{
-                  className: 'font-sans',
+                  className: "font-sans",
                 }}
               />
               <ShadcnToaster />
@@ -76,5 +80,5 @@ function RootComponent() {
         </ThemeProvider>
       </JotaiProvider>
     </>
-  )
+  );
 }

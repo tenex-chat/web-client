@@ -1,4 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { NDKAgentLesson } from "@/lib/ndk-events/NDKAgentLesson";
 import { formatRelativeTime } from "@/lib/utils/time";
 import { useNavigate } from "@tanstack/react-router";
@@ -9,7 +15,11 @@ interface LessonCardProps {
   compact?: boolean;
 }
 
-export function LessonCard({ lesson, onClick, compact = false }: LessonCardProps) {
+export function LessonCard({
+  lesson,
+  onClick,
+  compact = false,
+}: LessonCardProps) {
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -55,10 +65,7 @@ export function LessonCard({ lesson, onClick, compact = false }: LessonCardProps
             {lesson.hashtags && lesson.hashtags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {lesson.hashtags.map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="text-xs text-muted-foreground"
-                  >
+                  <span key={idx} className="text-xs text-muted-foreground">
                     #{tag}
                   </span>
                 ))}

@@ -40,11 +40,11 @@ interface AgentData {
   fromProject?: boolean;
 }
 
-function AgentCard({ 
-  agent, 
-  onAgentClick, 
+function AgentCard({
+  agent,
+  onAgentClick,
   onVoiceSettings,
-  hasVoice
+  hasVoice,
 }: {
   agent: AgentData;
   onAgentClick: (agent: AgentData) => void;
@@ -54,10 +54,10 @@ function AgentCard({
   const profile = useProfile(agent.pubkey);
   const avatarUrl = profile?.image || profile?.picture || agent.picture;
   const isOnline = agent.status === "online";
-  
+
   // Get voice config for this specific agent
   const { hasCustomConfig, config } = useAgentVoiceConfig(agent.pubkey);
-  
+
   return (
     <Card
       className="cursor-pointer hover:shadow-lg transition-shadow relative"
@@ -88,9 +88,7 @@ function AgentCard({
                 {agent.name || "Unnamed Agent"}
               </CardTitle>
               <div className="flex items-center gap-2 mt-1">
-                {agent.role && (
-                  <Badge variant="secondary">{agent.role}</Badge>
-                )}
+                {agent.role && <Badge variant="secondary">{agent.role}</Badge>}
                 {!isOnline && agent.fromStatus && (
                   <Badge variant="outline" className="text-xs">
                     Offline
@@ -126,9 +124,7 @@ function AgentCard({
                 Custom voice: {config.voiceId}
               </span>
             ) : (
-              <span className="text-muted-foreground">
-                Using global voice
-              </span>
+              <span className="text-muted-foreground">Using global voice</span>
             )}
           </div>
         )}
@@ -164,14 +160,17 @@ export function AgentsTabContent({ project }: AgentsTabContentProps) {
   const { ndk } = useNDK();
   const navigate = useNavigate();
   const [addAgentsDialogOpen, setAddAgentsDialogOpen] = useState(false);
-  
+
   // Check if we have voice configured
   const { config: globalVoiceConfig } = useAgentVoiceConfig(undefined);
   const hasVoice = globalVoiceConfig.enabled && !!globalVoiceConfig.apiKey;
 
   // Get agents from project status (same as Status tab)
   const projectStatus = useProjectStatus(project?.dTag);
-  const statusAgents = useMemo(() => projectStatus?.agents || [], [projectStatus]);
+  const statusAgents = useMemo(
+    () => projectStatus?.agents || [],
+    [projectStatus],
+  );
 
   // Get agent event IDs from project tags
   const projectAgentEventIds = useMemo(() => {

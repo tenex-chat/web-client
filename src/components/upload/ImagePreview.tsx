@@ -1,115 +1,115 @@
-import { useState, useEffect } from 'react'
-import { Download, ExternalLink, X, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { useState, useEffect } from "react";
+import { Download, ExternalLink, X, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { decode } from 'blurhash'
+} from "@/components/ui/dialog";
+import { decode } from "blurhash";
 
 interface ImagePreviewProps {
-  url: string
-  alt?: string
-  blurhash?: string
-  width?: number
-  height?: number
-  className?: string
-  onClick?: () => void
-  showLightbox?: boolean
+  url: string;
+  alt?: string;
+  blurhash?: string;
+  width?: number;
+  height?: number;
+  className?: string;
+  onClick?: () => void;
+  showLightbox?: boolean;
 }
 
 export function ImagePreview({
   url,
-  alt = 'Image',
+  alt = "Image",
   blurhash,
   width,
   height,
   className,
   onClick,
-  showLightbox = true
+  showLightbox = true,
 }: ImagePreviewProps) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [isError, setIsError] = useState(false)
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false)
-  const [blurhashUrl, setBlurhashUrl] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [blurhashUrl, setBlurhashUrl] = useState<string | null>(null);
 
   // Generate blurhash preview
   useEffect(() => {
-    if (!blurhash) return
+    if (!blurhash) return;
 
     try {
       // Decode blurhash to pixels
-      const pixels = decode(blurhash, 32, 32)
-      
-      // Create canvas and draw pixels
-      const canvas = document.createElement('canvas')
-      canvas.width = 32
-      canvas.height = 32
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
+      const pixels = decode(blurhash, 32, 32);
 
-      const imageData = ctx.createImageData(32, 32)
-      imageData.data.set(pixels)
-      ctx.putImageData(imageData, 0, 0)
+      // Create canvas and draw pixels
+      const canvas = document.createElement("canvas");
+      canvas.width = 32;
+      canvas.height = 32;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const imageData = ctx.createImageData(32, 32);
+      imageData.data.set(pixels);
+      ctx.putImageData(imageData, 0, 0);
 
       // Convert to data URL
-      setBlurhashUrl(canvas.toDataURL())
+      setBlurhashUrl(canvas.toDataURL());
     } catch (error) {
-      console.error('Failed to decode blurhash:', error)
+      console.error("Failed to decode blurhash:", error);
     }
-  }, [blurhash])
+  }, [blurhash]);
 
   const handleImageLoad = () => {
-    setIsLoading(false)
-  }
+    setIsLoading(false);
+  };
 
   const handleImageError = () => {
-    setIsLoading(false)
-    setIsError(true)
-  }
+    setIsLoading(false);
+    setIsError(true);
+  };
 
   const handleClick = () => {
     if (onClick) {
-      onClick()
+      onClick();
     } else if (showLightbox && !isError) {
-      setIsLightboxOpen(true)
+      setIsLightboxOpen(true);
     }
-  }
+  };
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(url)
-      const blob = await response.blob()
-      const downloadUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = downloadUrl
-      a.download = alt || 'image'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(downloadUrl)
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = alt || "image";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
     } catch (error) {
-      console.error('Failed to download image:', error)
+      console.error("Failed to download image:", error);
     }
-  }
+  };
 
   const openInNewTab = () => {
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <>
       <div
         className={cn(
-          'relative overflow-hidden rounded-lg bg-muted cursor-pointer',
-          className
+          "relative overflow-hidden rounded-lg bg-muted cursor-pointer",
+          className,
         )}
         onClick={handleClick}
         style={{
-          aspectRatio: width && height ? `${width}/${height}` : undefined
+          aspectRatio: width && height ? `${width}/${height}` : undefined,
         }}
       >
         {/* Blurhash placeholder */}
@@ -140,8 +140,8 @@ export function ImagePreview({
               variant="link"
               size="sm"
               onClick={(e) => {
-                e.stopPropagation()
-                openInNewTab()
+                e.stopPropagation();
+                openInNewTab();
               }}
               className="mt-2"
             >
@@ -155,8 +155,8 @@ export function ImagePreview({
           src={url}
           alt={alt}
           className={cn(
-            'w-full h-full object-cover transition-opacity duration-300',
-            isLoading ? 'opacity-0' : 'opacity-100'
+            "w-full h-full object-cover transition-opacity duration-300",
+            isLoading ? "opacity-0" : "opacity-100",
           )}
           onLoad={handleImageLoad}
           onError={handleImageError}
@@ -170,8 +170,8 @@ export function ImagePreview({
               variant="secondary"
               size="icon"
               onClick={(e) => {
-                e.stopPropagation()
-                handleDownload()
+                e.stopPropagation();
+                handleDownload();
               }}
               className="h-8 w-8"
             >
@@ -181,8 +181,8 @@ export function ImagePreview({
               variant="secondary"
               size="icon"
               onClick={(e) => {
-                e.stopPropagation()
-                openInNewTab()
+                e.stopPropagation();
+                openInNewTab();
               }}
               className="h-8 w-8"
             >
@@ -230,5 +230,5 @@ export function ImagePreview({
         </Dialog>
       )}
     </>
-  )
+  );
 }

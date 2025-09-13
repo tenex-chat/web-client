@@ -1,44 +1,49 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from "react";
 
 interface UseIntersectionObserverOptions {
-  threshold?: number
-  root?: Element | null
-  rootMargin?: string
-  freezeOnceVisible?: boolean
+  threshold?: number;
+  root?: Element | null;
+  rootMargin?: string;
+  freezeOnceVisible?: boolean;
 }
 
 export function useIntersectionObserver(
-  options: UseIntersectionObserverOptions = {}
+  options: UseIntersectionObserverOptions = {},
 ): [React.RefObject<HTMLDivElement | null>, boolean] {
-  const { threshold = 0, root = null, rootMargin = '0px', freezeOnceVisible = false } = options
-  const elementRef = useRef<HTMLDivElement>(null)
-  const [isVisible, setIsVisible] = useState(false)
-  const frozen = useRef(false)
+  const {
+    threshold = 0,
+    root = null,
+    rootMargin = "0px",
+    freezeOnceVisible = false,
+  } = options;
+  const elementRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const frozen = useRef(false);
 
   useEffect(() => {
-    if (!elementRef.current) return
-    if (frozen.current && freezeOnceVisible) return
+    if (!elementRef.current) return;
+    if (frozen.current && freezeOnceVisible) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        const isElementVisible = entry.isIntersecting
-        setIsVisible(isElementVisible)
-        
+        const isElementVisible = entry.isIntersecting;
+        setIsVisible(isElementVisible);
+
         if (isElementVisible && freezeOnceVisible) {
-          frozen.current = true
+          frozen.current = true;
         }
       },
-      { threshold, root, rootMargin }
-    )
+      { threshold, root, rootMargin },
+    );
 
-    observer.observe(elementRef.current)
+    observer.observe(elementRef.current);
 
     return () => {
       if (elementRef.current) {
-        observer.unobserve(elementRef.current)
+        observer.unobserve(elementRef.current);
       }
-    }
-  }, [threshold, root, rootMargin, freezeOnceVisible])
+    };
+  }, [threshold, root, rootMargin, freezeOnceVisible]);
 
-  return [elementRef, isVisible]
+  return [elementRef, isVisible];
 }

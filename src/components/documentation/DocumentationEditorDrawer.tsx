@@ -1,25 +1,32 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { NDKArticle } from '@nostr-dev-kit/ndk-hooks'
-import { useNDK } from '@nostr-dev-kit/ndk-hooks'
-import { Button } from '@/components/ui/button'
-import { DocumentationEditor } from './DocumentationEditor'
-import { HashtagInput } from './HashtagInput'
-import { useToast } from '@/hooks/use-toast'
-import type { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { ArrowLeft, Loader2, FileText, Trash2, ExternalLink, X } from 'lucide-react'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import TurndownService from 'turndown'
-import { marked } from 'marked'
+import { useState, useEffect } from "react";
+import { NDKArticle } from "@nostr-dev-kit/ndk-hooks";
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { Button } from "@/components/ui/button";
+import { DocumentationEditor } from "./DocumentationEditor";
+import { HashtagInput } from "./HashtagInput";
+import { useToast } from "@/hooks/use-toast";
+import type { NDKProject } from "@/lib/ndk-events/NDKProject";
+import {
+  ArrowLeft,
+  Loader2,
+  FileText,
+  Trash2,
+  ExternalLink,
+  X,
+} from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import TurndownService from "turndown";
+import { marked } from "marked";
 
 interface DocumentationEditorDrawerProps {
-  project: NDKProject
-  projectTitle?: string
-  existingArticle?: NDKArticle | null
-  existingHashtags?: string[]
-  onBack?: () => void
-  onDetach?: () => void
+  project: NDKProject;
+  projectTitle?: string;
+  existingArticle?: NDKArticle | null;
+  existingHashtags?: string[];
+  onBack?: () => void;
+  onDetach?: () => void;
 }
 
 export function DocumentationEditorDrawer({
@@ -28,186 +35,194 @@ export function DocumentationEditorDrawer({
   existingArticle,
   existingHashtags = [],
   onBack,
-  onDetach
+  onDetach,
 }: DocumentationEditorDrawerProps) {
-  const { ndk } = useNDK()
-  const { toast } = useToast()
-  const [isPublishing, setIsPublishing] = useState(false)
-  
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [hashtags, setHashtags] = useState<string[]>([])
-  const [draftLoaded, setDraftLoaded] = useState(false)
-  
-  const isEditMode = !!existingArticle
-  
+  const { ndk } = useNDK();
+  const { toast } = useToast();
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [hashtags, setHashtags] = useState<string[]>([]);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+
+  const isEditMode = !!existingArticle;
+
   // Initialize Turndown service for HTML to Markdown conversion
   const turndownService = new TurndownService({
-    headingStyle: 'atx',
-    codeBlockStyle: 'fenced',
-    bulletListMarker: '-'
-  })
-  
+    headingStyle: "atx",
+    codeBlockStyle: "fenced",
+    bulletListMarker: "-",
+  });
+
   // Initialize form with existing article data
   useEffect(() => {
     const loadArticle = async () => {
       if (existingArticle) {
-        setTitle(existingArticle.title || '')
-        
+        setTitle(existingArticle.title || "");
+
         // Convert markdown content to HTML for the editor
         if (existingArticle.content) {
-          const htmlContent = await marked(existingArticle.content)
-          setContent(htmlContent)
+          const htmlContent = await marked(existingArticle.content);
+          setContent(htmlContent);
         } else {
-          setContent('')
+          setContent("");
         }
-        
+
         // Extract hashtags from tags
         const articleHashtags = existingArticle.tags
-          .filter(tag => tag[0] === 't')
-          .map(tag => tag[1])
-        setHashtags(articleHashtags)
+          .filter((tag) => tag[0] === "t")
+          .map((tag) => tag[1]);
+        setHashtags(articleHashtags);
       } else {
         // Reset form for new article
-        setTitle('')
-        setContent('')
-        setHashtags([])
+        setTitle("");
+        setContent("");
+        setHashtags([]);
       }
-    }
-    
-    loadArticle()
-  }, [existingArticle])
+    };
+
+    loadArticle();
+  }, [existingArticle]);
   // Generate unique identifier for the article
   const generateIdentifier = () => {
     if (existingArticle) {
       // For edits, use existing identifier (d tag)
-      const dTag = existingArticle.tags.find(tag => tag[0] === 'd')
-      return dTag?.[1] || `${project.tagId()}-${Date.now()}`
+      const dTag = existingArticle.tags.find((tag) => tag[0] === "d");
+      return dTag?.[1] || `${project.tagId()}-${Date.now()}`;
     }
     // For new articles, create new identifier
-    return `${project.tagId()}-${Date.now()}`
-  }
-  
+    return `${project.tagId()}-${Date.now()}`;
+  };
+
   const handlePublish = async () => {
     if (!ndk?.signer || !title || !content) {
       toast({
         title: "Missing Information",
-        description: "Please provide a title and content for the documentation.",
-        variant: "destructive"
-      })
-      return
+        description:
+          "Please provide a title and content for the documentation.",
+        variant: "destructive",
+      });
+      return;
     }
-    
-    setIsPublishing(true)
-    
+
+    setIsPublishing(true);
+
     try {
-      const article = new NDKArticle(ndk)
-      
+      const article = new NDKArticle(ndk);
+
       // Convert HTML content to Markdown
-      const markdownContent = turndownService.turndown(content)
-      
+      const markdownContent = turndownService.turndown(content);
+
       // Auto-generate summary from content
-      const tempDiv = document.createElement('div')
-      tempDiv.innerHTML = content
-      const plainText = tempDiv.textContent || tempDiv.innerText || ''
-      const summary = plainText.slice(0, 160).trim() + (plainText.length > 160 ? '...' : '')
-      
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = content;
+      const plainText = tempDiv.textContent || tempDiv.innerText || "";
+      const summary =
+        plainText.slice(0, 160).trim() + (plainText.length > 160 ? "..." : "");
+
       // Set article properties
-      article.title = title
-      article.summary = summary || undefined
-      article.content = markdownContent  // Use markdown instead of HTML
-      article.published_at = Math.floor(Date.now() / 1000)
-      
+      article.title = title;
+      article.summary = summary || undefined;
+      article.content = markdownContent; // Use markdown instead of HTML
+      article.published_at = Math.floor(Date.now() / 1000);
+
       // Build tags array
-      const identifier = generateIdentifier()
+      const identifier = generateIdentifier();
       article.tags = [
-        ['d', identifier], // Unique identifier for replaceable event
-        ['title', title],
-        ['a', project.tagId()], // Link to project
-      ]
-      
+        ["d", identifier], // Unique identifier for replaceable event
+        ["title", title],
+        ["a", project.tagId()], // Link to project
+      ];
+
       // Add summary tag if provided
       if (summary) {
-        article.tags.push(['summary', summary])
+        article.tags.push(["summary", summary]);
       }
-      
+
       // Add hashtags
-      hashtags.forEach(tag => {
-        article.tags.push(['t', tag])
-      })
-      
+      hashtags.forEach((tag) => {
+        article.tags.push(["t", tag]);
+      });
+
       // Add published_at tag
-      article.tags.push(['published_at', String(article.published_at)])
-      
+      article.tags.push(["published_at", String(article.published_at)]);
+
       // Publish the article
-      await article.publish()
-      
+      await article.publish();
+
       toast({
         title: isEditMode ? "Documentation Updated" : "Documentation Published",
-        description: `Your article "${title}" has been ${isEditMode ? 'updated' : 'published'} successfully.`
-      })
-      
+        description: `Your article "${title}" has been ${isEditMode ? "updated" : "published"} successfully.`,
+      });
+
       // Clear form and go back
       if (!isEditMode) {
-        setTitle('')
-        setContent('')
-        setHashtags([])
-        localStorage.removeItem(`doc-draft-${project.tagId()}`)
+        setTitle("");
+        setContent("");
+        setHashtags([]);
+        localStorage.removeItem(`doc-draft-${project.tagId()}`);
       }
-      
-      onBack?.()
-      
+
+      onBack?.();
     } catch (error) {
-      console.error('Failed to publish article:', error)
+      console.error("Failed to publish article:", error);
       toast({
         title: "Publication Failed",
         description: "Failed to publish the documentation. Please try again.",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setIsPublishing(false)
+      setIsPublishing(false);
     }
-  }
-  
+  };
+
   // Save draft to localStorage
   useEffect(() => {
     if (!isEditMode && (title || content || hashtags.length > 0)) {
-      const draft = { title, content, hashtags }
-      localStorage.setItem(`doc-draft-${project.tagId()}`, JSON.stringify(draft))
+      const draft = { title, content, hashtags };
+      localStorage.setItem(
+        `doc-draft-${project.tagId()}`,
+        JSON.stringify(draft),
+      );
     }
-  }, [title, content, hashtags, project, isEditMode])
-  
+  }, [title, content, hashtags, project, isEditMode]);
+
   // Load draft on mount (only for new articles)
   useEffect(() => {
     if (!isEditMode) {
-      const draftKey = `doc-draft-${project.tagId()}`
-      const savedDraft = localStorage.getItem(draftKey)
+      const draftKey = `doc-draft-${project.tagId()}`;
+      const savedDraft = localStorage.getItem(draftKey);
       if (savedDraft) {
         try {
-          const draft = JSON.parse(savedDraft)
+          const draft = JSON.parse(savedDraft);
           // Only load draft if it has content
-          if (draft.title || draft.content || (draft.hashtags && draft.hashtags.length > 0)) {
-            setTitle(draft.title || '')
-            setContent(draft.content || '')
-            setHashtags(draft.hashtags || [])
-            setDraftLoaded(true)
+          if (
+            draft.title ||
+            draft.content ||
+            (draft.hashtags && draft.hashtags.length > 0)
+          ) {
+            setTitle(draft.title || "");
+            setContent(draft.content || "");
+            setHashtags(draft.hashtags || []);
+            setDraftLoaded(true);
           }
         } catch (e) {
-          console.error('Failed to load draft:', e)
+          console.error("Failed to load draft:", e);
         }
       }
     }
-  }, [isEditMode, project])
-  
+  }, [isEditMode, project]);
+
   // Function to clear draft and start fresh
   const clearDraft = () => {
-    setTitle('')
-    setContent('')
-    setHashtags([])
-    setDraftLoaded(false)
-    localStorage.removeItem(`doc-draft-${project.tagId()}`)
-  }
-  
+    setTitle("");
+    setContent("");
+    setHashtags([]);
+    setDraftLoaded(false);
+    localStorage.removeItem(`doc-draft-${project.tagId()}`);
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Header - similar to DocumentationViewer */}
@@ -241,17 +256,13 @@ export function DocumentationEditorDrawer({
               </p>
             )}
             <p className="text-lg font-semibold">
-              {isEditMode ? 'Edit Article' : 'New Article'}
+              {isEditMode ? "Edit Article" : "New Article"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {draftLoaded && !isEditMode && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearDraft}
-            >
+            <Button variant="outline" size="sm" onClick={clearDraft}>
               <Trash2 className="h-4 w-4 mr-2" />
               Clear draft
             </Button>
@@ -266,8 +277,10 @@ export function DocumentationEditorDrawer({
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Publishing...
               </>
+            ) : isEditMode ? (
+              "Update"
             ) : (
-              isEditMode ? 'Update' : 'Publish'
+              "Publish"
             )}
           </Button>
           {onBack && (
@@ -283,7 +296,7 @@ export function DocumentationEditorDrawer({
           )}
         </div>
       </div>
-      
+
       {/* Draft notification */}
       {draftLoaded && !isEditMode && (
         <div className="bg-blue-50 dark:bg-blue-950/30 px-4 py-2 text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
@@ -291,7 +304,7 @@ export function DocumentationEditorDrawer({
           <span>Restored from draft</span>
         </div>
       )}
-      
+
       {/* Content area - similar layout to viewer */}
       <ScrollArea className="flex-1">
         <div className="max-w-4xl mx-auto px-6 py-8">
@@ -303,7 +316,7 @@ export function DocumentationEditorDrawer({
             placeholder="Title"
             className="w-full border-0 outline-none bg-transparent text-3xl font-bold placeholder:text-muted-foreground/30 mb-4"
           />
-          
+
           {/* Hashtag input - inline and compact */}
           <div className="mb-8">
             <HashtagInput
@@ -314,7 +327,7 @@ export function DocumentationEditorDrawer({
               placeholder="Add tags..."
             />
           </div>
-          
+
           {/* Content editor */}
           <div className="prose prose-zinc dark:prose-invert max-w-none">
             <DocumentationEditor
@@ -326,5 +339,5 @@ export function DocumentationEditorDrawer({
         </div>
       </ScrollArea>
     </div>
-  )
+  );
 }

@@ -2,23 +2,26 @@
  * Utility functions for agent data transformation and common operations
  */
 
-import type { AgentInstance, ProjectGroup } from '@/types/agent'
-import type { NDKProject } from '@/lib/ndk-events/NDKProject'
+import type { AgentInstance, ProjectGroup } from "@/types/agent";
+import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 
 /**
  * Transforms raw agent data into a standardized AgentInstance format
  */
-export function transformAgentData(agent: {
-  pubkey: string
-  name?: string
-  picture?: string
-  description?: string
-  status?: string
-  lastSeen?: number
-}, project?: {
-  title?: string
-  dTag?: string
-}): AgentInstance {
+export function transformAgentData(
+  agent: {
+    pubkey: string;
+    name?: string;
+    picture?: string;
+    description?: string;
+    status?: string;
+    lastSeen?: number;
+  },
+  project?: {
+    title?: string;
+    dTag?: string;
+  },
+): AgentInstance {
   return {
     pubkey: agent.pubkey,
     name: agent.name || agent.pubkey.slice(0, 8),
@@ -27,36 +30,40 @@ export function transformAgentData(agent: {
     status: agent.status,
     lastSeen: agent.lastSeen,
     projectName: project ? getProjectDisplayName(project) : undefined,
-    projectDTag: project?.dTag
-  }
+    projectDTag: project?.dTag,
+  };
 }
 
 /**
  * Gets a display name for a project with fallbacks
  */
-export function getProjectDisplayName(project: {
-  title?: string
-  dTag?: string
-} | NDKProject): string {
-  return project.title || project.dTag || 'Unknown Project'
+export function getProjectDisplayName(
+  project:
+    | {
+        title?: string;
+        dTag?: string;
+      }
+    | NDKProject,
+): string {
+  return project.title || project.dTag || "Unknown Project";
 }
 
 /**
  * Checks if an agent is online
  */
 export function isAgentOnline(agent: {
-  fromStatus?: boolean
-  status?: string
-  lastSeen?: number
+  fromStatus?: boolean;
+  status?: string;
+  lastSeen?: number;
 }): boolean {
   // If agent comes from a status event, they're online by definition
   // (status events only report currently active agents)
   if (agent.fromStatus) {
-    return true
+    return true;
   }
-  
+
   // For non-status agents, fall back to explicit status field
-  return agent.status === 'online'
+  return agent.status === "online";
 }
 
 /**
@@ -64,18 +71,18 @@ export function isAgentOnline(agent: {
  */
 export function groupAgentsBy<K>(
   agents: AgentInstance[],
-  keyFn: (agent: AgentInstance) => K
+  keyFn: (agent: AgentInstance) => K,
 ): Map<K, AgentInstance[]> {
-  const groups = new Map<K, AgentInstance[]>()
-  
-  agents.forEach(agent => {
-    const key = keyFn(agent)
-    const group = groups.get(key) || []
-    group.push(agent)
-    groups.set(key, group)
-  })
-  
-  return groups
+  const groups = new Map<K, AgentInstance[]>();
+
+  agents.forEach((agent) => {
+    const key = keyFn(agent);
+    const group = groups.get(key) || [];
+    group.push(agent);
+    groups.set(key, group);
+  });
+
+  return groups;
 }
 
 /**
@@ -83,27 +90,27 @@ export function groupAgentsBy<K>(
  */
 export function createProjectGroups(
   agentsMap: Map<string, AgentInstance[]>,
-  currentProjectDTag?: string
+  currentProjectDTag?: string,
 ): ProjectGroup[] {
-  const groups: ProjectGroup[] = []
-  
+  const groups: ProjectGroup[] = [];
+
   agentsMap.forEach((agents, projectDTag) => {
-    if (agents.length === 0) return
-    
-    const projectName = agents[0].projectName || 'Unknown Project'
+    if (agents.length === 0) return;
+
+    const projectName = agents[0].projectName || "Unknown Project";
     groups.push({
       projectName,
       projectDTag,
       agents,
-      isCurrentProject: projectDTag === currentProjectDTag
-    })
-  })
-  
+      isCurrentProject: projectDTag === currentProjectDTag,
+    });
+  });
+
   return groups.sort((a, b) => {
     // Current project first
-    if (a.isCurrentProject) return -1
-    if (b.isCurrentProject) return 1
+    if (a.isCurrentProject) return -1;
+    if (b.isCurrentProject) return 1;
     // Then alphabetically
-    return a.projectName.localeCompare(b.projectName)
-  })
+    return a.projectName.localeCompare(b.projectName);
+  });
 }

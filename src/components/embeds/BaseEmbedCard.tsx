@@ -1,8 +1,8 @@
-import React from 'react';
-import { NDKEvent } from '@nostr-dev-kit/ndk-hooks';
-import { Card } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import { formatRelativeTime } from '@/lib/utils/time';
+import React from "react";
+import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/utils/time";
 
 export interface BaseEmbedCardProps {
   event: NDKEvent;
@@ -35,10 +35,10 @@ export function BaseEmbedCard({
     return (
       <span
         className={cn(
-          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md',
-          'bg-muted/50 hover:bg-muted transition-colors cursor-pointer',
-          'text-sm my-1',
-          className
+          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md",
+          "bg-muted/50 hover:bg-muted transition-colors cursor-pointer",
+          "text-sm my-1",
+          className,
         )}
         onClick={onClick}
       >
@@ -52,14 +52,14 @@ export function BaseEmbedCard({
   return (
     <Card
       className={cn(
-        'p-4 hover:shadow-md transition-all cursor-pointer',
-        'hover:scale-[1.01]',
-        className
+        "p-4 hover:shadow-md transition-all cursor-pointer",
+        "hover:scale-[1.01]",
+        className,
       )}
       onClick={onClick}
     >
       <div className="flex gap-3">
-        <div className={cn('flex-shrink-0', iconClassName)}>{icon}</div>
+        <div className={cn("flex-shrink-0", iconClassName)}>{icon}</div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -67,7 +67,9 @@ export function BaseEmbedCard({
                 {title}
               </h3>
               {subtitle && (
-                <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {subtitle}
+                </p>
               )}
             </div>
             {badges && <div className="flex gap-1 flex-shrink-0">{badges}</div>}

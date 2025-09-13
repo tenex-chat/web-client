@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from "react";
-import { Check, ChevronsUpDown, Bot } from "lucide-react";
+import { Check, ChevronDown, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,13 +44,11 @@ export function AgentSelector({
 
     // If there are recent messages, find the most recent non-user agent
     if (recentMessages.length > 0) {
-      const recentAgent = [...recentMessages]
-        .reverse()
-        .find(msg => {
-          const agent = onlineAgents.find(a => a.pubkey === msg.event.pubkey);
-          return agent !== undefined;
-        });
-      
+      const recentAgent = [...recentMessages].reverse().find((msg) => {
+        const agent = onlineAgents.find((a) => a.pubkey === msg.event.pubkey);
+        return agent !== undefined;
+      });
+
       if (recentAgent) {
         return recentAgent.event.pubkey;
       }
@@ -66,24 +64,27 @@ export function AgentSelector({
   // Get the agent object for display
   const currentAgentObj = useMemo(() => {
     if (!currentAgent || !onlineAgents) return null;
-    return onlineAgents.find(a => a.pubkey === currentAgent);
+    return onlineAgents.find((a) => a.pubkey === currentAgent);
   }, [currentAgent, onlineAgents]);
 
-  const handleSelect = useCallback((agentPubkey: string) => {
-    // If selecting the same agent that's already the default and nothing is explicitly selected, do nothing
-    if (agentPubkey === defaultAgent && !selectedAgent) {
+  const handleSelect = useCallback(
+    (agentPubkey: string) => {
+      // If selecting the same agent that's already the default and nothing is explicitly selected, do nothing
+      if (agentPubkey === defaultAgent && !selectedAgent) {
+        setOpen(false);
+        return;
+      }
+
+      // If selecting the same agent that's already explicitly selected, reset to auto mode
+      if (agentPubkey === selectedAgent) {
+        onAgentSelect(null);
+      } else {
+        onAgentSelect(agentPubkey);
+      }
       setOpen(false);
-      return;
-    }
-    
-    // If selecting the same agent that's already explicitly selected, reset to auto mode
-    if (agentPubkey === selectedAgent) {
-      onAgentSelect(null);
-    } else {
-      onAgentSelect(agentPubkey);
-    }
-    setOpen(false);
-  }, [defaultAgent, selectedAgent, onAgentSelect]);
+    },
+    [defaultAgent, selectedAgent, onAgentSelect],
+  );
 
   if (!onlineAgents || onlineAgents.length === 0) {
     return null;
@@ -93,56 +94,55 @@ export function AgentSelector({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "justify-between h-9",
-            "bg-background/50 border-border/50",
-            "hover:bg-accent/50 hover:border-border",
+            "justify-between h-9 px-2",
+            "bg-transparent border-0",
+            "hover:bg-accent/30",
             "transition-all duration-200",
-            className
+            className,
           )}
         >
           <div className="flex items-center gap-1.5 truncate">
             {currentAgentObj ? (
               <>
-                <NostrProfile 
-                  pubkey={currentAgentObj.pubkey} 
+                <NostrProfile
+                  pubkey={currentAgentObj.pubkey}
                   variant="avatar"
                   size="xs"
                   fallback={currentAgentObj.slug}
                   className="flex-shrink-0"
                 />
-                <span className="text-sm truncate">
-                  {currentAgentObj.slug}
-                </span>
+                <span className="text-sm truncate">{currentAgentObj.slug}</span>
               </>
             ) : (
               <>
                 <Bot className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Select agent</span>
+                <span className="text-sm text-muted-foreground">
+                  Select agent
+                </span>
               </>
             )}
           </div>
-          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+          <ChevronDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0" align="start">
+      <PopoverContent className="w-[280px] p-0 border-0 bg-popover/95 backdrop-blur-sm shadow-sm ring-1 ring-border/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring" align="start">
         <Command>
-          <CommandInput 
-            placeholder="Search agents..." 
-            className="h-9"
-          />
+          <CommandInput placeholder="Search agents..." className="h-9" />
           <CommandList>
             <CommandEmpty>No agents found.</CommandEmpty>
             <CommandGroup heading="Project Agents">
               {/* Agent options */}
               {onlineAgents.map((agent) => {
-                const isProjectManager = onlineAgents[0].pubkey === agent.pubkey;
+                const isProjectManager =
+                  onlineAgents[0].pubkey === agent.pubkey;
                 const isSelected = selectedAgent === agent.pubkey;
-                const isDefault = !selectedAgent && defaultAgent === agent.pubkey;
+                const isDefault =
+                  !selectedAgent && defaultAgent === agent.pubkey;
 
                 return (
                   <CommandItem
@@ -152,8 +152,8 @@ export function AgentSelector({
                     className="cursor-pointer"
                   >
                     <div className="flex items-center gap-2 flex-1">
-                      <NostrProfile 
-                        pubkey={agent.pubkey} 
+                      <NostrProfile
+                        pubkey={agent.pubkey}
                         variant="avatar"
                         size="sm"
                       />
@@ -173,7 +173,7 @@ export function AgentSelector({
                     <Check
                       className={cn(
                         "ml-auto h-4 w-4 flex-shrink-0",
-                        isSelected || isDefault ? "opacity-100" : "opacity-0"
+                        isSelected || isDefault ? "opacity-100" : "opacity-0",
                       )}
                     />
                   </CommandItem>

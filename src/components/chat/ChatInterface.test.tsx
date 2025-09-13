@@ -60,9 +60,17 @@ vi.mock("jotai", () => ({
 
 vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>,
+    div: ({
+      children,
+      ...props
+    }: {
+      children: React.ReactNode;
+      [key: string]: unknown;
+    }) => <div {...props}>{children}</div>,
   },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 vi.mock("@/hooks/useKeyboardHeight", () => ({
@@ -91,10 +99,10 @@ vi.mock("@/hooks/useAI", () => ({
     hasSTT: false,
     voiceSettings: {
       enabled: false,
-      provider: 'openai',
-      voiceId: 'alloy',
-      apiKey: '',
-      speed: 1.0
+      provider: "openai",
+      voiceId: "alloy",
+      apiKey: "",
+      speed: 1.0,
     },
     activeProvider: null,
   }),
@@ -103,12 +111,12 @@ vi.mock("@/hooks/useAI", () => ({
 vi.mock("@/hooks/useAgentVoiceConfig", () => ({
   useAgentVoiceConfig: vi.fn().mockReturnValue({
     config: {
-      voiceId: 'alloy',
-      provider: 'openai',
+      voiceId: "alloy",
+      provider: "openai",
       speed: 1.0,
       pitch: 1.0,
       enabled: false,
-      apiKey: ''
+      apiKey: "",
     },
     agentConfig: null,
     availableVoices: [],
@@ -118,7 +126,7 @@ vi.mock("@/hooks/useAgentVoiceConfig", () => ({
     testVoice: vi.fn(),
     hasCustomConfig: false,
   }),
-}))
+}));
 
 vi.mock("@/lib/utils/extractTTSContent", () => ({
   extractTTSContent: vi.fn().mockReturnValue(""),
@@ -146,7 +154,11 @@ vi.mock("@/stores/ai-config-store", () => ({
 // Import the component after all mocks are set up
 import { ChatInterface } from "./ChatInterface";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
-import { useNDK, useNDKCurrentUser, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import {
+  useNDK,
+  useNDKCurrentUser,
+  useSubscribe,
+} from "@nostr-dev-kit/ndk-hooks";
 import type { NDKUser } from "@nostr-dev-kit/ndk-hooks";
 import type NDK from "@nostr-dev-kit/ndk-hooks";
 
@@ -177,7 +189,9 @@ describe("ChatInterface", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useNDK).mockReturnValue({ ndk: mockNdk as unknown as NDK });
-    vi.mocked(useNDKCurrentUser).mockReturnValue(mockUser as unknown as NDKUser);
+    vi.mocked(useNDKCurrentUser).mockReturnValue(
+      mockUser as unknown as NDKUser,
+    );
     vi.mocked(useSubscribe).mockReturnValue({ events: [], eose: false });
   });
 
@@ -192,7 +206,7 @@ describe("ChatInterface", () => {
 
   it("displays project title in header", () => {
     render(<ChatInterface {...defaultProps} />);
-    
+
     // Check that the project title is displayed
     expect(screen.getByText("Test Project")).toBeInTheDocument();
   });

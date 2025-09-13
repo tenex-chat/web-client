@@ -1,66 +1,80 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import React, { useState, useEffect } from 'react'
-import { useNDKCurrentUser, useNDKSessionLogin, NDKPrivateKeySigner } from '@nostr-dev-kit/ndk-hooks'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { Loader2, Key, AlertCircle } from 'lucide-react'
-import { TEST_CREDENTIALS } from '@/lib/constants'
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import React, { useState, useEffect } from "react";
+import {
+  useNDKCurrentUser,
+  useNDKSessionLogin,
+  NDKPrivateKeySigner,
+} from "@nostr-dev-kit/ndk-hooks";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Loader2, Key, AlertCircle } from "lucide-react";
+import { TEST_CREDENTIALS } from "@/lib/constants";
 
-export const Route = createFileRoute('/login')({
+export const Route = createFileRoute("/login")({
   component: LoginPage,
-})
+});
 
 function LoginPage() {
-  const navigate = useNavigate()
-  const user = useNDKCurrentUser()
-  const ndkLogin = useNDKSessionLogin()
-  const [nsec, setNsec] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate();
+  const user = useNDKCurrentUser();
+  const ndkLogin = useNDKSessionLogin();
+  const [nsec, setNsec] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Redirect if already authenticated
   useEffect(() => {
     if (user) {
-      navigate({ to: '/projects' })
+      navigate({ to: "/projects" });
     }
-  }, [user, navigate])
+  }, [user, navigate]);
 
   // Don't render the form if already authenticated
   if (user) {
-    return null
+    return null;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setIsLoading(true)
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
 
     try {
-      const signer = new NDKPrivateKeySigner(nsec)
-      await ndkLogin(signer)
-      toast.success('Successfully logged in!')
-      navigate({ to: '/projects' })
+      const signer = new NDKPrivateKeySigner(nsec);
+      await ndkLogin(signer);
+      toast.success("Successfully logged in!");
+      navigate({ to: "/projects" });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to login'
-      setError(errorMessage)
-      toast.error(errorMessage)
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to login";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   // For development, prefill with test nsec
   const handleUseTestKey = () => {
     if (TEST_CREDENTIALS.NSEC) {
-      setNsec(TEST_CREDENTIALS.NSEC)
+      setNsec(TEST_CREDENTIALS.NSEC);
     }
-  }
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4" data-testid="login-screen">
+    <div
+      className="flex min-h-screen items-center justify-center p-4"
+      data-testid="login-screen"
+    >
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Welcome to TENEX</CardTitle>
@@ -105,23 +119,23 @@ function LoginPage() {
                   Connecting...
                 </>
               ) : (
-                'Sign In'
+                "Sign In"
               )}
             </Button>
 
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleUseTestKey}
-              >
-                Use Test Key (Dev Only)
-              </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleUseTestKey}
+            >
+              Use Test Key (Dev Only)
+            </Button>
           </form>
 
           <div className="mt-6 space-y-2 text-center text-sm text-muted-foreground">
             <p>
-              Don't have a Nostr key?{' '}
+              Don't have a Nostr key?{" "}
               <a
                 href="https://nostr.com"
                 target="_blank"
@@ -138,5 +152,5 @@ function LoginPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

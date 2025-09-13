@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 interface KeyboardShortcut {
   key: string;
@@ -13,13 +13,16 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       for (const shortcut of shortcuts) {
-        const isMatch = 
+        const isMatch =
           event.key.toLowerCase() === shortcut.key.toLowerCase() &&
-          (shortcut.ctrlKey === undefined || event.ctrlKey === shortcut.ctrlKey) &&
-          (shortcut.metaKey === undefined || event.metaKey === shortcut.metaKey) &&
-          (shortcut.shiftKey === undefined || event.shiftKey === shortcut.shiftKey) &&
+          (shortcut.ctrlKey === undefined ||
+            event.ctrlKey === shortcut.ctrlKey) &&
+          (shortcut.metaKey === undefined ||
+            event.metaKey === shortcut.metaKey) &&
+          (shortcut.shiftKey === undefined ||
+            event.shiftKey === shortcut.shiftKey) &&
           (shortcut.altKey === undefined || event.altKey === shortcut.altKey);
-        
+
         if (isMatch) {
           event.preventDefault();
           shortcut.handler();
@@ -27,11 +30,11 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
         }
       }
     };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    
+
+    window.addEventListener("keydown", handleKeyDown);
+
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [shortcuts]);
 }
@@ -39,12 +42,12 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
 export function useGlobalSearchShortcut(openSearch: () => void) {
   useKeyboardShortcuts([
     {
-      key: 'g',
+      key: "g",
       metaKey: true, // Cmd+G on Mac
       handler: openSearch,
     },
     {
-      key: 'g',
+      key: "g",
       ctrlKey: true, // Ctrl+G on Windows/Linux
       handler: openSearch,
     },

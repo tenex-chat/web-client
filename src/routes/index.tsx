@@ -1,23 +1,23 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
-import { useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute("/")({
   component: HomePage,
-})
+});
 
 function HomePage() {
-  const user = useNDKCurrentUser()
-  const navigate = useNavigate()
+  const user = useNDKCurrentUser();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
-      navigate({ to: '/projects' })
+      navigate({ to: "/projects" });
     } else {
-      navigate({ to: '/login' })
+      navigate({ to: "/login" });
     }
-  }, [user, navigate])
+  }, [user, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center">
@@ -26,5 +26,5 @@ function HomePage() {
         <p className="text-sm text-muted-foreground">Loading TENEX...</p>
       </div>
     </div>
-  )
+  );
 }

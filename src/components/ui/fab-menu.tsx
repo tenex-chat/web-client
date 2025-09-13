@@ -1,31 +1,36 @@
-import * as React from "react"
-import { FAB } from "./fab"
-import { Plus, MessageSquare, Phone, X } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { motion, AnimatePresence } from "framer-motion"
+import * as React from "react";
+import { FAB } from "./fab";
+import { Plus, MessageSquare, Phone, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface FABMenuProps {
-  onTextClick: () => void
-  onVoiceClick: () => void
-  className?: string
+  onTextClick: () => void;
+  onVoiceClick: () => void;
+  className?: string;
   offset?: {
-    bottom?: string
-    right?: string
-  }
+    bottom?: string;
+    right?: string;
+  };
 }
 
-export function FABMenu({ onTextClick, onVoiceClick, className, offset }: FABMenuProps) {
-  const [isOpen, setIsOpen] = React.useState(false)
+export function FABMenu({
+  onTextClick,
+  onVoiceClick,
+  className,
+  offset,
+}: FABMenuProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
 
   const handleTextClick = () => {
-    setIsOpen(false)
-    onTextClick()
-  }
+    setIsOpen(false);
+    onTextClick();
+  };
 
   const handleVoiceClick = () => {
-    setIsOpen(false)
-    onVoiceClick()
-  }
+    setIsOpen(false);
+    onVoiceClick();
+  };
 
   return (
     <>
@@ -45,7 +50,13 @@ export function FABMenu({ onTextClick, onVoiceClick, className, offset }: FABMen
       {/* Menu items */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed z-[70]" style={{ bottom: offset?.bottom || '80px', right: offset?.right || '16px' }}>
+          <div
+            className="fixed z-[70]"
+            style={{
+              bottom: offset?.bottom || "80px",
+              right: offset?.right || "16px",
+            }}
+          >
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -88,15 +99,11 @@ export function FABMenu({ onTextClick, onVoiceClick, className, offset }: FABMen
       {/* Main FAB */}
       <FAB
         onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "transition-transform",
-          isOpen && "rotate-45",
-          className
-        )}
+        className={cn("transition-transform", isOpen && "rotate-45", className)}
         offset={offset}
       >
         {isOpen ? <X /> : <Plus />}
       </FAB>
     </>
-  )
+  );
 }

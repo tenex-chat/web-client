@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Clock, Users, AlertCircle, CheckCircle2 } from 'lucide-react';
-import type { ExecutionQueue } from '@/lib/ndk-events/NDKProjectStatus';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Clock, Users, AlertCircle, CheckCircle2 } from "lucide-react";
+import type { ExecutionQueue } from "@/lib/ndk-events/NDKProjectStatus";
 
 interface ExecutionQueueCardProps {
   queue: ExecutionQueue | null;
@@ -9,7 +9,11 @@ interface ExecutionQueueCardProps {
   canForceRelease?: boolean;
 }
 
-export function ExecutionQueueCard({ queue, onForceRelease, canForceRelease }: ExecutionQueueCardProps) {
+export function ExecutionQueueCard({
+  queue,
+  onForceRelease,
+  canForceRelease,
+}: ExecutionQueueCardProps) {
   if (!queue) {
     return (
       <Card>
@@ -36,8 +40,8 @@ export function ExecutionQueueCard({ queue, onForceRelease, canForceRelease }: E
   };
 
   const calculateElapsedTime = (startTime?: number) => {
-    if (!startTime) return 'Unknown';
-    const elapsed = Math.floor((Date.now() / 1000) - startTime);
+    if (!startTime) return "Unknown";
+    const elapsed = Math.floor(Date.now() / 1000 - startTime);
     const minutes = Math.floor(elapsed / 60);
     const seconds = elapsed % 60;
     return `${minutes}m ${seconds}s`;
@@ -51,7 +55,9 @@ export function ExecutionQueueCard({ queue, onForceRelease, canForceRelease }: E
     }
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `~${hours}h ${remainingMinutes}m` : `~${hours} hours`;
+    return remainingMinutes > 0
+      ? `~${hours}h ${remainingMinutes}m`
+      : `~${hours} hours`;
   };
 
   return (
@@ -63,9 +69,7 @@ export function ExecutionQueueCard({ queue, onForceRelease, canForceRelease }: E
             Execution Queue
           </div>
           {queue.totalWaiting > 0 && (
-            <Badge variant="outline">
-              {queue.totalWaiting} waiting
-            </Badge>
+            <Badge variant="outline">{queue.totalWaiting} waiting</Badge>
           )}
         </CardTitle>
       </CardHeader>
@@ -80,7 +84,7 @@ export function ExecutionQueueCard({ queue, onForceRelease, canForceRelease }: E
             <div className="ml-6 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
-                  Conversation: 
+                  Conversation:
                 </span>
                 <code className="text-xs bg-muted px-2 py-1 rounded">
                   {formatConversationId(queue.active.conversationId)}
@@ -120,7 +124,10 @@ export function ExecutionQueueCard({ queue, onForceRelease, canForceRelease }: E
             </div>
             <div className="ml-6 space-y-2">
               {queue.waiting.slice(0, 5).map((item, index) => (
-                <div key={item.conversationId} className="flex items-center justify-between text-sm">
+                <div
+                  key={item.conversationId}
+                  className="flex items-center justify-between text-sm"
+                >
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-xs">
                       #{item.position || index + 1}

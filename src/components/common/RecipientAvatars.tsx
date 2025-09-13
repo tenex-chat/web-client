@@ -1,36 +1,41 @@
-import { useProfile } from "@nostr-dev-kit/ndk-hooks"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
-import { cn } from "@/lib/utils"
-import { Link } from "@tanstack/react-router"
+import { useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { cn } from "@/lib/utils";
+import { Link } from "@tanstack/react-router";
 
 interface RecipientAvatarsProps {
-  pubkeys: string[]
-  className?: string
-  avatarClassName?: string
-  maxDisplay?: number
+  pubkeys: string[];
+  className?: string;
+  avatarClassName?: string;
+  maxDisplay?: number;
 }
 
 function RecipientAvatar({ pubkey }: { pubkey: string }) {
-  const profile = useProfile(pubkey)
-  
-  const displayName = profile?.displayName || profile?.name || pubkey.slice(0, 8)
-  const avatarUrl = profile?.image || profile?.picture
-  const bio = profile?.about || profile?.bio
-  
+  const profile = useProfile(pubkey);
+
+  const displayName =
+    profile?.displayName || profile?.name || pubkey.slice(0, 8);
+  const avatarUrl = profile?.image || profile?.picture;
+  const bio = profile?.about || profile?.bio;
+
   const getInitials = (name: string) => {
-    const words = name.split(' ')
+    const words = name.split(" ");
     if (words.length >= 2) {
-      return words[0][0] + words[1][0]
+      return words[0][0] + words[1][0];
     }
-    return name.slice(0, 2).toUpperCase()
-  }
+    return name.slice(0, 2).toUpperCase();
+  };
 
   return (
     <HoverCard>
       <HoverCardTrigger asChild>
-        <Link 
-          to="/p/$pubkey" 
+        <Link
+          to="/p/$pubkey"
           params={{ pubkey }}
           className="block hover:opacity-80 transition-opacity"
         >
@@ -64,26 +69,26 @@ function RecipientAvatar({ pubkey }: { pubkey: string }) {
         </div>
       </HoverCardContent>
     </HoverCard>
-  )
+  );
 }
 
-export function RecipientAvatars({ 
-  pubkeys, 
+export function RecipientAvatars({
+  pubkeys,
   className,
   avatarClassName,
-  maxDisplay = 20 
+  maxDisplay = 20,
 }: RecipientAvatarsProps) {
-  if (!pubkeys || pubkeys.length === 0) return null
-  
-  const displayPubkeys = pubkeys.slice(0, maxDisplay)
-  const remainingCount = pubkeys.length - maxDisplay
-  
+  if (!pubkeys || pubkeys.length === 0) return null;
+
+  const displayPubkeys = pubkeys.slice(0, maxDisplay);
+  const remainingCount = pubkeys.length - maxDisplay;
+
   return (
     <div className={cn("flex items-center", className)}>
       <div className="flex -space-x-1">
         {displayPubkeys.map((pubkey, idx) => (
-          <div 
-            key={pubkey} 
+          <div
+            key={pubkey}
             style={{ zIndex: maxDisplay - idx }}
             className={avatarClassName}
           >
@@ -97,5 +102,5 @@ export function RecipientAvatars({
         </span>
       )}
     </div>
-  )
+  );
 }

@@ -17,7 +17,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
@@ -46,10 +52,15 @@ interface ProjectSettingsCardProps {
   onToolToggle: (projectDTag: string, tool: string) => void;
 }
 
-const ProjectSettingsCard = memo(function ProjectSettingsCard({ project, settings, onModelChange, onToolToggle }: ProjectSettingsCardProps) {
+const ProjectSettingsCard = memo(function ProjectSettingsCard({
+  project,
+  settings,
+  onModelChange,
+  onToolToggle,
+}: ProjectSettingsCardProps) {
   const models = useProjectOnlineModels(project.dTag);
   const tools = useProjectAvailableTools(project.dTag);
-  
+
   return (
     <Card>
       <CardHeader>
@@ -61,13 +72,15 @@ const ProjectSettingsCard = memo(function ProjectSettingsCard({ project, setting
           <Label>Model</Label>
           <Select
             value={settings.selectedModel}
-            onValueChange={(value) => onModelChange(settings.projectDTag, value)}
+            onValueChange={(value) =>
+              onModelChange(settings.projectDTag, value)
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a model" />
             </SelectTrigger>
             <SelectContent>
-              {models.map(model => (
+              {models.map((model) => (
                 <SelectItem key={model.model} value={model.model}>
                   {model.label}
                 </SelectItem>
@@ -75,17 +88,19 @@ const ProjectSettingsCard = memo(function ProjectSettingsCard({ project, setting
             </SelectContent>
           </Select>
         </div>
-        
+
         {/* Tools Selection */}
         <div className="space-y-2">
           <Label>Tools</Label>
           <div className="space-y-2">
-            {tools.map(tool => (
+            {tools.map((tool) => (
               <div key={tool} className="flex items-center space-x-2">
                 <Checkbox
                   id={`${project.dTag}-${tool}`}
                   checked={settings.selectedTools.has(tool)}
-                  onCheckedChange={() => onToolToggle(settings.projectDTag, tool)}
+                  onCheckedChange={() =>
+                    onToolToggle(settings.projectDTag, tool)
+                  }
                 />
                 <label
                   htmlFor={`${project.dTag}-${tool}`}
@@ -103,13 +118,15 @@ const ProjectSettingsCard = memo(function ProjectSettingsCard({ project, setting
 });
 
 export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
-  const [projectSettings, setProjectSettings] = useState<Map<string, ProjectAgentSettings>>(new Map());
+  const [projectSettings, setProjectSettings] = useState<
+    Map<string, ProjectAgentSettings>
+  >(new Map());
   const [isSaving, setIsSaving] = useState(false);
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
   const projectStatusMap = useProjectStatusMap();
   const projects = useProjectsArray();
-  
+
   // Use the agent's pubkey for voice config
   const agentPubkey = agentSlug; // agentSlug is actually the pubkey in profile pages
   const {
@@ -119,80 +136,98 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
     saveConfig: saveVoiceConfig,
     removeConfig: removeVoiceConfig,
     testVoice,
-    hasCustomConfig
+    hasCustomConfig,
   } = useAgentVoiceConfig(agentPubkey);
 
   // Filter projects where this agent is assigned
-  const agentProjects = projects.filter(project => {
-    const agentIds = project.agents?.map(a => a.ndkAgentEventId) || [];
+  const agentProjects = projects.filter((project) => {
+    const agentIds = project.agents?.map((a) => a.ndkAgentEventId) || [];
     return agentIds.some(() => {
-      const status = projectStatusMap.get(project.dTag || '');
-      return status?.agents?.some((as: ProjectAgent) => as.pubkey === agentPubkey);
+      const status = projectStatusMap.get(project.dTag || "");
+      return status?.agents?.some(
+        (as: ProjectAgent) => as.pubkey === agentPubkey,
+      );
     });
   });
 
   // Initialize project settings
   useEffect(() => {
     const newSettings = new Map<string, ProjectAgentSettings>();
-    
-    agentProjects.forEach(project => {
-      const projectStatus = projectStatusMap.get(project.dTag || '');
-      const agentStatus = projectStatus?.agents?.find((as: ProjectAgent) => as.pubkey === agentPubkey);
-      
+
+    agentProjects.forEach((project) => {
+      const projectStatus = projectStatusMap.get(project.dTag || "");
+      const agentStatus = projectStatus?.agents?.find(
+        (as: ProjectAgent) => as.pubkey === agentPubkey,
+      );
+
       if (projectStatus && agentStatus) {
-        newSettings.set(project.dTag || '', {
-          projectDTag: project.dTag || '',
-          projectTitle: project.title || 'Untitled',
-          selectedModel: agentStatus.modelOverride || agentStatus.model || '',
-          selectedTools: new Set(agentStatus.toolOverrides || agentStatus.tools || []),
+        newSettings.set(project.dTag || "", {
+          projectDTag: project.dTag || "",
+          projectTitle: project.title || "Untitled",
+          selectedModel: agentStatus.modelOverride || agentStatus.model || "",
+          selectedTools: new Set(
+            agentStatus.toolOverrides || agentStatus.tools || [],
+          ),
           originalModel: agentStatus.model,
           originalTools: agentStatus.tools,
         });
       }
     });
-    
+
     setProjectSettings(newSettings);
   }, [agentProjects, projectStatusMap, agentPubkey]);
 
-  const handleVoiceChange = useCallback((voiceId: string) => {
-    saveVoiceConfig({ voiceId });
-  }, [saveVoiceConfig]);
+  const handleVoiceChange = useCallback(
+    (voiceId: string) => {
+      saveVoiceConfig({ voiceId });
+    },
+    [saveVoiceConfig],
+  );
 
-  const handleSpeedChange = useCallback((speed: number[]) => {
-    saveVoiceConfig({ speed: speed[0] });
-  }, [saveVoiceConfig]);
+  const handleSpeedChange = useCallback(
+    (speed: number[]) => {
+      saveVoiceConfig({ speed: speed[0] });
+    },
+    [saveVoiceConfig],
+  );
 
-  const handleProviderChange = useCallback((provider: 'openai' | 'elevenlabs') => {
-    saveVoiceConfig({ provider });
-  }, [saveVoiceConfig]);
+  const handleProviderChange = useCallback(
+    (provider: "openai" | "elevenlabs") => {
+      saveVoiceConfig({ provider });
+    },
+    [saveVoiceConfig],
+  );
 
   const handleTestVoice = async () => {
     try {
       await testVoice();
-      toast.success('Voice test successful');
+      toast.success("Voice test successful");
     } catch {
-      toast.error('Failed to test voice');
+      toast.error("Failed to test voice");
     }
   };
 
   const handleResetVoice = () => {
     removeVoiceConfig();
-    toast.success('Reset to global voice settings');
+    toast.success("Reset to global voice settings");
   };
 
-  const handleModelChange = useCallback((projectDTag: string, model: string) => {
-    setProjectSettings(prev => {
-      const newSettings = new Map(prev);
-      const settings = newSettings.get(projectDTag);
-      if (settings) {
-        settings.selectedModel = model;
-      }
-      return newSettings;
-    });
-  }, []);
+  const handleModelChange = useCallback(
+    (projectDTag: string, model: string) => {
+      setProjectSettings((prev) => {
+        const newSettings = new Map(prev);
+        const settings = newSettings.get(projectDTag);
+        if (settings) {
+          settings.selectedModel = model;
+        }
+        return newSettings;
+      });
+    },
+    [],
+  );
 
   const handleToolToggle = useCallback((projectDTag: string, tool: string) => {
-    setProjectSettings(prev => {
+    setProjectSettings((prev) => {
       const newSettings = new Map(prev);
       const settings = newSettings.get(projectDTag);
       if (settings) {
@@ -215,13 +250,14 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
     }
 
     setIsSaving(true);
-    
+
     try {
       for (const [projectDTag, settings] of projectSettings) {
-        const hasChanges = 
+        const hasChanges =
           settings.selectedModel !== settings.originalModel ||
-          JSON.stringify(Array.from(settings.selectedTools)) !== JSON.stringify(settings.originalTools || []);
-        
+          JSON.stringify(Array.from(settings.selectedTools)) !==
+            JSON.stringify(settings.originalTools || []);
+
         if (!hasChanges) continue;
 
         const overrideEvent = new NDKEvent(ndk);
@@ -236,8 +272,11 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
         }
 
         const toolsArray = Array.from(settings.selectedTools);
-        if (JSON.stringify(toolsArray) !== JSON.stringify(settings.originalTools || [])) {
-          toolsArray.forEach(tool => {
+        if (
+          JSON.stringify(toolsArray) !==
+          JSON.stringify(settings.originalTools || [])
+        ) {
+          toolsArray.forEach((tool) => {
             overrideEvent.tags.push(["tool", tool]);
           });
         }
@@ -266,7 +305,9 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
           <CardDescription>
             Configure the voice for this agent
             {hasCustomConfig && (
-              <Badge variant="secondary" className="ml-2">Custom</Badge>
+              <Badge variant="secondary" className="ml-2">
+                Custom
+              </Badge>
             )}
           </CardDescription>
         </CardHeader>
@@ -274,9 +315,11 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
           {/* Voice Provider */}
           <div className="space-y-2">
             <Label>Voice Provider</Label>
-            <Select 
-              value={voiceConfig.provider} 
-              onValueChange={(value) => handleProviderChange(value as 'openai' | 'elevenlabs')}
+            <Select
+              value={voiceConfig.provider}
+              onValueChange={(value) =>
+                handleProviderChange(value as "openai" | "elevenlabs")
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -291,21 +334,27 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
           {/* Voice Selection */}
           <div className="space-y-2">
             <Label>Voice</Label>
-            <Select 
-              value={voiceConfig.voiceId} 
+            <Select
+              value={voiceConfig.voiceId}
               onValueChange={handleVoiceChange}
               disabled={loadingVoices}
             >
               <SelectTrigger>
-                <SelectValue placeholder={loadingVoices ? "Loading voices..." : "Select a voice"} />
+                <SelectValue
+                  placeholder={
+                    loadingVoices ? "Loading voices..." : "Select a voice"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {availableVoices.map(voice => (
+                {availableVoices.map((voice) => (
                   <SelectItem key={voice.id} value={voice.id}>
                     <div className="flex flex-col">
                       <span>{voice.name}</span>
                       {voice.description && (
-                        <span className="text-xs text-muted-foreground">{voice.description}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {voice.description}
+                        </span>
                       )}
                     </div>
                   </SelectItem>
@@ -337,10 +386,7 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
               Test Voice
             </Button>
             {hasCustomConfig && (
-              <Button
-                variant="outline"
-                onClick={handleResetVoice}
-              >
+              <Button variant="outline" onClick={handleResetVoice}>
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Reset to Global
               </Button>
@@ -364,11 +410,11 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
           <CardContent>
             <ScrollArea className="h-[400px] pr-4">
               <div className="space-y-4">
-                {agentProjects.map(project => {
-                  const settings = projectSettings.get(project.dTag || '');
-                  
+                {agentProjects.map((project) => {
+                  const settings = projectSettings.get(project.dTag || "");
+
                   if (!settings) return null;
-                  
+
                   return (
                     <ProjectSettingsCard
                       key={project.dTag}
@@ -381,7 +427,7 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
                 })}
               </div>
             </ScrollArea>
-            
+
             <div className="mt-4">
               <Button onClick={handleSaveProjectSettings} disabled={isSaving}>
                 <Save className="h-4 w-4 mr-2" />

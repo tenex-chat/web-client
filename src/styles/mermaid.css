@@ -1,0 +1,52 @@
+/* Mermaid diagram styling */
+.mermaid-container {
+  max-width: none !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 1rem 0;
+}
+
+.mermaid-container svg {
+  max-width: none !important;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Make diagrams responsive but allow them to be larger than viewport */
+.mermaid-container > svg {
+  min-width: 100%;
+  width: max-content;
+}
+
+/* Add some styling for scrollbar when needed */
+.mermaid-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.mermaid-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.mermaid-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.mermaid-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Dark mode scrollbar */
+.dark .mermaid-container::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+.dark .mermaid-container::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+.dark .mermaid-container::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}

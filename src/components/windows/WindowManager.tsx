@@ -1,28 +1,28 @@
-import { useWindowManager } from '@/stores/windowManager'
-import { FloatingWindow, DrawerContent } from './FloatingWindow'
-import { WindowTaskbar } from './WindowTaskbar'
-import { AnimatePresence } from 'framer-motion'
+import { useWindowManager } from "@/stores/windowManager";
+import { FloatingWindow, DrawerContent } from "./FloatingWindow";
+import { WindowTaskbar } from "./WindowTaskbar";
+import { AnimatePresence } from "framer-motion";
 
 interface WindowManagerProps {
-  onAttach?: (content: DrawerContent) => void
+  onAttach?: (content: DrawerContent) => void;
 }
 
 export function WindowManager({ onAttach }: WindowManagerProps) {
-  const { 
-    windows, 
-    removeWindow, 
-    minimizeWindow, 
+  const {
+    windows,
+    removeWindow,
+    minimizeWindow,
     restoreWindow,
     focusWindow,
-    attachToDrawer
-  } = useWindowManager()
-  
+    attachToDrawer,
+  } = useWindowManager();
+
   const handleAttach = (windowId: string) => {
     if (onAttach) {
-      attachToDrawer(windowId, onAttach)
+      attachToDrawer(windowId, onAttach);
     }
-  }
-  
+  };
+
   return (
     <>
       {/* Floating Windows */}
@@ -34,14 +34,18 @@ export function WindowManager({ onAttach }: WindowManagerProps) {
             onClose={() => removeWindow(window.id)}
             onMinimize={() => minimizeWindow(window.id)}
             onFocus={() => focusWindow(window.id)}
-            onAttach={onAttach ? (content) => handleAttach(window.id, content) : undefined}
+            onAttach={
+              onAttach
+                ? (content) => handleAttach(window.id, content)
+                : undefined
+            }
             isMinimized={window.isMinimized}
             zIndex={window.zIndex}
             initialPosition={window.position}
           />
         ))}
       </AnimatePresence>
-      
+
       {/* Taskbar for minimized windows */}
       {windows.size > 0 && (
         <WindowTaskbar
@@ -51,5 +55,5 @@ export function WindowManager({ onAttach }: WindowManagerProps) {
         />
       )}
     </>
-  )
+  );
 }

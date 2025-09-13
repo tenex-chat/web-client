@@ -1,23 +1,23 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
-import { memo, ReactNode, useMemo } from 'react'
-import { Link } from '@tanstack/react-router'
-import { NostrProfile } from '@/components/common/NostrProfile'
-import { RecipientAvatars } from '@/components/common/RecipientAvatars'
-import { formatRelativeTime } from '@/lib/utils/time'
-import { cn } from '@/lib/utils'
-import { getUserStatus } from '@/lib/utils/userStatus'
-import { useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
-import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { Badge } from '@/components/ui/badge'
+import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import { memo, ReactNode, useMemo } from "react";
+import { Link } from "@tanstack/react-router";
+import { NostrProfile } from "@/components/common/NostrProfile";
+import { RecipientAvatars } from "@/components/common/RecipientAvatars";
+import { formatRelativeTime } from "@/lib/utils/time";
+import { cn } from "@/lib/utils";
+import { getUserStatus } from "@/lib/utils/userStatus";
+import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
+import { NDKProject } from "@/lib/ndk-events/NDKProject";
+import { Badge } from "@/components/ui/badge";
 
 interface MessageShellProps {
-  event: NDKEvent
-  project: NDKProject | null | undefined
-  children: ReactNode
-  className?: string
-  isNested?: boolean
-  headerActions?: ReactNode
-  onTimeClick?: (event: NDKEvent) => void
+  event: NDKEvent;
+  project: NDKProject | null | undefined;
+  children: ReactNode;
+  className?: string;
+  isNested?: boolean;
+  headerActions?: ReactNode;
+  onTimeClick?: (event: NDKEvent) => void;
 }
 
 /**
@@ -31,73 +31,75 @@ export const MessageShell = memo(function MessageShell({
   className,
   isNested = false,
   headerActions,
-  onTimeClick
+  onTimeClick,
 }: MessageShellProps) {
-  const user = useNDKCurrentUser()
-  
+  const user = useNDKCurrentUser();
+
   // Get user status (external or belonging to another project)
   const userStatus = useMemo(() => {
-    return getUserStatus(event.pubkey, user?.pubkey, project?.dTag)
-  }, [event.pubkey, user?.pubkey, project?.dTag])
-  
+    return getUserStatus(event.pubkey, user?.pubkey, project?.dTag);
+  }, [event.pubkey, user?.pubkey, project?.dTag]);
+
   // Extract p-tags (recipients) from the event
   const recipientPubkeys = useMemo(() => {
-    if (!event.tags) return []
+    if (!event.tags) return [];
     return event.tags
-      .filter(tag => tag[0] === 'p' && tag[1])
-      .map(tag => tag[1])
-      .filter((pubkey, index, self) => self.indexOf(pubkey) === index) // Remove duplicates
-  }, [event.tags])
-  
+      .filter((tag) => tag[0] === "p" && tag[1])
+      .map((tag) => tag[1])
+      .filter((pubkey, index, self) => self.indexOf(pubkey) === index); // Remove duplicates
+  }, [event.tags]);
+
   // Extract tool tag if present
   const toolName = useMemo(() => {
-    return event.tagValue('tool')
-  }, [event])
+    return event.tagValue("tool");
+  }, [event]);
 
   return (
-    <div className={cn(
-      "group hover:bg-muted/30 transition-colors px-4 py-1",
-      isNested && "ml-10",
-      className
-    )}>
+    <div
+      className={cn(
+        "group hover:bg-muted/30 transition-colors px-4 py-1",
+        isNested && "ml-10",
+        className,
+      )}
+    >
       {/* Message - Slack style layout */}
       <div className="flex gap-3">
         {/* Avatar column - fixed width */}
         <div className="flex-shrink-0 pt-0.5">
-          <Link 
-            to="/p/$pubkey" 
+          <Link
+            to="/p/$pubkey"
             params={{ pubkey: event.pubkey }}
             className="block hover:opacity-80 transition-opacity"
           >
-            <NostrProfile 
-              pubkey={event.pubkey} 
-              size="md" 
+            <NostrProfile
+              pubkey={event.pubkey}
+              size="md"
               variant="avatar"
               className="h-9 w-9 rounded-md"
             />
           </Link>
         </div>
-        
+
         {/* Content column */}
         <div className="flex-1 min-w-0">
           {/* Header row with name, time, and actions */}
           <div className="flex items-start justify-between gap-2 mb-0.5">
             <div className="flex items-baseline gap-2 flex-wrap">
-              <Link 
-                to="/p/$pubkey" 
+              <Link
+                to="/p/$pubkey"
                 params={{ pubkey: event.pubkey }}
                 className="hover:underline"
               >
-                <NostrProfile 
-                  pubkey={event.pubkey} 
-                  size="md" 
+                <NostrProfile
+                  pubkey={event.pubkey}
+                  size="md"
                   variant="name"
                   className="text-sm font-semibold text-foreground"
                 />
               </Link>
               {userStatus.isExternal && (
                 <span className="text-xs text-muted-foreground">
-                  ({userStatus.projectName || 'external'})
+                  ({userStatus.projectName || "external"})
                 </span>
               )}
               {toolName && (
@@ -117,14 +119,14 @@ export const MessageShell = memo(function MessageShell({
               {recipientPubkeys.length > 0 && (
                 <>
                   <span className="text-xs text-muted-foreground">→</span>
-                  <RecipientAvatars 
+                  <RecipientAvatars
                     pubkeys={recipientPubkeys}
                     className="ml-1"
                   />
                 </>
               )}
             </div>
-            
+
             {/* Action buttons - only visible on hover */}
             {headerActions && (
               <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -132,11 +134,11 @@ export const MessageShell = memo(function MessageShell({
               </div>
             )}
           </div>
-          
+
           {/* Content area - children will be rendered here */}
           {children}
         </div>
       </div>
     </div>
-  )
-})
+  );
+});

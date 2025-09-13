@@ -1,99 +1,120 @@
-import { useState } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, AlertCircle } from 'lucide-react'
-import { toast } from 'sonner'
-import { providerRegistry, type ProviderConfig, type ProviderType } from '@/services/ai/provider-registry'
-import { modelDiscovery, type Model } from '@/services/ai/model-discovery'
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import {
+  providerRegistry,
+  type ProviderConfig,
+  type ProviderType,
+} from "@/services/ai/provider-registry";
+import { modelDiscovery, type Model } from "@/services/ai/model-discovery";
 
 interface AddProviderDialogProps {
-  open: boolean
-  onClose: () => void
-  onAdd: (provider: ProviderConfig) => void
+  open: boolean;
+  onClose: () => void;
+  onAdd: (provider: ProviderConfig) => void;
 }
 
-export function AddProviderDialog({ open, onClose, onAdd }: AddProviderDialogProps) {
-  const [provider, setProvider] = useState<ProviderType>('openai')
-  const [apiKey, setApiKey] = useState('')
-  const [baseURL, setBaseURL] = useState('')
-  const [model, setModel] = useState('')
-  const [models, setModels] = useState<Model[]>([])
-  const [loadingModels, setLoadingModels] = useState(false)
-  const [modelsFetchError, setModelsFetchError] = useState(false)
-  const [testing, setTesting] = useState(false)
+export function AddProviderDialog({
+  open,
+  onClose,
+  onAdd,
+}: AddProviderDialogProps) {
+  const [provider, setProvider] = useState<ProviderType>("openai");
+  const [apiKey, setApiKey] = useState("");
+  const [baseURL, setBaseURL] = useState("");
+  const [model, setModel] = useState("");
+  const [models, setModels] = useState<Model[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [modelsFetchError, setModelsFetchError] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   const handleFetchModels = async () => {
     if (!apiKey) {
-      toast.error('Please enter an API key first')
-      return
+      toast.error("Please enter an API key first");
+      return;
     }
 
-    setLoadingModels(true)
-    setModelsFetchError(false)
-    setModels([])
-    setModel('')
+    setLoadingModels(true);
+    setModelsFetchError(false);
+    setModels([]);
+    setModel("");
 
     try {
-      const fetchedModels = await modelDiscovery.fetchModels(provider, apiKey)
-      setModels(fetchedModels)
+      const fetchedModels = await modelDiscovery.fetchModels(provider, apiKey);
+      setModels(fetchedModels);
       if (fetchedModels.length > 0) {
-        setModel(fetchedModels[0].id)
+        setModel(fetchedModels[0].id);
       }
     } catch (error) {
-      console.error('Failed to fetch models:', error)
-      setModelsFetchError(true)
+      console.error("Failed to fetch models:", error);
+      setModelsFetchError(true);
     } finally {
-      setLoadingModels(false)
+      setLoadingModels(false);
     }
-  }
+  };
 
   const handleTest = async () => {
     if (!apiKey) {
-      toast.error('API key is required')
-      return
+      toast.error("API key is required");
+      return;
     }
 
     if (!model && !modelsFetchError) {
-      toast.error('Please select or enter a model')
-      return
+      toast.error("Please select or enter a model");
+      return;
     }
 
-    setTesting(true)
+    setTesting(true);
     const config: ProviderConfig = {
       id: `${provider}-${Date.now()}`,
       provider,
       apiKey,
       model: model || undefined,
       baseURL: baseURL || undefined,
-    }
+    };
 
     try {
-      const result = await providerRegistry.testConnection(config)
+      const result = await providerRegistry.testConnection(config);
       if (result.success) {
-        toast.success('Connection successful!')
+        toast.success("Connection successful!");
       } else {
-        toast.error(result.error || 'Connection failed')
+        toast.error(result.error || "Connection failed");
       }
     } catch {
-      toast.error('Failed to test connection')
+      toast.error("Failed to test connection");
     } finally {
-      setTesting(false)
+      setTesting(false);
     }
-  }
+  };
 
   const handleAdd = () => {
     if (!apiKey) {
-      toast.error('API key is required')
-      return
+      toast.error("API key is required");
+      return;
     }
 
     if (!model && !modelsFetchError) {
-      toast.error('Please select or enter a model')
-      return
+      toast.error("Please select or enter a model");
+      return;
     }
 
     const config: ProviderConfig = {
@@ -102,10 +123,10 @@ export function AddProviderDialog({ open, onClose, onAdd }: AddProviderDialogPro
       apiKey,
       model: model || undefined,
       baseURL: baseURL || undefined,
-    }
+    };
 
-    onAdd(config)
-  }
+    onAdd(config);
+  };
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
@@ -121,7 +142,10 @@ export function AddProviderDialog({ open, onClose, onAdd }: AddProviderDialogPro
           {/* Provider Selection */}
           <div className="space-y-2">
             <Label htmlFor="provider">Provider</Label>
-            <Select value={provider} onValueChange={(value) => setProvider(value as ProviderType)}>
+            <Select
+              value={provider}
+              onValueChange={(value) => setProvider(value as ProviderType)}
+            >
               <SelectTrigger id="provider">
                 <SelectValue />
               </SelectTrigger>
@@ -162,7 +186,7 @@ export function AddProviderDialog({ open, onClose, onAdd }: AddProviderDialogPro
                 Fetching models...
               </>
             ) : (
-              'Fetch Available Models'
+              "Fetch Available Models"
             )}
           </Button>
 
@@ -237,17 +261,14 @@ export function AddProviderDialog({ open, onClose, onAdd }: AddProviderDialogPro
                 Testing...
               </>
             ) : (
-              'Test'
+              "Test"
             )}
           </Button>
-          <Button
-            onClick={handleAdd}
-            disabled={!apiKey || !model}
-          >
+          <Button onClick={handleAdd} disabled={!apiKey || !model}>
             Add Provider
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

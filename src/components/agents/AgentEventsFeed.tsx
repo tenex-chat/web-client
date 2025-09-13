@@ -35,7 +35,7 @@ const EVENT_KIND_NAMES: Record<number, string> = {
 export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
   const { ndk } = useNDK();
   const navigate = useNavigate();
-  
+
   // Subscribe to all events from this agent pubkey
   const { events } = useSubscribe(
     [
@@ -74,7 +74,7 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
     try {
       const content = event.content;
       if (!content) return "No content";
-      
+
       // Try to parse as JSON first
       try {
         const parsed = JSON.parse(content);
@@ -86,33 +86,36 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
         if (parsed.name) return parsed.name;
         // Return first string value found
         for (const value of Object.values(parsed)) {
-          if (typeof value === 'string' && value.trim()) {
+          if (typeof value === "string" && value.trim()) {
             return value;
           }
         }
       } catch {
         // Not JSON, return as is
       }
-      
+
       return content;
     } catch {
       return "Unable to parse content";
     }
   };
-  
+
   // Handle conversation navigation - find the project from the event tags
-  const handleConversationNavigate = useCallback((event: NDKEvent) => {
-    // Find project tag (d-tag) from the event
-    const projectTag = event.tags?.find(tag => tag[0] === 'd' && tag[1]);
-    if (projectTag && projectTag[1]) {
-      // Navigate to the project conversation with this event selected
-      navigate({
-        to: '/projects/$projectId',
-        params: { projectId: projectTag[1] },
-        search: { threadId: event.id }
-      });
-    }
-  }, [navigate]);
+  const handleConversationNavigate = useCallback(
+    (event: NDKEvent) => {
+      // Find project tag (d-tag) from the event
+      const projectTag = event.tags?.find((tag) => tag[0] === "d" && tag[1]);
+      if (projectTag && projectTag[1]) {
+        // Navigate to the project conversation with this event selected
+        navigate({
+          to: "/projects/$projectId",
+          params: { projectId: projectTag[1] },
+          search: { threadId: event.id },
+        });
+      }
+    },
+    [navigate],
+  );
 
   if (sortedEvents.length === 0) {
     return (
@@ -126,7 +129,7 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
 
   const renderEvent = (event: NDKEvent) => {
     const kind = event.kind as number;
-    
+
     // Use chat message component for Generic Reply (kind 1111)
     if (kind === 1111) {
       return (
@@ -138,19 +141,13 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
         />
       );
     }
-    
+
     // Use LessonCard for lesson events (kind 4129)
     if (kind === 4129) {
       const lesson = NDKAgentLesson.from(event);
-      return (
-        <LessonCard
-          key={event.id}
-          lesson={lesson}
-          compact={true}
-        />
-      );
+      return <LessonCard key={event.id} lesson={lesson} compact={true} />;
     }
-    
+
     // Use TaskContent for task events
     if (kind === 9905 || kind === 9906 || kind === 9907 || kind === 9908) {
       const task = NDKTask.from(event);
@@ -162,20 +159,18 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
         );
       }
     }
-    
+
     // Default card rendering for other events
     return (
-      <Card 
-        key={event.id} 
+      <Card
+        key={event.id}
         className="hover:bg-muted/50 transition-colors cursor-pointer"
         onClick={() => handleConversationNavigate(event)}
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
-              <Badge variant="outline">
-                {getEventKindName(event.kind)}
-              </Badge>
+              <Badge variant="outline">{getEventKindName(event.kind)}</Badge>
               <span className="text-xs text-muted-foreground">
                 {formatRelativeTime(event.created_at || 0)}
               </span>
@@ -196,7 +191,10 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
                   key={idx}
                   className="text-xs bg-muted px-2 py-0.5 rounded"
                 >
-                  {tag[0]}{tag[1] ? `: ${tag[1].slice(0, 20)}${tag[1].length > 20 ? '...' : ''}` : ''}
+                  {tag[0]}
+                  {tag[1]
+                    ? `: ${tag[1].slice(0, 20)}${tag[1].length > 20 ? "..." : ""}`
+                    : ""}
                 </span>
               ))}
               {event.tags.length > 5 && (
@@ -213,9 +211,7 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
 
   return (
     <ScrollArea className="h-full">
-      <div className="space-y-3">
-        {sortedEvents.map(renderEvent)}
-      </div>
+      <div className="space-y-3">{sortedEvents.map(renderEvent)}</div>
     </ScrollArea>
   );
 }

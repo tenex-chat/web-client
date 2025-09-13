@@ -1,28 +1,39 @@
-import { useState } from 'react'
-import { useNDK, useNDKCurrentUser, useSubscribe, useProfile } from '@nostr-dev-kit/ndk-hooks'
-import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { toast } from 'sonner'
-import { Bot, UserMinus, Users } from 'lucide-react'
-import { NDKProject } from '@/lib/ndk-events/NDKProject'
+import { useState } from "react";
+import {
+  useNDK,
+  useNDKCurrentUser,
+  useSubscribe,
+  useProfile,
+} from "@nostr-dev-kit/ndk-hooks";
+import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "sonner";
+import { Bot, UserMinus, Users } from "lucide-react";
+import { NDKProject } from "@/lib/ndk-events/NDKProject";
 
 interface ProjectAgentsPanelProps {
-  project: NDKProject
+  project: NDKProject;
 }
 
 interface AgentItemProps {
-  pubkey: string
-  isSelected: boolean
-  onToggle: (pubkey: string) => void
+  pubkey: string;
+  isSelected: boolean;
+  onToggle: (pubkey: string) => void;
 }
 
 function AgentItem({ pubkey, isSelected, onToggle }: AgentItemProps) {
-  const profile = useProfile(pubkey)
-  const name = profile?.displayName || profile?.name || pubkey.slice(0, 8)
-  const avatarUrl = profile?.image || profile?.picture
+  const profile = useProfile(pubkey);
+  const name = profile?.displayName || profile?.name || pubkey.slice(0, 8);
+  const avatarUrl = profile?.image || profile?.picture;
 
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
@@ -31,14 +42,14 @@ function AgentItem({ pubkey, isSelected, onToggle }: AgentItemProps) {
         onCheckedChange={() => onToggle(pubkey)}
         className="ml-1"
       />
-      
+
       <Avatar className="h-10 w-10">
         <AvatarImage src={avatarUrl} alt={name} />
         <AvatarFallback>
           <Bot className="w-5 h-5" />
         </AvatarFallback>
       </Avatar>
-      
+
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate">{name}</p>
         <p className="text-xs text-muted-foreground truncate">
@@ -46,94 +57,98 @@ function AgentItem({ pubkey, isSelected, onToggle }: AgentItemProps) {
         </p>
       </div>
     </div>
-  )
+  );
 }
 
 export function ProjectAgentsPanel({ project }: ProjectAgentsPanelProps) {
-  const { ndk } = useNDK()
-  const currentUser = useNDKCurrentUser()
-  const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set())
-  const [isRemoving, setIsRemoving] = useState(false)
+  const { ndk } = useNDK();
+  const currentUser = useNDKCurrentUser();
+  const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set());
+  const [isRemoving, setIsRemoving] = useState(false);
 
   // Subscribe to the project event to get current agents
   const { events } = useSubscribe(
-    project.pubkey && project.dTag ? [{
-      kinds: [31933],
-      authors: [project.pubkey],
-      "#d": [project.dTag]
-    }] : [],
+    project.pubkey && project.dTag
+      ? [
+          {
+            kinds: [31933],
+            authors: [project.pubkey],
+            "#d": [project.dTag],
+          },
+        ]
+      : [],
     {
-      closeOnEose: true
-    }
-  )
+      closeOnEose: true,
+    },
+  );
 
-  const projectEvent = events?.[0]
-  const agentPubkeys = projectEvent?.tags
-    .filter(tag => tag[0] === 'p')
-    .map(tag => tag[1]) || []
+  const projectEvent = events?.[0];
+  const agentPubkeys =
+    projectEvent?.tags.filter((tag) => tag[0] === "p").map((tag) => tag[1]) ||
+    [];
 
-  const isOwner = currentUser?.pubkey === project.pubkey
-  const hasSelectedAgents = selectedAgents.size > 0
+  const isOwner = currentUser?.pubkey === project.pubkey;
+  const hasSelectedAgents = selectedAgents.size > 0;
 
   const handleToggleAgent = (pubkey: string) => {
-    setSelectedAgents(prev => {
-      const newSet = new Set(prev)
+    setSelectedAgents((prev) => {
+      const newSet = new Set(prev);
       if (newSet.has(pubkey)) {
-        newSet.delete(pubkey)
+        newSet.delete(pubkey);
       } else {
-        newSet.add(pubkey)
+        newSet.add(pubkey);
       }
-      return newSet
-    })
-  }
+      return newSet;
+    });
+  };
 
   const handleSelectAll = () => {
     if (selectedAgents.size === agentPubkeys.length) {
-      setSelectedAgents(new Set())
+      setSelectedAgents(new Set());
     } else {
-      setSelectedAgents(new Set(agentPubkeys))
+      setSelectedAgents(new Set(agentPubkeys));
     }
-  }
+  };
 
   const handleRemoveAgents = async () => {
-    if (!projectEvent || !ndk || !currentUser) return
+    if (!projectEvent || !ndk || !currentUser) return;
 
     // Verify ownership
     if (projectEvent.pubkey !== currentUser.pubkey) {
-      toast.error('Only the project owner can remove agents')
-      return
+      toast.error("Only the project owner can remove agents");
+      return;
     }
 
     if (selectedAgents.size === 0) {
-      toast.error('No agents selected')
-      return
+      toast.error("No agents selected");
+      return;
     }
 
-    setIsRemoving(true)
+    setIsRemoving(true);
     try {
       // Create new event from the existing one
-      const newEvent = new NDKEvent(ndk, projectEvent.rawEvent())
-      
+      const newEvent = new NDKEvent(ndk, projectEvent.rawEvent());
+
       // Remove selected agent p tags
-      newEvent.tags = newEvent.tags.filter(tag => 
-        !(tag[0] === 'p' && selectedAgents.has(tag[1]))
-      )
-      
+      newEvent.tags = newEvent.tags.filter(
+        (tag) => !(tag[0] === "p" && selectedAgents.has(tag[1])),
+      );
+
       // Sign and publish the updated event
-      await newEvent.sign()
-      await newEvent.publish()
-      
+      await newEvent.sign();
+      await newEvent.publish();
+
       toast.success(
-        `Successfully removed ${selectedAgents.size} agent${selectedAgents.size > 1 ? 's' : ''}`
-      )
-      setSelectedAgents(new Set())
+        `Successfully removed ${selectedAgents.size} agent${selectedAgents.size > 1 ? "s" : ""}`,
+      );
+      setSelectedAgents(new Set());
     } catch (error) {
-      console.error('Failed to remove agents:', error)
-      toast.error('Failed to remove agents')
+      console.error("Failed to remove agents:", error);
+      toast.error("Failed to remove agents");
     } finally {
-      setIsRemoving(false)
+      setIsRemoving(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -151,12 +166,10 @@ export function ProjectAgentsPanel({ project }: ProjectAgentsPanelProps) {
             </div>
             {isOwner && agentPubkeys.length > 0 && (
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSelectAll}
-                >
-                  {selectedAgents.size === agentPubkeys.length ? 'Deselect All' : 'Select All'}
+                <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                  {selectedAgents.size === agentPubkeys.length
+                    ? "Deselect All"
+                    : "Select All"}
                 </Button>
                 <Button
                   variant="destructive"
@@ -165,7 +178,7 @@ export function ProjectAgentsPanel({ project }: ProjectAgentsPanelProps) {
                   disabled={!hasSelectedAgents || isRemoving}
                 >
                   {isRemoving ? (
-                    'Removing...'
+                    "Removing..."
                   ) : (
                     <>
                       <UserMinus className="h-4 w-4 mr-2" />
@@ -198,9 +211,9 @@ export function ProjectAgentsPanel({ project }: ProjectAgentsPanelProps) {
                   </p>
                 </div>
               )}
-              
+
               <div className="grid gap-2">
-                {agentPubkeys.map(pubkey => (
+                {agentPubkeys.map((pubkey) => (
                   <AgentItem
                     key={pubkey}
                     pubkey={pubkey}
@@ -209,11 +222,12 @@ export function ProjectAgentsPanel({ project }: ProjectAgentsPanelProps) {
                   />
                 ))}
               </div>
-              
+
               {hasSelectedAgents && (
                 <div className="mt-4 p-3 bg-destructive/10 rounded-lg">
                   <p className="text-sm text-destructive">
-                    {selectedAgents.size} agent{selectedAgents.size > 1 ? 's' : ''} selected for removal
+                    {selectedAgents.size} agent
+                    {selectedAgents.size > 1 ? "s" : ""} selected for removal
                   </p>
                 </div>
               )}
@@ -222,5 +236,5 @@ export function ProjectAgentsPanel({ project }: ProjectAgentsPanelProps) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

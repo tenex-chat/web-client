@@ -1,4 +1,4 @@
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface OpenRouterModel {
   id: string;
@@ -35,108 +35,136 @@ interface ProviderModels {
 }
 
 export const DEFAULT_MODELS = {
-  openai: 'gpt-3.5-turbo',
-  anthropic: 'claude-3-opus-20240229',
-  google: 'gemini-pro',
-  ollama: 'llama2',
-  groq: 'mixtral-8x7b-32768',
-  openrouter: 'auto',
+  openai: "gpt-3.5-turbo",
+  anthropic: "claude-3-opus-20240229",
+  google: "gemini-pro",
+  ollama: "llama2",
+  groq: "mixtral-8x7b-32768",
+  openrouter: "auto",
 } as const;
 
 const PROVIDER_DEFAULTS: ProviderModels = {
-  openai: ['gpt-4-turbo-preview', 'gpt-4', 'gpt-3.5-turbo'],
-  anthropic: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'],
-  google: ['gemini-pro', 'gemini-pro-vision'],
-  ollama: ['llama2', 'mistral', 'codellama'],
-  groq: ['mixtral-8x7b-32768', 'llama2-70b-4096'],
+  openai: ["gpt-4-turbo-preview", "gpt-4", "gpt-3.5-turbo"],
+  anthropic: [
+    "claude-3-opus-20240229",
+    "claude-3-sonnet-20240229",
+    "claude-3-haiku-20240307",
+  ],
+  google: ["gemini-pro", "gemini-pro-vision"],
+  ollama: ["llama2", "mistral", "codellama"],
+  groq: ["mixtral-8x7b-32768", "llama2-70b-4096"],
 };
 
 export async function fetchOpenRouterModels(): Promise<string[]> {
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/models');
+    const response = await fetch("https://openrouter.ai/api/v1/models");
     if (!response.ok) {
-      logger.warn('Failed to fetch OpenRouter models, using defaults');
-      return ['auto'];
+      logger.warn("Failed to fetch OpenRouter models, using defaults");
+      return ["auto"];
     }
-    
+
     const data = await response.json();
     const models = data.data as OpenRouterModel[];
-    
+
     // Sort by name and return model IDs
     return models
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map(model => model.id);
+      .map((model) => model.id);
   } catch (error) {
-    logger.error('Error fetching OpenRouter models:', error);
-    return ['auto'];
+    logger.error("Error fetching OpenRouter models:", error);
+    return ["auto"];
   }
 }
 
-export async function fetchOpenRouterModelsWithDetails(): Promise<OpenRouterModelWithAudio[]> {
+export async function fetchOpenRouterModelsWithDetails(): Promise<
+  OpenRouterModelWithAudio[]
+> {
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/models');
+    const response = await fetch("https://openrouter.ai/api/v1/models");
     if (!response.ok) {
-      logger.warn('Failed to fetch OpenRouter models, using defaults');
+      logger.warn("Failed to fetch OpenRouter models, using defaults");
       return [];
     }
-    
+
     const data = await response.json();
     const models = data.data as OpenRouterModel[];
-    
+
     // Check for audio support based on input_modalities array
-    return models.map(model => ({
-      ...model,
-      supportsAudio: model.architecture?.input_modalities?.includes('audio') || 
-                     model.architecture?.modality?.includes('audio') ||
-                     model.id.toLowerCase().includes('whisper') ||
-                     model.id.toLowerCase().includes('audio')
-    })).sort((a, b) => a.name.localeCompare(b.name));
+    return models
+      .map((model) => ({
+        ...model,
+        supportsAudio:
+          model.architecture?.input_modalities?.includes("audio") ||
+          model.architecture?.modality?.includes("audio") ||
+          model.id.toLowerCase().includes("whisper") ||
+          model.id.toLowerCase().includes("audio"),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    logger.error('Error fetching OpenRouter models:', error);
+    logger.error("Error fetching OpenRouter models:", error);
     return [];
   }
 }
 
-export async function fetchOpenAIModelsWithDetails(apiKey?: string): Promise<OpenAIModelWithAudio[]> {
+export async function fetchOpenAIModelsWithDetails(
+  apiKey?: string,
+): Promise<OpenAIModelWithAudio[]> {
   const defaultModels = [
-    { id: 'whisper-1', object: 'model', created: 0, owned_by: 'openai-internal', supportsAudio: true },
-    { id: 'gpt-4o-transcribe', object: 'model', created: 0, owned_by: 'openai', supportsAudio: true }
+    {
+      id: "whisper-1",
+      object: "model",
+      created: 0,
+      owned_by: "openai-internal",
+      supportsAudio: true,
+    },
+    {
+      id: "gpt-4o-transcribe",
+      object: "model",
+      created: 0,
+      owned_by: "openai",
+      supportsAudio: true,
+    },
   ];
-  
+
   if (!apiKey) {
     return defaultModels;
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/models', {
+    const response = await fetch("https://api.openai.com/v1/models", {
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
     });
 
     if (!response.ok) {
-      logger.warn('Failed to fetch OpenAI models, using defaults');
+      logger.warn("Failed to fetch OpenAI models, using defaults");
       return defaultModels;
     }
-    
+
     const data = await response.json();
     const models = data.data as OpenAIModel[];
-    
+
     // Filter for audio-capable models
-    const audioModels = models.filter(model => 
-      model.id === 'whisper-1' || 
-      model.id === 'gpt-4o-transcribe' ||
-      model.id.includes('audio') ||
-      model.id.includes('transcrib')
-    ).map(model => ({
-      ...model,
-      supportsAudio: true
-    }));
-    
+    const audioModels = models
+      .filter(
+        (model) =>
+          model.id === "whisper-1" ||
+          model.id === "gpt-4o-transcribe" ||
+          model.id.includes("audio") ||
+          model.id.includes("transcrib"),
+      )
+      .map((model) => ({
+        ...model,
+        supportsAudio: true,
+      }));
+
     // If no audio models found in API response, return defaults
-    return audioModels.length > 0 ? audioModels.sort((a, b) => a.id.localeCompare(b.id)) : defaultModels;
+    return audioModels.length > 0
+      ? audioModels.sort((a, b) => a.id.localeCompare(b.id))
+      : defaultModels;
   } catch (error) {
-    logger.error('Error fetching OpenAI models:', error);
+    logger.error("Error fetching OpenAI models:", error);
     return defaultModels;
   }
 }
@@ -148,57 +176,63 @@ export async function fetchOpenAIModelsWithDetails(apiKey?: string): Promise<Ope
  * @returns Promise resolving to an array of available model names
  * @throws Error if the fetch fails or provider is unsupported
  */
-export async function fetchProviderModels(provider: string, apiKey?: string): Promise<string[]> {
+export async function fetchProviderModels(
+  provider: string,
+  apiKey?: string,
+): Promise<string[]> {
   switch (provider) {
-    case 'openrouter':
+    case "openrouter":
       return fetchOpenRouterModels();
-    
-    case 'openai':
+
+    case "openai":
       if (apiKey) {
         try {
-          const response = await fetch('https://api.openai.com/v1/models', {
+          const response = await fetch("https://api.openai.com/v1/models", {
             headers: {
-              'Authorization': `Bearer ${apiKey}`,
+              Authorization: `Bearer ${apiKey}`,
             },
           });
           if (response.ok) {
             const data = await response.json();
             return data.data
-              .filter((model: { id: string }) => model.id.includes('gpt'))
+              .filter((model: { id: string }) => model.id.includes("gpt"))
               .map((model: { id: string }) => model.id)
               .sort();
           }
         } catch (error) {
-          logger.error('Error fetching OpenAI models:', error);
+          logger.error("Error fetching OpenAI models:", error);
         }
       }
       return PROVIDER_DEFAULTS.openai;
-    
-    case 'anthropic':
+
+    case "anthropic":
       // Anthropic doesn't have a public models endpoint
       return PROVIDER_DEFAULTS.anthropic;
-    
-    case 'google':
+
+    case "google":
       // Google doesn't have a simple models endpoint
       return PROVIDER_DEFAULTS.google;
-    
-    case 'ollama':
+
+    case "ollama":
       // Could fetch from local Ollama instance if running
       try {
-        const response = await fetch('http://localhost:11434/api/tags');
+        const response = await fetch("http://localhost:11434/api/tags");
         if (response.ok) {
           const data = await response.json();
-          return data.models?.map((model: { name: string }) => model.name) || PROVIDER_DEFAULTS.ollama;
+          return (
+            data.models?.map((model: { name: string }) => model.name) ||
+            PROVIDER_DEFAULTS.ollama
+          );
         }
       } catch {
         // Ollama not running locally
       }
       return PROVIDER_DEFAULTS.ollama;
-    
-    case 'groq':
+
+    case "groq":
       // Groq doesn't have a public models endpoint
       return PROVIDER_DEFAULTS.groq;
-    
+
     default:
       return [];
   }

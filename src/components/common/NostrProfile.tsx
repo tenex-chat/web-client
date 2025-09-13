@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 
 interface NostrProfileProps {
   pubkey: string;
-  variant?: 'full' | 'name' | 'avatar' | 'compact';
-  size?: 'xs' | 'sm' | 'md' | 'lg';
+  variant?: "full" | "name" | "avatar" | "compact";
+  size?: "xs" | "sm" | "md" | "lg";
   fallback?: string; // Optional fallback name (e.g., agent slug)
   className?: string;
   avatarClassName?: string;
@@ -15,8 +15,8 @@ interface NostrProfileProps {
 
 export function NostrProfile({
   pubkey,
-  variant = 'full',
-  size = 'sm',
+  variant = "full",
+  size = "sm",
   fallback,
   className = "",
   nameClassName = "",
@@ -36,7 +36,7 @@ export function NostrProfile({
     if (userProfile?.displayName) return userProfile.displayName;
     if (userProfile?.name) return userProfile.name;
     if (fallback) return fallback;
-    
+
     // Default fallback to npub slice
     const user = new NDKUser({ pubkey });
     return `${user.npub.slice(0, 8)}...`;
@@ -44,9 +44,9 @@ export function NostrProfile({
 
   const displayName = getDisplayName();
   const avatarUrl = userProfile?.image || userProfile?.picture;
-  
+
   const getInitials = (name: string) => {
-    const words = name.split(' ');
+    const words = name.split(" ");
     if (words.length >= 2) {
       return words[0][0] + words[1][0];
     }
@@ -54,15 +54,22 @@ export function NostrProfile({
   };
 
   // Handle different variants
-  if (variant === 'name') {
+  if (variant === "name") {
     return (
-      <span className={cn(sizeClasses[size].text, "truncate", nameClassName, className)}>
+      <span
+        className={cn(
+          sizeClasses[size].text,
+          "truncate",
+          nameClassName,
+          className,
+        )}
+      >
         {displayName}
       </span>
     );
   }
 
-  if (variant === 'avatar') {
+  if (variant === "avatar") {
     return (
       <NostrAvatar
         pubkey={pubkey}
@@ -74,7 +81,7 @@ export function NostrProfile({
     );
   }
 
-  if (variant === 'compact') {
+  if (variant === "compact") {
     return (
       <div className={cn("inline-flex items-center gap-1", className)}>
         <NostrAvatar

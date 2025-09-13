@@ -1,20 +1,26 @@
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { NDKProject } from '@/lib/ndk-events/NDKProject'
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { NDKProject } from "@/lib/ndk-events/NDKProject";
 
 interface ProjectAdvancedSettingsProps {
-  project: NDKProject
+  project: NDKProject;
 }
 
-export function ProjectAdvancedSettings({ project }: ProjectAdvancedSettingsProps) {
+export function ProjectAdvancedSettings({
+  project,
+}: ProjectAdvancedSettingsProps) {
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Advanced Settings</CardTitle>
-          <CardDescription>
-            Configure advanced project options
-          </CardDescription>
+          <CardDescription>Configure advanced project options</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-4">
@@ -22,19 +28,23 @@ export function ProjectAdvancedSettings({ project }: ProjectAdvancedSettingsProp
               <Label>Project ID</Label>
               <p className="text-sm text-muted-foreground mt-1">{project.id}</p>
             </div>
-            
+
             <div>
               <Label>D-Tag</Label>
-              <p className="text-sm text-muted-foreground mt-1">{project.dTag}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {project.dTag}
+              </p>
             </div>
-            
+
             <div>
               <Label>Created At</Label>
               <p className="text-sm text-muted-foreground mt-1">
-                {project.created_at ? new Date(project.created_at * 1000).toLocaleString() : 'Unknown'}
+                {project.created_at
+                  ? new Date(project.created_at * 1000).toLocaleString()
+                  : "Unknown"}
               </p>
             </div>
-            
+
             {project.pubkey && (
               <div>
                 <Label>Author</Label>
@@ -50,9 +60,7 @@ export function ProjectAdvancedSettings({ project }: ProjectAdvancedSettingsProp
       <Card>
         <CardHeader>
           <CardTitle>Project Metadata</CardTitle>
-          <CardDescription>
-            Additional project information
-          </CardDescription>
+          <CardDescription>Additional project information</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -62,14 +70,15 @@ export function ProjectAdvancedSettings({ project }: ProjectAdvancedSettingsProp
                 {project.tags.length} tags
               </p>
             </div>
-            
+
             <div>
               <Label>Agent Count</Label>
               <p className="text-sm text-muted-foreground mt-1">
-                {project.agents.length} agent{project.agents.length !== 1 ? 's' : ''}
+                {project.agents.length} agent
+                {project.agents.length !== 1 ? "s" : ""}
               </p>
             </div>
-            
+
             {project.sig && (
               <div>
                 <Label>Signature</Label>
@@ -82,5 +91,5 @@ export function ProjectAdvancedSettings({ project }: ProjectAdvancedSettingsProp
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

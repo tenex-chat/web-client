@@ -1,83 +1,98 @@
-import { useState, useEffect } from 'react'
-import { Camera, Save } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { ProjectAvatar } from '@/components/ui/project-avatar'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { toast } from 'sonner'
-import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { useNDK } from '@nostr-dev-kit/ndk-hooks'
+import { useState, useEffect } from "react";
+import { Camera, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { ProjectAvatar } from "@/components/ui/project-avatar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+import { NDKProject } from "@/lib/ndk-events/NDKProject";
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
 
 interface ProjectGeneralSettingsProps {
-  project: NDKProject
-  onSave?: () => void
+  project: NDKProject;
+  onSave?: () => void;
 }
 
-export function ProjectGeneralSettings({ project, onSave }: ProjectGeneralSettingsProps) {
-  const { ndk } = useNDK()
-  const [isSaving, setIsSaving] = useState(false)
-  const [hasChanges, setHasChanges] = useState(false)
-  
+export function ProjectGeneralSettings({
+  project,
+  onSave,
+}: ProjectGeneralSettingsProps) {
+  const { ndk } = useNDK();
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+
   // Form data state
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    picture: '',
-    repo: '',
+    title: "",
+    description: "",
+    picture: "",
+    repo: "",
     hashtags: [] as string[],
-  })
+  });
 
   // Initialize form data when project loads
   useEffect(() => {
     if (project) {
       setFormData({
-        title: project.title || '',
-        description: project.description || '',
-        picture: project.picture || '',
-        repo: project.repository || '',
+        title: project.title || "",
+        description: project.description || "",
+        picture: project.picture || "",
+        repo: project.repository || "",
         hashtags: project.hashtags || [],
-      })
+      });
     }
-  }, [project])
+  }, [project]);
 
   const handleSave = async () => {
-    if (!project || !ndk) return
+    if (!project || !ndk) return;
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       // Update project with new data
-      project.title = formData.title
-      project.content = formData.description
-      project.picture = formData.picture
-      project.repository = formData.repo
-      project.hashtags = formData.hashtags
+      project.title = formData.title;
+      project.content = formData.description;
+      project.picture = formData.picture;
+      project.repository = formData.repo;
+      project.hashtags = formData.hashtags;
 
       // Publish the updated project
-						await project.publishReplaceable();
-      
-      toast.success('Project settings saved successfully')
-      setHasChanges(false)
-      onSave?.()
-    } catch (error) {
-      console.error('Failed to save project:', error)
-      toast.error('Failed to save project settings')
-    } finally {
-      setIsSaving(false)
-    }
-  }
+      await project.publishReplaceable();
 
-  const handleInputChange = (field: keyof typeof formData, value: string | string[]) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    setHasChanges(true)
-  }
+      toast.success("Project settings saved successfully");
+      setHasChanges(false);
+      onSave?.();
+    } catch (error) {
+      console.error("Failed to save project:", error);
+      toast.error("Failed to save project settings");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleInputChange = (
+    field: keyof typeof formData,
+    value: string | string[],
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
 
   const handleHashtagsChange = (value: string) => {
-    const hashtags = value.split(',').map(tag => tag.trim()).filter(Boolean)
-    handleInputChange('hashtags', hashtags)
-  }
+    const hashtags = value
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    handleInputChange("hashtags", hashtags);
+  };
 
   return (
     <div className="space-y-6">
@@ -107,8 +122,8 @@ export function ProjectGeneralSettings({ project, onSave }: ProjectGeneralSettin
         <CardContent className="space-y-6">
           {/* Avatar Section */}
           <div className="flex items-center gap-6">
-            <ProjectAvatar 
-              project={project} 
+            <ProjectAvatar
+              project={project}
               className="h-24 w-24"
               fallbackClassName="text-2xl"
             />
@@ -119,16 +134,16 @@ export function ProjectGeneralSettings({ project, onSave }: ProjectGeneralSettin
                   id="picture"
                   placeholder="https://example.com/image.png"
                   value={formData.picture}
-                  onChange={(e) => handleInputChange('picture', e.target.value)}
+                  onChange={(e) => handleInputChange("picture", e.target.value)}
                   className="max-w-sm"
                 />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => {
-                    const url = prompt('Enter image URL:', formData.picture)
+                    const url = prompt("Enter image URL:", formData.picture);
                     if (url !== null) {
-                      handleInputChange('picture', url)
+                      handleInputChange("picture", url);
                     }
                   }}
                 >
@@ -147,7 +162,7 @@ export function ProjectGeneralSettings({ project, onSave }: ProjectGeneralSettin
               id="title"
               placeholder="Enter project name"
               value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
+              onChange={(e) => handleInputChange("title", e.target.value)}
               className="max-w-md"
             />
           </div>
@@ -159,7 +174,7 @@ export function ProjectGeneralSettings({ project, onSave }: ProjectGeneralSettin
               id="description"
               placeholder="Describe your project..."
               value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              onChange={(e) => handleInputChange("description", e.target.value)}
               className="min-h-[100px]"
             />
           </div>
@@ -171,7 +186,7 @@ export function ProjectGeneralSettings({ project, onSave }: ProjectGeneralSettin
               id="repo"
               placeholder="https://github.com/username/repo"
               value={formData.repo}
-              onChange={(e) => handleInputChange('repo', e.target.value)}
+              onChange={(e) => handleInputChange("repo", e.target.value)}
               className="max-w-md"
             />
           </div>
@@ -182,7 +197,7 @@ export function ProjectGeneralSettings({ project, onSave }: ProjectGeneralSettin
             <Input
               id="hashtags"
               placeholder="react, typescript, web3 (comma separated)"
-              value={formData.hashtags.join(', ')}
+              value={formData.hashtags.join(", ")}
               onChange={(e) => handleHashtagsChange(e.target.value)}
               className="max-w-md"
             />
@@ -193,5 +208,5 @@ export function ProjectGeneralSettings({ project, onSave }: ProjectGeneralSettin
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

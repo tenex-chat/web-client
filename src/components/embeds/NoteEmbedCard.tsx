@@ -1,34 +1,43 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
-import { MessageSquare, Heart, Repeat2, Zap } from 'lucide-react'
-import { Card } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
-import { formatRelativeTime } from '@/lib/utils/time'
-import { NostrProfile } from '@/components/common/NostrProfile'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { BaseEmbedCard } from './BaseEmbedCard'
+import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import { MessageSquare, Heart, Repeat2, Zap } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/utils/time";
+import { NostrProfile } from "@/components/common/NostrProfile";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { BaseEmbedCard } from "./BaseEmbedCard";
 
 interface NoteEmbedCardProps {
-  event: NDKEvent
-  compact?: boolean
-  className?: string
-  onClick?: () => void
+  event: NDKEvent;
+  compact?: boolean;
+  className?: string;
+  onClick?: () => void;
 }
 
-export function NoteEmbedCard({ event, compact, className, onClick }: NoteEmbedCardProps) {
+export function NoteEmbedCard({
+  event,
+  compact,
+  className,
+  onClick,
+}: NoteEmbedCardProps) {
   const getImageUrl = () => {
-    const urlTag = event.tags?.find(tag => tag[0] === 'url' || tag[0] === 'image')
-    if (urlTag) return urlTag[1]
-    
-    const imageMatch = event.content?.match(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/i)
-    return imageMatch?.[0]
-  }
+    const urlTag = event.tags?.find(
+      (tag) => tag[0] === "url" || tag[0] === "image",
+    );
+    if (urlTag) return urlTag[1];
 
-  const imageUrl = getImageUrl()
-  const contentWithoutImage = imageUrl 
-    ? event.content?.replace(imageUrl, '').trim() 
-    : event.content
+    const imageMatch = event.content?.match(
+      /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/i,
+    );
+    return imageMatch?.[0];
+  };
+
+  const imageUrl = getImageUrl();
+  const contentWithoutImage = imageUrl
+    ? event.content?.replace(imageUrl, "").trim()
+    : event.content;
 
   if (compact) {
     return (
@@ -40,16 +49,16 @@ export function NoteEmbedCard({ event, compact, className, onClick }: NoteEmbedC
         icon={<MessageSquare className="w-3.5 h-3.5" />}
         title={`Note by ${event.pubkey.slice(0, 8)}...`}
       />
-    )
+    );
   }
 
   return (
-    <Card 
+    <Card
       onClick={onClick}
       className={cn(
         "my-3 p-4 cursor-pointer transition-all",
         "hover:shadow-md hover:border-primary/20",
-        className
+        className,
       )}
     >
       <div className="flex gap-3">
@@ -58,7 +67,7 @@ export function NoteEmbedCard({ event, compact, className, onClick }: NoteEmbedC
             {event.pubkey.slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
-        
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <NostrProfile pubkey={event.pubkey} />
@@ -66,29 +75,28 @@ export function NoteEmbedCard({ event, compact, className, onClick }: NoteEmbedC
               {event.created_at && formatRelativeTime(event.created_at * 1000)}
             </span>
           </div>
-          
+
           {contentWithoutImage && (
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {contentWithoutImage.length > 280 
-                  ? contentWithoutImage.slice(0, 280) + '...' 
-                  : contentWithoutImage
-                }
+                {contentWithoutImage.length > 280
+                  ? contentWithoutImage.slice(0, 280) + "..."
+                  : contentWithoutImage}
               </ReactMarkdown>
             </div>
           )}
-          
+
           {imageUrl && (
             <div className="mt-3 rounded-lg overflow-hidden bg-muted">
-              <img 
-                src={imageUrl} 
+              <img
+                src={imageUrl}
                 alt="Note attachment"
                 className="max-w-full max-h-64 object-contain"
                 loading="lazy"
               />
             </div>
           )}
-          
+
           <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
             <button className="flex items-center gap-1 hover:text-foreground transition-colors">
               <MessageSquare className="w-3.5 h-3.5" />
@@ -110,5 +118,5 @@ export function NoteEmbedCard({ event, compact, className, onClick }: NoteEmbedC
         </div>
       </div>
     </Card>
-  )
+  );
 }

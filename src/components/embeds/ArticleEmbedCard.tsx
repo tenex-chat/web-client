@@ -1,38 +1,45 @@
-import { NDKEvent } from '@nostr-dev-kit/ndk-hooks'
-import { FileText, Calendar, User } from 'lucide-react'
-import { Card } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
-import { formatRelativeTime } from '@/lib/utils/time'
-import { NostrProfile } from '@/components/common/NostrProfile'
-import { BaseEmbedCard } from './BaseEmbedCard'
+import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import { FileText, Calendar, User } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/utils/time";
+import { NostrProfile } from "@/components/common/NostrProfile";
+import { BaseEmbedCard } from "./BaseEmbedCard";
 
 interface ArticleEmbedCardProps {
-  event: NDKEvent
-  compact?: boolean
-  className?: string
-  onClick?: () => void
+  event: NDKEvent;
+  compact?: boolean;
+  className?: string;
+  onClick?: () => void;
 }
 
-export function ArticleEmbedCard({ event, compact, className, onClick }: ArticleEmbedCardProps) {
-  const title = event.tags?.find(tag => tag[0] === 'title')?.[1] || 
-                event.tags?.find(tag => tag[0] === 'd')?.[1]?.toUpperCase() || 
-                'Untitled Article'
-  
-  const summary = event.tags?.find(tag => tag[0] === 'summary')?.[1] || 
-                  event.tags?.find(tag => tag[0] === 'description')?.[1] ||
-                  event.content?.slice(0, 150) + (event.content?.length > 150 ? '...' : '')
-  
-  const image = event.tags?.find(tag => tag[0] === 'image')?.[1]
-  const publishedAt = event.tags?.find(tag => tag[0] === 'published_at')?.[1]
+export function ArticleEmbedCard({
+  event,
+  compact,
+  className,
+  onClick,
+}: ArticleEmbedCardProps) {
+  const title =
+    event.tags?.find((tag) => tag[0] === "title")?.[1] ||
+    event.tags?.find((tag) => tag[0] === "d")?.[1]?.toUpperCase() ||
+    "Untitled Article";
+
+  const summary =
+    event.tags?.find((tag) => tag[0] === "summary")?.[1] ||
+    event.tags?.find((tag) => tag[0] === "description")?.[1] ||
+    event.content?.slice(0, 150) + (event.content?.length > 150 ? "..." : "");
+
+  const image = event.tags?.find((tag) => tag[0] === "image")?.[1];
+  const publishedAt = event.tags?.find((tag) => tag[0] === "published_at")?.[1];
 
   if (!compact && image) {
     return (
-      <Card 
+      <Card
         onClick={onClick}
         className={cn(
           "my-3 cursor-pointer transition-all overflow-hidden",
           "hover:shadow-md hover:border-primary/20",
-          className
+          className,
         )}
       >
         <div className="flex">
@@ -53,12 +60,11 @@ export function ArticleEmbedCard({ event, compact, className, onClick }: Article
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
                     <span>
-                      {publishedAt 
+                      {publishedAt
                         ? formatRelativeTime(parseInt(publishedAt) * 1000)
-                        : event.created_at 
+                        : event.created_at
                           ? formatRelativeTime(event.created_at * 1000)
-                          : 'Unknown date'
-                      }
+                          : "Unknown date"}
                     </span>
                   </div>
                 </div>
@@ -66,8 +72,8 @@ export function ArticleEmbedCard({ event, compact, className, onClick }: Article
             </div>
           </div>
           <div className="flex-shrink-0 w-48 h-32 bg-muted">
-            <img 
-              src={image} 
+            <img
+              src={image}
               alt={title}
               className="w-full h-full object-cover"
               loading="lazy"
@@ -75,7 +81,7 @@ export function ArticleEmbedCard({ event, compact, className, onClick }: Article
           </div>
         </div>
       </Card>
-    )
+    );
   }
 
   return (
@@ -95,5 +101,5 @@ export function ArticleEmbedCard({ event, compact, className, onClick }: Article
         </>
       }
     />
-  )
+  );
 }

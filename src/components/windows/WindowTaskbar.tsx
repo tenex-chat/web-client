@@ -1,59 +1,63 @@
-import { motion, AnimatePresence } from 'framer-motion'
-import { X, FileText, MessageSquare, Bot, Settings } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { WindowState } from '@/stores/windowManager'
-import { NDKArticle, NDKEvent } from '@nostr-dev-kit/ndk-hooks'
-import { ProjectAvatar } from '@/components/ui/project-avatar'
+import { motion, AnimatePresence } from "framer-motion";
+import { X, FileText, MessageSquare, Bot, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { WindowState } from "@/stores/windowManager";
+import { NDKArticle, NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import { ProjectAvatar } from "@/components/ui/project-avatar";
 
 interface WindowTaskbarProps {
-  windows: WindowState[]
-  onRestore: (id: string) => void
-  onClose: (id: string) => void
+  windows: WindowState[];
+  onRestore: (id: string) => void;
+  onClose: (id: string) => void;
 }
 
-export function WindowTaskbar({ windows, onRestore, onClose }: WindowTaskbarProps) {
-  const minimizedWindows = windows.filter(w => w.isMinimized)
-  
+export function WindowTaskbar({
+  windows,
+  onRestore,
+  onClose,
+}: WindowTaskbarProps) {
+  const minimizedWindows = windows.filter((w) => w.isMinimized);
+
   if (minimizedWindows.length === 0) {
-    return null
+    return null;
   }
-  
+
   const getIcon = (window: WindowState) => {
     switch (window.content.type) {
-      case 'conversations':
-        return <MessageSquare className="h-3 w-3" />
-      case 'docs':
-        return <FileText className="h-3 w-3" />
-      case 'agents':
-        return <Bot className="h-3 w-3" />
-      case 'settings':
-        return <Settings className="h-3 w-3" />
+      case "conversations":
+        return <MessageSquare className="h-3 w-3" />;
+      case "docs":
+        return <FileText className="h-3 w-3" />;
+      case "agents":
+        return <Bot className="h-3 w-3" />;
+      case "settings":
+        return <Settings className="h-3 w-3" />;
       default:
-        return null
+        return null;
     }
-  }
-  
+  };
+
   const getTitle = (window: WindowState) => {
-    const { content } = window
+    const { content } = window;
     switch (content.type) {
-      case 'conversations':
-        return content.item === 'new' ? 'New Conversation' : 'Conversation'
-      case 'docs':
-        if (content.item === 'new') return 'New Document'
+      case "conversations":
+        return content.item === "new" ? "New Conversation" : "Conversation";
+      case "docs":
+        if (content.item === "new") return "New Document";
         if (content.item instanceof NDKEvent) {
-          const article = NDKArticle.from(content.item)
-          return article.title || 'Document'
+          const article = NDKArticle.from(content.item);
+          return article.title || "Document";
         }
-        return 'Documentation'
-      case 'agents':
-        return 'Agent Profile'
-      case 'settings':
-        return 'Settings'
+        return "Documentation";
+      case "agents":
+        return "Agent Profile";
+      case "settings":
+        return "Settings";
       default:
-        return content.project.title
+        return content.project.title;
     }
-  }
-  
+  };
+
   return (
     <motion.div
       initial={{ y: 100 }}
@@ -65,7 +69,7 @@ export function WindowTaskbar({ windows, onRestore, onClose }: WindowTaskbarProp
         <span className="text-xs text-muted-foreground mr-2">
           Minimized ({minimizedWindows.length})
         </span>
-        
+
         <AnimatePresence mode="popLayout">
           {minimizedWindows.map((window) => (
             <motion.div
@@ -81,8 +85,8 @@ export function WindowTaskbar({ windows, onRestore, onClose }: WindowTaskbarProp
                 onClick={() => onRestore(window.id)}
                 className="group relative flex items-center gap-2 pr-8"
               >
-                <ProjectAvatar 
-                  project={window.content.project} 
+                <ProjectAvatar
+                  project={window.content.project}
                   className="h-4 w-4 shrink-0"
                   fallbackClassName="text-[8px]"
                 />
@@ -93,14 +97,14 @@ export function WindowTaskbar({ windows, onRestore, onClose }: WindowTaskbarProp
                 <span className="text-xs text-muted-foreground">
                   • {window.content.project.title}
                 </span>
-                
+
                 <Button
                   variant="ghost"
                   size="icon"
                   className="absolute right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    onClose(window.id)
+                    e.stopPropagation();
+                    onClose(window.id);
                   }}
                 >
                   <X className="h-3 w-3" />
@@ -111,5 +115,5 @@ export function WindowTaskbar({ windows, onRestore, onClose }: WindowTaskbarProp
         </AnimatePresence>
       </div>
     </motion.div>
-  )
+  );
 }

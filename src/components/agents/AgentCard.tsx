@@ -37,13 +37,19 @@ export const AgentCard = memo(function AgentCard({
               {agent.tools?.length > 0 && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Wrench className="w-3 h-3" />
-                  <span>{agent.tools.length} tool{agent.tools.length !== 1 ? 's' : ''}</span>
+                  <span>
+                    {agent.tools.length} tool
+                    {agent.tools.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
               )}
               {agent.mcpServers?.length > 0 && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Server className="w-3 h-3" />
-                  <span>{agent.mcpServers.length} MCP server{agent.mcpServers.length !== 1 ? 's' : ''}</span>
+                  <span>
+                    {agent.mcpServers.length} MCP server
+                    {agent.mcpServers.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
               )}
             </div>

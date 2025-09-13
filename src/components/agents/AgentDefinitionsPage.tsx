@@ -9,7 +9,13 @@ import { NDKAgentDefinitionPack } from "@/lib/ndk-events/NDKAgentDefinitionPack"
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { CreateAgentDialog } from "@/components/dialogs/CreateAgentDialog";
 import { CreatePackDialog } from "@/components/dialogs/CreatePackDialog";
@@ -28,14 +34,14 @@ export function AgentDefinitionsPage() {
   const [createPackDialogOpen, setCreatePackDialogOpen] = useState(false);
 
   // Fetch all agents (kind 4199)
-  const { events: rawAgents } = useSubscribe(
-    [{ kinds: [NDKAgentDefinition.kind as NDKKind] }]
-  );
+  const { events: rawAgents } = useSubscribe([
+    { kinds: [NDKAgentDefinition.kind as NDKKind] },
+  ]);
 
   // Fetch all packs (kind 34199)
-  const { events: rawPacks } = useSubscribe(
-    [{ kinds: [NDKAgentDefinitionPack.kind as NDKKind] }]
-  );
+  const { events: rawPacks } = useSubscribe([
+    { kinds: [NDKAgentDefinitionPack.kind as NDKKind] },
+  ]);
 
   // Convert raw events to NDKAgentDefinition instances and filter to latest versions only
   const agents = useMemo(() => {
@@ -91,9 +97,12 @@ export function AgentDefinitionsPage() {
 
   // Convert raw pack events to NDKAgentDefinitionPack instances
   const packs = useMemo(() => {
-    return (rawPacks || []).map(
-      (event) => new NDKAgentDefinitionPack(ndk || undefined, event.rawEvent())
-    ).slice(0, 10); // Limit to 10 for horizontal scroll
+    return (rawPacks || [])
+      .map(
+        (event) =>
+          new NDKAgentDefinitionPack(ndk || undefined, event.rawEvent()),
+      )
+      .slice(0, 10); // Limit to 10 for horizontal scroll
   }, [rawPacks, ndk]);
 
   // Filter agents based on search query and filter
@@ -141,7 +150,7 @@ export function AgentDefinitionsPage() {
     const naddr = pack.encode();
     navigate({
       to: "/agents/packs/$naddr",
-      params: { naddr }
+      params: { naddr },
     });
   };
 
@@ -178,7 +187,9 @@ export function AgentDefinitionsPage() {
           {packs.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base font-medium text-muted-foreground">Featured Packs</h2>
+                <h2 className="text-base font-medium text-muted-foreground">
+                  Featured Packs
+                </h2>
                 <div className="flex items-center gap-2">
                   <Link to="/agents/packs">
                     <Button variant="ghost" size="sm">
@@ -188,7 +199,7 @@ export function AgentDefinitionsPage() {
                   </Link>
                 </div>
               </div>
-              
+
               {/* Horizontal scroll container */}
               <div className="overflow-x-auto">
                 <div className="flex gap-4 pb-2">

@@ -1,17 +1,27 @@
-import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import { useNDK, useSubscribe, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
-import { NDKKind } from '@nostr-dev-kit/ndk-hooks'
-import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { toast } from 'sonner'
+import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  useNDK,
+  useSubscribe,
+  useNDKCurrentUser,
+} from "@nostr-dev-kit/ndk-hooks";
+import { NDKKind } from "@nostr-dev-kit/ndk-hooks";
+import { NDKMCPTool } from "@/lib/ndk-events/NDKMCPTool";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   Plus,
@@ -23,8 +33,8 @@ import {
   Wrench,
   Save,
   X,
-  Loader2
-} from 'lucide-react'
+  Loader2,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,167 +44,169 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+} from "@/components/ui/alert-dialog";
 
 export function MCPToolsPage() {
-  const navigate = useNavigate()
-  const { ndk } = useNDK()
-  const user = useNDKCurrentUser()
-  const [selectedTool, setSelectedTool] = useState<NDKMCPTool | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
-  const [isCreating, setIsCreating] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [toolToDelete, setToolToDelete] = useState<NDKMCPTool | null>(null)
+  const navigate = useNavigate();
+  const { ndk } = useNDK();
+  const user = useNDKCurrentUser();
+  const [selectedTool, setSelectedTool] = useState<NDKMCPTool | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [toolToDelete, setToolToDelete] = useState<NDKMCPTool | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    command: '',
+    name: "",
+    description: "",
+    command: "",
     parameters: {} as Record<string, unknown>,
-    capabilities: [] as string[]
-  })
+    capabilities: [] as string[],
+  });
 
   // Subscribe to MCP tools
-  const { events } = useSubscribe(
-    [{ kinds: [4200 as NDKKind], limit: 100 }],
-    { closeOnEose: false }
-  )
+  const { events } = useSubscribe([{ kinds: [4200 as NDKKind], limit: 100 }], {
+    closeOnEose: false,
+  });
 
-  const tools = events?.map(event => {
-    const tool = new NDKMCPTool(event.ndk, event.rawEvent())
-    return tool
-  }) || []
+  const tools =
+    events?.map((event) => {
+      const tool = new NDKMCPTool(event.ndk, event.rawEvent());
+      return tool;
+    }) || [];
 
   // Group tools by ownership
-  const myTools = tools.filter(tool => tool.pubkey === user?.pubkey)
+  const myTools = tools.filter((tool) => tool.pubkey === user?.pubkey);
 
   const handleCreateNew = () => {
-    setSelectedTool(null)
-    setIsCreating(true)
-    setIsEditing(true)
+    setSelectedTool(null);
+    setIsCreating(true);
+    setIsEditing(true);
     setFormData({
-      name: '',
-      description: '',
-      command: '',
+      name: "",
+      description: "",
+      command: "",
       parameters: {},
-      capabilities: []
-    })
-  }
+      capabilities: [],
+    });
+  };
 
   const handleEdit = (tool: NDKMCPTool) => {
-    setSelectedTool(tool)
-    setIsEditing(true)
-    setIsCreating(false)
+    setSelectedTool(tool);
+    setIsEditing(true);
+    setIsCreating(false);
     setFormData({
-      name: tool.name || '',
-      description: tool.description || '',
-      command: tool.command || '',
+      name: tool.name || "",
+      description: tool.description || "",
+      command: tool.command || "",
       parameters: tool.parameters || {},
-      capabilities: tool.capabilities || []
-    })
-  }
+      capabilities: tool.capabilities || [],
+    });
+  };
 
   const handleSave = async () => {
     if (!ndk || !user) {
-      toast.error('Not authenticated')
-      return
+      toast.error("Not authenticated");
+      return;
     }
 
     if (!formData.name || !formData.command) {
-      toast.error('Name and command are required')
-      return
+      toast.error("Name and command are required");
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
-      const tool = selectedTool || new NDKMCPTool(ndk)
-      
-      tool.name = formData.name
-      tool.description = formData.description
-      tool.command = formData.command
-      tool.parameters = formData.parameters
-      tool.capabilities = formData.capabilities
+      const tool = selectedTool || new NDKMCPTool(ndk);
 
-      await tool.publish()
-      
-      toast.success(isCreating ? 'Tool created successfully' : 'Tool updated successfully')
-      setIsEditing(false)
-      setIsCreating(false)
-      setSelectedTool(tool)
+      tool.name = formData.name;
+      tool.description = formData.description;
+      tool.command = formData.command;
+      tool.parameters = formData.parameters;
+      tool.capabilities = formData.capabilities;
+
+      await tool.publish();
+
+      toast.success(
+        isCreating ? "Tool created successfully" : "Tool updated successfully",
+      );
+      setIsEditing(false);
+      setIsCreating(false);
+      setSelectedTool(tool);
     } catch (error) {
-      console.error('Failed to save tool:', error)
-      toast.error('Failed to save tool')
+      console.error("Failed to save tool:", error);
+      toast.error("Failed to save tool");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleDelete = async () => {
-    if (!toolToDelete || !ndk || !user) return
+    if (!toolToDelete || !ndk || !user) return;
 
     try {
       // Create a deletion event (kind 5)
-      const deleteEvent = await toolToDelete.delete()
+      const deleteEvent = await toolToDelete.delete();
       if (deleteEvent) {
-        await deleteEvent.publish()
+        await deleteEvent.publish();
       }
-      
-      toast.success('Tool deleted successfully')
-      setDeleteDialogOpen(false)
-      setToolToDelete(null)
+
+      toast.success("Tool deleted successfully");
+      setDeleteDialogOpen(false);
+      setToolToDelete(null);
       if (selectedTool?.id === toolToDelete.id) {
-        setSelectedTool(null)
+        setSelectedTool(null);
       }
     } catch (error) {
-      console.error('Failed to delete tool:', error)
-      toast.error('Failed to delete tool')
+      console.error("Failed to delete tool:", error);
+      toast.error("Failed to delete tool");
     }
-  }
+  };
 
   const handleCopyId = (tool: NDKMCPTool) => {
-    navigator.clipboard.writeText(tool.id)
-    toast.success('Tool ID copied to clipboard')
-  }
+    navigator.clipboard.writeText(tool.id);
+    toast.success("Tool ID copied to clipboard");
+  };
 
   const handleCancel = () => {
-    setIsEditing(false)
-    setIsCreating(false)
+    setIsEditing(false);
+    setIsCreating(false);
     if (!selectedTool) {
       setFormData({
-        name: '',
-        description: '',
-        command: '',
+        name: "",
+        description: "",
+        command: "",
         parameters: {},
-        capabilities: []
-      })
+        capabilities: [],
+      });
     }
-  }
+  };
 
   const addCapability = () => {
-    const cap = prompt('Enter capability:')
+    const cap = prompt("Enter capability:");
     if (cap && !formData.capabilities.includes(cap)) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        capabilities: [...prev.capabilities, cap]
-      }))
+        capabilities: [...prev.capabilities, cap],
+      }));
     }
-  }
+  };
 
   const removeCapability = (cap: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      capabilities: prev.capabilities.filter(c => c !== cap)
-    }))
-  }
+      capabilities: prev.capabilities.filter((c) => c !== cap),
+    }));
+  };
 
   const getToolIcon = (command?: string) => {
-    if (!command) return <Wrench className="h-5 w-5" />
-    if (command.includes('mcp')) return <Terminal className="h-5 w-5" />
-    if (command.includes('code')) return <Code2 className="h-5 w-5" />
-    return <Wrench className="h-5 w-5" />
-  }
+    if (!command) return <Wrench className="h-5 w-5" />;
+    if (command.includes("mcp")) return <Terminal className="h-5 w-5" />;
+    if (command.includes("code")) return <Code2 className="h-5 w-5" />;
+    return <Wrench className="h-5 w-5" />;
+  };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -204,7 +216,7 @@ export function MCPToolsPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate({ to: '/projects' })}
+            onClick={() => navigate({ to: "/projects" })}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -233,16 +245,18 @@ export function MCPToolsPage() {
                 All Tools ({tools.length})
               </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="my">
               <ScrollArea className="h-[600px]">
                 <div className="space-y-2">
                   {myTools.length === 0 ? (
                     <Card>
                       <CardContent className="text-center py-8">
-                        <p className="text-muted-foreground">No tools created yet</p>
-                        <Button 
-                          variant="link" 
+                        <p className="text-muted-foreground">
+                          No tools created yet
+                        </p>
+                        <Button
+                          variant="link"
                           onClick={handleCreateNew}
                           className="mt-2"
                         >
@@ -251,11 +265,11 @@ export function MCPToolsPage() {
                       </CardContent>
                     </Card>
                   ) : (
-                    myTools.map(tool => (
+                    myTools.map((tool) => (
                       <Card
                         key={tool.id}
                         className={`cursor-pointer transition-colors ${
-                          selectedTool?.id === tool.id ? 'border-primary' : ''
+                          selectedTool?.id === tool.id ? "border-primary" : ""
                         }`}
                         onClick={() => setSelectedTool(tool)}
                       >
@@ -264,12 +278,12 @@ export function MCPToolsPage() {
                             <div className="flex items-center gap-2">
                               {getToolIcon(tool.command)}
                               <CardTitle className="text-base">
-                                {tool.name || 'Unnamed Tool'}
+                                {tool.name || "Unnamed Tool"}
                               </CardTitle>
                             </div>
                           </div>
                           <CardDescription className="text-xs line-clamp-2">
-                            {tool.description || 'No description'}
+                            {tool.description || "No description"}
                           </CardDescription>
                           {tool.command && (
                             <code className="text-xs bg-muted px-2 py-1 rounded">
@@ -287,11 +301,11 @@ export function MCPToolsPage() {
             <TabsContent value="all">
               <ScrollArea className="h-[600px]">
                 <div className="space-y-2">
-                  {tools.map(tool => (
+                  {tools.map((tool) => (
                     <Card
                       key={tool.id}
                       className={`cursor-pointer transition-colors ${
-                        selectedTool?.id === tool.id ? 'border-primary' : ''
+                        selectedTool?.id === tool.id ? "border-primary" : ""
                       }`}
                       onClick={() => setSelectedTool(tool)}
                     >
@@ -300,15 +314,17 @@ export function MCPToolsPage() {
                           <div className="flex items-center gap-2">
                             {getToolIcon(tool.command)}
                             <CardTitle className="text-base">
-                              {tool.name || 'Unnamed Tool'}
+                              {tool.name || "Unnamed Tool"}
                             </CardTitle>
                           </div>
                           {tool.pubkey === user?.pubkey && (
-                            <Badge variant="secondary" className="text-xs">You</Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              You
+                            </Badge>
                           )}
                         </div>
                         <CardDescription className="text-xs line-clamp-2">
-                          {tool.description || 'No description'}
+                          {tool.description || "No description"}
                         </CardDescription>
                         {tool.command && (
                           <code className="text-xs bg-muted px-2 py-1 rounded">
@@ -330,7 +346,7 @@ export function MCPToolsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>
-                  {isCreating ? 'Create New Tool' : 'Edit Tool'}
+                  {isCreating ? "Create New Tool" : "Edit Tool"}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -339,7 +355,9 @@ export function MCPToolsPage() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, name: e.target.value }))
+                    }
                     placeholder="My MCP Tool"
                   />
                 </div>
@@ -349,7 +367,12 @@ export function MCPToolsPage() {
                   <Textarea
                     id="description"
                     value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
                     placeholder="Describe what this tool does..."
                     rows={3}
                   />
@@ -360,7 +383,12 @@ export function MCPToolsPage() {
                   <Input
                     id="command"
                     value={formData.command}
-                    onChange={(e) => setFormData(prev => ({ ...prev, command: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        command: e.target.value,
+                      }))
+                    }
                     placeholder="mcp-server-tool"
                     className="font-mono"
                   />
@@ -369,11 +397,7 @@ export function MCPToolsPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Capabilities</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={addCapability}
-                    >
+                    <Button variant="outline" size="sm" onClick={addCapability}>
                       <Plus className="h-3 w-3 mr-1" />
                       Add
                     </Button>
@@ -391,7 +415,9 @@ export function MCPToolsPage() {
                       </Badge>
                     ))}
                     {formData.capabilities.length === 0 && (
-                      <p className="text-sm text-muted-foreground">No capabilities added</p>
+                      <p className="text-sm text-muted-foreground">
+                        No capabilities added
+                      </p>
                     )}
                   </div>
                 </div>
@@ -404,10 +430,7 @@ export function MCPToolsPage() {
                   >
                     Cancel
                   </Button>
-                  <Button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                  >
+                  <Button onClick={handleSave} disabled={isSaving}>
                     {isSaving ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -430,10 +453,12 @@ export function MCPToolsPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       {getToolIcon(selectedTool.command)}
-                      <CardTitle>{selectedTool.name || 'Unnamed Tool'}</CardTitle>
+                      <CardTitle>
+                        {selectedTool.name || "Unnamed Tool"}
+                      </CardTitle>
                     </div>
                     <CardDescription>
-                      {selectedTool.description || 'No description available'}
+                      {selectedTool.description || "No description available"}
                     </CardDescription>
                   </div>
                   {selectedTool.pubkey === user?.pubkey && (
@@ -449,8 +474,8 @@ export function MCPToolsPage() {
                         variant="outline"
                         size="icon"
                         onClick={() => {
-                          setToolToDelete(selectedTool)
-                          setDeleteDialogOpen(true)
+                          setToolToDelete(selectedTool);
+                          setDeleteDialogOpen(true);
                         }}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -469,18 +494,19 @@ export function MCPToolsPage() {
                   </div>
                 )}
 
-                {selectedTool.capabilities && selectedTool.capabilities.length > 0 && (
-                  <div>
-                    <Label className="text-sm">Capabilities</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {selectedTool.capabilities.map((cap, index) => (
-                        <Badge key={index} variant="secondary">
-                          {cap}
-                        </Badge>
-                      ))}
+                {selectedTool.capabilities &&
+                  selectedTool.capabilities.length > 0 && (
+                    <div>
+                      <Label className="text-sm">Capabilities</Label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {selectedTool.capabilities.map((cap, index) => (
+                          <Badge key={index} variant="secondary">
+                            {cap}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 <div>
                   <Label className="text-sm">Tool ID</Label>
@@ -523,7 +549,8 @@ export function MCPToolsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the tool "{toolToDelete?.name}". This action cannot be undone.
+              This will permanently delete the tool "{toolToDelete?.name}". This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -533,5 +560,5 @@ export function MCPToolsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

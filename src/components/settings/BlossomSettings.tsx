@@ -1,48 +1,54 @@
-import { useState } from 'react'
-import { useAtom } from 'jotai'
-import { Upload, Server, Plus, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Slider } from '@/components/ui/slider'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { blossomServersAtom, serverHealthAtom } from '@/stores/blossomStore'
-import { BlossomServerRegistry } from '@/services/blossom/BlossomServerRegistry'
-import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
+import { useState } from "react";
+import { useAtom } from "jotai";
+import { Upload, Server, Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { blossomServersAtom, serverHealthAtom } from "@/stores/blossomStore";
+import { BlossomServerRegistry } from "@/services/blossom/BlossomServerRegistry";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 export function BlossomSettings() {
-  const [servers, setServers] = useAtom(blossomServersAtom)
-  const [serverHealth] = useAtom(serverHealthAtom)
-  const [newServerUrl, setNewServerUrl] = useState('')
-  const [newServerName, setNewServerName] = useState('')
-  const [autoCompress, setAutoCompress] = useState(true)
-  const [compressionQuality, setCompressionQuality] = useState(85)
-  const [stripExif, setStripExif] = useState(true)
-  const [maxFileSize, setMaxFileSize] = useState(10) // MB
-  const [isTesting, setIsTesting] = useState<string | null>(null)
+  const [servers, setServers] = useAtom(blossomServersAtom);
+  const [serverHealth] = useAtom(serverHealthAtom);
+  const [newServerUrl, setNewServerUrl] = useState("");
+  const [newServerName, setNewServerName] = useState("");
+  const [autoCompress, setAutoCompress] = useState(true);
+  const [compressionQuality, setCompressionQuality] = useState(85);
+  const [stripExif, setStripExif] = useState(true);
+  const [maxFileSize, setMaxFileSize] = useState(10); // MB
+  const [isTesting, setIsTesting] = useState<string | null>(null);
 
-  const registry = BlossomServerRegistry.getInstance()
+  const registry = BlossomServerRegistry.getInstance();
 
   const addServer = () => {
     if (!newServerUrl || !newServerName) {
-      toast.error('Please enter both server URL and name')
-      return
+      toast.error("Please enter both server URL and name");
+      return;
     }
 
     // Validate URL
     try {
-      new URL(newServerUrl)
+      new URL(newServerUrl);
     } catch {
-      toast.error('Please enter a valid URL')
-      return
+      toast.error("Please enter a valid URL");
+      return;
     }
 
     // Check if server already exists
-    if (servers.some(s => s.url === newServerUrl)) {
-      toast.error('Server already exists')
-      return
+    if (servers.some((s) => s.url === newServerUrl)) {
+      toast.error("Server already exists");
+      return;
     }
 
     // Add to registry
@@ -53,53 +59,67 @@ export function BlossomSettings() {
       capabilities: {
         maxFileSize: 50 * 1024 * 1024, // Default 50MB
         requiresAuth: true,
-        supportedFeatures: []
-      }
-    })
+        supportedFeatures: [],
+      },
+    });
 
     // Get the newly added server from registry (which has full info)
-    const newServer = registry.getServers().find(s => s.url === newServerUrl)
+    const newServer = registry.getServers().find((s) => s.url === newServerUrl);
     if (newServer) {
-      setServers([...servers, newServer])
+      setServers([...servers, newServer]);
     }
 
-    toast.success(`Added ${newServerName}`)
-    setNewServerUrl('')
-    setNewServerName('')
-  }
+    toast.success(`Added ${newServerName}`);
+    setNewServerUrl("");
+    setNewServerName("");
+  };
 
   const removeServer = (url: string) => {
-    registry.removeServer(url)
-    setServers(servers.filter(s => s.url !== url))
-    toast.success('Server removed')
-  }
+    registry.removeServer(url);
+    setServers(servers.filter((s) => s.url !== url));
+    toast.success("Server removed");
+  };
 
   const testServer = async (url: string) => {
-    setIsTesting(url)
+    setIsTesting(url);
     try {
-      const response = await fetch(url, { method: 'HEAD' })
+      const response = await fetch(url, { method: "HEAD" });
       if (response.ok || response.status === 405) {
-        toast.success('Server is reachable')
+        toast.success("Server is reachable");
       } else {
-        toast.error('Server returned an error')
+        toast.error("Server returned an error");
       }
     } catch {
-      toast.error('Failed to reach server')
+      toast.error("Failed to reach server");
     } finally {
-      setIsTesting(null)
+      setIsTesting(null);
     }
-  }
+  };
 
   const getServerStatus = (url: string) => {
-    const health = serverHealth.get(url)
-    if (!health) return null
+    const health = serverHealth.get(url);
+    if (!health) return null;
 
     if (health.isHealthy) {
-      return <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300">Online</Badge>
+      return (
+        <Badge
+          variant="outline"
+          className="bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300"
+        >
+          Online
+        </Badge>
+      );
     } else {
-      return <Badge variant="outline" className="bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300">Offline</Badge>
+      return (
+        <Badge
+          variant="outline"
+          className="bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300"
+        >
+          Offline
+        </Badge>
+      );
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -126,7 +146,9 @@ export function BlossomSettings() {
                 onValueChange={([value]) => setMaxFileSize(value)}
                 className="flex-1"
               />
-              <span className="w-16 text-sm text-muted-foreground">{maxFileSize} MB</span>
+              <span className="w-16 text-sm text-muted-foreground">
+                {maxFileSize} MB
+              </span>
             </div>
           </div>
 
@@ -157,7 +179,9 @@ export function BlossomSettings() {
                   onValueChange={([value]) => setCompressionQuality(value)}
                   className="flex-1"
                 />
-                <span className="w-12 text-sm text-muted-foreground">{compressionQuality}%</span>
+                <span className="w-12 text-sm text-muted-foreground">
+                  {compressionQuality}%
+                </span>
               </div>
             </div>
           )}
@@ -192,7 +216,10 @@ export function BlossomSettings() {
           {/* Existing servers */}
           <div className="space-y-2">
             {registry.getServers().map((server) => (
-              <div key={server.url} className="flex items-center justify-between p-3 border rounded-lg">
+              <div
+                key={server.url}
+                className="flex items-center justify-between p-3 border rounded-lg"
+              >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-medium">{server.name}</p>
@@ -200,7 +227,11 @@ export function BlossomSettings() {
                   </div>
                   <p className="text-xs text-muted-foreground">{server.url}</p>
                   <p className="text-xs text-muted-foreground">
-                    Max: {(server.capabilities.maxFileSize / (1024 * 1024)).toFixed(0)} MB
+                    Max:{" "}
+                    {(server.capabilities.maxFileSize / (1024 * 1024)).toFixed(
+                      0,
+                    )}{" "}
+                    MB
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -210,7 +241,7 @@ export function BlossomSettings() {
                     onClick={() => testServer(server.url)}
                     disabled={isTesting === server.url}
                   >
-                    {isTesting === server.url ? 'Testing...' : 'Test'}
+                    {isTesting === server.url ? "Testing..." : "Test"}
                   </Button>
                   <Button
                     variant="ghost"
@@ -249,5 +280,5 @@ export function BlossomSettings() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

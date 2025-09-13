@@ -1,7 +1,13 @@
-import { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Component, ErrorInfo, ReactNode } from "react";
+import { AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface Props {
   children: ReactNode;
@@ -27,10 +33,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log error to console in development
-    if (process.env.NODE_ENV === 'development') {
-      console.error('ErrorBoundary caught an error:', error, errorInfo);
+    if (process.env.NODE_ENV === "development") {
+      console.error("ErrorBoundary caught an error:", error, errorInfo);
     }
-    
+
     // Update state with error details
     this.setState({
       error,
@@ -44,9 +50,9 @@ export class ErrorBoundary extends Component<Props, State> {
       error: null,
       errorInfo: null,
     });
-    
+
     // Optionally reload the page
-    if (window.confirm('Would you like to reload the page?')) {
+    if (window.confirm("Would you like to reload the page?")) {
       window.location.reload();
     }
   };
@@ -66,11 +72,12 @@ export class ErrorBoundary extends Component<Props, State> {
                 <CardTitle>Something went wrong</CardTitle>
               </div>
               <CardDescription>
-                An unexpected error occurred. The error has been logged and we'll look into it.
+                An unexpected error occurred. The error has been logged and
+                we'll look into it.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {process.env.NODE_ENV === "development" && this.state.error && (
                 <div className="rounded-md bg-muted p-3">
                   <p className="text-sm font-mono text-muted-foreground">
                     {this.state.error.toString()}
@@ -91,8 +98,8 @@ export class ErrorBoundary extends Component<Props, State> {
                 <Button onClick={this.handleReset} variant="default">
                   Try Again
                 </Button>
-                <Button 
-                  onClick={() => window.location.href = '/'} 
+                <Button
+                  onClick={() => (window.location.href = "/")}
                   variant="outline"
                 >
                   Go Home

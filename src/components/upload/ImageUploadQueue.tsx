@@ -1,51 +1,65 @@
-import { useAtom } from 'jotai'
-import { X, RotateCw, Upload, Check, AlertCircle, ChevronUp, ChevronDown } from 'lucide-react'
-import { useState } from 'react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
+import { useAtom } from "jotai";
+import {
+  X,
+  RotateCw,
+  Upload,
+  Check,
+  AlertCircle,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import {
   uploadQueueAtom,
   removeUploadItemAtom,
   retryUploadAtom,
-  clearCompletedUploadsAtom
-} from '@/stores/blossomStore'
-import type { UploadQueueItem } from '@/stores/blossomStore'
+  clearCompletedUploadsAtom,
+} from "@/stores/blossomStore";
+import type { UploadQueueItem } from "@/stores/blossomStore";
 
 export function ImageUploadQueue() {
-  const [uploadQueue] = useAtom(uploadQueueAtom)
-  const [, removeItem] = useAtom(removeUploadItemAtom)
-  const [, retryUpload] = useAtom(retryUploadAtom)
-  const [, clearCompleted] = useAtom(clearCompletedUploadsAtom)
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [uploadQueue] = useAtom(uploadQueueAtom);
+  const [, removeItem] = useAtom(removeUploadItemAtom);
+  const [, retryUpload] = useAtom(retryUploadAtom);
+  const [, clearCompleted] = useAtom(clearCompletedUploadsAtom);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   if (uploadQueue.length === 0) {
-    return null
+    return null;
   }
 
-  const activeUploads = uploadQueue.filter(item => item.status === 'uploading')
-  const completedUploads = uploadQueue.filter(item => item.status === 'completed')
-  const failedUploads = uploadQueue.filter(item => item.status === 'failed')
-  const pendingUploads = uploadQueue.filter(item => item.status === 'pending')
+  const activeUploads = uploadQueue.filter(
+    (item) => item.status === "uploading",
+  );
+  const completedUploads = uploadQueue.filter(
+    (item) => item.status === "completed",
+  );
+  const failedUploads = uploadQueue.filter((item) => item.status === "failed");
+  const pendingUploads = uploadQueue.filter(
+    (item) => item.status === "pending",
+  );
 
-  const getStatusIcon = (status: UploadQueueItem['status']) => {
+  const getStatusIcon = (status: UploadQueueItem["status"]) => {
     switch (status) {
-      case 'uploading':
-        return <Upload className="w-4 h-4 animate-pulse" />
-      case 'completed':
-        return <Check className="w-4 h-4 text-green-500" />
-      case 'failed':
-        return <AlertCircle className="w-4 h-4 text-red-500" />
+      case "uploading":
+        return <Upload className="w-4 h-4 animate-pulse" />;
+      case "completed":
+        return <Check className="w-4 h-4 text-green-500" />;
+      case "failed":
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
       default:
-        return <Upload className="w-4 h-4 text-muted-foreground" />
+        return <Upload className="w-4 h-4 text-muted-foreground" />;
     }
-  }
+  };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-80 bg-background border rounded-lg shadow-lg">
@@ -91,13 +105,13 @@ export function ImageUploadQueue() {
               key={item.id}
               className={cn(
                 "p-3 border-b last:border-b-0",
-                item.status === 'failed' && "bg-red-50 dark:bg-red-950/20"
+                item.status === "failed" && "bg-red-50 dark:bg-red-950/20",
               )}
             >
               <div className="flex items-start gap-3">
                 {/* Thumbnail */}
                 <div className="w-10 h-10 rounded overflow-hidden bg-muted flex-shrink-0">
-                  {item.file.type.startsWith('image/') ? (
+                  {item.file.type.startsWith("image/") ? (
                     <img
                       src={URL.createObjectURL(item.file)}
                       alt={item.file.name}
@@ -117,7 +131,7 @@ export function ImageUploadQueue() {
                       {item.file.name}
                     </p>
                     <div className="flex items-center gap-1">
-                      {item.status === 'failed' && (
+                      {item.status === "failed" && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -146,32 +160,32 @@ export function ImageUploadQueue() {
                     </span>
                     {getStatusIcon(item.status)}
                     <span className="text-xs text-muted-foreground">
-                      {item.status === 'uploading' && `${item.progress}%`}
-                      {item.status === 'completed' && 'Completed'}
-                      {item.status === 'failed' && 'Failed'}
-                      {item.status === 'pending' && 'Waiting...'}
+                      {item.status === "uploading" && `${item.progress}%`}
+                      {item.status === "completed" && "Completed"}
+                      {item.status === "failed" && "Failed"}
+                      {item.status === "pending" && "Waiting..."}
                     </span>
                   </div>
 
                   {/* Progress bar */}
-                  {item.status === 'uploading' && (
+                  {item.status === "uploading" && (
                     <Progress value={item.progress} className="h-1 mt-2" />
                   )}
 
                   {/* Error message */}
-                  {item.status === 'failed' && item.error && (
+                  {item.status === "failed" && item.error && (
                     <p className="text-xs text-red-500 mt-1">{item.error}</p>
                   )}
 
                   {/* Success - show URL */}
-                  {item.status === 'completed' && item.url && (
+                  {item.status === "completed" && item.url && (
                     <div className="mt-1">
                       <Button
                         variant="link"
                         size="sm"
                         className="h-auto p-0 text-xs"
                         onClick={() => {
-                          navigator.clipboard.writeText(item.url!)
+                          navigator.clipboard.writeText(item.url!);
                         }}
                       >
                         Copy URL
@@ -191,22 +205,24 @@ export function ImageUploadQueue() {
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">
               {activeUploads.length > 0 && `${activeUploads.length} uploading`}
-              {pendingUploads.length > 0 && `, ${pendingUploads.length} pending`}
-              {completedUploads.length > 0 && `, ${completedUploads.length} completed`}
+              {pendingUploads.length > 0 &&
+                `, ${pendingUploads.length} pending`}
+              {completedUploads.length > 0 &&
+                `, ${completedUploads.length} completed`}
               {failedUploads.length > 0 && `, ${failedUploads.length} failed`}
             </span>
           </div>
           {activeUploads.length > 0 && (
-            <Progress 
+            <Progress
               value={
-                activeUploads.reduce((acc, item) => acc + item.progress, 0) / 
+                activeUploads.reduce((acc, item) => acc + item.progress, 0) /
                 activeUploads.length
-              } 
-              className="h-1 mt-2" 
+              }
+              className="h-1 mt-2"
             />
           )}
         </div>
       )}
     </div>
-  )
+  );
 }

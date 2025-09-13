@@ -1,86 +1,98 @@
-import { useState } from 'react'
-import { useAtom } from 'jotai'
-import { activeProviderAtom, voiceSettingsAtom, sttSettingsAtom, openAIApiKeyAtom } from '@/stores/ai-config-store'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Switch } from '@/components/ui/switch'
-import { Slider } from '@/components/ui/slider'
-import { Loader2, Plus, Volume2, Key } from 'lucide-react'
-import { toast } from 'sonner'
-import { AddProviderDialog } from './AddProviderDialog'
-import { VoiceSelectionDialog } from './VoiceSelectionDialog'
-import { providerRegistry } from '@/services/ai/provider-registry'
-import { voiceDiscovery } from '@/services/ai/voice-discovery'
+import { useState } from "react";
+import { useAtom } from "jotai";
+import {
+  activeProviderAtom,
+  voiceSettingsAtom,
+  sttSettingsAtom,
+  openAIApiKeyAtom,
+} from "@/stores/ai-config-store";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { Loader2, Plus, Volume2, Key } from "lucide-react";
+import { toast } from "sonner";
+import { AddProviderDialog } from "./AddProviderDialog";
+import { VoiceSelectionDialog } from "./VoiceSelectionDialog";
+import { providerRegistry } from "@/services/ai/provider-registry";
+import { voiceDiscovery } from "@/services/ai/voice-discovery";
 
 export function AISettings() {
-  const [activeProvider, setActiveProvider] = useAtom(activeProviderAtom)
-  const [voiceSettings, setVoiceSettings] = useAtom(voiceSettingsAtom)
-  const [sttSettings, setSTTSettings] = useAtom(sttSettingsAtom)
-  const [openAIApiKey, setOpenAIApiKey] = useAtom(openAIApiKeyAtom)
-  const [showAddProvider, setShowAddProvider] = useState(false)
-  const [showVoiceSelection, setShowVoiceSelection] = useState(false)
-  const [testingConnection, setTestingConnection] = useState(false)
-  const [previewingVoice, setPreviewingVoice] = useState(false)
+  const [activeProvider, setActiveProvider] = useAtom(activeProviderAtom);
+  const [voiceSettings, setVoiceSettings] = useAtom(voiceSettingsAtom);
+  const [sttSettings, setSTTSettings] = useAtom(sttSettingsAtom);
+  const [openAIApiKey, setOpenAIApiKey] = useAtom(openAIApiKeyAtom);
+  const [showAddProvider, setShowAddProvider] = useState(false);
+  const [showVoiceSelection, setShowVoiceSelection] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [previewingVoice, setPreviewingVoice] = useState(false);
 
   const handleTestConnection = async () => {
     if (!activeProvider) {
-      toast.error('No provider configured')
-      return
+      toast.error("No provider configured");
+      return;
     }
 
-    setTestingConnection(true)
+    setTestingConnection(true);
     try {
-      const result = await providerRegistry.testConnection(activeProvider)
+      const result = await providerRegistry.testConnection(activeProvider);
       if (result.success) {
-        toast.success('Connection successful!')
+        toast.success("Connection successful!");
       } else {
-        toast.error(result.error || 'Connection failed')
+        toast.error(result.error || "Connection failed");
       }
     } catch {
-      toast.error('Failed to test connection')
+      toast.error("Failed to test connection");
     } finally {
-      setTestingConnection(false)
+      setTestingConnection(false);
     }
-  }
+  };
 
   const handlePreviewVoice = async () => {
     if (!voiceSettings.voiceId) {
-      toast.error('No voice selected')
-      return
+      toast.error("No voice selected");
+      return;
     }
 
-    const apiKey = voiceSettings.provider === 'openai' ? openAIApiKey : voiceSettings.apiKey
+    const apiKey =
+      voiceSettings.provider === "openai" ? openAIApiKey : voiceSettings.apiKey;
     if (!apiKey) {
-      toast.error(`${voiceSettings.provider} API key required`)
-      return
+      toast.error(`${voiceSettings.provider} API key required`);
+      return;
     }
 
-    setPreviewingVoice(true)
+    setPreviewingVoice(true);
     try {
       const audioBlob = await voiceDiscovery.previewVoice(
         voiceSettings.provider,
         voiceSettings.voiceId,
-        'Hello! This is a preview of the selected voice.',
-        apiKey
-      )
-      
-      const audioUrl = URL.createObjectURL(audioBlob)
-      const audio = new Audio(audioUrl)
-      await audio.play()
-      
+        "Hello! This is a preview of the selected voice.",
+        apiKey,
+      );
+
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      await audio.play();
+
       audio.onended = () => {
-        URL.revokeObjectURL(audioUrl)
-      }
+        URL.revokeObjectURL(audioUrl);
+      };
     } catch (error) {
-      console.error('Failed to preview voice:', error)
-      toast.error('Failed to preview voice')
+      console.error("Failed to preview voice:", error);
+      toast.error("Failed to preview voice");
     } finally {
-      setPreviewingVoice(false)
+      setPreviewingVoice(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -100,9 +112,13 @@ export function AISettings() {
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium capitalize">{activeProvider.provider}</span>
+                    <span className="font-medium capitalize">
+                      {activeProvider.provider}
+                    </span>
                     <span className="text-sm text-muted-foreground">•</span>
-                    <span className="text-sm text-muted-foreground">{activeProvider.model}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {activeProvider.model}
+                    </span>
                   </div>
                   <div className="text-sm text-muted-foreground">
                     API Key: •••••••{activeProvider.apiKey.slice(-4)}
@@ -118,7 +134,7 @@ export function AISettings() {
                     {testingConnection ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      'Test Connection'
+                      "Test Connection"
                     )}
                   </Button>
                   <Button
@@ -133,7 +149,9 @@ export function AISettings() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
-              <p className="text-sm text-muted-foreground">No AI provider configured</p>
+              <p className="text-sm text-muted-foreground">
+                No AI provider configured
+              </p>
               <Button onClick={() => setShowAddProvider(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Provider
@@ -182,14 +200,14 @@ export function AISettings() {
                 onCheckedChange={(enabled) => setVoiceSettings({ enabled })}
               />
             </div>
-            
+
             {voiceSettings.enabled && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Voice Provider</Label>
                   <RadioGroup
                     value={voiceSettings.provider}
-                    onValueChange={(provider: 'openai' | 'elevenlabs') => 
+                    onValueChange={(provider: "openai" | "elevenlabs") =>
                       setVoiceSettings({ provider })
                     }
                   >
@@ -198,15 +216,21 @@ export function AISettings() {
                       <Label htmlFor="voice-openai">OpenAI</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="elevenlabs" id="voice-elevenlabs" />
+                      <RadioGroupItem
+                        value="elevenlabs"
+                        id="voice-elevenlabs"
+                      />
                       <Label htmlFor="voice-elevenlabs">ElevenLabs</Label>
                     </div>
                   </RadioGroup>
                 </div>
 
-                {voiceSettings.provider === 'openai' && (
+                {voiceSettings.provider === "openai" && (
                   <div className="space-y-2">
-                    <Label htmlFor="openai-key" className="flex items-center gap-2">
+                    <Label
+                      htmlFor="openai-key"
+                      className="flex items-center gap-2"
+                    >
                       <Key className="h-4 w-4" />
                       OpenAI API Key
                     </Label>
@@ -214,7 +238,7 @@ export function AISettings() {
                       id="openai-key"
                       type="password"
                       placeholder="Enter your OpenAI API key"
-                      value={openAIApiKey || ''}
+                      value={openAIApiKey || ""}
                       onChange={(e) => setOpenAIApiKey(e.target.value)}
                     />
                     <p className="text-xs text-muted-foreground">
@@ -223,9 +247,12 @@ export function AISettings() {
                   </div>
                 )}
 
-                {voiceSettings.provider === 'elevenlabs' && (
+                {voiceSettings.provider === "elevenlabs" && (
                   <div className="space-y-2">
-                    <Label htmlFor="elevenlabs-key" className="flex items-center gap-2">
+                    <Label
+                      htmlFor="elevenlabs-key"
+                      className="flex items-center gap-2"
+                    >
                       <Key className="h-4 w-4" />
                       ElevenLabs API Key
                     </Label>
@@ -233,8 +260,10 @@ export function AISettings() {
                       id="elevenlabs-key"
                       type="password"
                       placeholder="Enter your ElevenLabs API key"
-                      value={voiceSettings.apiKey || ''}
-                      onChange={(e) => setVoiceSettings({ apiKey: e.target.value })}
+                      value={voiceSettings.apiKey || ""}
+                      onChange={(e) =>
+                        setVoiceSettings({ apiKey: e.target.value })
+                      }
                     />
                     <p className="text-xs text-muted-foreground">
                       Get your API key from the ElevenLabs dashboard
@@ -243,21 +272,26 @@ export function AISettings() {
                 )}
 
                 <div className="space-y-2">
-                  <Label>Voice: {voiceSettings.voiceId || 'None selected'}</Label>
+                  <Label>
+                    Voice: {voiceSettings.voiceId || "None selected"}
+                  </Label>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const hasApiKey = voiceSettings.provider === 'openai' 
-                          ? !!openAIApiKey 
-                          : !!voiceSettings.apiKey
-                        
+                        const hasApiKey =
+                          voiceSettings.provider === "openai"
+                            ? !!openAIApiKey
+                            : !!voiceSettings.apiKey;
+
                         if (!hasApiKey) {
-                          toast.error(`Please enter your ${voiceSettings.provider === 'openai' ? 'OpenAI' : 'ElevenLabs'} API key first`)
-                          return
+                          toast.error(
+                            `Please enter your ${voiceSettings.provider === "openai" ? "OpenAI" : "ElevenLabs"} API key first`,
+                          );
+                          return;
                         }
-                        setShowVoiceSelection(true)
+                        setShowVoiceSelection(true);
                       }}
                     >
                       Select Voice
@@ -294,7 +328,9 @@ export function AISettings() {
                   <Switch
                     id="auto-speak"
                     checked={voiceSettings.autoSpeak}
-                    onCheckedChange={(autoSpeak) => setVoiceSettings({ autoSpeak })}
+                    onCheckedChange={(autoSpeak) =>
+                      setVoiceSettings({ autoSpeak })
+                    }
                   />
                 </div>
               </div>
@@ -322,8 +358,8 @@ export function AISettings() {
             <Button
               variant="outline"
               onClick={() => {
-                localStorage.removeItem('ai-config-v2')
-                window.location.reload()
+                localStorage.removeItem("ai-config-v2");
+                window.location.reload();
               }}
             >
               Reset to Defaults
@@ -338,9 +374,9 @@ export function AISettings() {
           open={showAddProvider}
           onClose={() => setShowAddProvider(false)}
           onAdd={(provider) => {
-            setActiveProvider(provider)
-            setShowAddProvider(false)
-            toast.success('Provider added successfully')
+            setActiveProvider(provider);
+            setShowAddProvider(false);
+            toast.success("Provider added successfully");
           }}
         />
       )}
@@ -354,11 +390,11 @@ export function AISettings() {
           provider={voiceSettings.provider}
           apiKey={voiceSettings.apiKey}
           onSelect={(voiceId) => {
-            setVoiceSettings({ voiceId })
-            toast.success('Voice selected successfully')
+            setVoiceSettings({ voiceId });
+            toast.success("Voice selected successfully");
           }}
         />
       )}
     </div>
-  )
+  );
 }

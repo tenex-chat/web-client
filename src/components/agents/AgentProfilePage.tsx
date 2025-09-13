@@ -28,7 +28,9 @@ interface AgentProfilePageProps {
   pubkey?: string;
 }
 
-export function AgentProfilePage({ pubkey: propPubkey }: AgentProfilePageProps = {}) {
+export function AgentProfilePage({
+  pubkey: propPubkey,
+}: AgentProfilePageProps = {}) {
   // Try to get params, but handle the case where we're not in a route context
   let routePubkey: string | undefined;
   try {

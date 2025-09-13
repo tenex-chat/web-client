@@ -50,15 +50,18 @@ export const ChatMessageList = memo(function ChatMessageList({
   onNavigate,
 }: ChatMessageListProps) {
   const isMobile = useIsMobile();
-  const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(null);
-  
+  const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(
+    null,
+  );
+
   // TTS configuration
   const { speak, hasTTS } = useAI();
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Auto-play new messages when auto-TTS is enabled
-  const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
-  
+  const latestMessageId =
+    messages.length > 0 ? messages[messages.length - 1].id : null;
+
   useEffect(() => {
     if (!autoTTS || !latestMessageId || messages.length === 0) return;
 
@@ -89,16 +92,22 @@ export const ChatMessageList = memo(function ChatMessageList({
         });
       setLastPlayedMessageId(latestMessage.id);
     }
-  }, [latestMessageId, autoTTS, hasTTS, lastPlayedMessageId, currentUserPubkey, isPlaying, speak, messages]);
+  }, [
+    latestMessageId,
+    autoTTS,
+    hasTTS,
+    lastPlayedMessageId,
+    currentUserPubkey,
+    isPlaying,
+    speak,
+    messages,
+  ]);
 
   const renderMessage = (message: Message, index: number) => {
     // Check if this is a metadata change event (kind 513)
     if (message.event.kind === EVENT_KINDS.CONVERSATION_METADATA) {
       return (
-        <div
-          key={message.id}
-          data-message-author={message.event.pubkey}
-        >
+        <div key={message.id} data-message-author={message.event.pubkey}>
           <MetadataChangeMessage
             event={message.event}
             onTimeClick={onNavigate}
@@ -106,20 +115,18 @@ export const ChatMessageList = memo(function ChatMessageList({
         </div>
       );
     }
-    
+
     // Check if this message is consecutive (from same author as previous non-metadata message)
     // Don't treat as consecutive if message has p-tags (recipients)
-    const isConsecutive = index > 0 && 
+    const isConsecutive =
+      index > 0 &&
       messages[index - 1].event.pubkey === message.event.pubkey &&
       messages[index - 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
       message.event.kind !== EVENT_KINDS.CONVERSATION_METADATA;
-    
+
     // All events (including tasks) go through MessageWithReplies
     return (
-      <div
-        key={message.id}
-        data-message-author={message.event.pubkey}
-      >
+      <div key={message.id} data-message-author={message.event.pubkey}>
         <MessageWithReplies
           event={message.event}
           project={project}

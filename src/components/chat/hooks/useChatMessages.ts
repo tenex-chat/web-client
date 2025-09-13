@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
-import { type NDKEvent, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { processEventsToMessages } from '@/components/chat/utils/messageProcessor'
+import { useState, useEffect } from "react";
+import { type NDKEvent, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { processEventsToMessages } from "@/components/chat/utils/messageProcessor";
 
 export interface Message {
-  id: string // Either event.id or synthetic ID for streaming sessions
-  event: NDKEvent
+  id: string; // Either event.id or synthetic ID for streaming sessions
+  event: NDKEvent;
 }
 
 /**
@@ -12,23 +12,23 @@ export interface Message {
  * Handles event subscription, streaming processing, and message sorting
  */
 export function useChatMessages(rootEvent: NDKEvent | null) {
-  const [messages, setMessages] = useState<Message[]>([])
-  
+  const [messages, setMessages] = useState<Message[]>([]);
+
   // Subscribe to thread messages using NIP-22 threading
   // This will include all message types: 1111, 1112, and other kinds
   const { events } = useSubscribe(
     rootEvent
       ? [{ ids: [rootEvent.id] }, rootEvent.filter(), rootEvent.nip22Filter()]
       : false,
-    { closeOnEose: false, groupable: false, subId: 'use-chat-messages' },
+    { closeOnEose: false, groupable: false, subId: "use-chat-messages" },
     [rootEvent?.id],
-  )
+  );
 
   // Process thread replies into messages with streaming session management
   useEffect(() => {
-    const processedMessages = processEventsToMessages(events, rootEvent)
-    setMessages(processedMessages)
-  }, [events, rootEvent])
+    const processedMessages = processEventsToMessages(events, rootEvent);
+    setMessages(processedMessages);
+  }, [events, rootEvent]);
 
-  return messages
+  return messages;
 }

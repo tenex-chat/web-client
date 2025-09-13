@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, memo, useState } from "react";
+import React, { useRef, useCallback, memo, useState, useEffect } from "react";
 import { Send, Mic, Paperclip, X, Reply } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,189 +10,536 @@ import { ChatMentionMenu } from "./ChatMentionMenu";
 import { VoiceDialog } from "@/components/dialogs/VoiceDialog";
 import { ImageUploadQueue } from "@/components/upload/ImageUploadQueue";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
-import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
-import { useAtom } from "jotai";
-import { uploadQueueAtom, uploadStatisticsAtom } from "@/stores/blossomStore";
+import {
+  NDKEvent,
+  NDKThread,
+  useNDK,
+  useNDKCurrentUser,
+} from "@nostr-dev-kit/ndk-hooks";
 import { useReply } from "../contexts/ReplyContext";
 import { NostrProfile } from "@/components/common/NostrProfile";
 import { AgentSelector } from "./AgentSelector";
+import { ModelSelector } from "./ModelSelector";
 import type { AgentInstance } from "@/types/agent";
 import type { Message } from "../hooks/useChatMessages";
+import { useBlossomUpload } from "@/hooks/useBlossomUpload";
+import { useMentions } from "@/hooks/useMentions";
+import { useDraftPersistence } from "@/hooks/useDraftPersistence";
+import { NDKTask } from "@/lib/ndk-events/NDKTask";
+import { useAI } from "@/hooks/useAI";
+import { toast } from "sonner";
+import { useProjectStatus } from "@/stores/projects";
 
 interface ChatInputAreaProps {
   project?: NDKProject | null;
-  inputProps: any; // The entire inputProps object from useChatInput
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-  onSend: (content: string, mentions: any[], imageUploads: any[], targetAgent: string | null) => void;
-  isNewThread: boolean;
-  disabled?: boolean;
-  showVoiceButton?: boolean;
-  canSend: boolean;
-  localRootEvent: NDKEvent | null;
-  onVoiceComplete: (data: { transcription: string }) => void;
+  rootEvent?: NDKEvent | null;
+  extraTags?: string[][];
   onlineAgents?: AgentInstance[] | null;
   recentMessages?: Message[];
+  disabled?: boolean;
+  showVoiceButton?: boolean;
+  className?: string;
+  onThreadCreated?: (thread: NDKEvent) => void;
+}
+
+interface ImageUpload {
+  url: string;
+  metadata?: {
+    sha256: string;
+    mimeType: string;
+    size: number;
+    blurhash?: string;
+  };
 }
 
 /**
- * Chat input area component
- * Handles message input, file attachments, and mentions
+ * Fully autonomous chat input area component
+ * Manages its own state and publishes events directly to Nostr
  */
 export const ChatInputArea = memo(function ChatInputArea({
   project,
-  inputProps,
-  textareaRef,
-  onSend,
-  isNewThread,
-  disabled = false,
-  showVoiceButton = true,
-  canSend,
-  localRootEvent,
-  onVoiceComplete,
+  rootEvent,
+  extraTags = [],
   onlineAgents,
   recentMessages = [],
+  disabled = false,
+  showVoiceButton = true,
+  className,
+  onThreadCreated,
 }: ChatInputAreaProps) {
+  const { ndk } = useNDK();
+  const user = useNDKCurrentUser();
+  const isMobile = useIsMobile();
+  const { replyingTo, clearReply } = useReply();
+  const { voiceSettings } = useAI();
+  const autoTTS = voiceSettings.autoSpeak;
+
+  // Get project status for available models
+  const projectDTag = project?.dTag;
+  const projectStatus = useProjectStatus(projectDTag);
+
+  // Local state - all input state is managed here
+  const [messageInput, setMessageInput] = useState("");
   const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
-  const { replyingTo, clearReply } = useReply();
-  
-  // Use atoms directly for upload queue and stats
-  const [uploadQueue] = useAtom(uploadQueueAtom);
-  const [uploadStats] = useAtom(uploadStatisticsAtom);
-  
-  // Reset agent selection when conversation (localRootEvent) changes
-  React.useEffect(() => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Refs
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Draft persistence
+  const threadId =
+    rootEvent && rootEvent.kind !== NDKTask.kind ? rootEvent.id : undefined;
+  const taskId =
+    rootEvent && rootEvent.kind === NDKTask.kind ? rootEvent.id : undefined;
+  const { draft, saveDraft, clearDraft } = useDraftPersistence({
+    threadId,
+    taskId,
+    enabled: !!rootEvent,
+  });
+
+  // Load draft when root event changes
+  useEffect(() => {
+    if (rootEvent?.id) {
+      setMessageInput(draft || "");
+    } else {
+      setMessageInput("");
+    }
+  }, [rootEvent?.id, draft]);
+
+  // Save draft whenever input changes
+  useEffect(() => {
+    if (!rootEvent?.id) return;
+    const timeoutId = setTimeout(() => {
+      saveDraft(messageInput);
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [messageInput, saveDraft, rootEvent?.id]);
+
+  // Reset agent selection when conversation changes
+  useEffect(() => {
     setSelectedAgent(null);
-  }, [localRootEvent?.id]);
-  
+  }, [rootEvent?.id]);
+
+  // Image upload functionality
+  const {
+    uploadFiles,
+    uploadQueue,
+    cancelUpload,
+    retryUpload,
+    clearCompleted,
+    handlePaste,
+    uploadStats,
+  } = useBlossomUpload();
+
+  const pendingImageUrls = uploadQueue
+    .filter((item) => item.status === "completed" && item.url)
+    .map((item) => item.url)
+    .filter((url): url is string => url !== undefined);
+
+  const showUploadProgress = uploadQueue.length > 0;
+
+  // Mentions functionality
+  const mentionProps = useMentions({
+    agents: onlineAgents ?? [],
+    textareaRef,
+    messageInput,
+    setMessageInput,
+    includeAllProjects: true,
+  });
+
   // Detect @ mentions in the message input
   const mentionedAgents = React.useMemo(() => {
-    if (!onlineAgents || !inputProps.messageInput) return [];
+    if (!onlineAgents || !messageInput) return [];
     const mentionRegex = /@([\w-]+)/g;
     const matches = [];
     let match;
-    while ((match = mentionRegex.exec(inputProps.messageInput)) !== null) {
+    while ((match = mentionRegex.exec(messageInput)) !== null) {
       const mentionSlug = match[1].toLowerCase();
-      const agent = onlineAgents.find(a => 
-        a.slug.toLowerCase() === mentionSlug
+      const agent = onlineAgents.find(
+        (a) => a.slug.toLowerCase() === mentionSlug,
       );
       if (agent) {
         matches.push(agent);
       }
     }
     return matches;
-  }, [inputProps.messageInput, onlineAgents]);
-  
-  // Hide selector if there are @ mentions in the input
+  }, [messageInput, onlineAgents]);
+
   const showAgentSelector = mentionedAgents.length === 0;
-  
-  // Focus input on reply (exposed through parent)
-  React.useImperativeHandle(inputProps.inputRef, () => ({
-    focus: () => textareaRef.current?.focus(),
-  }), []);
 
-  // Destructure from inputProps
-  const {
-    messageInput,
-    setMessageInput,
-    pendingImageUrls,
-    removeImageUrl,
-    uploadFiles,
-    handlePaste,
-    cancelUpload,
-    retryUpload,
-    setShowUploadProgress,
-    mentionProps,
-    buildMessageContent,
-    clearInput,
-    getCompletedUploads,
-  } = inputProps;
-  const isMobile = useIsMobile();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Update mention props with the textarea ref and setMessageInput
-  const mentionPropsWithRef = {
-    ...mentionProps,
-    textareaRef,
-    handleInputChange: (value: string) => {
-      setMessageInput(value);
-      mentionProps.handleInputChange(value);
+  // Determine the default agent based on p-tag logic (same as AgentSelector)
+  const defaultAgent = React.useMemo(() => {
+    if (!onlineAgents || onlineAgents.length === 0) return null;
+
+    // If there are recent messages, find the most recent non-user agent
+    if (recentMessages.length > 0) {
+      const recentAgent = [...recentMessages].reverse().find((msg) => {
+        const agent = onlineAgents.find((a) => a.pubkey === msg.event.pubkey);
+        return agent !== undefined;
+      });
+
+      if (recentAgent) {
+        return recentAgent.event.pubkey;
+      }
+    }
+
+    // Otherwise, default to the PM (first agent)
+    return onlineAgents[0].pubkey;
+  }, [onlineAgents, recentMessages]);
+
+  // Use selected agent or default (same logic as AgentSelector)
+  const currentAgent = selectedAgent || defaultAgent;
+
+  // Get the current agent's model from project status
+  const currentAgentModel = React.useMemo(() => {
+    if (!currentAgent || !projectStatus) return undefined;
+    const statusAgent = projectStatus.agents.find(
+      (a) => a.pubkey === currentAgent,
+    );
+    return statusAgent?.model;
+  }, [currentAgent, projectStatus]);
+
+  // Build message content with images
+  const buildMessageContent = useCallback(() => {
+    let content = messageInput;
+    const completedUploads = uploadQueue.filter(
+      (item) => item.status === "completed",
+    );
+    if (completedUploads.length > 0) {
+      const imageUrls = completedUploads
+        .map((upload) => upload.url)
+        .filter(Boolean)
+        .join("\n");
+      if (imageUrls) {
+        content = content ? `${content}\n\n${imageUrls}` : imageUrls;
+      }
+    }
+    return content;
+  }, [messageInput, uploadQueue]);
+
+  // Create a new thread
+  const createThread = useCallback(
+    async (
+      content: string,
+      mentions: AgentInstance[],
+      images: ImageUpload[],
+    ) => {
+      if (!ndk || !user) return null;
+
+      const newThreadEvent = new NDKThread(ndk);
+      newThreadEvent.content = content;
+      newThreadEvent.title = content.slice(0, 50);
+
+      if (project) newThreadEvent.tag(project.tagReference());
+
+      if (extraTags.length > 0) {
+        newThreadEvent.tags.push(...extraTags);
+      }
+
+      images.forEach((upload) => {
+        if (upload.metadata) {
+          newThreadEvent.tags.push([
+            "image",
+            upload.metadata.sha256,
+            upload.url,
+            upload.metadata.mimeType,
+            upload.metadata.size.toString(),
+          ]);
+          if (upload.metadata.blurhash) {
+            newThreadEvent.tags.push(["blurhash", upload.metadata.blurhash]);
+          }
+        }
+      });
+
+      mentions.forEach((agent) => {
+        newThreadEvent.tags.push(["p", agent.pubkey]);
+      });
+
+      if (selectedAgent && mentions.every((m) => m.pubkey !== selectedAgent)) {
+        newThreadEvent.tags.push(["p", selectedAgent]);
+      } else if (
+        mentions.length === 0 &&
+        !selectedAgent &&
+        onlineAgents &&
+        onlineAgents.length > 0
+      ) {
+        const projectManager = onlineAgents[0];
+        newThreadEvent.tags.push(["p", projectManager.pubkey]);
+      }
+
+      if (autoTTS) {
+        newThreadEvent.tags.push(["mode", "voice"]);
+      }
+
+      await newThreadEvent.sign();
+      await newThreadEvent.publish();
+
+      if (onThreadCreated) {
+        onThreadCreated(newThreadEvent);
+      }
+
+      return newThreadEvent;
     },
-  };
+    [
+      ndk,
+      user,
+      project,
+      extraTags,
+      onlineAgents,
+      selectedAgent,
+      autoTTS,
+      onThreadCreated,
+    ],
+  );
 
-  // Handle sending with all the logic local to this component
-  const handleSend = useCallback(() => {
-    if (!canSend || (!messageInput.trim() && pendingImageUrls.length === 0)) {
+  // Send a reply
+  const sendReply = useCallback(
+    async (
+      content: string,
+      mentions: AgentInstance[],
+      images: ImageUpload[],
+    ) => {
+      if (!ndk || !user || !rootEvent) return null;
+
+      const targetEvent = replyingTo || rootEvent;
+      const replyEvent = targetEvent.reply();
+      replyEvent.content = content;
+
+      replyEvent.tags = replyEvent.tags.filter((tag) => tag[0] !== "p");
+
+      if (project) {
+        const tagId = project.tagId();
+        if (tagId) {
+          replyEvent.tags.push(["a", tagId]);
+        }
+      }
+
+      images.forEach((upload) => {
+        if (upload.metadata) {
+          replyEvent.tags.push([
+            "image",
+            upload.metadata.sha256,
+            upload.url,
+            upload.metadata.mimeType,
+            upload.metadata.size.toString(),
+          ]);
+          if (upload.metadata.blurhash) {
+            replyEvent.tags.push(["blurhash", upload.metadata.blurhash]);
+          }
+        }
+      });
+
+      mentions.forEach((agent) => {
+        replyEvent.tags.push(["p", agent.pubkey]);
+      });
+
+      const hasUnresolvedMentions =
+        /@[\w-]+/.test(content) && mentions.length === 0;
+
+      if (selectedAgent && mentions.every((m) => m.pubkey !== selectedAgent)) {
+        replyEvent.tags.push(["p", selectedAgent]);
+      } else if (
+        !hasUnresolvedMentions &&
+        mentions.length === 0 &&
+        !selectedAgent &&
+        recentMessages.length > 0
+      ) {
+        const mostRecentNonUserMessage = [...recentMessages]
+          .reverse()
+          .find((msg) => msg.event.pubkey !== user.pubkey);
+
+        if (mostRecentNonUserMessage) {
+          replyEvent.tags.push(["p", mostRecentNonUserMessage.event.pubkey]);
+        }
+      }
+
+      if (autoTTS) {
+        replyEvent.tags.push(["mode", "voice"]);
+      }
+
+      await replyEvent.sign();
+      await replyEvent.publish();
+
+      return replyEvent;
+    },
+    [
+      ndk,
+      user,
+      rootEvent,
+      project,
+      replyingTo,
+      selectedAgent,
+      recentMessages,
+      autoTTS,
+    ],
+  );
+
+  // Main send handler - publishes directly to Nostr
+  const handleSend = useCallback(async () => {
+    if (!ndk || !user) {
+      console.error("ChatInputArea: Cannot send message without NDK or user");
       return;
     }
 
-    const content = buildMessageContent();
-    const mentions = mentionProps.extractMentions(content);
-    const completedUploads = getCompletedUploads();
-    const imageUploads = completedUploads
-      .filter((upload: any) => upload.url !== undefined)
-      .map((upload: any) => ({
-        url: upload.url,
-        metadata: upload.metadata,
-      }));
+    if (!messageInput.trim() && pendingImageUrls.length === 0) {
+      return;
+    }
 
-    onSend(content, mentions, imageUploads, selectedAgent);
-    clearInput();
-    // Clear agent selection after sending
-    setSelectedAgent(null);
-  }, [canSend, messageInput, pendingImageUrls, buildMessageContent, mentionProps, getCompletedUploads, onSend, clearInput, selectedAgent]);
+    if (isSubmitting) return;
 
-  // Handle file selection from input
+    setIsSubmitting(true);
+    try {
+      const content = buildMessageContent();
+      const mentions = mentionProps.extractMentions(content);
+      const completedUploads = uploadQueue
+        .filter((item) => item.status === "completed" && item.url)
+        .map((upload) => ({
+          url: upload.url!,
+          metadata: upload.metadata,
+        }));
+
+      setMessageInput("");
+
+      // Send directly to Nostr
+      if (!rootEvent) {
+        await createThread(content, mentions, completedUploads);
+      } else {
+        await sendReply(content, mentions, completedUploads);
+      }
+
+      // Clear everything after successful send
+      clearCompleted();
+      clearDraft();
+      setSelectedAgent(null);
+
+      if (replyingTo) {
+        clearReply();
+      }
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      toast.error("Failed to send message");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    ndk,
+    user,
+    messageInput,
+    pendingImageUrls.length,
+    isSubmitting,
+    buildMessageContent,
+    mentionProps,
+    uploadQueue,
+    rootEvent,
+    createThread,
+    sendReply,
+    clearCompleted,
+    clearDraft,
+    replyingTo,
+    clearReply,
+  ]);
+
+  // Handle file selection
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
       if (files && files.length > 0) {
-        setShowUploadProgress(true);
         await uploadFiles(Array.from(files));
       }
-      // Clear the input so the same file can be selected again
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     },
-    [uploadFiles, setShowUploadProgress],
+    [uploadFiles],
   );
 
-  // Enhanced paste handler
+  // Handle paste event
   const handlePasteEvent = useCallback(
     (e: React.ClipboardEvent) => {
       handlePaste(e);
-      setShowUploadProgress(true);
     },
-    [handlePaste, setShowUploadProgress],
+    [handlePaste],
   );
 
-  console.log('🔄 ChatInputArea render - messageInput changed:', messageInput?.length || 0, 'chars')
+  // Handle voice completion
+  const handleVoiceComplete = useCallback(
+    async (data: { transcription: string }) => {
+      if (data.transcription.trim()) {
+        setMessageInput(data.transcription);
+        // Auto-send voice messages
+        const content = data.transcription;
+        const mentions = mentionProps.extractMentions(content);
+        const completedUploads = uploadQueue
+          .filter((item) => item.status === "completed" && item.url)
+          .map((upload) => ({
+            url: upload.url!,
+            metadata: upload.metadata,
+          }));
+
+        setIsSubmitting(true);
+        try {
+          if (!rootEvent) {
+            await createThread(content, mentions, completedUploads);
+          } else {
+            await sendReply(content, mentions, completedUploads);
+          }
+          setMessageInput("");
+          clearCompleted();
+          clearDraft();
+        } catch (error) {
+          console.error("Failed to send voice message:", error);
+          toast.error("Failed to send voice message");
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
+    },
+    [
+      mentionProps,
+      uploadQueue,
+      rootEvent,
+      createThread,
+      sendReply,
+      clearCompleted,
+      clearDraft,
+    ],
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Handle escape to cancel reply
     if (e.key === "Escape" && replyingTo) {
       e.preventDefault();
       clearReply();
       return;
     }
-    
-    // First check for mention autocomplete
-    if (mentionPropsWithRef.showAgentMenu) {
-      mentionPropsWithRef.handleKeyDown(e);
+
+    if (mentionProps.showAgentMenu) {
+      mentionProps.handleKeyDown(e);
       return;
     }
 
-    // Handle sending with Enter (without shift)
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
 
+  const removeImageUrl = (url: string) => {
+    const item = uploadQueue.find((i) => i.url === url);
+    if (item) cancelUpload(item.id);
+  };
+
+  const canSend = !!ndk && !!user;
+  const isNewThread = !rootEvent;
+
   return (
     <div
-      className={cn("flex-shrink-0 absolute bottom-0 left-0 right-0", isMobile ? "p-3 pb-safe" : "p-4")}
+      className={cn(
+        "flex-shrink-0 absolute bottom-0 left-0 right-0",
+        isMobile ? "p-3 pb-safe" : "p-4",
+        className,
+      )}
       onPaste={handlePasteEvent}
     >
       <div
@@ -212,20 +559,28 @@ export const ChatInputArea = memo(function ChatInputArea({
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <div className={cn(
-                "flex items-center justify-between border-b border-border/30",
-                isMobile ? "p-2 pb-2" : "p-3 pb-3"
-              )}>
+              <div
+                className={cn(
+                  "flex items-center justify-between border-b border-border/30",
+                  isMobile ? "p-2 pb-2" : "p-3 pb-3",
+                )}
+              >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <Reply className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  <span className="text-xs text-muted-foreground">Replying to</span>
-                  <NostrProfile 
-                    pubkey={replyingTo.pubkey} 
+                  <span className="text-xs text-muted-foreground">
+                    Replying to
+                  </span>
+                  <NostrProfile
+                    pubkey={replyingTo.pubkey}
                     variant="name"
                     className="text-xs text-primary font-medium"
                   />
                   <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                    "{replyingTo.content?.substring(0, 50)}{replyingTo.content && replyingTo.content.length > 50 ? '...' : ''}"
+                    "{replyingTo.content?.substring(0, 50)}
+                    {replyingTo.content && replyingTo.content.length > 50
+                      ? "..."
+                      : ""}
+                    "
                   </span>
                 </div>
                 <Button
@@ -240,8 +595,8 @@ export const ChatInputArea = memo(function ChatInputArea({
             </motion.div>
           )}
         </AnimatePresence>
-        
-        {/* Enhanced pending images display with animation */}
+
+        {/* Pending images display */}
         <AnimatePresence>
           {pendingImageUrls.length > 0 && (
             <motion.div
@@ -256,9 +611,9 @@ export const ChatInputArea = memo(function ChatInputArea({
                   isMobile ? "p-2 pb-3" : "p-3 pb-4",
                 )}
               >
-                {pendingImageUrls.map((url: any, index: any) => {
+                {pendingImageUrls.map((url, index) => {
                   const uploadItem = uploadQueue.find(
-                    (item: any) => item.url === url,
+                    (item) => item.url === url,
                   );
                   return (
                     <motion.div
@@ -276,7 +631,6 @@ export const ChatInputArea = memo(function ChatInputArea({
                         showLightbox={false}
                       />
 
-                      {/* Upload status overlay */}
                       {uploadItem && uploadItem.status === "uploading" && (
                         <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
                           <div className="text-white text-xs font-medium">
@@ -285,7 +639,6 @@ export const ChatInputArea = memo(function ChatInputArea({
                         </div>
                       )}
 
-                      {/* Actions */}
                       <div className="absolute -top-1.5 -right-1.5 flex gap-0.5">
                         {uploadItem?.status === "failed" && (
                           <button
@@ -309,12 +662,7 @@ export const ChatInputArea = memo(function ChatInputArea({
                           </button>
                         )}
                         <button
-                          onClick={() => {
-                            removeImageUrl(url);
-                            if (uploadItem) {
-                              cancelUpload(uploadItem.id);
-                            }
-                          }}
+                          onClick={() => removeImageUrl(url)}
                           className="bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                         >
                           <X className="w-2.5 h-2.5" />
@@ -329,29 +677,26 @@ export const ChatInputArea = memo(function ChatInputArea({
         </AnimatePresence>
 
         {/* Textarea area */}
-        <div className={cn("relative w-full", isMobile ? "p-2 pb-1" : "p-3 pb-2")}>
-          {/* Mention Autocomplete Menu */}
+        <div
+          className={cn("relative w-full", isMobile ? "p-2 pb-1" : "p-3 pb-2")}
+        >
           <ChatMentionMenu
-            showAgentMenu={mentionPropsWithRef.showAgentMenu}
-            filteredAgents={mentionPropsWithRef.filteredAgents}
-            filteredProjectGroups={mentionPropsWithRef.filteredProjectGroups}
-            selectedAgentIndex={mentionPropsWithRef.selectedAgentIndex}
-            insertMention={mentionPropsWithRef.insertMention}
+            showAgentMenu={mentionProps.showAgentMenu}
+            filteredAgents={mentionProps.filteredAgents}
+            filteredProjectGroups={mentionProps.filteredProjectGroups}
+            selectedAgentIndex={mentionProps.selectedAgentIndex}
+            insertMention={mentionProps.insertMention}
           />
 
           <Textarea
             ref={textareaRef}
             value={messageInput}
-            onChange={(e) =>
-              mentionPropsWithRef.handleInputChange(e.target.value)
-            }
+            onChange={(e) => mentionProps.handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              isNewThread
-                ? "Start a new conversation..."
-                : "Type a message..."
+              isNewThread ? "Start a new conversation..." : "Type a message..."
             }
-            disabled={disabled}
+            disabled={disabled || isSubmitting}
             className={cn(
               "resize-none bg-transparent border-0 !focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
               "placeholder:text-muted-foreground/60",
@@ -370,21 +715,33 @@ export const ChatInputArea = memo(function ChatInputArea({
             isMobile ? "gap-1.5 p-2 pt-2" : "gap-2 p-3 pt-3",
           )}
         >
-          {/* Left side controls */}
-          <div className={cn("flex items-center", isMobile ? "gap-1" : "gap-2")}>
-            {/* Agent selector or mentioned agents display */}
-            {onlineAgents && onlineAgents.length > 0 && (
-              showAgentSelector ? (
-                <AgentSelector
-                  onlineAgents={onlineAgents}
-                  recentMessages={recentMessages}
-                  selectedAgent={selectedAgent}
-                  onAgentSelect={setSelectedAgent}
-                  disabled={disabled}
-                  className="flex-shrink-0"
-                />
+          <div
+            className={cn("flex items-center", isMobile ? "gap-1" : "gap-2")}
+          >
+            {onlineAgents &&
+              onlineAgents.length > 0 &&
+              (showAgentSelector ? (
+                <>
+                  <AgentSelector
+                    onlineAgents={onlineAgents}
+                    recentMessages={recentMessages}
+                    selectedAgent={selectedAgent}
+                    onAgentSelect={setSelectedAgent}
+                    disabled={disabled || isSubmitting}
+                    className="flex-shrink-0"
+                  />
+                  {currentAgent && projectStatus && project && (
+                    <ModelSelector
+                      selectedAgentPubkey={currentAgent}
+                      selectedAgentModel={currentAgentModel}
+                      availableModels={projectStatus.models}
+                      project={project}
+                      disabled={disabled || isSubmitting}
+                      className="flex-shrink-0"
+                    />
+                  )}
+                </>
               ) : (
-                /* Show mentioned agents as chips */
                 <div className="flex items-center gap-1.5">
                   {mentionedAgents.map((agent) => (
                     <div
@@ -392,11 +749,11 @@ export const ChatInputArea = memo(function ChatInputArea({
                       className={cn(
                         "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
                         "bg-accent/50 border border-border/50",
-                        "text-sm"
+                        "text-sm",
                       )}
                     >
-                      <NostrProfile 
-                        pubkey={agent.pubkey} 
+                      <NostrProfile
+                        pubkey={agent.pubkey}
                         variant="avatar"
                         size="xs"
                         fallback={agent.slug}
@@ -406,17 +763,15 @@ export const ChatInputArea = memo(function ChatInputArea({
                     </div>
                   ))}
                 </div>
-              )
-            )}
+              ))}
 
-            {/* Attach button */}
             <Button
               onClick={() => fileInputRef.current?.click()}
               size="icon"
               variant="ghost"
-              disabled={disabled}
+              disabled={disabled || isSubmitting}
               className={cn(
-                "rounded-full transition-all duration-200",
+                "rounded-sm transition-all duration-200",
                 "hover:bg-accent/80",
                 isMobile ? "h-8 w-8" : "h-9 w-9",
               )}
@@ -430,15 +785,14 @@ export const ChatInputArea = memo(function ChatInputArea({
               />
             </Button>
 
-            {/* Voice button */}
             {!isMobile && showVoiceButton && (
               <Button
                 onClick={() => setIsVoiceDialogOpen(true)}
                 size="icon"
                 variant="ghost"
-                disabled={disabled}
+                disabled={disabled || isSubmitting}
                 className={cn(
-                  "rounded-full transition-all duration-200",
+                  "rounded-sm transition-all duration-200",
                   "hover:bg-accent/80",
                   "h-9 w-9",
                 )}
@@ -448,9 +802,7 @@ export const ChatInputArea = memo(function ChatInputArea({
             )}
           </div>
 
-          {/* Right side send button */}
           <div className="flex items-center">
-            {/* Hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
@@ -462,21 +814,23 @@ export const ChatInputArea = memo(function ChatInputArea({
 
             <Button
               onClick={handleSend}
-              disabled={disabled || !messageInput.trim() && pendingImageUrls.length === 0}
+              disabled={
+                disabled ||
+                isSubmitting ||
+                (!messageInput.trim() && pendingImageUrls.length === 0)
+              }
               size="icon"
               className={cn(
-                "rounded-full transition-all duration-200",
-                "bg-primary hover:bg-primary/90",
-                "hover:scale-110 active:scale-95",
-                "disabled:opacity-50 disabled:hover:scale-100",
-                "shadow-sm hover:shadow-md",
+                "rounded-lg transition-all duration-200",
+                "bg-primary text-primary-foreground",
+                "hover:bg-primary/90",
+                "disabled:opacity-50 disabled:bg-muted disabled:text-muted-foreground",
                 isMobile ? "h-8 w-8" : "h-9 w-9",
               )}
             >
               <Send
                 className={cn(
-                  "transition-transform",
-                  canSend ? "translate-x-0.5" : "",
+                  "transition-colors",
                   isMobile ? "h-3.5 w-3.5" : "h-4 w-4",
                 )}
               />
@@ -484,29 +838,28 @@ export const ChatInputArea = memo(function ChatInputArea({
           </div>
         </div>
       </div>
-      
+
       {/* Voice Dialog */}
       <VoiceDialog
         open={isVoiceDialogOpen}
         onOpenChange={setIsVoiceDialogOpen}
-        onComplete={onVoiceComplete}
-        conversationId={localRootEvent?.id}
+        onComplete={handleVoiceComplete}
+        conversationId={rootEvent?.id}
         projectId={project?.tagId()}
         publishAudioEvent={true}
       />
 
       {/* Upload Queue Overlay */}
       <AnimatePresence>
-        {inputProps.showUploadProgress &&
-          uploadStats.total > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-            >
-              <ImageUploadQueue />
-            </motion.div>
-          )}
+        {showUploadProgress && uploadStats.total > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+          >
+            <ImageUploadQueue />
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

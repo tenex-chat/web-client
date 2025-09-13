@@ -1,57 +1,32 @@
-## Stopping a Claude Code Session
+## Project: TENEX Web
+TENEX Web is a robust, decentralised web application designed to enable secure, efficient, and direct interactions between users and AI agents within the Nostr ecosystem. It aims to provide users with collaborative capabilities for managing projects, delegating tasks, and leveraging AI assistance seamlessly.
 
-The process for stopping an ongoing `claude_code` session involves the following:
+### Core Functionality and Features
+The application offers a suite of tools for:
+* **Agent Management:** Defined through modular components, enabling the deployment and interaction with various AI agents. New enhancements make agent definitions adaptable and intuitive to manage.
+* **Project Coordination:** Centralization of project information, tasks, and communications. Recent improvements include visual indicators for project status, enhancing user visibility for active tasks.
+* **Secure Communication:** All interactions are maintained via the Nostr protocol, ensuring privacy and censorship resistance, with comprehensive logging of actions for transparency.
+* **Code Execution and Management:** Supports dynamic code execution within the system, facilitating interactions with features powered by AI tools. Error handling and state management have been improved based on user interactions.
+* **Data Integrity and Persistence:** Management of project data is based on the NDK model, ensuring updates and deletions remain aligned with event handling protocols.
 
-1. **Frontend Action:** The frontend sends an HTTP DELETE request.  
-2. **Endpoint:** The request is sent to the `/sessions/{sessionId}` endpoint on the TENEX daemon.  
-3. **Backend Handler:** The daemon receives this request and calls the necessary method on the `ClaudeTaskExecutor` to gracefully terminate the task.  
+### Key Components and Concepts
+* **Nostr Protocol:** Central to all communication, this protocol maintains the secure and decentralized nature of interactions within TENEX Web.
+* **AI Agents:** Represented as autonomous entities that assist users across various tasks, with recent optimizations for learning from user behavior, enhancing interaction quality.
+* **Workflows and Phases:** Structured processes managed through high-level components allowing multi-step tasks and agent interactions, dynamically adapted based on user feedback.
+* **Immutable Events:** Designed to maintain a verifiable log of actions, these events ensure reliable communication and data integrity across the platform.
 
-This ensures a clean and reliable way to halt ongoing operations. It is critical that the proper routing to the `ClaudeTaskExecutor` occurs for effective session management.
+### User Flows
+#### Project Creation and Management
+Users can initiate new projects, define their scope, and invite participants while receiving guided assistance from AI agents during setup. Enhanced visibility on task timelines has improved flow management.
 
----
+#### Agent Definition and Deployment
+Users and project managers define new AI agents with designated roles and functionalities. Improvements in user interface design have made this process more user-friendly and efficient.
 
-## NDKProject Delete Behavior
+#### Task Delegation and Execution
+Tasks can be delegated to specific AI agents or groups, with improved tracking of execution performance and outcome feedback, enhancing overall task management.
 
-When deleting a project (NIP-33 replaceable event, kind 31933), the code now:
-1. Publishes a deletion event (kind 5) for backward compatibility
-2. Republishes the project event with a ["deleted"] tag for proper NIP-33 replaceable event handling
+#### Secure Communication and Collaboration
+All user interactions—including messaging and updates—are logged through Nostr events, strengthening secure collaboration within the project.
 
-This dual approach ensures both compatibility with clients expecting deletion events and proper handling of replaceable events.
-
----
-
-## NDKAgentDefinition Phase Management
-
-The NDKAgentDefinition CRUD interface must support phase definitions for agent workflow management:
-
-### Phase Definition Structure
-- **Tag Format**: `[ "phase", "<name>", "<instructions>" ]`
-- **Multiple Phases**: Agents can have 0 or more phase definitions
-- **Agent Types**: 
-  - Non-PM agents typically have no phase definitions
-  - Project Manager agents will likely define multiple phases
-
-### User Interface Requirements
-
-#### Agent Definition Form
-- Must allow adding/removing phase definitions dynamically
-- Support for 0 or more phases (no minimum requirement)
-- Each phase requires:
-  - Name (string identifier)
-  - Instructions (descriptive text for the phase)
-
-#### Agent Definition Card Display
-- Show phase count when > 0 phases are defined
-- Display format: "X phases" or similar indicator
-- No phase indicator needed when count is 0
-
-#### Agent Details Page
-- Must include a dedicated "Phases" tab
-- Tab should only be visible/accessible when phases exist
-- Phase tab displays all defined phases with their names and instructions
-- Phases should be presented in a clear, readable format
-
-### Data Model
-Phase definitions are stored as Nostr event tags within the NDKAgentDefinition event, allowing for flexible phase configuration per agent while maintaining compatibility with the broader Nostr ecosystem.
-
----
+#### Data Persistence and Updates
+Project and agent data management leverages Nostr's replaceable events, ensuring persistence while allowing dynamic updates based on user needs.

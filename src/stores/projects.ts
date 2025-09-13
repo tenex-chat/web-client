@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
-import { NDKProjectStatus, type ProjectAgent, type ProjectModel, type ExecutionQueue } from "@/lib/ndk-events/NDKProjectStatus";
+import {
+  NDKProjectStatus,
+  type ProjectAgent,
+  type ProjectModel,
+  type ExecutionQueue,
+} from "@/lib/ndk-events/NDKProjectStatus";
 import type { NDKEvent, NDKSubscription } from "@nostr-dev-kit/ndk-hooks";
 import type NDK from "@nostr-dev-kit/ndk-hooks";
 import { useAgentsStore } from "./agents";
@@ -9,547 +14,572 @@ import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 
 export interface ProjectStatusData {
-    statusEvent: NDKProjectStatus | null;
-    agents: ProjectAgent[];
-    models: ProjectModel[];
-    executionQueue: ExecutionQueue | null;
-    lastSeen: Date | null;
-    isOnline: boolean;
+  statusEvent: NDKProjectStatus | null;
+  agents: ProjectAgent[];
+  models: ProjectModel[];
+  executionQueue: ExecutionQueue | null;
+  lastSeen: Date | null;
+  isOnline: boolean;
 }
 
 interface ProjectsState {
-    // Map of dTag -> NDKProject
-    projects: Map<string, NDKProject>;
-    // Map of bech32 -> dTag for quick lookup
-    bech32Map: Map<string, string>;
-    // Map of tagId -> dTag for legacy compatibility
-    tagIdMap: Map<string, string>;
-    projectsArray: NDKProject[]; // Cached array version
-    projectsWithStatusArray: Array<{ project: NDKProject; status: ProjectStatusData | null }>; // Cached combined array
-    threads: Map<string, NDKEvent[]>;
-    // Map of dTag -> project status data
-    projectStatus: Map<string, ProjectStatusData>;
-    // Single subscription for all project status events
-    statusSubscription: NDKSubscription | null;
-    // Subscription for projects
-    projectsSubscription: NDKSubscription | null;
-    // Track which agents we've already notified about per project
-    notifiedAgents: Map<string, Set<string>>; // dTag -> Set of agent pubkeys
-    
-    addProject: (project: NDKProject) => void;
-    removeProject: (dTag: string) => void;
-    setProjects: (projects: NDKProject[]) => void;
-    addThread: (dTag: string, thread: NDKEvent) => void;
-    setThreads: (dTag: string, threads: NDKEvent[]) => void;
-    
-    // Lookup methods
-    getProjectByDTag: (dTag: string) => NDKProject | null;
-    getProjectByBech32: (bech32: string) => NDKProject | null;
-    getProjectByTagId: (tagId: string) => NDKProject | null;
-    getProjectByIdentifier: (identifier: string) => NDKProject | null;
-    
-    // Subscription management
-    initializeSubscriptions: (ndk: NDK, userPubkey: string) => void;
-    cleanupSubscriptions: () => void;
-    
-    // Status management
-    initializeStatusSubscription: (ndk: NDK) => void;
-    updateProjectStatus: (event: NDKEvent) => Promise<void>;
-    cleanupStatusSubscription: () => void;
-    getProjectStatus: (dTag: string) => ProjectStatusData | null;
+  // Map of dTag -> NDKProject
+  projects: Map<string, NDKProject>;
+  // Map of bech32 -> dTag for quick lookup
+  bech32Map: Map<string, string>;
+  // Map of tagId -> dTag for legacy compatibility
+  tagIdMap: Map<string, string>;
+  projectsArray: NDKProject[]; // Cached array version
+  projectsWithStatusArray: Array<{
+    project: NDKProject;
+    status: ProjectStatusData | null;
+  }>; // Cached combined array
+  threads: Map<string, NDKEvent[]>;
+  // Map of dTag -> project status data
+  projectStatus: Map<string, ProjectStatusData>;
+  // Single subscription for all project status events
+  statusSubscription: NDKSubscription | null;
+  // Subscription for projects
+  projectsSubscription: NDKSubscription | null;
+  // Track which agents we've already notified about per project
+  notifiedAgents: Map<string, Set<string>>; // dTag -> Set of agent pubkeys
+
+  addProject: (project: NDKProject) => void;
+  removeProject: (dTag: string) => void;
+  setProjects: (projects: NDKProject[]) => void;
+  addThread: (dTag: string, thread: NDKEvent) => void;
+  setThreads: (dTag: string, threads: NDKEvent[]) => void;
+
+  // Lookup methods
+  getProjectByDTag: (dTag: string) => NDKProject | null;
+  getProjectByBech32: (bech32: string) => NDKProject | null;
+  getProjectByTagId: (tagId: string) => NDKProject | null;
+  getProjectByIdentifier: (identifier: string) => NDKProject | null;
+
+  // Subscription management
+  initializeSubscriptions: (ndk: NDK, userPubkey: string) => void;
+  cleanupSubscriptions: () => void;
+
+  // Status management
+  initializeStatusSubscription: (ndk: NDK) => void;
+  updateProjectStatus: (event: NDKEvent) => Promise<void>;
+  cleanupStatusSubscription: () => void;
+  getProjectStatus: (dTag: string) => ProjectStatusData | null;
 }
 
 // Initial empty array that's stable
-const INITIAL_PROJECTS_WITH_STATUS: Array<{ project: NDKProject; status: ProjectStatusData | null }> = [];
+const INITIAL_PROJECTS_WITH_STATUS: Array<{
+  project: NDKProject;
+  status: ProjectStatusData | null;
+}> = [];
 const INITIAL_PROJECTS_ARRAY: NDKProject[] = [];
 
 export const useProjectsStore = create<ProjectsState>((set, get) => ({
-        projects: new Map(),
-        bech32Map: new Map(),
-        tagIdMap: new Map(),
-        projectsArray: INITIAL_PROJECTS_ARRAY,
-        projectsWithStatusArray: INITIAL_PROJECTS_WITH_STATUS,
-        threads: new Map(),
-        projectStatus: new Map(),
-        statusSubscription: null,
-        projectsSubscription: null,
-        notifiedAgents: new Map(),
-        
-        addProject: (project) => set((state) => {
-            // Don't add deleted projects
-            if (project.hasTag('deleted')) {
-                return state;
-            }
-            const dTag = project.dTag;
-            if (!dTag) {
-                logger.warn('[ProjectStore] Project missing dTag, skipping');
-                return state;
-            }
-            
-            const newProjects = new Map(state.projects);
-            const newBech32Map = new Map(state.bech32Map);
-            const newTagIdMap = new Map(state.tagIdMap);
-            
-            newProjects.set(dTag, project);
-            
-            // Add bech32 mapping
-            try {
-                const bech32 = project.encode();
-                if (bech32) {
-                    newBech32Map.set(bech32, dTag);
-                }
-            } catch {
-                logger.warn('[ProjectStore] Failed to encode project to bech32');
-            }
-            
-            // Add tagId mapping for legacy compatibility
-            const tagId = project.tagId();
-            if (tagId) {
-                newTagIdMap.set(tagId, dTag);
-            }
-            
-            const newProjectsArray = Array.from(newProjects.values());
-            return { 
-                projects: newProjects,
-                bech32Map: newBech32Map,
-                tagIdMap: newTagIdMap,
-                projectsArray: newProjectsArray,
-                projectsWithStatusArray: newProjectsArray.map(p => ({
-                    project: p,
-                    status: state.projectStatus.get(p.dTag || '') || null
-                }))
-            };
-        }),
-        
-        removeProject: (dTag) => set((state) => {
-            const project = state.projects.get(dTag);
-            if (!project) return state;
-            
-            const newProjects = new Map(state.projects);
-            const newBech32Map = new Map(state.bech32Map);
-            const newTagIdMap = new Map(state.tagIdMap);
-            
-            newProjects.delete(dTag);
-            
-            // Remove from bech32 map
-            try {
-                const bech32 = project.encode();
-                if (bech32) {
-                    newBech32Map.delete(bech32);
-                }
-            } catch {
-                // Ignore encoding errors
-            }
-            
-            // Remove from tagId map
-            const tagId = project.tagId();
-            if (tagId) {
-                newTagIdMap.delete(tagId);
-            }
-            
-            // Also remove status for this project
-            const newStatus = new Map(state.projectStatus);
-            newStatus.delete(dTag);
-            const newProjectsArray = Array.from(newProjects.values());
-            return { 
-                projects: newProjects,
-                bech32Map: newBech32Map,
-                tagIdMap: newTagIdMap,
-                projectsArray: newProjectsArray,
-                projectStatus: newStatus,
-                projectsWithStatusArray: newProjectsArray.map(p => ({
-                    project: p,
-                    status: newStatus.get(p.dTag || '') || null
-                }))
-            };
-        }),
-        
-        setProjects: (projects) => set((state) => {
-            const newProjects = new Map();
-            const newBech32Map = new Map();
-            const newTagIdMap = new Map();
-            
-            projects.forEach(project => {
-                // Filter out deleted projects
-                if (!project.hasTag('deleted')) {
-                    const dTag = project.dTag;
-                    if (!dTag) {
-                        logger.warn('[ProjectStore] Project missing dTag, skipping');
-                        return;
-                    }
-                    
-                    newProjects.set(dTag, project);
-                    
-                    // Add bech32 mapping
-                    try {
-                        const bech32 = project.encode();
-                        if (bech32) {
-                            newBech32Map.set(bech32, dTag);
-                        }
-                    } catch {
-                        logger.warn('[ProjectStore] Failed to encode project to bech32');
-                    }
-                    
-                    // Add tagId mapping for legacy compatibility
-                    const tagId = project.tagId();
-                    if (tagId) {
-                        newTagIdMap.set(tagId, dTag);
-                    }
-                }
-            });
-            const newProjectsArray = Array.from(newProjects.values());
-            
-            // Check if projects actually changed
-            if (newProjectsArray.length === 0 && state.projectsArray.length === 0) {
-                return state;
-            }
-            
-            const projectsChanged = newProjectsArray.length !== state.projectsArray.length ||
-                newProjectsArray.some((p, i) => p.dTag !== state.projectsArray[i]?.dTag);
-            
-            // Only update arrays if projects actually changed
-            if (!projectsChanged) {
-                return state;
-            }
-            
-            // Create new arrays
-            const newProjectsWithStatusArray = newProjectsArray.map(p => ({
-                project: p,
-                status: state.projectStatus.get(p.dTag || '') || null
-            }));
-            
-            return { 
-                projects: newProjects,
-                bech32Map: newBech32Map,
-                tagIdMap: newTagIdMap,
-                projectsArray: newProjectsArray,
-                projectsWithStatusArray: newProjectsWithStatusArray
-            };
-        }),
-        
-        addThread: (dTag, thread) => set((state) => {
-            const projectThreads = state.threads.get(dTag) || [];
-            const newThreads = new Map(state.threads);
-            newThreads.set(dTag, [...projectThreads, thread]);
-            return { threads: newThreads };
-        }),
-        
-        setThreads: (dTag, threads) => set((state) => {
-            const newThreads = new Map(state.threads);
-            newThreads.set(dTag, threads);
-            return { threads: newThreads };
-        }),
-        
-        // Lookup methods
-        getProjectByDTag: (dTag: string) => {
-            return get().projects.get(dTag) || null;
-        },
-        
-        getProjectByBech32: (bech32: string) => {
-            const dTag = get().bech32Map.get(bech32);
-            if (!dTag) return null;
-            return get().projects.get(dTag) || null;
-        },
-        
-        getProjectByTagId: (tagId: string) => {
-            const dTag = get().tagIdMap.get(tagId);
-            if (!dTag) return null;
-            return get().projects.get(dTag) || null;
-        },
-        
-        getProjectByIdentifier: (identifier: string) => {
-            // Try direct dTag lookup first
-            const project = get().projects.get(identifier);
-            if (project) return project;
-            
-            // Try bech32 lookup
-            const bech32Project = get().getProjectByBech32(identifier);
-            if (bech32Project) return bech32Project;
-            
-            // Try tagId lookup for legacy compatibility
-            const tagIdProject = get().getProjectByTagId(identifier);
-            if (tagIdProject) return tagIdProject;
-            
-            return null;
-        },
-        
-        // Initialize global status subscription for all projects
-        initializeStatusSubscription: (ndk: NDK) => {
-            const { statusSubscription } = get();
-            
-            // Don't re-initialize if already subscribed
-            if (statusSubscription) {
-                return;
-            }
-            
-            // Get the current user's pubkey
-            const user = ndk.signer?.user();
-            if (!user) {
-                return;
-            }
-            
-            user.then((userInfo) => {
-                if (!userInfo) {
-                    return;
-                }
-                
-                const filter = {
-                    kinds: [24010], // PROJECT_STATUS event kind
-                    "#p": [userInfo.pubkey] // Status events for the current user's projects
-                };
-                
-                // Subscribe to all project status events for this user
-                const sub = ndk.subscribe(
-                    filter,
-                    { closeOnEose: false, groupable: true, subId: 'status' },
-                    {
-                        onEvent: (event: NDKEvent) => get().updateProjectStatus(event),
-                    }
-                );
-                
-                set({ statusSubscription: sub });
-            });
-        },
-        
-        /**
-         * Updates the status of a project based on an NDKEvent
-         * @param event - The NDKEvent containing project status information
-         */
-        updateProjectStatus: async (event: NDKEvent) => {
-            if (!event.ndk) return;
+  projects: new Map(),
+  bech32Map: new Map(),
+  tagIdMap: new Map(),
+  projectsArray: INITIAL_PROJECTS_ARRAY,
+  projectsWithStatusArray: INITIAL_PROJECTS_WITH_STATUS,
+  threads: new Map(),
+  projectStatus: new Map(),
+  statusSubscription: null,
+  projectsSubscription: null,
+  notifiedAgents: new Map(),
 
-            const { projects, tagIdMap, projectStatus, notifiedAgents } = get();
-            const status = NDKProjectStatus.from(event);
-            const projectTagId = status.projectId;
-            
-            if (!projectTagId) {
-                return;
-            }
-            
-            // Convert tagId to dTag
-            let finalDTag = tagIdMap.get(projectTagId);
-            if (!finalDTag) {
-                // Try direct lookup in case it's already a dTag
-                if (projects.has(projectTagId)) {
-                    finalDTag = projectTagId;
-                } else {
-                    return;
-                }
-            }
-            
-            // Only process status events for projects we know about
-            if (!projects.has(finalDTag)) {
-                return;
-            }
-            
-            // Check for global agents and add them to the agents store
-            for (const tag of event.tags) {
-                if (tag[0] === 'agent') {
-                    if (tag.length >= 4) {
-                        if (tag[3] === 'global') {
-                            useAgentsStore.getState().addGlobalAgent(tag[1], tag[2]);
-                        }
-                    }
-                }
-            }
-            
-            // Check if this is actually a change
-            const existingStatus = projectStatus.get(finalDTag);
-            
-            // Check for new agents and show toast notification
-            if (status.agents.length > 0) {
-                // Get or create the set of notified agents for this project
-                const projectNotifiedAgents = notifiedAgents.get(finalDTag) || new Set<string>();
-                
-                // Find agents we haven't notified about yet
-                const newAgents = status.agents.filter(a => !projectNotifiedAgents.has(a.pubkey));
-                
-                // Show toast only if exactly one new agent joined
-                if (newAgents.length === 1) {
-                    const newAgent = newAgents[0];
-                    const project = projects.get(finalDTag);
-                    const projectName = project?.title || 'the project';
-                    
-                    // Fetch the agent's profile to get their real name
-                    try {
-                        const agentUser = event.ndk.getUser({ pubkey: newAgent.pubkey });
-                        await agentUser.fetchProfile();
-                        const agentName = agentUser.profile?.displayName || 
-                                        agentUser.profile?.name || 
-                                        newAgent.name;
-                        toast.success(`Agent ${agentName} has joined ${projectName}`);
-                    } catch {
-                        // Fallback to using the slug name if profile fetch fails
-                        toast.success(`Agent ${newAgent.name} has joined ${projectName}`);
-                    }
-                    
-                    // Mark this agent as notified
-                    projectNotifiedAgents.add(newAgent.pubkey);
-                    set((state) => {
-                        const newNotifiedAgents = new Map(state.notifiedAgents);
-                        newNotifiedAgents.set(finalDTag, projectNotifiedAgents);
-                        return { notifiedAgents: newNotifiedAgents };
-                    });
-                }
-            }
-            
-            if (existingStatus && 
-                existingStatus.isOnline === status.isOnline &&
-                existingStatus.agents.length === status.agents.length &&
-                existingStatus.models.length === status.models.length) {
-                // No change, skip update to prevent re-renders
-                return;
-            }
-            
-            // Update activity timestamp when we receive a status update
-            // Use the event's created_at timestamp for consistency
-            if (status.isOnline || status.lastSeen) {
-                // If online, use current event time; if has lastSeen, use the most recent
-                const timestamp = status.isOnline ? event.created_at : 
-                                 (status.lastSeen ? Math.floor(status.lastSeen.getTime() / 1000) : null);
-                if (timestamp) {
-                    useProjectActivityStore.getState().updateActivity(finalDTag, timestamp);
-                }
-            }
-            
-            set((state) => {
-                const newStatus = new Map(state.projectStatus);
-                newStatus.set(finalDTag, {
-                    statusEvent: status,
-                    agents: status.agents,
-                    models: status.models,
-                    executionQueue: status.executionQueue,
-                    lastSeen: status.lastSeen || null,
-                    isOnline: status.isOnline
-                });
-                
-                // Update the cached combined array
-                const newProjectsWithStatusArray = state.projectsArray.map(p => ({
-                    project: p,
-                    status: newStatus.get(p.dTag || '') || null
-                }));
-                
-                return { 
-                    projectStatus: newStatus,
-                    projectsWithStatusArray: newProjectsWithStatusArray
-                };
-            });
-        },
-        
-        // Initialize all subscriptions when user logs in
-        initializeSubscriptions: (ndk: NDK, userPubkey: string) => {
-            const { projectsSubscription, statusSubscription } = get();
-            
-            // Clean up any existing subscriptions first
-            if (projectsSubscription || statusSubscription) {
-                get().cleanupSubscriptions();
-            }
-            
-            // Clear projects first to ensure clean state
-            set({ 
-                projects: new Map(),
-                projectsArray: INITIAL_PROJECTS_ARRAY,
-                projectsWithStatusArray: INITIAL_PROJECTS_WITH_STATUS
-            });
-            
-            // Subscribe to user's projects
-            const projectsSub = ndk.subscribe({
-                kinds: [31933],
-                authors: [userPubkey],
-            }, { closeOnEose: false }, {
-                onEvent: (event: NDKEvent) => {
-                    const project = new NDKProject(ndk, event.rawEvent());
-                    const projectDTag = project.dTag;
+  addProject: (project) =>
+    set((state) => {
+      // Don't add deleted projects
+      if (project.hasTag("deleted")) {
+        return state;
+      }
+      const dTag = project.dTag;
+      if (!dTag) {
+        logger.warn("[ProjectStore] Project missing dTag, skipping");
+        return state;
+      }
 
-                    if (!projectDTag) {
-                        throw "No projectDTag";
-                    }
-                    
-                    if (project.hasTag('deleted')) {
-                        get().removeProject(projectDTag);
-                    } else {
-                        get().addProject(project);
-                    }
-                },
-                onEose: () => {
-                    // Initialize status subscription after initial projects have loaded
-                    get().initializeStatusSubscription(ndk);
-                }
-            });
-            
-            set({ projectsSubscription: projectsSub });
-        },
-        
-        // Clean up all subscriptions when user logs out
-        cleanupSubscriptions: () => {
-            const { projectsSubscription, statusSubscription } = get();
-            
-            if (projectsSubscription) {
-                projectsSubscription.stop();
-            }
-            
-            if (statusSubscription) {
-                statusSubscription.stop();
-            }
-            
-            set({
-                projectsSubscription: null,
-                statusSubscription: null,
-                projects: new Map(),
-                projectsArray: INITIAL_PROJECTS_ARRAY,
-                projectStatus: new Map(),
-                projectsWithStatusArray: INITIAL_PROJECTS_WITH_STATUS
-            });
-        },
-        
-        cleanupStatusSubscription: () => {
-            const { statusSubscription } = get();
-            
-            if (statusSubscription) {
-                statusSubscription.stop();
-            }
-            
-            set((state) => ({
-                statusSubscription: null,
-                projectStatus: new Map(),
-                projectsWithStatusArray: state.projectsArray.map(p => ({
-                    project: p,
-                    status: null
-                }))
-            }));
-        },
-        
-        getProjectStatus: (dTag: string) => {
-            return get().projectStatus.get(dTag) || null;
+      const newProjects = new Map(state.projects);
+      const newBech32Map = new Map(state.bech32Map);
+      const newTagIdMap = new Map(state.tagIdMap);
+
+      newProjects.set(dTag, project);
+
+      // Add bech32 mapping
+      try {
+        const bech32 = project.encode();
+        if (bech32) {
+          newBech32Map.set(bech32, dTag);
         }
-    })
-);
+      } catch {
+        logger.warn("[ProjectStore] Failed to encode project to bech32");
+      }
+
+      // Add tagId mapping for legacy compatibility
+      const tagId = project.tagId();
+      if (tagId) {
+        newTagIdMap.set(tagId, dTag);
+      }
+
+      const newProjectsArray = Array.from(newProjects.values());
+      return {
+        projects: newProjects,
+        bech32Map: newBech32Map,
+        tagIdMap: newTagIdMap,
+        projectsArray: newProjectsArray,
+        projectsWithStatusArray: newProjectsArray.map((p) => ({
+          project: p,
+          status: state.projectStatus.get(p.dTag || "") || null,
+        })),
+      };
+    }),
+
+  removeProject: (dTag) =>
+    set((state) => {
+      const project = state.projects.get(dTag);
+      if (!project) return state;
+
+      const newProjects = new Map(state.projects);
+      const newBech32Map = new Map(state.bech32Map);
+      const newTagIdMap = new Map(state.tagIdMap);
+
+      newProjects.delete(dTag);
+
+      // Remove from bech32 map
+      try {
+        const bech32 = project.encode();
+        if (bech32) {
+          newBech32Map.delete(bech32);
+        }
+      } catch {
+        // Ignore encoding errors
+      }
+
+      // Remove from tagId map
+      const tagId = project.tagId();
+      if (tagId) {
+        newTagIdMap.delete(tagId);
+      }
+
+      // Also remove status for this project
+      const newStatus = new Map(state.projectStatus);
+      newStatus.delete(dTag);
+      const newProjectsArray = Array.from(newProjects.values());
+      return {
+        projects: newProjects,
+        bech32Map: newBech32Map,
+        tagIdMap: newTagIdMap,
+        projectsArray: newProjectsArray,
+        projectStatus: newStatus,
+        projectsWithStatusArray: newProjectsArray.map((p) => ({
+          project: p,
+          status: newStatus.get(p.dTag || "") || null,
+        })),
+      };
+    }),
+
+  setProjects: (projects) =>
+    set((state) => {
+      const newProjects = new Map();
+      const newBech32Map = new Map();
+      const newTagIdMap = new Map();
+
+      projects.forEach((project) => {
+        // Filter out deleted projects
+        if (!project.hasTag("deleted")) {
+          const dTag = project.dTag;
+          if (!dTag) {
+            logger.warn("[ProjectStore] Project missing dTag, skipping");
+            return;
+          }
+
+          newProjects.set(dTag, project);
+
+          // Add bech32 mapping
+          try {
+            const bech32 = project.encode();
+            if (bech32) {
+              newBech32Map.set(bech32, dTag);
+            }
+          } catch {
+            logger.warn("[ProjectStore] Failed to encode project to bech32");
+          }
+
+          // Add tagId mapping for legacy compatibility
+          const tagId = project.tagId();
+          if (tagId) {
+            newTagIdMap.set(tagId, dTag);
+          }
+        }
+      });
+      const newProjectsArray = Array.from(newProjects.values());
+
+      // Check if projects actually changed
+      if (newProjectsArray.length === 0 && state.projectsArray.length === 0) {
+        return state;
+      }
+
+      const projectsChanged =
+        newProjectsArray.length !== state.projectsArray.length ||
+        newProjectsArray.some(
+          (p, i) => p.dTag !== state.projectsArray[i]?.dTag,
+        );
+
+      // Only update arrays if projects actually changed
+      if (!projectsChanged) {
+        return state;
+      }
+
+      // Create new arrays
+      const newProjectsWithStatusArray = newProjectsArray.map((p) => ({
+        project: p,
+        status: state.projectStatus.get(p.dTag || "") || null,
+      }));
+
+      return {
+        projects: newProjects,
+        bech32Map: newBech32Map,
+        tagIdMap: newTagIdMap,
+        projectsArray: newProjectsArray,
+        projectsWithStatusArray: newProjectsWithStatusArray,
+      };
+    }),
+
+  addThread: (dTag, thread) =>
+    set((state) => {
+      const projectThreads = state.threads.get(dTag) || [];
+      const newThreads = new Map(state.threads);
+      newThreads.set(dTag, [...projectThreads, thread]);
+      return { threads: newThreads };
+    }),
+
+  setThreads: (dTag, threads) =>
+    set((state) => {
+      const newThreads = new Map(state.threads);
+      newThreads.set(dTag, threads);
+      return { threads: newThreads };
+    }),
+
+  // Lookup methods
+  getProjectByDTag: (dTag: string) => {
+    return get().projects.get(dTag) || null;
+  },
+
+  getProjectByBech32: (bech32: string) => {
+    const dTag = get().bech32Map.get(bech32);
+    if (!dTag) return null;
+    return get().projects.get(dTag) || null;
+  },
+
+  getProjectByTagId: (tagId: string) => {
+    const dTag = get().tagIdMap.get(tagId);
+    if (!dTag) return null;
+    return get().projects.get(dTag) || null;
+  },
+
+  getProjectByIdentifier: (identifier: string) => {
+    // Try direct dTag lookup first
+    const project = get().projects.get(identifier);
+    if (project) return project;
+
+    // Try bech32 lookup
+    const bech32Project = get().getProjectByBech32(identifier);
+    if (bech32Project) return bech32Project;
+
+    // Try tagId lookup for legacy compatibility
+    const tagIdProject = get().getProjectByTagId(identifier);
+    if (tagIdProject) return tagIdProject;
+
+    return null;
+  },
+
+  // Initialize global status subscription for all projects
+  initializeStatusSubscription: (ndk: NDK) => {
+    const { statusSubscription } = get();
+
+    // Don't re-initialize if already subscribed
+    if (statusSubscription) {
+      return;
+    }
+
+    // Get the current user's pubkey
+    const user = ndk.signer?.user();
+    if (!user) {
+      return;
+    }
+
+    user.then((userInfo) => {
+      if (!userInfo) {
+        return;
+      }
+
+      const filter = {
+        kinds: [24010], // PROJECT_STATUS event kind
+        "#p": [userInfo.pubkey], // Status events for the current user's projects
+      };
+
+      // Subscribe to all project status events for this user
+      const sub = ndk.subscribe(
+        filter,
+        { closeOnEose: false, groupable: true, subId: "status" },
+        {
+          onEvent: (event: NDKEvent) => get().updateProjectStatus(event),
+        },
+      );
+
+      set({ statusSubscription: sub });
+    });
+  },
+
+  /**
+   * Updates the status of a project based on an NDKEvent
+   * @param event - The NDKEvent containing project status information
+   */
+  updateProjectStatus: async (event: NDKEvent) => {
+    if (!event.ndk) return;
+
+    const { projects, tagIdMap, projectStatus, notifiedAgents } = get();
+    const status = NDKProjectStatus.from(event);
+    const projectTagId = status.projectId;
+
+    if (!projectTagId) {
+      return;
+    }
+
+    // Convert tagId to dTag
+    let finalDTag = tagIdMap.get(projectTagId);
+    if (!finalDTag) {
+      // Try direct lookup in case it's already a dTag
+      if (projects.has(projectTagId)) {
+        finalDTag = projectTagId;
+      } else {
+        return;
+      }
+    }
+
+    // Only process status events for projects we know about
+    if (!projects.has(finalDTag)) {
+      return;
+    }
+
+    // Check for global agents and add them to the agents store
+    for (const tag of event.tags) {
+      if (tag[0] === "agent") {
+        if (tag.length >= 4) {
+          if (tag[3] === "global") {
+            useAgentsStore.getState().addGlobalAgent(tag[1], tag[2]);
+          }
+        }
+      }
+    }
+
+    // Check if this is actually a change
+    const existingStatus = projectStatus.get(finalDTag);
+
+    // Check for new agents and show toast notification
+    if (status.agents.length > 0) {
+      // Get or create the set of notified agents for this project
+      const projectNotifiedAgents =
+        notifiedAgents.get(finalDTag) || new Set<string>();
+
+      // Find agents we haven't notified about yet
+      const newAgents = status.agents.filter(
+        (a) => !projectNotifiedAgents.has(a.pubkey),
+      );
+
+      // Show toast only if exactly one new agent joined
+      if (newAgents.length === 1) {
+        const newAgent = newAgents[0];
+        const project = projects.get(finalDTag);
+        const projectName = project?.title || "the project";
+
+        // Fetch the agent's profile to get their real name
+        try {
+          const agentUser = event.ndk.getUser({ pubkey: newAgent.pubkey });
+          await agentUser.fetchProfile();
+          const agentName =
+            agentUser.profile?.displayName ||
+            agentUser.profile?.name ||
+            newAgent.name;
+          toast.success(`Agent ${agentName} has joined ${projectName}`);
+        } catch {
+          // Fallback to using the slug name if profile fetch fails
+          toast.success(`Agent ${newAgent.name} has joined ${projectName}`);
+        }
+
+        // Mark this agent as notified
+        projectNotifiedAgents.add(newAgent.pubkey);
+        set((state) => {
+          const newNotifiedAgents = new Map(state.notifiedAgents);
+          newNotifiedAgents.set(finalDTag, projectNotifiedAgents);
+          return { notifiedAgents: newNotifiedAgents };
+        });
+      }
+    }
+
+    if (
+      existingStatus &&
+      existingStatus.isOnline === status.isOnline &&
+      existingStatus.agents.length === status.agents.length &&
+      existingStatus.models.length === status.models.length
+    ) {
+      // No change, skip update to prevent re-renders
+      return;
+    }
+
+    // Update activity timestamp when we receive a status update
+    // Use the event's created_at timestamp for consistency
+    if (status.isOnline || status.lastSeen) {
+      // If online, use current event time; if has lastSeen, use the most recent
+      const timestamp = status.isOnline
+        ? event.created_at
+        : status.lastSeen
+          ? Math.floor(status.lastSeen.getTime() / 1000)
+          : null;
+      if (timestamp) {
+        useProjectActivityStore.getState().updateActivity(finalDTag, timestamp);
+      }
+    }
+
+    set((state) => {
+      const newStatus = new Map(state.projectStatus);
+      newStatus.set(finalDTag, {
+        statusEvent: status,
+        agents: status.agents,
+        models: status.models,
+        executionQueue: status.executionQueue,
+        lastSeen: status.lastSeen || null,
+        isOnline: status.isOnline,
+      });
+
+      // Update the cached combined array
+      const newProjectsWithStatusArray = state.projectsArray.map((p) => ({
+        project: p,
+        status: newStatus.get(p.dTag || "") || null,
+      }));
+
+      return {
+        projectStatus: newStatus,
+        projectsWithStatusArray: newProjectsWithStatusArray,
+      };
+    });
+  },
+
+  // Initialize all subscriptions when user logs in
+  initializeSubscriptions: (ndk: NDK, userPubkey: string) => {
+    const { projectsSubscription, statusSubscription } = get();
+
+    // Clean up any existing subscriptions first
+    if (projectsSubscription || statusSubscription) {
+      get().cleanupSubscriptions();
+    }
+
+    // Clear projects first to ensure clean state
+    set({
+      projects: new Map(),
+      projectsArray: INITIAL_PROJECTS_ARRAY,
+      projectsWithStatusArray: INITIAL_PROJECTS_WITH_STATUS,
+    });
+
+    // Subscribe to user's projects
+    const projectsSub = ndk.subscribe(
+      {
+        kinds: [31933],
+        authors: [userPubkey],
+      },
+      { closeOnEose: false },
+      {
+        onEvent: (event: NDKEvent) => {
+          const project = new NDKProject(ndk, event.rawEvent());
+          const projectDTag = project.dTag;
+
+          if (!projectDTag) {
+            throw "No projectDTag";
+          }
+
+          if (project.hasTag("deleted")) {
+            get().removeProject(projectDTag);
+          } else {
+            get().addProject(project);
+          }
+        },
+        onEose: () => {
+          // Initialize status subscription after initial projects have loaded
+          get().initializeStatusSubscription(ndk);
+        },
+      },
+    );
+
+    set({ projectsSubscription: projectsSub });
+  },
+
+  // Clean up all subscriptions when user logs out
+  cleanupSubscriptions: () => {
+    const { projectsSubscription, statusSubscription } = get();
+
+    if (projectsSubscription) {
+      projectsSubscription.stop();
+    }
+
+    if (statusSubscription) {
+      statusSubscription.stop();
+    }
+
+    set({
+      projectsSubscription: null,
+      statusSubscription: null,
+      projects: new Map(),
+      projectsArray: INITIAL_PROJECTS_ARRAY,
+      projectStatus: new Map(),
+      projectsWithStatusArray: INITIAL_PROJECTS_WITH_STATUS,
+    });
+  },
+
+  cleanupStatusSubscription: () => {
+    const { statusSubscription } = get();
+
+    if (statusSubscription) {
+      statusSubscription.stop();
+    }
+
+    set((state) => ({
+      statusSubscription: null,
+      projectStatus: new Map(),
+      projectsWithStatusArray: state.projectsArray.map((p) => ({
+        project: p,
+        status: null,
+      })),
+    }));
+  },
+
+  getProjectStatus: (dTag: string) => {
+    return get().projectStatus.get(dTag) || null;
+  },
+}));
 
 // Selector hooks for easy access
 export const useProjectStatus = (dTag: string | undefined) => {
-    return useProjectsStore(state => 
-        dTag ? state.projectStatus.get(dTag) || null : null
-    );
+  return useProjectsStore((state) =>
+    dTag ? state.projectStatus.get(dTag) || null : null,
+  );
 };
 
 // Separate selectors to prevent unnecessary re-renders
 // Return the cached array of projects
 export const useProjectsArray = () => {
-    return useProjectsStore(state => state.projectsArray);
+  return useProjectsStore((state) => state.projectsArray);
 };
 
 // Direct access to the store maps (use carefully)
 export const useProjectsMap = () => {
-    return useProjectsStore(state => state.projects);
+  return useProjectsStore((state) => state.projects);
 };
 
 export const useProjectStatusMap = () => {
-    return useProjectsStore(state => state.projectStatus);
+  return useProjectsStore((state) => state.projectStatus);
 };
 
 // Combined selector that returns projects with their status
 // Returns the cached array to prevent unnecessary re-renders
 export const useProjectsWithStatus = () => {
-    return useProjectsStore(state => state.projectsWithStatusArray);
+  return useProjectsStore((state) => state.projectsWithStatusArray);
 };
-

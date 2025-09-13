@@ -1,58 +1,65 @@
-import { useState, useEffect } from 'react'
-import { useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
-import { ItemSelector } from '@/components/common/ItemSelector'
-import { SelectableCard } from '@/components/common/SelectableCard'
-import { Code2, Terminal, Wrench } from 'lucide-react'
-import type { NDKKind } from '@nostr-dev-kit/ndk-hooks'
+import { useState, useEffect } from "react";
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { NDKMCPTool } from "@/lib/ndk-events/NDKMCPTool";
+import { ItemSelector } from "@/components/common/ItemSelector";
+import { SelectableCard } from "@/components/common/SelectableCard";
+import { Code2, Terminal, Wrench } from "lucide-react";
+import type { NDKKind } from "@nostr-dev-kit/ndk-hooks";
 
 interface MCPToolSelectorProps {
-  selectedTools: Array<{ eventId: string; name: string; selected: boolean }>
-  onToolsChange: (tools: Array<{ eventId: string; name: string; selected: boolean }>) => void
+  selectedTools: Array<{ eventId: string; name: string; selected: boolean }>;
+  onToolsChange: (
+    tools: Array<{ eventId: string; name: string; selected: boolean }>,
+  ) => void;
 }
 
-export function MCPToolSelector({ selectedTools, onToolsChange }: MCPToolSelectorProps) {
-  const [tools, setTools] = useState<NDKMCPTool[]>([])
+export function MCPToolSelector({
+  selectedTools,
+  onToolsChange,
+}: MCPToolSelectorProps) {
+  const [tools, setTools] = useState<NDKMCPTool[]>([]);
 
   // Subscribe to MCP tools
-  const { events } = useSubscribe(
-    [{ kinds: [4200 as NDKKind], limit: 100 }],
-    { closeOnEose: true }
-  )
+  const { events } = useSubscribe([{ kinds: [4200 as NDKKind], limit: 100 }], {
+    closeOnEose: true,
+  });
 
   useEffect(() => {
     if (events && events.length > 0) {
-      const mcpTools = events.map(event => {
-        const tool = new NDKMCPTool(event.ndk, event.rawEvent())
-        return tool
-      })
-      setTools(mcpTools)
+      const mcpTools = events.map((event) => {
+        const tool = new NDKMCPTool(event.ndk, event.rawEvent());
+        return tool;
+      });
+      setTools(mcpTools);
     }
-  }, [events])
+  }, [events]);
 
   const handleToggle = (toolId: string) => {
-    const tool = tools.find(t => t.id === toolId)
-    if (!tool) return
+    const tool = tools.find((t) => t.id === toolId);
+    if (!tool) return;
 
-    const currentIndex = selectedTools.findIndex(t => t.eventId === toolId)
+    const currentIndex = selectedTools.findIndex((t) => t.eventId === toolId);
     if (currentIndex >= 0) {
       // Remove tool
-      const newTools = selectedTools.filter(t => t.eventId !== toolId)
-      onToolsChange(newTools)
+      const newTools = selectedTools.filter((t) => t.eventId !== toolId);
+      onToolsChange(newTools);
     } else {
       // Add tool
-      const newTools = [...selectedTools, {
-        eventId: toolId,
-        name: tool.name,
-        selected: true
-      }]
-      onToolsChange(newTools)
+      const newTools = [
+        ...selectedTools,
+        {
+          eventId: toolId,
+          name: tool.name,
+          selected: true,
+        },
+      ];
+      onToolsChange(newTools);
     }
-  }
+  };
 
   const renderTool = (tool: NDKMCPTool) => {
-    const isSelected = selectedTools.some(t => t.eventId === tool.id)
-    const capabilities = tool.capabilities || []
+    const isSelected = selectedTools.some((t) => t.eventId === tool.id);
+    const capabilities = tool.capabilities || [];
 
     return (
       <SelectableCard
@@ -61,34 +68,42 @@ export function MCPToolSelector({ selectedTools, onToolsChange }: MCPToolSelecto
         isSelected={isSelected}
         onSelect={() => handleToggle(tool.id)}
         onDeselect={() => handleToggle(tool.id)}
-        renderIcon={() => 
-          tool.command?.includes('mcp') ? (
+        renderIcon={() =>
+          tool.command?.includes("mcp") ? (
             <Terminal className="h-5 w-5 text-muted-foreground" />
-          ) : tool.command?.includes('code') ? (
+          ) : tool.command?.includes("code") ? (
             <Code2 className="h-5 w-5 text-muted-foreground" />
           ) : (
             <Wrench className="h-5 w-5 text-muted-foreground" />
           )
         }
-        renderTitle={() => tool.name || 'Unnamed Tool'}
-        renderDescription={() => tool.description || 'No description available'}
-        renderMeta={() => tool.command ? <span className="font-mono">{tool.command}</span> : null}
+        renderTitle={() => tool.name || "Unnamed Tool"}
+        renderDescription={() => tool.description || "No description available"}
+        renderMeta={() =>
+          tool.command ? (
+            <span className="font-mono">{tool.command}</span>
+          ) : null
+        }
         renderTags={() => capabilities.slice(0, 3)}
       />
-    )
-  }
+    );
+  };
 
   return (
     <ItemSelector
       items={tools}
-      selectedItems={selectedTools.map(st => tools.find(t => t.id === st.eventId)).filter(Boolean) as NDKMCPTool[]}
+      selectedItems={
+        selectedTools
+          .map((st) => tools.find((t) => t.id === st.eventId))
+          .filter(Boolean) as NDKMCPTool[]
+      }
       onItemsChange={(newTools) => {
-        const updatedTools = newTools.map(t => ({
+        const updatedTools = newTools.map((t) => ({
           eventId: t.id,
           name: t.name,
-          selected: true
-        }))
-        onToolsChange(updatedTools)
+          selected: true,
+        }));
+        onToolsChange(updatedTools);
       }}
       searchPlaceholder="Search MCP tools by name or command..."
       filterLabel="Filter Tools"
@@ -99,14 +114,16 @@ export function MCPToolSelector({ selectedTools, onToolsChange }: MCPToolSelecto
       getItemId={(tool: NDKMCPTool) => tool.id}
       getItemTags={(tool: NDKMCPTool) => tool.capabilities || []}
       searchFilter={(tool: NDKMCPTool, searchTerm: string) => {
-        const searchLower = searchTerm.toLowerCase()
+        const searchLower = searchTerm.toLowerCase();
         return (
           tool.name?.toLowerCase().includes(searchLower) ||
           tool.description?.toLowerCase().includes(searchLower) ||
           tool.command?.toLowerCase().includes(searchLower) ||
-          (tool.capabilities || []).some(cap => cap.toLowerCase().includes(searchLower))
-        )
+          (tool.capabilities || []).some((cap) =>
+            cap.toLowerCase().includes(searchLower),
+          )
+        );
       }}
     />
-  )
+  );
 }

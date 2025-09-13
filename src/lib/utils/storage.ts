@@ -1,4 +1,4 @@
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 
 /**
  * Type-safe localStorage wrapper with error handling
@@ -9,12 +9,12 @@ export class Storage {
    */
   static getItem<T>(key: string, defaultValue?: T): T | undefined {
     try {
-      const item = localStorage.getItem(key)
-      if (!item) return defaultValue
-      return JSON.parse(item) as T
+      const item = localStorage.getItem(key);
+      if (!item) return defaultValue;
+      return JSON.parse(item) as T;
     } catch (error) {
-      logger.error(`Failed to get item from localStorage: ${key}`, error)
-      return defaultValue
+      logger.error(`Failed to get item from localStorage: ${key}`, error);
+      return defaultValue;
     }
   }
 
@@ -23,11 +23,11 @@ export class Storage {
    */
   static setItem<T>(key: string, value: T): boolean {
     try {
-      localStorage.setItem(key, JSON.stringify(value))
-      return true
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
     } catch (error) {
-      logger.error(`Failed to set item in localStorage: ${key}`, error)
-      return false
+      logger.error(`Failed to set item in localStorage: ${key}`, error);
+      return false;
     }
   }
 
@@ -36,9 +36,9 @@ export class Storage {
    */
   static removeItem(key: string): void {
     try {
-      localStorage.removeItem(key)
+      localStorage.removeItem(key);
     } catch (error) {
-      logger.error(`Failed to remove item from localStorage: ${key}`, error)
+      logger.error(`Failed to remove item from localStorage: ${key}`, error);
     }
   }
 
@@ -47,9 +47,9 @@ export class Storage {
    */
   static clear(): void {
     try {
-      localStorage.clear()
+      localStorage.clear();
     } catch (error) {
-      logger.error('Failed to clear localStorage', error)
+      logger.error("Failed to clear localStorage", error);
     }
   }
 
@@ -58,9 +58,9 @@ export class Storage {
    */
   static hasItem(key: string): boolean {
     try {
-      return localStorage.getItem(key) !== null
+      return localStorage.getItem(key) !== null;
     } catch {
-      return false
+      return false;
     }
   }
 }
@@ -69,20 +69,20 @@ export class Storage {
  * Create a namespaced storage instance
  */
 export function createNamespacedStorage(namespace: string) {
-  const prefixKey = (key: string) => `${namespace}:${key}`
+  const prefixKey = (key: string) => `${namespace}:${key}`;
 
   return {
     getItem<T>(key: string, defaultValue?: T): T | undefined {
-      return Storage.getItem(prefixKey(key), defaultValue)
+      return Storage.getItem(prefixKey(key), defaultValue);
     },
     setItem<T>(key: string, value: T): boolean {
-      return Storage.setItem(prefixKey(key), value)
+      return Storage.setItem(prefixKey(key), value);
     },
     removeItem(key: string): void {
-      Storage.removeItem(prefixKey(key))
+      Storage.removeItem(prefixKey(key));
     },
     hasItem(key: string): boolean {
-      return Storage.hasItem(prefixKey(key))
-    }
-  }
+      return Storage.hasItem(prefixKey(key));
+    },
+  };
 }

@@ -46,8 +46,8 @@ interface ConversationAgentsProps {
 interface AgentInfo {
   pubkey: string;
   slug?: string;
-  model?: string;  // Model slug from the agent - optional
-  tools?: string[];  // Tools are optional - agent might not use any
+  model?: string; // Model slug from the agent - optional
+  tools?: string[]; // Tools are optional - agent might not use any
   isProjectAgent?: boolean; // Flag to indicate if this is a project agent
 }
 
@@ -74,7 +74,9 @@ function AgentAvatar({
   const isMobile = useIsMobile();
 
   // Always call hooks before any conditional returns
-  const [selectedModel, setSelectedModel] = useState(agent.model ?? "");
+  const [selectedModel, setSelectedModel] = useState(
+    agent.model || availableModels[0]?.model || "",
+  );
   const [selectedTools, setSelectedTools] = useState<Set<string>>(
     new Set(agent.tools ?? []),
   );
@@ -103,8 +105,8 @@ function AgentAvatar({
   // Logic for project agents (the popover)
 
   const hasChanges =
-    selectedModel !== (agent.model ?? "") ||
-    !setsAreEqual(selectedTools, new Set(agent.tools ?? []));
+    selectedModel !== (agent.model || "") ||
+    !setsAreEqual(selectedTools, new Set(agent.tools || []));
 
   function setsAreEqual<T>(setA: Set<T>, setB: Set<T>): boolean {
     if (setA.size !== setB.size) return false;
@@ -115,7 +117,7 @@ function AgentAvatar({
   }
 
   const handleToolToggle = (tool: string) => {
-    setSelectedTools(prev => {
+    setSelectedTools((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(tool)) {
         newSet.delete(tool);
@@ -173,6 +175,9 @@ function AgentAvatar({
             <p className="text-xs text-muted-foreground truncate">
               {agent.pubkey}
             </p>
+            <span className="text-xs text-muted-foreground">
+              Model: {agent.model || "N/A"}
+            </span>
           </div>
 
           <div className="space-y-2">
@@ -184,15 +189,12 @@ function AgentAvatar({
                 No models available
               </p>
             ) : (
-              <Select
-                value={selectedModel}
-                onValueChange={setSelectedModel}
-              >
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
                 <SelectTrigger className="w-full h-8 text-xs">
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableModels.map(model => (
+                  {availableModels.map((model) => (
                     <SelectItem
                       key={model.model}
                       value={model.model}
@@ -219,7 +221,7 @@ function AgentAvatar({
             </div>
             <div className="h-48 overflow-y-auto rounded-md border p-2">
               <div className="space-y-1">
-                {availableTools.map(tool => (
+                {availableTools.map((tool) => (
                   <div key={tool} className="flex items-center space-x-2 py-1">
                     <Checkbox
                       id={`tool-${tool}`}
@@ -277,7 +279,7 @@ export function ConversationAgents({
         ]
       : false,
     { closeOnEose: false, groupable: true },
-    [rootEvent?.id]
+    [rootEvent?.id],
   );
 
   // Extract unique agents from the conversation
@@ -290,7 +292,7 @@ export function ConversationAgents({
 
       // Check if this is a project agent
       const agentInfo = onlineAgents.find((a) => a.pubkey === pubkey);
-      
+
       if (!agentsMap.has(pubkey)) {
         agentsMap.set(pubkey, {
           pubkey,
@@ -327,10 +329,20 @@ export function ConversationAgents({
     return Array.from(agentsMap.values());
   }, [messages, onlineAgents, user?.pubkey, rootEvent, threadParticipants]);
 
-  const handleSaveChanges = async (agentPubkey: string, newModel: string, tools: string[]) => {
+  const handleSaveChanges = async (
+    agentPubkey: string,
+    newModel: string,
+    tools: string[],
+  ) => {
     if (!ndk || !user || !rootEvent) return;
 
     try {
+      const projectTagId = project.tagId();
+      if (!projectTagId) {
+        toast.error("Project tag ID not found");
+        return;
+      }
+
       // Create a model/tools change event (kind 24020)
       const changeEvent = new NDKEvent(ndk);
       changeEvent.kind = 24020;
@@ -338,18 +350,18 @@ export function ConversationAgents({
       changeEvent.tags = [
         ["p", agentPubkey], // Target agent
         ["model", newModel], // New model slug
-        ["a", project.tagId() || ""], // Project reference
+        ["a", projectTagId], // Project reference
       ];
 
       // Add tool tags - one tag per tool
-      tools.forEach(tool => {
+      tools.forEach((tool) => {
         changeEvent.tags.push(["tool", tool]);
       });
 
+      await changeEvent.sign();
       await changeEvent.publish();
       toast.success(`Agent settings updated`);
     } catch {
-      toast.error("Failed to update agent settings");
       toast.error("Failed to update agent settings");
     }
   };
@@ -357,7 +369,13 @@ export function ConversationAgents({
   const isMobile = useIsMobile();
 
   return (
-    <div className={isMobile ? "flex items-center -space-x-1" : "flex flex-wrap items-center gap-x-1.5 gap-y-1"}>
+    <div
+      className={
+        isMobile
+          ? "flex items-center -space-x-1"
+          : "flex flex-wrap items-center gap-x-1.5 gap-y-1"
+      }
+    >
       {/* Show agents with popover for model selection */}
       {conversationAgents.map((agent, index) => (
         <div key={agent.pubkey} className={isMobile && index > 0 ? "" : ""}>

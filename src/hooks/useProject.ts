@@ -1,4 +1,4 @@
-import { useProjectsStore } from '@/stores/projects'
+import { useProjectsStore } from "@/stores/projects";
 
 /**
  * Custom hook to get an NDKProject by its identifier from the store
@@ -7,7 +7,7 @@ import { useProjectsStore } from '@/stores/projects'
  * @returns The project from the store or null if not found
  */
 export function useProject(identifier: string | undefined) {
-  return useProjectsStore(state => 
-    identifier ? state.getProjectByIdentifier(identifier) : null
-  )
+  return useProjectsStore((state) =>
+    identifier ? state.getProjectByIdentifier(identifier) : null,
+  );
 }

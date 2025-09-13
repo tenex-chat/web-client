@@ -12,22 +12,17 @@ export function AgentDefinitionFromId({ eventId }: AgentDefinitionFromIdProps) {
   const { ndk } = useNDK();
   const navigate = useNavigate();
   const event = useEvent(eventId);
-  
+
   if (!event || !ndk) return null;
-  
+
   const agent = new NDKAgentDefinition(ndk, event);
-  
+
   const handleClick = () => {
     navigate({
       to: "/agent-definition/$agentDefinitionEventId",
-      params: { agentDefinitionEventId: agent.id }
+      params: { agentDefinitionEventId: agent.id },
     });
   };
-  
-  return (
-    <AgentDefinitionCard
-      agent={agent}
-      onClick={handleClick}
-    />
-  );
+
+  return <AgentDefinitionCard agent={agent} onClick={handleClick} />;
 }

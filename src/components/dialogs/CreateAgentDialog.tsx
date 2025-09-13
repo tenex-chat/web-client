@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { useNDK } from '@nostr-dev-kit/ndk-hooks'
-import { toast } from 'sonner'
+import { useState, useEffect } from "react";
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -8,279 +8,312 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Loader2, ChevronLeft, ChevronRight, Wrench, Server, Plus, X, Layers } from 'lucide-react'
-import { NDKAgentDefinition } from '@/lib/ndk-events/NDKAgentDefinition'
-import ReactMarkdown from 'react-markdown'
-import { ToolSelector } from '@/components/common/ToolSelector'
-import { useAvailableTools } from '@/hooks/useAvailableTools'
-import { useAvailableMCPServers } from '@/hooks/useAvailableMCPServers'
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Wrench,
+  Server,
+  Plus,
+  X,
+  Layers,
+} from "lucide-react";
+import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
+import ReactMarkdown from "react-markdown";
+import { ToolSelector } from "@/components/common/ToolSelector";
+import { useAvailableTools } from "@/hooks/useAvailableTools";
+import { useAvailableMCPServers } from "@/hooks/useAvailableMCPServers";
 
 interface CreateAgentDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  forkFromAgent?: NDKAgentDefinition
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  forkFromAgent?: NDKAgentDefinition;
 }
 
-type WizardStep = 'basics' | 'prompt' | 'preview' | 'tools' | 'phases' | 'criteria'
+type WizardStep =
+  | "basics"
+  | "prompt"
+  | "preview"
+  | "tools"
+  | "phases"
+  | "criteria";
 
-export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateAgentDialogProps) {
-  const { ndk } = useNDK()
-  const [isCreating, setIsCreating] = useState(false)
-  const [currentStep, setCurrentStep] = useState<WizardStep>('basics')
-  const availableTools = useAvailableTools()
-  const mcpServers = useAvailableMCPServers()
-  
+export function CreateAgentDialog({
+  open,
+  onOpenChange,
+  forkFromAgent,
+}: CreateAgentDialogProps) {
+  const { ndk } = useNDK();
+  const [isCreating, setIsCreating] = useState(false);
+  const [currentStep, setCurrentStep] = useState<WizardStep>("basics");
+  const availableTools = useAvailableTools();
+  const mcpServers = useAvailableMCPServers();
+
   // Agent data
   const [agentData, setAgentData] = useState({
-    name: '',
-    description: '',
-    role: '',
-    instructions: '',
-    useCriteria: '',
-    version: '1',
-    slug: '',
+    name: "",
+    description: "",
+    role: "",
+    instructions: "",
+    useCriteria: "",
+    version: "1",
+    slug: "",
     tools: [] as string[],
     mcpServers: [] as string[],
     phases: [] as Array<{ name: string; instructions: string }>,
-  })
+  });
 
   // Load fork data when agent changes
   useEffect(() => {
     if (forkFromAgent) {
       // Parse existing version and bump it
-      const existingVersion = Number.parseInt(forkFromAgent.version || '1')
-      const newVersion = Number.isNaN(existingVersion) ? 2 : existingVersion + 1
-      
+      const existingVersion = Number.parseInt(forkFromAgent.version || "1");
+      const newVersion = Number.isNaN(existingVersion)
+        ? 2
+        : existingVersion + 1;
+
       setAgentData({
-        name: `${forkFromAgent.name || 'Unnamed'}`,
-        description: forkFromAgent.description || '',
-        role: forkFromAgent.role || '',
-        instructions: forkFromAgent.instructions || '',
-        useCriteria: forkFromAgent.useCriteria?.join('\n') || '',
+        name: `${forkFromAgent.name || "Unnamed"}`,
+        description: forkFromAgent.description || "",
+        role: forkFromAgent.role || "",
+        instructions: forkFromAgent.instructions || "",
+        useCriteria: forkFromAgent.useCriteria?.join("\n") || "",
         version: String(newVersion),
-        slug: forkFromAgent.slug || '',
+        slug: forkFromAgent.slug || "",
         tools: forkFromAgent.tools || [],
         mcpServers: forkFromAgent.mcpServers || [],
         phases: forkFromAgent.phases || [],
-      })
+      });
     } else {
       // Reset form when not forking
       setAgentData({
-        name: '',
-        description: '',
-        role: '',
-        instructions: '',
-        useCriteria: '',
-        version: '1',
-        slug: '',
+        name: "",
+        description: "",
+        role: "",
+        instructions: "",
+        useCriteria: "",
+        version: "1",
+        slug: "",
         tools: [],
         mcpServers: [],
         phases: [],
-      })
+      });
     }
     // Reset to first step when dialog opens/closes
-    setCurrentStep('basics')
-  }, [forkFromAgent, open])
+    setCurrentStep("basics");
+  }, [forkFromAgent, open]);
 
   const handleCreate = async () => {
     if (!ndk) {
-      toast.error('NDK not initialized')
-      return
+      toast.error("NDK not initialized");
+      return;
     }
 
     if (!agentData.name.trim()) {
-      toast.error('Agent name is required')
-      setCurrentStep('basics')
-      return
+      toast.error("Agent name is required");
+      setCurrentStep("basics");
+      return;
     }
 
     if (!agentData.description.trim()) {
-      toast.error('Agent description is required')
-      setCurrentStep('basics')
-      return
+      toast.error("Agent description is required");
+      setCurrentStep("basics");
+      return;
     }
 
     if (!agentData.instructions.trim()) {
-      toast.error('System prompt is required')
-      setCurrentStep('prompt')
-      return
+      toast.error("System prompt is required");
+      setCurrentStep("prompt");
+      return;
     }
 
-    setIsCreating(true)
+    setIsCreating(true);
     try {
       // Always create a new agent (forking creates a new event)
-      const agent = new NDKAgentDefinition(ndk)
-      agent.name = agentData.name
-      agent.description = agentData.description
-      agent.role = agentData.role
-      agent.instructions = agentData.instructions
+      const agent = new NDKAgentDefinition(ndk);
+      agent.name = agentData.name;
+      agent.description = agentData.description;
+      agent.role = agentData.role;
+      agent.instructions = agentData.instructions;
       // Parse use criteria from textarea (split by newlines)
       const criteria = agentData.useCriteria
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-      agent.useCriteria = criteria
-      agent.version = agentData.version || undefined
-      agent.slug = agentData.slug || undefined
-      agent.tools = agentData.tools
-      agent.mcpServers = agentData.mcpServers
-      agent.phases = agentData.phases
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+      agent.useCriteria = criteria;
+      agent.version = agentData.version || undefined;
+      agent.slug = agentData.slug || undefined;
+      agent.tools = agentData.tools;
+      agent.mcpServers = agentData.mcpServers;
+      agent.phases = agentData.phases;
 
       // If forking, add an "e" tag to reference the previous version
       if (forkFromAgent) {
-        agent.tags.push(['e', forkFromAgent.id])
+        agent.tags.push(["e", forkFromAgent.id]);
       }
 
-      await agent.publish()
-      
-      toast.success(forkFromAgent ? 'Agent definition forked successfully!' : 'Agent definition created successfully!')
-      onOpenChange(false)
-      
+      await agent.publish();
+
+      toast.success(
+        forkFromAgent
+          ? "Agent definition forked successfully!"
+          : "Agent definition created successfully!",
+      );
+      onOpenChange(false);
+
       // Reset form
       setAgentData({
-        name: '',
-        description: '',
-        role: '',
-        instructions: '',
-        useCriteria: '',
-        version: '1',
-        slug: '',
+        name: "",
+        description: "",
+        role: "",
+        instructions: "",
+        useCriteria: "",
+        version: "1",
+        slug: "",
         tools: [],
         mcpServers: [],
         phases: [],
-      })
+      });
     } catch {
-      console.error('Failed to save agent')
-      toast.error(forkFromAgent ? 'Failed to fork agent definition' : 'Failed to create agent definition')
+      console.error("Failed to save agent");
+      toast.error(
+        forkFromAgent
+          ? "Failed to fork agent definition"
+          : "Failed to create agent definition",
+      );
     } finally {
-      setIsCreating(false)
+      setIsCreating(false);
     }
-  }
+  };
 
   const canGoNext = () => {
     switch (currentStep) {
-      case 'basics':
-        return agentData.name.trim() && agentData.description.trim()
-      case 'prompt':
-        return agentData.instructions.trim().length > 0
-      case 'preview':
-        return true
-      case 'tools':
-        return true
-      case 'phases':
-        return true
-      case 'criteria':
-        return true
+      case "basics":
+        return agentData.name.trim() && agentData.description.trim();
+      case "prompt":
+        return agentData.instructions.trim().length > 0;
+      case "preview":
+        return true;
+      case "tools":
+        return true;
+      case "phases":
+        return true;
+      case "criteria":
+        return true;
       default:
-        return false
+        return false;
     }
-  }
+  };
 
   const goNext = () => {
-    if (!canGoNext()) return
-    
+    if (!canGoNext()) return;
+
     switch (currentStep) {
-      case 'basics':
-        setCurrentStep('prompt')
-        break
-      case 'prompt':
-        setCurrentStep('preview')
-        break
-      case 'preview':
-        setCurrentStep('tools')
-        break
-      case 'tools':
-        setCurrentStep('phases')
-        break
-      case 'phases':
-        setCurrentStep('criteria')
-        break
-      case 'criteria':
-        handleCreate()
-        break
+      case "basics":
+        setCurrentStep("prompt");
+        break;
+      case "prompt":
+        setCurrentStep("preview");
+        break;
+      case "preview":
+        setCurrentStep("tools");
+        break;
+      case "tools":
+        setCurrentStep("phases");
+        break;
+      case "phases":
+        setCurrentStep("criteria");
+        break;
+      case "criteria":
+        handleCreate();
+        break;
     }
-  }
+  };
 
   const goBack = () => {
     switch (currentStep) {
-      case 'prompt':
-        setCurrentStep('basics')
-        break
-      case 'preview':
-        setCurrentStep('prompt')
-        break
-      case 'tools':
-        setCurrentStep('preview')
-        break
-      case 'phases':
-        setCurrentStep('tools')
-        break
-      case 'criteria':
-        setCurrentStep('phases')
-        break
+      case "prompt":
+        setCurrentStep("basics");
+        break;
+      case "preview":
+        setCurrentStep("prompt");
+        break;
+      case "tools":
+        setCurrentStep("preview");
+        break;
+      case "phases":
+        setCurrentStep("tools");
+        break;
+      case "criteria":
+        setCurrentStep("phases");
+        break;
     }
-  }
+  };
 
   const getStepTitle = () => {
     switch (currentStep) {
-      case 'basics':
-        return 'Basic Information'
-      case 'prompt':
-        return 'System Prompt'
-      case 'preview':
-        return 'Preview System Prompt'
-      case 'tools':
-        return 'Tools & MCP Servers'
-      case 'phases':
-        return 'Phase Definitions'
-      case 'criteria':
-        return 'Use Criteria & Version'
+      case "basics":
+        return "Basic Information";
+      case "prompt":
+        return "System Prompt";
+      case "preview":
+        return "Preview System Prompt";
+      case "tools":
+        return "Tools & MCP Servers";
+      case "phases":
+        return "Phase Definitions";
+      case "criteria":
+        return "Use Criteria & Version";
       default:
-        return ''
+        return "";
     }
-  }
+  };
 
   const getStepDescription = () => {
     switch (currentStep) {
-      case 'basics':
-        return 'Define the basic properties of your agent definition'
-      case 'prompt':
-        return 'Write the system prompt that defines this agent\'s behavior and capabilities'
-      case 'preview':
-        return 'Review how your system prompt will be displayed'
-      case 'tools':
-        return 'Select tools and MCP servers this agent requires'
-      case 'phases':
-        return 'Define project phases for PM agents (optional)'
-      case 'criteria':
-        return 'Define when this agent should be used and set version'
+      case "basics":
+        return "Define the basic properties of your agent definition";
+      case "prompt":
+        return "Write the system prompt that defines this agent's behavior and capabilities";
+      case "preview":
+        return "Review how your system prompt will be displayed";
+      case "tools":
+        return "Select tools and MCP servers this agent requires";
+      case "phases":
+        return "Define project phases for PM agents (optional)";
+      case "criteria":
+        return "Define when this agent should be used and set version";
       default:
-        return ''
+        return "";
     }
-  }
+  };
 
   const getDialogWidth = () => {
     switch (currentStep) {
-      case 'prompt':
-        return 'max-w-3xl'
-      case 'preview':
-        return 'max-w-4xl'
+      case "prompt":
+        return "max-w-3xl";
+      case "preview":
+        return "max-w-4xl";
       default:
-        return 'max-w-2xl'
+        return "max-w-2xl";
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${getDialogWidth()} max-h-[90vh] flex flex-col`}>
+      <DialogContent
+        className={`${getDialogWidth()} max-h-[90vh] flex flex-col`}
+      >
         <DialogHeader>
           <DialogTitle>
-            {forkFromAgent ? 'Fork Agent Definition' : 'Create Agent Definition'}
+            {forkFromAgent
+              ? "Fork Agent Definition"
+              : "Create Agent Definition"}
           </DialogTitle>
           <DialogDescription>
             {getStepTitle()} - {getStepDescription()}
@@ -288,14 +321,16 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto py-4">
-          {currentStep === 'basics' && (
+          {currentStep === "basics" && (
             <div className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="name">Name *</Label>
                 <Input
                   id="name"
                   value={agentData.name}
-                  onChange={(e) => setAgentData({ ...agentData, name: e.target.value })}
+                  onChange={(e) =>
+                    setAgentData({ ...agentData, name: e.target.value })
+                  }
                   placeholder="My AI Assistant"
                 />
               </div>
@@ -305,7 +340,9 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
                 <Textarea
                   id="description"
                   value={agentData.description}
-                  onChange={(e) => setAgentData({ ...agentData, description: e.target.value })}
+                  onChange={(e) =>
+                    setAgentData({ ...agentData, description: e.target.value })
+                  }
                   placeholder="Describe what this agent does..."
                   rows={3}
                 />
@@ -316,7 +353,9 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
                 <Input
                   id="role"
                   value={agentData.role}
-                  onChange={(e) => setAgentData({ ...agentData, role: e.target.value })}
+                  onChange={(e) =>
+                    setAgentData({ ...agentData, role: e.target.value })
+                  }
                   placeholder="e.g., assistant, developer, researcher"
                 />
               </div>
@@ -324,12 +363,15 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
               <div className="grid gap-2">
                 <Label htmlFor="slug">Slug (optional)</Label>
                 <div className="text-sm text-muted-foreground mb-2">
-                  A unique identifier for this agent definition (e.g., "code-assistant", "research-helper")
+                  A unique identifier for this agent definition (e.g.,
+                  "code-assistant", "research-helper")
                 </div>
                 <Input
                   id="slug"
                   value={agentData.slug}
-                  onChange={(e) => setAgentData({ ...agentData, slug: e.target.value })}
+                  onChange={(e) =>
+                    setAgentData({ ...agentData, slug: e.target.value })
+                  }
                   placeholder="e.g., my-assistant"
                   pattern="^[a-z0-9-]+$"
                 />
@@ -337,17 +379,20 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
             </div>
           )}
 
-          {currentStep === 'prompt' && (
+          {currentStep === "prompt" && (
             <div className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="instructions">System Prompt *</Label>
                 <div className="text-sm text-muted-foreground mb-2">
-                  Define the agent's behavior, capabilities, and constraints. Use Markdown for formatting.
+                  Define the agent's behavior, capabilities, and constraints.
+                  Use Markdown for formatting.
                 </div>
                 <Textarea
                   id="instructions"
                   value={agentData.instructions}
-                  onChange={(e) => setAgentData({ ...agentData, instructions: e.target.value })}
+                  onChange={(e) =>
+                    setAgentData({ ...agentData, instructions: e.target.value })
+                  }
                   placeholder="You are a helpful AI assistant specialized in...
 
 ## Core Responsibilities
@@ -371,14 +416,16 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
             </div>
           )}
 
-          {currentStep === 'preview' && (
+          {currentStep === "preview" && (
             <div className="space-y-4">
               <div className="border rounded-lg p-6 bg-muted/30">
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                   {agentData.instructions ? (
                     <ReactMarkdown>{agentData.instructions}</ReactMarkdown>
                   ) : (
-                    <p className="text-muted-foreground italic">No system prompt provided</p>
+                    <p className="text-muted-foreground italic">
+                      No system prompt provided
+                    </p>
                   )}
                 </div>
               </div>
@@ -386,7 +433,7 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentStep('prompt')}
+                  onClick={() => setCurrentStep("prompt")}
                 >
                   Edit System Prompt
                 </Button>
@@ -394,12 +441,13 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
             </div>
           )}
 
-          {currentStep === 'tools' && (
+          {currentStep === "tools" && (
             <div className="space-y-6">
               <div className="grid gap-2">
                 <Label htmlFor="tools">Required Tools</Label>
                 <div className="text-sm text-muted-foreground mb-2">
-                  Specify which tools this agent needs access to. Users will be notified when adding this agent.
+                  Specify which tools this agent needs access to. Users will be
+                  notified when adding this agent.
                 </div>
                 <ToolSelector
                   value={agentData.tools}
@@ -414,11 +462,12 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
               <div className="grid gap-2">
                 <Label htmlFor="mcp-servers">Required MCP Servers</Label>
                 <div className="text-sm text-muted-foreground mb-2">
-                  Select MCP servers this agent requires. These will be installed when the agent is added to a project.
+                  Select MCP servers this agent requires. These will be
+                  installed when the agent is added to a project.
                 </div>
                 <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
                   {mcpServers.length > 0 ? (
-                    mcpServers.map(server => (
+                    mcpServers.map((server) => (
                       <label
                         key={server.id}
                         className="flex items-start gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
@@ -430,13 +479,18 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
                             if (e.target.checked) {
                               setAgentData({
                                 ...agentData,
-                                mcpServers: [...agentData.mcpServers, server.id]
-                              })
+                                mcpServers: [
+                                  ...agentData.mcpServers,
+                                  server.id,
+                                ],
+                              });
                             } else {
                               setAgentData({
                                 ...agentData,
-                                mcpServers: agentData.mcpServers.filter(id => id !== server.id)
-                              })
+                                mcpServers: agentData.mcpServers.filter(
+                                  (id) => id !== server.id,
+                                ),
+                              });
                             }
                           }}
                           className="mt-1"
@@ -444,13 +498,19 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <Server className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium text-sm">{server.name || 'Unnamed MCP Server'}</span>
+                            <span className="font-medium text-sm">
+                              {server.name || "Unnamed MCP Server"}
+                            </span>
                           </div>
                           {server.description && (
-                            <p className="text-xs text-muted-foreground mt-1">{server.description}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {server.description}
+                            </p>
                           )}
                           {server.command && (
-                            <code className="text-xs text-muted-foreground mt-1 block font-mono">{server.command}</code>
+                            <code className="text-xs text-muted-foreground mt-1 block font-mono">
+                              {server.command}
+                            </code>
                           )}
                         </div>
                       </label>
@@ -465,25 +525,29 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
             </div>
           )}
 
-          {currentStep === 'phases' && (
+          {currentStep === "phases" && (
             <div className="space-y-4">
               <div className="grid gap-2">
                 <Label>Phase Definitions</Label>
                 <div className="text-sm text-muted-foreground mb-2">
-                  Define project phases for PM agents. Each phase has a name and instructions.
+                  Define project phases for PM agents. Each phase has a name and
+                  instructions.
                 </div>
-                
+
                 <div className="space-y-3">
                   {agentData.phases.map((phase, index) => (
-                    <div key={index} className="border border-border rounded-lg p-4 space-y-3">
+                    <div
+                      key={index}
+                      className="border border-border rounded-lg p-4 space-y-3"
+                    >
                       <div className="flex items-start gap-2">
                         <div className="flex-1 space-y-3">
                           <Input
                             value={phase.name}
                             onChange={(e) => {
-                              const newPhases = [...agentData.phases]
-                              newPhases[index].name = e.target.value
-                              setAgentData({ ...agentData, phases: newPhases })
+                              const newPhases = [...agentData.phases];
+                              newPhases[index].name = e.target.value;
+                              setAgentData({ ...agentData, phases: newPhases });
                             }}
                             placeholder="Phase name (e.g., Discovery, Development, Testing)"
                             className="font-medium"
@@ -491,9 +555,9 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
                           <Textarea
                             value={phase.instructions}
                             onChange={(e) => {
-                              const newPhases = [...agentData.phases]
-                              newPhases[index].instructions = e.target.value
-                              setAgentData({ ...agentData, phases: newPhases })
+                              const newPhases = [...agentData.phases];
+                              newPhases[index].instructions = e.target.value;
+                              setAgentData({ ...agentData, phases: newPhases });
                             }}
                             placeholder="Instructions for this phase..."
                             rows={3}
@@ -504,8 +568,10 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            const newPhases = agentData.phases.filter((_, i) => i !== index)
-                            setAgentData({ ...agentData, phases: newPhases })
+                            const newPhases = agentData.phases.filter(
+                              (_, i) => i !== index,
+                            );
+                            setAgentData({ ...agentData, phases: newPhases });
                           }}
                         >
                           <X className="h-4 w-4" />
@@ -513,27 +579,31 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
                       </div>
                     </div>
                   ))}
-                  
+
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => {
                       setAgentData({
                         ...agentData,
-                        phases: [...agentData.phases, { name: '', instructions: '' }]
-                      })
+                        phases: [
+                          ...agentData.phases,
+                          { name: "", instructions: "" },
+                        ],
+                      });
                     }}
                     className="w-full"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Phase
                   </Button>
-                  
+
                   {agentData.phases.length === 0 && (
                     <div className="text-center py-6 border border-dashed rounded-lg">
                       <Layers className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                       <p className="text-sm text-muted-foreground">
-                        No phases defined. Phases are optional and typically used for PM agents.
+                        No phases defined. Phases are optional and typically
+                        used for PM agents.
                       </p>
                     </div>
                   )}
@@ -542,17 +612,20 @@ export function CreateAgentDialog({ open, onOpenChange, forkFromAgent }: CreateA
             </div>
           )}
 
-          {currentStep === 'criteria' && (
+          {currentStep === "criteria" && (
             <div className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="use-criteria">Use Criteria (optional)</Label>
                 <div className="text-sm text-muted-foreground mb-2">
-                  Define conditions when this agent should be used. Enter one criterion per line.
+                  Define conditions when this agent should be used. Enter one
+                  criterion per line.
                 </div>
                 <Textarea
                   id="use-criteria"
                   value={agentData.useCriteria}
-                  onChange={(e) => setAgentData({ ...agentData, useCriteria: e.target.value })}
+                  onChange={(e) =>
+                    setAgentData({ ...agentData, useCriteria: e.target.value })
+                  }
                   placeholder="User asks for help with coding
 User needs research assistance
 Task requires creative writing
@@ -564,12 +637,15 @@ Complex problem solving is needed"
               <div className="grid gap-2">
                 <Label htmlFor="version">Version</Label>
                 <div className="text-sm text-muted-foreground mb-2">
-                  Version number for this agent definition (use integers: 1, 2, 3, etc.)
+                  Version number for this agent definition (use integers: 1, 2,
+                  3, etc.)
                 </div>
                 <Input
                   id="version"
                   value={agentData.version}
-                  onChange={(e) => setAgentData({ ...agentData, version: e.target.value })}
+                  onChange={(e) =>
+                    setAgentData({ ...agentData, version: e.target.value })
+                  }
                   placeholder="1"
                   type="number"
                   min="1"
@@ -581,18 +657,14 @@ Complex problem solving is needed"
 
         <DialogFooter className="flex justify-between">
           <div className="flex gap-2">
-            {currentStep !== 'basics' && (
-              <Button
-                variant="outline"
-                onClick={goBack}
-                disabled={isCreating}
-              >
+            {currentStep !== "basics" && (
+              <Button variant="outline" onClick={goBack} disabled={isCreating}>
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Back
               </Button>
             )}
           </div>
-          
+
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -601,18 +673,19 @@ Complex problem solving is needed"
             >
               Cancel
             </Button>
-            
-            <Button 
-              onClick={goNext} 
-              disabled={isCreating || !canGoNext()}
-            >
+
+            <Button onClick={goNext} disabled={isCreating || !canGoNext()}>
               {isCreating ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {forkFromAgent ? 'Forking...' : 'Creating...'}
+                  {forkFromAgent ? "Forking..." : "Creating..."}
                 </>
-              ) : currentStep === 'criteria' ? (
-                forkFromAgent ? 'Fork' : 'Create'
+              ) : currentStep === "criteria" ? (
+                forkFromAgent ? (
+                  "Fork"
+                ) : (
+                  "Create"
+                )
               ) : (
                 <>
                   Next
@@ -624,5 +697,5 @@ Complex problem solving is needed"
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

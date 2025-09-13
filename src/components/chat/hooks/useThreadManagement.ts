@@ -1,17 +1,22 @@
-import { useState, useCallback } from 'react'
-import { NDKEvent, NDKThread, useNDK, useNDKCurrentUser } from '@nostr-dev-kit/ndk-hooks'
-import type { NDKProject } from '@/lib/ndk-events/NDKProject'
-import type { Message } from './useChatMessages'
-import type { AgentInstance } from '@/types/agent'
+import { useState, useCallback } from "react";
+import {
+  NDKEvent,
+  NDKThread,
+  useNDK,
+  useNDKCurrentUser,
+} from "@nostr-dev-kit/ndk-hooks";
+import type { NDKProject } from "@/lib/ndk-events/NDKProject";
+import type { Message } from "./useChatMessages";
+import type { AgentInstance } from "@/types/agent";
 
 export interface ImageUpload {
-  url: string
+  url: string;
   metadata?: {
-    sha256: string
-    mimeType: string
-    size: number
-    blurhash?: string
-  }
+    sha256: string;
+    mimeType: string;
+    size: number;
+    blurhash?: string;
+  };
 }
 
 /**
@@ -24,188 +29,218 @@ export function useThreadManagement(
   extraTags?: string[][],
   onThreadCreated?: (thread: NDKEvent) => void,
   onlineAgents?: { pubkey: string; slug: string }[],
-  replyingTo?: NDKEvent | null
+  replyingTo?: NDKEvent | null,
 ) {
-  const { ndk } = useNDK()
-  const user = useNDKCurrentUser()
-  const [localRootEvent, setLocalRootEvent] = useState<NDKEvent | null>(initialRootEvent)
+  const { ndk } = useNDK();
+  const user = useNDKCurrentUser();
+  const [localRootEvent, setLocalRootEvent] = useState<NDKEvent | null>(
+    initialRootEvent,
+  );
 
-  const createThread = useCallback(async (
-    content: string,
-    mentions: AgentInstance[],
-    images: ImageUpload[],
-    autoTTS: boolean,
-    targetAgent: string | null
-  ) => {
-    if (!ndk || !user) return null
+  const createThread = useCallback(
+    async (
+      content: string,
+      mentions: AgentInstance[],
+      images: ImageUpload[],
+      autoTTS: boolean,
+      targetAgent: string | null,
+    ) => {
+      if (!ndk || !user) return null;
 
-    // Create the initial thread event (kind 11)
-    const newThreadEvent = new NDKThread(ndk)
-    newThreadEvent.content = content
-    newThreadEvent.title = content.slice(0, 50)
+      // Create the initial thread event (kind 11)
+      const newThreadEvent = new NDKThread(ndk);
+      newThreadEvent.content = content;
+      newThreadEvent.title = content.slice(0, 50);
 
-    if (project) newThreadEvent.tag(project.tagReference());
+      if (project) newThreadEvent.tag(project.tagReference());
 
-    // Add extra tags if provided
-    if (extraTags && extraTags.length > 0) {
-      newThreadEvent.tags.push(...extraTags)
-    }
+      // Add extra tags if provided
+      if (extraTags && extraTags.length > 0) {
+        newThreadEvent.tags.push(...extraTags);
+      }
 
-    // Add image tags for each uploaded image
-    images.forEach(upload => {
-      if (upload.metadata) {
-        newThreadEvent.tags.push([
-          'image',
-          upload.metadata.sha256,
-          upload.url,
-          upload.metadata.mimeType,
-          upload.metadata.size.toString()
-        ])
-        if (upload.metadata.blurhash) {
-          newThreadEvent.tags.push(['blurhash', upload.metadata.blurhash])
+      // Add image tags for each uploaded image
+      images.forEach((upload) => {
+        if (upload.metadata) {
+          newThreadEvent.tags.push([
+            "image",
+            upload.metadata.sha256,
+            upload.url,
+            upload.metadata.mimeType,
+            upload.metadata.size.toString(),
+          ]);
+          if (upload.metadata.blurhash) {
+            newThreadEvent.tags.push(["blurhash", upload.metadata.blurhash]);
+          }
+        }
+      });
+
+      // Add p-tags for mentioned agents
+      mentions.forEach((agent) => {
+        newThreadEvent.tags.push(["p", agent.pubkey]);
+      });
+
+      // If a specific agent is targeted, add their p-tag
+      if (targetAgent && mentions.every((m) => m.pubkey !== targetAgent)) {
+        newThreadEvent.tags.push(["p", targetAgent]);
+      }
+      // If no mentions and no target, add first agent (PM) p-tag when starting new conversation
+      else if (
+        mentions.length === 0 &&
+        !targetAgent &&
+        onlineAgents &&
+        onlineAgents.length > 0
+      ) {
+        // First agent in the list is the project manager
+        const projectManager = onlineAgents[0];
+        newThreadEvent.tags.push(["p", projectManager.pubkey]);
+      }
+
+      // Log warning if there are unresolved mentions
+      const hasUnresolvedMentions =
+        /@[\w-]+/.test(content) && mentions.length === 0;
+      if (hasUnresolvedMentions) {
+        // Silent warning - mentions might be for agents not in this project
+      }
+
+      // Add voice mode tag if auto-TTS is enabled
+      if (autoTTS) {
+        newThreadEvent.tags.push(["mode", "voice"]);
+      }
+
+      await newThreadEvent.sign();
+      setLocalRootEvent(newThreadEvent);
+      await newThreadEvent.publish();
+
+      // Notify parent component about the new thread
+      if (onThreadCreated) {
+        onThreadCreated(newThreadEvent);
+      }
+
+      return newThreadEvent;
+    },
+    [ndk, user, project, extraTags, onThreadCreated, onlineAgents],
+  );
+
+  const sendReply = useCallback(
+    async (
+      content: string,
+      mentions: AgentInstance[],
+      images: ImageUpload[],
+      autoTTS: boolean,
+      recentMessages: Message[],
+      targetAgent: string | null,
+    ) => {
+      if (!ndk || !user || !localRootEvent) return null;
+
+      // If replying to a specific message, use that as the reply target
+      // Otherwise reply to the thread root
+      const targetEvent = replyingTo || localRootEvent;
+
+      // Send a reply to the target event
+      const replyEvent = targetEvent.reply();
+      replyEvent.content = content;
+
+      // Remove all p-tags that NDK's .reply() generated
+      replyEvent.tags = replyEvent.tags.filter((tag) => tag[0] !== "p");
+
+      // Add project tag if project exists
+      if (project) {
+        const tagId = project.tagId();
+        if (tagId) {
+          replyEvent.tags.push(["a", tagId]);
         }
       }
-    })
 
-    // Add p-tags for mentioned agents
-    mentions.forEach(agent => {
-      newThreadEvent.tags.push(['p', agent.pubkey])
-    })
-    
-    // If a specific agent is targeted, add their p-tag
-    if (targetAgent && mentions.every(m => m.pubkey !== targetAgent)) {
-      newThreadEvent.tags.push(['p', targetAgent])
-    }
-    // If no mentions and no target, add first agent (PM) p-tag when starting new conversation
-    else if (mentions.length === 0 && !targetAgent && onlineAgents && onlineAgents.length > 0) {
-      // First agent in the list is the project manager
-      const projectManager = onlineAgents[0]
-      newThreadEvent.tags.push(['p', projectManager.pubkey])
-    }
-    
-    // Log warning if there are unresolved mentions
-    const hasUnresolvedMentions = /@[\w-]+/.test(content) && mentions.length === 0
-    if (hasUnresolvedMentions) {
-      // Silent warning - mentions might be for agents not in this project
-    }
+      // Add image tags for each uploaded image
+      images.forEach((upload) => {
+        if (upload.metadata) {
+          replyEvent.tags.push([
+            "image",
+            upload.metadata.sha256,
+            upload.url,
+            upload.metadata.mimeType,
+            upload.metadata.size.toString(),
+          ]);
+          if (upload.metadata.blurhash) {
+            replyEvent.tags.push(["blurhash", upload.metadata.blurhash]);
+          }
+        }
+      });
 
-    // Add voice mode tag if auto-TTS is enabled
-    if (autoTTS) {
-      newThreadEvent.tags.push(['mode', 'voice'])
-    }
+      // Add p-tags for mentioned agents
+      mentions.forEach((agent) => {
+        replyEvent.tags.push(["p", agent.pubkey]);
+      });
 
-    await newThreadEvent.sign()
-    setLocalRootEvent(newThreadEvent)
-    await newThreadEvent.publish()
-    
-    // Notify parent component about the new thread
-    if (onThreadCreated) {
-      onThreadCreated(newThreadEvent)
-    }
+      // Check if there are @ mentions in the content that weren't resolved
+      const hasUnresolvedMentions =
+        /@[\w-]+/.test(content) && mentions.length === 0;
 
-    return newThreadEvent
-  }, [ndk, user, project, extraTags, onThreadCreated, onlineAgents])
-
-  const sendReply = useCallback(async (
-    content: string,
-    mentions: AgentInstance[],
-    images: ImageUpload[],
-    autoTTS: boolean,
-    recentMessages: Message[],
-    targetAgent: string | null
-  ) => {
-    if (!ndk || !user || !localRootEvent) return null
-
-    // If replying to a specific message, use that as the reply target
-    // Otherwise reply to the thread root
-    const targetEvent = replyingTo || localRootEvent
-    
-    // Send a reply to the target event
-    const replyEvent = targetEvent.reply()
-    replyEvent.content = content
-
-    // Remove all p-tags that NDK's .reply() generated
-    replyEvent.tags = replyEvent.tags.filter((tag) => tag[0] !== "p")
-
-    // Add project tag if project exists
-    if (project) {
-      const tagId = project.tagId()
-      if (tagId) {
-        replyEvent.tags.push(['a', tagId])
+      // If a specific agent is targeted, add their p-tag
+      if (targetAgent && mentions.every((m) => m.pubkey !== targetAgent)) {
+        replyEvent.tags.push(["p", targetAgent]);
       }
-    }
-    
-    // Add image tags for each uploaded image
-    images.forEach(upload => {
-      if (upload.metadata) {
-        replyEvent.tags.push([
-          'image',
-          upload.metadata.sha256,
-          upload.url,
-          upload.metadata.mimeType,
-          upload.metadata.size.toString()
-        ])
-        if (upload.metadata.blurhash) {
-          replyEvent.tags.push(['blurhash', upload.metadata.blurhash])
+      // Only auto-tag the most recent non-user if there are NO @ mentions at all
+      // (resolved or unresolved) in the content and no target agent
+      else if (
+        !hasUnresolvedMentions &&
+        mentions.length === 0 &&
+        !targetAgent &&
+        recentMessages.length > 0
+      ) {
+        const mostRecentNonUserMessage = [...recentMessages]
+          .reverse()
+          .find((msg) => msg.event.pubkey !== user.pubkey);
+
+        if (mostRecentNonUserMessage) {
+          replyEvent.tags.push(["p", mostRecentNonUserMessage.event.pubkey]);
         }
       }
-    })
 
-    // Add p-tags for mentioned agents
-    mentions.forEach(agent => {
-      replyEvent.tags.push(['p', agent.pubkey])
-    })
-
-    // Check if there are @ mentions in the content that weren't resolved
-    const hasUnresolvedMentions = /@[\w-]+/.test(content) && mentions.length === 0
-    
-    // If a specific agent is targeted, add their p-tag
-    if (targetAgent && mentions.every(m => m.pubkey !== targetAgent)) {
-      replyEvent.tags.push(['p', targetAgent])
-    }
-    // Only auto-tag the most recent non-user if there are NO @ mentions at all
-    // (resolved or unresolved) in the content and no target agent
-    else if (!hasUnresolvedMentions && mentions.length === 0 && !targetAgent && recentMessages.length > 0) {
-      const mostRecentNonUserMessage = [...recentMessages]
-        .reverse()
-        .find(msg => msg.event.pubkey !== user.pubkey)
-      
-      if (mostRecentNonUserMessage) {
-        replyEvent.tags.push(['p', mostRecentNonUserMessage.event.pubkey])
+      // Add voice mode tag if auto-TTS is enabled
+      if (autoTTS) {
+        replyEvent.tags.push(["mode", "voice"]);
       }
-    }
 
-    // Add voice mode tag if auto-TTS is enabled
-    if (autoTTS) {
-      replyEvent.tags.push(['mode', 'voice'])
-    }
+      await replyEvent.sign();
+      await replyEvent.publish();
 
-    await replyEvent.sign()
-    await replyEvent.publish()
+      return replyEvent;
+    },
+    [ndk, user, localRootEvent, project, replyingTo],
+  );
 
-    return replyEvent
-  }, [ndk, user, localRootEvent, project, replyingTo])
-
-  const sendMessage = useCallback(async (
-    content: string,
-    mentions: AgentInstance[],
-    images: ImageUpload[],
-    autoTTS: boolean,
-    recentMessages: Message[],
-    targetAgent: string | null = null
-  ) => {
-    if (!localRootEvent) {
-      return createThread(content, mentions, images, autoTTS, targetAgent)
-    } else {
-      return sendReply(content, mentions, images, autoTTS, recentMessages, targetAgent)
-    }
-  }, [localRootEvent, createThread, sendReply])
+  const sendMessage = useCallback(
+    async (
+      content: string,
+      mentions: AgentInstance[],
+      images: ImageUpload[],
+      autoTTS: boolean,
+      recentMessages: Message[],
+      targetAgent: string | null = null,
+    ) => {
+      if (!localRootEvent) {
+        return createThread(content, mentions, images, autoTTS, targetAgent);
+      } else {
+        return sendReply(
+          content,
+          mentions,
+          images,
+          autoTTS,
+          recentMessages,
+          targetAgent,
+        );
+      }
+    },
+    [localRootEvent, createThread, sendReply],
+  );
 
   return {
     localRootEvent,
     setLocalRootEvent,
     createThread,
     sendReply,
-    sendMessage
-  }
+    sendMessage,
+  };
 }

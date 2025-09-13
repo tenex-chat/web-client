@@ -1,118 +1,126 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { useNDK, useSubscribe } from '@nostr-dev-kit/ndk-hooks'
-import { NDKProject } from '@/lib/ndk-events/NDKProject'
-import { NDKMCPTool } from '@/lib/ndk-events/NDKMCPTool'
-import { NDKKind } from '@nostr-dev-kit/ndk-hooks'
-import { Search, Wrench, Code2, Terminal, Plus, Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useNDK, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { NDKProject } from "@/lib/ndk-events/NDKProject";
+import { NDKMCPTool } from "@/lib/ndk-events/NDKMCPTool";
+import { NDKKind } from "@nostr-dev-kit/ndk-hooks";
+import { Search, Wrench, Code2, Terminal, Plus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AddToolsToProjectDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  project: NDKProject
-  existingToolIds: string[]
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  project: NDKProject;
+  existingToolIds: string[];
 }
 
 export function AddToolsToProjectDialog({
   open,
   onOpenChange,
   project,
-  existingToolIds
+  existingToolIds,
 }: AddToolsToProjectDialogProps) {
-  const { ndk } = useNDK()
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedTools, setSelectedTools] = useState<string[]>([])
-  const [isAdding, setIsAdding] = useState(false)
+  const { ndk } = useNDK();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [isAdding, setIsAdding] = useState(false);
 
   // Subscribe to all MCP tools
   const { events: toolEvents, eose } = useSubscribe(
     [{ kinds: [4200 as NDKKind], limit: 100 }],
-    { closeOnEose: true }
-  )
+    { closeOnEose: true },
+  );
 
   // Convert events to tools and filter out already added ones
   const availableTools = toolEvents
-    .map(event => ({
+    .map((event) => ({
       event,
-      tool: NDKMCPTool.from(event)
+      tool: NDKMCPTool.from(event),
     }))
-    .filter(({ event }) => !existingToolIds.includes(event.id))
+    .filter(({ event }) => !existingToolIds.includes(event.id));
 
   // Filter tools based on search
   const filteredTools = availableTools.filter(({ tool }) => {
-    if (!searchTerm) return true
-    const searchLower = searchTerm.toLowerCase()
-    const name = tool.name?.toLowerCase() || ''
-    const description = tool.description?.toLowerCase() || ''
-    const serverName = tool.serverName?.toLowerCase() || ''
-    return name.includes(searchLower) || 
-           description.includes(searchLower) ||
-           serverName.includes(searchLower)
-  })
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    const name = tool.name?.toLowerCase() || "";
+    const description = tool.description?.toLowerCase() || "";
+    const serverName = tool.serverName?.toLowerCase() || "";
+    return (
+      name.includes(searchLower) ||
+      description.includes(searchLower) ||
+      serverName.includes(searchLower)
+    );
+  });
 
   // Reset selections when dialog opens/closes
   useEffect(() => {
     if (!open) {
-      setSelectedTools([])
-      setSearchTerm('')
+      setSelectedTools([]);
+      setSearchTerm("");
     }
-  }, [open])
+  }, [open]);
 
   const handleToggleTool = (toolId: string) => {
-    setSelectedTools(prev => 
+    setSelectedTools((prev) =>
       prev.includes(toolId)
-        ? prev.filter(id => id !== toolId)
-        : [...prev, toolId]
-    )
-  }
+        ? prev.filter((id) => id !== toolId)
+        : [...prev, toolId],
+    );
+  };
 
   const handleAddTools = async () => {
-    if (!ndk || !project || selectedTools.length === 0) return
+    if (!ndk || !project || selectedTools.length === 0) return;
 
-    setIsAdding(true)
+    setIsAdding(true);
     try {
       // Add new tool tags
-      const newTags = [...project.tags]
-      selectedTools.forEach(toolId => {
-        newTags.push(['mcp', toolId])
-      })
-      
+      const newTags = [...project.tags];
+      selectedTools.forEach((toolId) => {
+        newTags.push(["mcp", toolId]);
+      });
+
       // Update project
-      project.tags = newTags
-      await project.publishReplaceable()
-      
-      toast.success(`Added ${selectedTools.length} tool${selectedTools.length !== 1 ? 's' : ''} to project`)
-      onOpenChange(false)
+      project.tags = newTags;
+      await project.publishReplaceable();
+
+      toast.success(
+        `Added ${selectedTools.length} tool${selectedTools.length !== 1 ? "s" : ""} to project`,
+      );
+      onOpenChange(false);
     } catch (error) {
-      console.error('Failed to add tools:', error)
-      toast.error('Failed to add tools to project')
+      console.error("Failed to add tools:", error);
+      toast.error("Failed to add tools to project");
     } finally {
-      setIsAdding(false)
+      setIsAdding(false);
     }
-  }
+  };
 
   const getToolIcon = (tool: NDKMCPTool) => {
-    const name = tool.name?.toLowerCase() || ''
-    if (name.includes('terminal') || name.includes('bash') || name.includes('shell')) {
-      return <Terminal className="h-4 w-4" />
+    const name = tool.name?.toLowerCase() || "";
+    if (
+      name.includes("terminal") ||
+      name.includes("bash") ||
+      name.includes("shell")
+    ) {
+      return <Terminal className="h-4 w-4" />;
     }
-    if (name.includes('code') || name.includes('script')) {
-      return <Code2 className="h-4 w-4" />
+    if (name.includes("code") || name.includes("script")) {
+      return <Code2 className="h-4 w-4" />;
     }
-    return <Wrench className="h-4 w-4" />
-  }
+    return <Wrench className="h-4 w-4" />;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,7 +128,8 @@ export function AddToolsToProjectDialog({
         <DialogHeader>
           <DialogTitle>Add MCP Tools</DialogTitle>
           <DialogDescription>
-            Select tools to add to your project. These tools will be available to all project agents.
+            Select tools to add to your project. These tools will be available
+            to all project agents.
           </DialogDescription>
         </DialogHeader>
 
@@ -144,10 +153,10 @@ export function AddToolsToProjectDialog({
               <Wrench className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">
                 {searchTerm
-                  ? 'No tools found matching your search'
+                  ? "No tools found matching your search"
                   : existingToolIds.length > 0
-                  ? 'All available tools are already added to this project'
-                  : 'No MCP tools available'}
+                    ? "All available tools are already added to this project"
+                    : "No MCP tools available"}
               </p>
             </div>
           ) : (
@@ -167,7 +176,7 @@ export function AddToolsToProjectDialog({
                     <div className="flex items-center gap-2">
                       {getToolIcon(tool)}
                       <span className="font-medium truncate">
-                        {tool.name || 'Unnamed Tool'}
+                        {tool.name || "Unnamed Tool"}
                       </span>
                       {tool.serverName && (
                         <Badge variant="secondary" className="text-xs">
@@ -182,7 +191,8 @@ export function AddToolsToProjectDialog({
                     )}
                     {tool.inputSchema && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        {Object.keys(tool.inputSchema.properties || {}).length} parameters
+                        {Object.keys(tool.inputSchema.properties || {}).length}{" "}
+                        parameters
                       </p>
                     )}
                   </div>
@@ -194,7 +204,8 @@ export function AddToolsToProjectDialog({
 
         <div className="flex items-center justify-between pt-4 border-t">
           <p className="text-sm text-muted-foreground">
-            {selectedTools.length} tool{selectedTools.length !== 1 ? 's' : ''} selected
+            {selectedTools.length} tool{selectedTools.length !== 1 ? "s" : ""}{" "}
+            selected
           </p>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -220,5 +231,5 @@ export function AddToolsToProjectDialog({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

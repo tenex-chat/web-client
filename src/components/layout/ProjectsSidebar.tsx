@@ -1,44 +1,54 @@
-import { useState, useMemo } from 'react'
-import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { Plus, Settings, LogOut, Bot, Wrench, User, ChevronDown, Globe, Search } from 'lucide-react'
-import { CreateProjectDialog } from '@/components/dialogs/CreateProjectDialog'
-import { GlobalSearchDialog } from '@/components/dialogs/GlobalSearchDialog'
-import { cn } from '@/lib/utils'
-import { useGlobalSearchShortcut } from '@/hooks/useKeyboardShortcuts'
-import { useCurrentUserProfile } from '@nostr-dev-kit/ndk-hooks'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Button } from '@/components/ui/button'
-import { SearchBar } from '@/components/common/SearchBar'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useState, useMemo } from "react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import {
+  Plus,
+  Settings,
+  LogOut,
+  Bot,
+  Wrench,
+  User,
+  ChevronDown,
+  Globe,
+  Search,
+} from "lucide-react";
+import { CreateProjectDialog } from "@/components/dialogs/CreateProjectDialog";
+import { GlobalSearchDialog } from "@/components/dialogs/GlobalSearchDialog";
+import { cn } from "@/lib/utils";
+import { useGlobalSearchShortcut } from "@/hooks/useKeyboardShortcuts";
+import { useCurrentUserProfile } from "@nostr-dev-kit/ndk-hooks";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { SearchBar } from "@/components/common/SearchBar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { ProjectCard } from '@/components/projects/ProjectCard'
-import { logger } from '@/lib/logger'
-import { useProjectsStore } from '@/stores/projects'
-import { useGlobalAgents } from '@/stores/agents'
-import { useProfile } from '@nostr-dev-kit/ndk-hooks'
+} from "@/components/ui/dropdown-menu";
+import { ProjectCard } from "@/components/projects/ProjectCard";
+import { logger } from "@/lib/logger";
+import { useProjectsStore } from "@/stores/projects";
+import { useGlobalAgents } from "@/stores/agents";
+import { useProfile } from "@nostr-dev-kit/ndk-hooks";
 
 interface ProjectsSidebarProps {
-  className?: string
-  onProjectSelect?: () => void
+  className?: string;
+  onProjectSelect?: () => void;
 }
 
 function GlobalAgentItem({ pubkey, slug }: { pubkey: string; slug: string }) {
-  const profile = useProfile(pubkey)
-  const navigate = useNavigate()
-  
-  const displayName = profile?.displayName || profile?.name || slug
-  const avatarUrl = profile?.image || profile?.picture
-  
+  const profile = useProfile(pubkey);
+  const navigate = useNavigate();
+
+  const displayName = profile?.displayName || profile?.name || slug;
+  const avatarUrl = profile?.image || profile?.picture;
+
   const handleClick = () => {
-    navigate({ to: '/p/$pubkey', params: { pubkey } })
-  }
-  
+    navigate({ to: "/p/$pubkey", params: { pubkey } });
+  };
+
   return (
     <Button
       variant="ghost"
@@ -50,53 +60,61 @@ function GlobalAgentItem({ pubkey, slug }: { pubkey: string; slug: string }) {
         <Avatar className="h-6 w-6 flex-shrink-0">
           <AvatarImage src={avatarUrl} />
           <AvatarFallback className="text-xs">
-            {displayName[0]?.toUpperCase() || 'A'}
+            {displayName[0]?.toUpperCase() || "A"}
           </AvatarFallback>
         </Avatar>
         <span className="text-sm truncate">{displayName}</span>
       </div>
     </Button>
-  )
+  );
 }
 
-export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarProps) {
-  const userProfile = useCurrentUserProfile()
-  const location = useLocation()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [searchDialogOpen, setSearchDialogOpen] = useState(false)
-  
+export function ProjectsSidebar({
+  className,
+  onProjectSelect,
+}: ProjectsSidebarProps) {
+  const userProfile = useCurrentUserProfile();
+  const location = useLocation();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+
   // Add keyboard shortcut for global search
-  useGlobalSearchShortcut(() => setSearchDialogOpen(true))
+  useGlobalSearchShortcut(() => setSearchDialogOpen(true));
 
   // Use the cached arrays from the store to prevent infinite loops
-  const projectsWithStatus = useProjectsStore(state => state.projectsWithStatusArray)
-  const globalAgents = useGlobalAgents()
-  
+  const projectsWithStatus = useProjectsStore(
+    (state) => state.projectsWithStatusArray,
+  );
+  const globalAgents = useGlobalAgents();
+
   // Debug logging for global agents
-  logger.debug(`[ProjectsSidebar] Global agents in sidebar:`, globalAgents)
-  logger.debug(`[ProjectsSidebar] Number of global agents: ${globalAgents.length}`)
-  
+  logger.debug(`[ProjectsSidebar] Global agents in sidebar:`, globalAgents);
+  logger.debug(
+    `[ProjectsSidebar] Number of global agents: ${globalAgents.length}`,
+  );
+
   // Filter and sort projects based on search
   const filteredProjectsWithStatus = useMemo(() => {
     if (!projectsWithStatus || projectsWithStatus.length === 0) {
-      return []
+      return [];
     }
-    
+
     return projectsWithStatus
-      .filter(({ project }) =>
-        project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.description.toLowerCase().includes(searchQuery.toLowerCase())
+      .filter(
+        ({ project }) =>
+          project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          project.description.toLowerCase().includes(searchQuery.toLowerCase()),
       )
       .sort((a, b) => {
         // Online projects come first
         if (a.status?.isOnline !== b.status?.isOnline) {
-          return a.status?.isOnline ? -1 : 1
+          return a.status?.isOnline ? -1 : 1;
         }
         // Then sort by title
-        return a.project.title.localeCompare(b.project.title)
-      })
-  }, [projectsWithStatus, searchQuery])
+        return a.project.title.localeCompare(b.project.title);
+      });
+  }, [projectsWithStatus, searchQuery]);
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
@@ -104,19 +122,18 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
       <div className="p-4 border-b">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-bold">TENEX</h1>
-          
+
           {/* User Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-auto p-2 hover:bg-accent"
-              >
+              <Button variant="ghost" className="h-auto p-2 hover:bg-accent">
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={userProfile?.image} />
                     <AvatarFallback>
-                      {userProfile?.name?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
+                      {userProfile?.name?.[0]?.toUpperCase() || (
+                        <User className="h-4 w-4" />
+                      )}
                     </AvatarFallback>
                   </Avatar>
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -127,10 +144,10 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
               {userProfile && (
                 <div className="px-2 py-1.5">
                   <p className="text-sm font-medium">
-                    {userProfile.name || userProfile.displayName || 'User'}
+                    {userProfile.name || userProfile.displayName || "User"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {userProfile.nip05 || userProfile.lud16 || ''}
+                    {userProfile.nip05 || userProfile.lud16 || ""}
                   </p>
                 </div>
               )}
@@ -186,7 +203,9 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
         <div className="p-2">
           {/* Projects Header with New Project Button */}
           <div className="flex items-center justify-between mb-2 px-2">
-            <span className="text-sm font-medium text-muted-foreground">Projects</span>
+            <span className="text-sm font-medium text-muted-foreground">
+              Projects
+            </span>
             <Button
               variant="ghost"
               size="icon"
@@ -201,11 +220,11 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
           <div className="space-y-1">
             {filteredProjectsWithStatus.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
-                {searchQuery ? 'No projects found' : 'No projects yet'}
+                {searchQuery ? "No projects found" : "No projects yet"}
               </div>
             ) : (
               filteredProjectsWithStatus.map(({ project, status }) => {
-                const projectIdentifier = project.dTag || project.encode()
+                const projectIdentifier = project.dTag || project.encode();
                 return (
                   <ProjectCard
                     key={projectIdentifier}
@@ -214,11 +233,11 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
                     isActive={location.pathname.includes(projectIdentifier)}
                     onClick={onProjectSelect}
                   />
-                )
+                );
               })
             )}
           </div>
-          
+
           {/* Agents */}
           {globalAgents.length > 0 && !searchQuery && (
             <div className="mt-4 pt-4 border-t">
@@ -240,16 +259,16 @@ export function ProjectsSidebar({ className, onProjectSelect }: ProjectsSidebarP
       </ScrollArea>
 
       {/* Create Project Dialog */}
-      <CreateProjectDialog 
-        open={createDialogOpen} 
+      <CreateProjectDialog
+        open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
       />
-      
+
       {/* Global Search Dialog */}
       <GlobalSearchDialog
         open={searchDialogOpen}
         onOpenChange={setSearchDialogOpen}
       />
     </div>
-  )
+  );
 }

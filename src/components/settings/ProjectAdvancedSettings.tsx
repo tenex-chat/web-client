@@ -19,8 +19,8 @@ export function ProjectAdvancedSettings({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Advanced Settings</CardTitle>
-          <CardDescription>Configure advanced project options</CardDescription>
+          <CardTitle>Project Information</CardTitle>
+          <CardDescription>Technical details about your project</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-4">

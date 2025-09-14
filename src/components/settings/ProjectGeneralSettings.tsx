@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { HashtagEditor } from "./HashtagEditor";
 
 interface ProjectGeneralSettingsProps {
   project: NDKProject;
@@ -36,8 +37,8 @@ export function ProjectGeneralSettings({
     description: "",
     picture: "",
     repo: "",
-    hashtags: [] as string[],
   });
+  const [hashtags, setHashtags] = useState<string[]>([]);
 
   // Initialize form data when project loads
   useEffect(() => {
@@ -47,8 +48,8 @@ export function ProjectGeneralSettings({
         description: project.description || "",
         picture: project.picture || "",
         repo: project.repository || "",
-        hashtags: project.hashtags || [],
       });
+      setHashtags(project.hashtags || []);
     }
   }, [project]);
 
@@ -62,7 +63,7 @@ export function ProjectGeneralSettings({
       project.content = formData.description;
       project.picture = formData.picture;
       project.repository = formData.repo;
-      project.hashtags = formData.hashtags;
+      project.hashtags = hashtags;
 
       // Publish the updated project
       await project.publishReplaceable();
@@ -86,13 +87,11 @@ export function ProjectGeneralSettings({
     setHasChanges(true);
   };
 
-  const handleHashtagsChange = (value: string) => {
-    const hashtags = value
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean);
-    handleInputChange("hashtags", hashtags);
+  const handleHashtagsChange = (newHashtags: string[]) => {
+    setHashtags(newHashtags);
+    setHasChanges(true);
   };
+
 
   return (
     <div className="space-y-6">
@@ -191,20 +190,14 @@ export function ProjectGeneralSettings({
             />
           </div>
 
+          <Separator />
+
           {/* Hashtags */}
-          <div className="space-y-2">
-            <Label htmlFor="hashtags">Tags</Label>
-            <Input
-              id="hashtags"
-              placeholder="react, typescript, web3 (comma separated)"
-              value={formData.hashtags.join(", ")}
-              onChange={(e) => handleHashtagsChange(e.target.value)}
-              className="max-w-md"
-            />
-            <p className="text-sm text-muted-foreground">
-              Separate tags with commas to help others discover your project
-            </p>
-          </div>
+          <HashtagEditor
+            hashtags={hashtags}
+            onChange={handleHashtagsChange}
+            disabled={isSaving}
+          />
         </CardContent>
       </Card>
     </div>

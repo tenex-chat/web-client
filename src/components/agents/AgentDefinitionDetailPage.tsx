@@ -13,6 +13,7 @@ import {
   Wrench,
   Server,
   Layers,
+  BookOpen,
 } from "lucide-react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
@@ -33,6 +34,7 @@ import ReactMarkdown from "react-markdown";
 import { generateAgentColor } from "@/lib/utils/agent-colors";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AgentInstances } from "./AgentInstances";
+import { AgentDefinitionLessons } from "./AgentDefinitionLessons";
 import { NDKMCPTool } from "@/lib/ndk-events/NDKMCPTool";
 import type { NDKKind } from "@nostr-dev-kit/ndk-hooks";
 
@@ -182,6 +184,13 @@ export function AgentDefinitionDetailPage() {
                     Phases ({agent.phases.length})
                   </TabsTrigger>
                 )}
+                <TabsTrigger
+                  value="lessons"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-12"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Lessons Learned
+                </TabsTrigger>
               </TabsList>
             </div>
           </div>
@@ -398,6 +407,10 @@ export function AgentDefinitionDetailPage() {
 
           <TabsContent value="instances" className="flex-1 mt-0">
             <AgentInstances agentDefinitionId={agent.id} />
+          </TabsContent>
+
+          <TabsContent value="lessons" className="flex-1 mt-0">
+            <AgentDefinitionLessons agentDefinitionId={agent.id} />
           </TabsContent>
         </Tabs>
       </div>

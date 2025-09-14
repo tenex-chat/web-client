@@ -15,6 +15,8 @@ import { EVENT_KINDS } from "@/lib/constants";
 import { useAI } from "@/hooks/useAI";
 import { extractTTSContent } from "@/lib/utils/extractTTSContent";
 import { isAudioEvent } from "@/lib/utils/audioEvents";
+import { useAtomValue } from "jotai";
+import { expandedRepliesAtom } from "@/components/chat/atoms/expandedReplies";
 
 interface ChatMessageListProps {
   messages: Message[];
@@ -53,6 +55,7 @@ export const ChatMessageList = memo(function ChatMessageList({
   const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(
     null,
   );
+  const expandedReplies = useAtomValue(expandedRepliesAtom);
 
   // TTS configuration
   const { speak, hasTTS } = useAI();
@@ -117,12 +120,16 @@ export const ChatMessageList = memo(function ChatMessageList({
     }
 
     // Check if this message is consecutive (from same author as previous non-metadata message)
-    // Don't treat as consecutive if message has p-tags (recipients)
+    // Don't treat as consecutive if message has p-tags (recipients) or if previous message has expanded replies
+    const previousMessageHasExpandedReplies =
+      index > 0 && expandedReplies.has(messages[index - 1].event.id);
+
     const isConsecutive =
       index > 0 &&
       messages[index - 1].event.pubkey === message.event.pubkey &&
       messages[index - 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-      message.event.kind !== EVENT_KINDS.CONVERSATION_METADATA;
+      message.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+      !previousMessageHasExpandedReplies;
 
     // All events (including tasks) go through MessageWithReplies
     return (

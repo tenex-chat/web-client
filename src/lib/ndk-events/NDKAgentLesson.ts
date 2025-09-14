@@ -1,11 +1,10 @@
-import { NDKEvent, type NDKRawEvent } from "@nostr-dev-kit/ndk-hooks";
-import type NDK from "@nostr-dev-kit/ndk-hooks";
+import { NDKEvent, type NostrEvent, type NDK } from "@nostr-dev-kit/ndk-hooks";
 
 export class NDKAgentLesson extends NDKEvent {
   static kind = 4129;
   static kinds = [4129];
 
-  constructor(ndk?: NDK, event?: NDKEvent | NDKRawEvent) {
+  constructor(ndk?: NDK, event?: NDKEvent | NostrEvent) {
     super(ndk, event);
     this.kind ??= 4129;
   }
@@ -37,6 +36,15 @@ export class NDKAgentLesson extends NDKEvent {
   }
 
   get agentId(): string | undefined {
+    return this.tags.find((tag) => tag[0] === "e")?.[1];
+  }
+
+  set agentDefinition(agentDefinitionEvent: NDKEvent) {
+    this.removeTag("e");
+    this.tag(agentDefinitionEvent);
+  }
+
+  get agentDefinitionId(): string | undefined {
     return this.tags.find((tag) => tag[0] === "e")?.[1];
   }
 

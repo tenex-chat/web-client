@@ -33,6 +33,10 @@ import {
   hoveredMessageIdAtom,
   hoveredMessageStackAtom,
 } from "./atoms/hoveredMessage";
+import {
+  expandedRepliesAtom,
+  toggleRepliesAtom,
+} from "./atoms/expandedReplies";
 import { TaskContent } from "./TaskContent";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { MessageHeaderContent } from "./MessageHeaderContent";
@@ -60,7 +64,9 @@ export const MessageWithReplies = memo(function MessageWithReplies({
 }: MessageWithRepliesProps) {
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
-  const [showReplies, setShowReplies] = useState(false);
+  const expandedReplies = useAtomValue(expandedRepliesAtom);
+  const toggleReplies = useSetAtom(toggleRepliesAtom);
+  const showReplies = expandedReplies.has(event.id);
   const [showMetadataDialog, setShowMetadataDialog] = useState(false);
   const { replyingTo, setReplyingTo } = useReply();
   const [, setLightboxImage] = useState<string | null>(null);
@@ -547,7 +553,7 @@ export const MessageWithReplies = memo(function MessageWithReplies({
         <div className="mt-1.5">
           <button
             type="button"
-            onClick={() => setShowReplies(!showReplies)}
+            onClick={() => toggleReplies(event.id)}
             className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 transition-colors font-medium hover:bg-blue-50 dark:hover:bg-blue-950/30 px-2 py-1 rounded"
           >
             <div className="flex -space-x-1.5">

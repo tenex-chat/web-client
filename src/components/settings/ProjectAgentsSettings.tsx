@@ -17,11 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useNDK, useSubscribe, useProfile } from "@nostr-dev-kit/ndk-hooks";
-import { Crown, X, Plus, Bot } from "lucide-react";
+import { useNDK, useSubscribe, useProfile, useEvent } from "@nostr-dev-kit/ndk-hooks";
+import { Crown, X, Plus, Bot, AlertCircle, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { AddAgentsToProjectDialog } from "@/components/dialogs/AddAgentsToProjectDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useNavigate } from "@tanstack/react-router";
 
 // Component to display agent info with real-time subscription
 function AgentDisplay({
@@ -29,12 +30,17 @@ function AgentDisplay({
   isProjectManager,
   onRemove,
   canRemove,
+  onUpdate,
 }: {
   projectAgent: { ndkAgentEventId: string };
   isProjectManager: boolean;
   onRemove: () => void;
   canRemove: boolean;
+  onUpdate?: (oldId: string, newId: string) => void;
 }) {
+  const navigate = useNavigate();
+  const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
+
   // Subscribe to the agent definition event in real-time
   const { events } = useSubscribe(
     projectAgent.ndkAgentEventId
@@ -47,9 +53,25 @@ function AgentDisplay({
     { closeOnEose: false },
   );
 
+  // Check for newer versions that reference this event
+  const newerVersionEvent = useEvent(
+    projectAgent.ndkAgentEventId
+      ? [
+          {
+            "#e": [projectAgent.ndkAgentEventId],
+            kinds: NDKAgentDefinition.kinds,
+          },
+        ]
+      : [],
+  );
+
   const agentEvent = events[0];
   const agentDefinition = agentEvent
     ? NDKAgentDefinition.from(agentEvent)
+    : null;
+
+  const newerAgentDefinition = newerVersionEvent
+    ? NDKAgentDefinition.from(newerVersionEvent)
     : null;
 
   const agentPubkey = agentDefinition?.pubkey;
@@ -67,6 +89,31 @@ function AgentDisplay({
     return `${eventId.slice(0, 12)}...${eventId.slice(-6)}`;
   };
 
+  const handleEventIdClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate({
+      to: "/agent-definition/$agentDefinitionId",
+      params: { agentDefinitionId: projectAgent.ndkAgentEventId },
+    });
+  };
+
+  const handleViewNewVersion = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (newerVersionEvent) {
+      navigate({
+        to: "/agent-definition/$agentDefinitionId",
+        params: { agentDefinitionId: newerVersionEvent.id },
+      });
+    }
+  };
+
+  const handleUpdateVersion = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (newerVersionEvent && onUpdate) {
+      onUpdate(projectAgent.ndkAgentEventId, newerVersionEvent.id);
+    }
+  };
+
   return (
     <div className="flex items-start gap-3 p-3 rounded-md border bg-card hover:bg-accent/50 transition-colors">
       <div className="flex-1 min-w-0">
@@ -78,6 +125,12 @@ function AgentDisplay({
               <span className="text-xs font-semibold">PM</span>
             </div>
           )}
+          {newerVersionEvent && (
+            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 shrink-0">
+              <AlertCircle className="h-3 w-3" />
+              <span className="text-xs font-semibold">Update Available</span>
+            </div>
+          )}
         </div>
         {description && (
           <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
@@ -85,8 +138,35 @@ function AgentDisplay({
           </div>
         )}
         <div className="text-xs text-muted-foreground mt-1">
-          Event ID: {truncateEventId(projectAgent.ndkAgentEventId)}
+          Event ID:{" "}
+          <button
+            onClick={handleEventIdClick}
+            className="hover:text-primary underline transition-colors"
+          >
+            {truncateEventId(projectAgent.ndkAgentEventId)}
+          </button>
         </div>
+        {newerVersionEvent && (
+          <div className="flex items-center gap-2 mt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleViewNewVersion}
+              className="h-7 text-xs"
+            >
+              View New Version
+            </Button>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={handleUpdateVersion}
+              className="h-7 text-xs"
+            >
+              <ArrowRight className="h-3 w-3 mr-1" />
+              Update to {truncateEventId(newerVersionEvent.id)}
+            </Button>
+          </div>
+        )}
       </div>
       <Button
         variant="ghost"
@@ -187,6 +267,29 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
     }
   };
 
+  const handleUpdateAgentVersion = async (oldEventId: string, newEventId: string) => {
+    if (!ndk || !project) return;
+
+    try {
+      // Find and update the agent tag
+      const newTags = project.tags.map((tag) => {
+        if (tag[0] === "agent" && tag[1] === oldEventId) {
+          return ["agent", newEventId];
+        }
+        return tag;
+      });
+
+      // Update project
+      project.tags = newTags;
+      await project.publishReplaceable();
+
+      toast.success("Agent definition updated to newer version");
+    } catch (error) {
+      console.error("Failed to update agent version:", error);
+      toast.error("Failed to update agent version");
+    }
+  };
+
   const handleRemoveAgent = async (agentToRemove: {
     ndkAgentEventId: string;
   }) => {
@@ -255,6 +358,7 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
                     isProjectManager={true}
                     onRemove={() => {}}
                     canRemove={false}
+                    onUpdate={handleUpdateAgentVersion}
                   />
                 </div>
               </div>
@@ -305,7 +409,7 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Assigned Agents</CardTitle>
+          <CardTitle>Agent Definitions</CardTitle>
           <CardDescription>
             {projectAgents.length} agent{projectAgents.length !== 1 ? "s" : ""}{" "}
             assigned to this project
@@ -326,6 +430,7 @@ export function ProjectAgentsSettings({ project }: ProjectAgentsSettingsProps) {
                     !(isProjectManager && projectAgents.length > 1) &&
                     projectAgents.length > 1
                   }
+                  onUpdate={handleUpdateAgentVersion}
                 />
               );
             })}

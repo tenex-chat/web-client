@@ -21,6 +21,8 @@ export function extractLLMMetadata(event: NDKEvent): Record<string, string> {
     "llm-context-window",
     "llm-completion-tokens",
     "llm-total-tokens",
+    "llm-reasoning-tokens",
+    "llm-cached-input-tokens",
     "llm-cache-creation-tokens",
     "llm-cache-read-tokens",
     "llm-confidence",

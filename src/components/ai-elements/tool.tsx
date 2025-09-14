@@ -48,7 +48,7 @@ export const Tool = memo(
             </Badge> */}
           </div>
           {description && (
-            <CardDescription className="text-xs mt-1">{description}</CardDescription>
+            <CardDescription className="text-sm mt-1">{description}</CardDescription>
           )}
         </CardHeader>
         

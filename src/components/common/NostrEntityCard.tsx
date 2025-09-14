@@ -55,16 +55,14 @@ export function NostrEntityCard({
 
   // Handle profile types (npub, nprofile)
   let user: NDKUser | undefined;
-  let decodingError: string | undefined;
 
   try {
     if (bech32.startsWith("npub")) user = new NDKUser({ npub: bech32 });
     else if (bech32.startsWith("nprofile"))
       user = new NDKUser({ nprofile: bech32 });
   } catch (error) {
-    // Capture the decoding error for display
-    decodingError =
-      error instanceof Error ? error.message : "Invalid entity format";
+    // If we still get an error, render as text
+    return <span className={className}>{bech32}</span>;
   }
 
   if (user) {
@@ -78,24 +76,6 @@ export function NostrEntityCard({
     return (
       <Card className={cn("inline-flex items-center gap-2", className)}>
         <NostrProfile pubkey={user.pubkey} />
-      </Card>
-    );
-  }
-
-  // If there was a decoding error, show it gracefully
-  if (decodingError) {
-    return (
-      <Card
-        className={cn(
-          "inline-flex items-center gap-2 px-3 py-2",
-          "bg-destructive/10 border-destructive/20",
-          className,
-        )}
-      >
-        <span className="text-sm text-destructive">
-          Failed to decode: {bech32.slice(0, 20)}...
-        </span>
-        <span className="text-xs text-muted-foreground">({decodingError})</span>
       </Card>
     );
   }

@@ -3,7 +3,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { cn } from "@/lib/utils";
-import { NostrEntityCard } from "@/components/common/NostrEntityCard";
+import { SafeNostrEntityCard } from "@/components/common/SafeNostrEntityCard";
 import { MermaidRenderer } from "@/components/markdown/MermaidRenderer";
 import type { Components } from "react-markdown";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
@@ -50,7 +50,7 @@ export function getMarkdownComponents({
 
         // Just pass the bech32 directly to NostrEntityCard
         parts.push(
-          <NostrEntityCard
+          <SafeNostrEntityCard
             key={`${match.index}-${bech32}`}
             bech32={bech32}
             onConversationClick={onConversationClick}
@@ -111,7 +111,7 @@ export function getMarkdownComponents({
       ) {
         // Don't use compact mode for standalone entity references
         return (
-          <NostrEntityCard
+          <SafeNostrEntityCard
             bech32={childText}
             compact={false}
             onConversationClick={onConversationClick}
@@ -128,7 +128,7 @@ export function getMarkdownComponents({
       ) {
         // Don't use compact mode for standalone entity references
         return (
-          <NostrEntityCard
+          <SafeNostrEntityCard
             bech32={href}
             compact={false}
             onConversationClick={onConversationClick}

@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Bot, LogOut, Settings } from "lucide-react";
+import { ArrowLeft, Bot, LogOut, Settings, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -12,6 +12,7 @@ import { AISettings } from "@/components/settings/AISettings";
 import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { BlossomSettings } from "@/components/settings/BlossomSettings";
+import { RelaySettings } from "@/components/settings/RelaySettings";
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -47,13 +48,14 @@ export function SettingsPage() {
       {/* Content */}
       <div className="container max-w-6xl mx-auto px-4 py-8">
         <Tabs defaultValue="account" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-[700px]">
+          <TabsList className="grid w-full grid-cols-7 lg:w-[800px]">
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="ai">AI</TabsTrigger>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="blossom">Upload</TabsTrigger>
             <TabsTrigger value="agents">Agents</TabsTrigger>
+            <TabsTrigger value="relays">Relays</TabsTrigger>
           </TabsList>
 
           {/* Account Settings */}
@@ -175,6 +177,11 @@ export function SettingsPage() {
                 </Button>
               </div>
             </Card>
+          </TabsContent>
+
+          {/* Relay Settings */}
+          <TabsContent value="relays">
+            <RelaySettings />
           </TabsContent>
         </Tabs>
       </div>

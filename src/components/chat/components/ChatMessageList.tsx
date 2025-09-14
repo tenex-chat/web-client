@@ -1,25 +1,26 @@
-import React, { memo, useState, useEffect } from "react";
+import React, { memo, useState, useEffect, useMemo, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MessageWithReplies } from "@/components/chat/MessageWithReplies";
-import { MetadataChangeMessage } from "@/components/chat/MetadataChangeMessage";
+import { Message } from "@/components/chat/Message";
+import { MessageThread } from "@/components/chat/MessageThread";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
-import type { Message } from "@/components/chat/hooks/useChatMessages";
+import type { Message as MessageType } from "@/components/chat/hooks/useChatMessages";
 import { EVENT_KINDS } from "@/lib/constants";
 import { useAI } from "@/hooks/useAI";
 import { extractTTSContent } from "@/lib/utils/extractTTSContent";
 import { isAudioEvent } from "@/lib/utils/audioEvents";
 import { useAtomValue } from "jotai";
 import { expandedRepliesAtom } from "@/components/chat/atoms/expandedReplies";
+import { useReply } from "@/components/chat/contexts/ReplyContext";
 
 interface ChatMessageListProps {
-  messages: Message[];
+  messages: MessageType[];
   project: NDKProject | null | undefined;
   scrollAreaRef: React.RefObject<HTMLDivElement>;
   showScrollToBottom: boolean;
@@ -56,6 +57,7 @@ export const ChatMessageList = memo(function ChatMessageList({
     null,
   );
   const expandedReplies = useAtomValue(expandedRepliesAtom);
+  const { setReplyingTo } = useReply();
 
   // TTS configuration
   const { speak, hasTTS } = useAI();
@@ -106,45 +108,33 @@ export const ChatMessageList = memo(function ChatMessageList({
     messages,
   ]);
 
-  const renderMessage = (message: Message, index: number) => {
-    // Check if this is a metadata change event (kind 513)
-    if (message.event.kind === EVENT_KINDS.CONVERSATION_METADATA) {
-      return (
-        <div key={message.id} data-message-author={message.event.pubkey}>
-          <MetadataChangeMessage
-            event={message.event}
-            onTimeClick={onNavigate}
-          />
-        </div>
-      );
-    }
+  // Calculate consecutive messages and collect main thread event IDs
+  const { messagesWithConsecutive, mainThreadEventIds } = useMemo(() => {
+    const eventIds = new Set<string>();
+    const withConsecutive = messages.map((message, index) => {
+      eventIds.add(message.event.id);
 
-    // Check if this message is consecutive (from same author as previous non-metadata message)
-    // Don't treat as consecutive if message has p-tags (recipients) or if previous message has expanded replies
-    const previousMessageHasExpandedReplies =
-      index > 0 && expandedReplies.has(messages[index - 1].event.id);
+      // Don't treat as consecutive if previous message has expanded replies
+      const previousMessageHasExpandedReplies =
+        index > 0 && expandedReplies.has(messages[index - 1].event.id);
 
-    const isConsecutive =
-      index > 0 &&
-      messages[index - 1].event.pubkey === message.event.pubkey &&
-      messages[index - 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-      message.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-      !previousMessageHasExpandedReplies;
+      const isConsecutive =
+        index > 0 &&
+        messages[index - 1].event.pubkey === message.event.pubkey &&
+        messages[index - 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+        message.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+        !previousMessageHasExpandedReplies;
 
-    // All events (including tasks) go through MessageWithReplies
-    return (
-      <div key={message.id} data-message-author={message.event.pubkey}>
-        <MessageWithReplies
-          event={message.event}
-          project={project}
-          onReply={onReplyFocus}
-          onTimeClick={onNavigate}
-          onConversationNavigate={onNavigate}
-          isConsecutive={isConsecutive}
-        />
-      </div>
-    );
-  };
+      return { message, isConsecutive };
+    });
+
+    return { messagesWithConsecutive: withConsecutive, mainThreadEventIds: eventIds };
+  }, [messages, expandedReplies]);
+
+  const handleReply = useCallback((event: NDKEvent) => {
+    setReplyingTo(event);
+    onReplyFocus();
+  }, [setReplyingTo, onReplyFocus]);
 
   return (
     <div className="flex-1 overflow-hidden relative">
@@ -160,7 +150,30 @@ export const ChatMessageList = memo(function ChatMessageList({
         >
           <div className={isMobile ? "py-0 pb-48" : "py-2 pb-48"}>
             <div className="divide-y divide-transparent">
-              {messages.map((message, index) => renderMessage(message, index))}
+              {messagesWithConsecutive.map(({ message, isConsecutive }) => (
+                <div key={message.id}>
+                  <div className="relative">
+                    <Message
+                      event={message.event}
+                      project={project}
+                      isConsecutive={isConsecutive}
+                      onReply={handleReply}
+                      onTimeClick={onNavigate}
+                      onConversationNavigate={onNavigate}
+                    />
+                    <div className={cn(isMobile ? "ml-9" : "ml-12")}>
+                      <MessageThread
+                        parentEvent={message.event}
+                        project={project}
+                        onReply={handleReply}
+                        onTimeClick={onNavigate}
+                        onConversationNavigate={onNavigate}
+                        mainThreadEventIds={mainThreadEventIds}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </ScrollArea>

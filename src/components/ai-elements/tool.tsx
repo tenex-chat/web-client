@@ -3,7 +3,6 @@
 import { cn } from "@/lib/utils";
 import { type ComponentProps, memo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Code2, Terminal, Wrench } from "lucide-react";
 
 interface ToolProps extends ComponentProps<"div"> {
@@ -17,23 +16,8 @@ interface ToolProps extends ComponentProps<"div"> {
 
 export const Tool = memo(
   ({ className, name, description, status = "completed", parameters, result, error, ...props }: ToolProps) => {
-    const getStatusColor = () => {
-      switch (status) {
-        case "pending":
-          return "bg-muted text-muted-foreground";
-        case "running":
-          return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
-        case "completed":
-          return "bg-green-500/10 text-green-600 dark:text-green-400";
-        case "failed":
-          return "bg-red-500/10 text-red-600 dark:text-red-400";
-        default:
-          return "bg-muted text-muted-foreground";
-      }
-    };
-
     return (
-      <Card className={cn("my-2", className)} {...props}>
+      <Card className={cn("mb-2", className)} {...props}>
         <CardHeader className="p-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">

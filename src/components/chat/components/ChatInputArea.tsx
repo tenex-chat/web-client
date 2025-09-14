@@ -29,6 +29,8 @@ import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { useAI } from "@/hooks/useAI";
 import { toast } from "sonner";
 import { useProjectStatus } from "@/stores/projects";
+import { findNostrEntities, type NostrEntity } from "@/lib/utils/nostrEntityParser";
+import { EventPreview } from "./EventPreview";
 
 interface ChatInputAreaProps {
   project?: NDKProject | null;
@@ -83,6 +85,7 @@ export const ChatInputArea = memo(function ChatInputArea({
   const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [quotedEvents, setQuotedEvents] = useState<NostrEntity[]>([]);
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -117,10 +120,40 @@ export const ChatInputArea = memo(function ChatInputArea({
     return () => clearTimeout(timeoutId);
   }, [messageInput, saveDraft, rootEvent?.id]);
 
+  // Detect bech32 entities in message input
+  useEffect(() => {
+    const entities = findNostrEntities(messageInput);
+    // Only keep event-type entities (nevent, note, naddr)
+    const eventEntities = entities.filter(
+      e => e.type === 'nevent' || e.type === 'note' || e.type === 'naddr'
+    );
+    setQuotedEvents(eventEntities);
+  }, [messageInput]);
+
+  // Handle quoted event author - auto-select if it's an agent
+  const handleQuotedEventLoaded = useCallback((pubkey: string) => {
+    if (onlineAgents) {
+      const agent = onlineAgents.find(a => a.pubkey === pubkey);
+      if (agent && !selectedAgent) {
+        setSelectedAgent(agent.pubkey);
+      }
+    }
+  }, [onlineAgents, selectedAgent]);
+
   // Reset agent selection when conversation changes
   useEffect(() => {
     setSelectedAgent(null);
   }, [rootEvent?.id]);
+
+  // When replying, automatically set the selected agent to the author of the message being replied to
+  useEffect(() => {
+    if (replyingTo) {
+      setSelectedAgent(replyingTo.pubkey);
+    } else {
+      // Reset to null when reply is cleared to allow auto-selection
+      setSelectedAgent(null);
+    }
+  }, [replyingTo]);
 
   // Image upload functionality
   const {
@@ -167,7 +200,7 @@ export const ChatInputArea = memo(function ChatInputArea({
     return matches;
   }, [messageInput, onlineAgents]);
 
-  const showAgentSelector = mentionedAgents.length === 0;
+  const showAgentSelector = mentionedAgents.length === 0 && !replyingTo;
 
   // Determine the default agent based on p-tag logic (same as AgentSelector)
   const defaultAgent = React.useMemo(() => {
@@ -413,6 +446,7 @@ export const ChatInputArea = memo(function ChatInputArea({
       clearCompleted();
       clearDraft();
       setSelectedAgent(null);
+      setQuotedEvents([]);
 
       if (replyingTo) {
         clearReply();
@@ -530,7 +564,6 @@ export const ChatInputArea = memo(function ChatInputArea({
     if (item) cancelUpload(item.id);
   };
 
-  const canSend = !!ndk && !!user;
   const isNewThread = !rootEvent;
 
   return (
@@ -550,6 +583,28 @@ export const ChatInputArea = memo(function ChatInputArea({
           "shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)]",
         )}
       >
+        {/* Quoted event previews */}
+        <AnimatePresence>
+          {quotedEvents.length > 0 && (
+            <>
+              {quotedEvents.map((entity, index) => (
+                <EventPreview
+                  key={`${entity.bech32}-${index}`}
+                  entity={entity}
+                  onRemove={() => {
+                    // Remove the bech32 from the message input
+                    const regex = new RegExp(`(?:nostr:)?${entity.bech32}`, 'g');
+                    const newInput = messageInput.replace(regex, '').trim();
+                    setMessageInput(newInput);
+                    setQuotedEvents(prev => prev.filter((_, i) => i !== index));
+                  }}
+                  onEventLoaded={handleQuotedEventLoaded}
+                />
+              ))}
+            </>
+          )}
+        </AnimatePresence>
+
         {/* Reply preview */}
         <AnimatePresence>
           {replyingTo && (
@@ -570,11 +625,19 @@ export const ChatInputArea = memo(function ChatInputArea({
                   <span className="text-xs text-muted-foreground">
                     Replying to
                   </span>
-                  <NostrProfile
-                    pubkey={replyingTo.pubkey}
-                    variant="name"
-                    className="text-xs text-primary font-medium"
-                  />
+                  <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded-full">
+                    <NostrProfile
+                      pubkey={replyingTo.pubkey}
+                      variant="avatar"
+                      size="xs"
+                      className="h-4 w-4"
+                    />
+                    <NostrProfile
+                      pubkey={replyingTo.pubkey}
+                      variant="name"
+                      className="text-xs text-primary font-medium"
+                    />
+                  </div>
                   <span className="text-xs text-muted-foreground truncate max-w-[200px]">
                     "{replyingTo.content?.substring(0, 50)}
                     {replyingTo.content && replyingTo.content.length > 50
@@ -743,6 +806,29 @@ export const ChatInputArea = memo(function ChatInputArea({
                 </>
               ) : (
                 <div className="flex items-center gap-1.5">
+                  {/* Show reply destination as a pill */}
+                  {replyingTo && (
+                    <div
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
+                        "bg-primary/10 border border-primary/20",
+                        "text-sm",
+                      )}
+                    >
+                      <NostrProfile
+                        pubkey={replyingTo.pubkey}
+                        variant="avatar"
+                        size="xs"
+                        className="flex-shrink-0"
+                      />
+                      <NostrProfile
+                        pubkey={replyingTo.pubkey}
+                        variant="name"
+                        className="text-xs font-medium"
+                      />
+                    </div>
+                  )}
+                  {/* Show mentioned agents */}
                   {mentionedAgents.map((agent) => (
                     <div
                       key={agent.pubkey}

@@ -194,7 +194,7 @@ export function processEventsToMessages(
         // Events with "reasoning" tag should come first
         if (aHasReasoning && !bHasReasoning) return -1;
         if (!aHasReasoning && bHasReasoning) return 1;
-        
+
         // If neither or both have reasoning, check tool tags
         // Events with "tool" tag should come after reasoning but before others
         if (aHasTool && !bHasTool) return -1;

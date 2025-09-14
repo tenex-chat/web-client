@@ -2,8 +2,10 @@ import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Reply, MoreVertical, Cpu, DollarSign, User, Copy } from "lucide-react";
-import { TTSButton } from "./TTSButton";
+import { Reply, MoreVertical, Cpu, DollarSign, User, Copy, Volume2, Square } from "lucide-react";
+import { useAI } from "@/hooks/useAI";
+import { extractTTSContent } from "@/lib/utils/extractTTSContent";
+import { useRef, useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +21,6 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatCost } from "@/lib/utils/formatCost";
-import { useState, useEffect } from "react";
 
 interface MessageActionsToolbarProps {
   event: NDKEvent;
@@ -28,7 +29,6 @@ interface MessageActionsToolbarProps {
   onMetadataClick?: () => void;
   llmMetadata?: Record<string, unknown> | null;
   isMobile: boolean;
-  isHovered?: boolean;
   isConsecutive?: boolean;
 }
 
@@ -39,10 +39,44 @@ export function MessageActionsToolbar({
   onMetadataClick,
   llmMetadata,
   isMobile,
-  isHovered = false,
   isConsecutive = false,
 }: MessageActionsToolbarProps) {
   const [showRawEventDialog, setShowRawEventDialog] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { speak, hasTTS } = useAI();
+
+  const handleTTS = async () => {
+    if (!hasTTS || !event.content) return;
+
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setIsPlaying(false);
+    } else {
+      const ttsContent = extractTTSContent(event.content);
+      if (ttsContent) {
+        try {
+          setIsPlaying(true);
+          const audioBlob = await speak(ttsContent);
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+          audioRef.current = audio;
+
+          audio.onended = () => {
+            setIsPlaying(false);
+            URL.revokeObjectURL(audioUrl);
+            audioRef.current = null;
+          };
+
+          await audio.play();
+        } catch (error) {
+          console.error("TTS playback failed:", error);
+          setIsPlaying(false);
+        }
+      }
+    }
+  };
 
   // Fix for Radix UI Dialog not properly cleaning up body styles
   useEffect(() => {
@@ -58,30 +92,6 @@ export function MessageActionsToolbar({
   if (isMobile) {
     return (
       <div className="flex items-center gap-0.5">
-        {/* Reply button - always visible as primary action */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onReply?.();
-          }}
-          className="h-5 px-1 text-[10px] text-muted-foreground hover:text-foreground"
-        >
-          <Reply className="h-2.5 w-2.5" />
-        </Button>
-
-        {/* TTS button */}
-        <TTSButton
-          content={event.content}
-          authorPubkey={event.pubkey}
-          projectId={project?.dTag}
-          size="sm"
-          variant="ghost"
-          className="h-5 px-1 text-[10px] text-muted-foreground hover:text-foreground [&>svg]:h-2.5 [&>svg]:w-2.5"
-          tooltipEnabled={false}
-        />
-
         {/* More options */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -94,6 +104,22 @@ export function MessageActionsToolbar({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem
+              className="cursor-pointer text-xs"
+              onClick={() => onReply?.()}
+            >
+              <Reply className="h-3 w-3 mr-2" />
+              Reply
+            </DropdownMenuItem>
+            {hasTTS && event.content && (
+              <DropdownMenuItem
+                className="cursor-pointer text-xs"
+                onClick={handleTTS}
+              >
+                {isPlaying ? <Square className="h-3 w-3 mr-2" /> : <Volume2 className="h-3 w-3 mr-2" />}
+                {isPlaying ? "Stop" : "Text to Speech"}
+              </DropdownMenuItem>
+            )}
             {llmMetadata && (
               <DropdownMenuItem
                 className="cursor-pointer text-xs"
@@ -166,67 +192,23 @@ export function MessageActionsToolbar({
           );
           if (!cost) return null;
           return (
-            <Badge
-              variant="outline"
-              className="text-[9px] h-4 px-1 text-muted-foreground border-muted ml-auto"
+            <span
+              className="text-[9px] h-4 px-1 text-muted-foreground ml-auto"
             >
               {cost}
-            </Badge>
+            </span>
           );
         })()}
       </div>
     );
   }
 
-  // Desktop layout: Hover-based actions
+  // Desktop layout: Always visible actions
   return (
     <>
       <div
-        className={cn(
-          "flex items-center gap-0.5 transition-opacity",
-          isHovered ? "opacity-100" : "opacity-0",
-        )}
+        className="flex items-center gap-0.5"
       >
-        {/* TTS button */}
-        <TTSButton
-          content={event.content}
-          authorPubkey={event.pubkey}
-          projectId={project?.dTag}
-          size="icon"
-          variant="ghost"
-          className="h-7 w-7 p-0 hover:bg-muted"
-        />
-
-        {/* Reply button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onReply?.();
-          }}
-          className="h-7 w-7 p-0 hover:bg-muted"
-          title="Reply to this message"
-        >
-          <Reply className="h-3.5 w-3.5" />
-        </Button>
-
-        {/* LLM Metadata Icon */}
-        {llmMetadata && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onMetadataClick?.();
-            }}
-            className="h-7 w-7 p-0 hover:bg-muted"
-            title="View LLM metadata"
-          >
-            <Cpu className="h-3.5 w-3.5" />
-          </Button>
-        )}
-
         {/* More options dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -240,6 +222,31 @@ export function MessageActionsToolbar({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => onReply?.()}
+            >
+              <Reply className="h-3.5 w-3.5 mr-2" />
+              Reply
+            </DropdownMenuItem>
+            {hasTTS && event.content && (
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={handleTTS}
+              >
+                {isPlaying ? <Square className="h-3.5 w-3.5 mr-2" /> : <Volume2 className="h-3.5 w-3.5 mr-2" />}
+                {isPlaying ? "Stop" : "Text to Speech"}
+              </DropdownMenuItem>
+            )}
+            {llmMetadata && (
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={onMetadataClick}
+              >
+                <Cpu className="h-3.5 w-3.5 mr-2" />
+                View LLM Info
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               className="cursor-pointer"
               onClick={() => {

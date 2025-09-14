@@ -1,5 +1,5 @@
 import { type NDKKind, type NDKEvent } from "@nostr-dev-kit/ndk-hooks";
-import { useSubscribe, useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,7 +7,8 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Activity } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils/time";
 import { Badge } from "@/components/ui/badge";
-import { MessageWithReplies } from "@/components/chat/MessageWithReplies";
+import { Message } from "@/components/chat/Message";
+import { MessageThread } from "@/components/chat/MessageThread";
 import { TaskContent } from "@/components/chat/TaskContent";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { MessageShell } from "@/components/chat/MessageShell";
@@ -33,7 +34,6 @@ const EVENT_KIND_NAMES: Record<number, string> = {
 };
 
 export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
-  const { ndk } = useNDK();
   const navigate = useNavigate();
 
   // Subscribe to all events from this agent pubkey
@@ -133,12 +133,18 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
     // Use chat message component for Generic Reply (kind 1111)
     if (kind === 1111) {
       return (
-        <MessageWithReplies
-          key={event.id}
-          event={event}
-          project={null}
-          onConversationNavigate={handleConversationNavigate}
-        />
+        <div key={event.id}>
+          <Message
+            event={event}
+            project={null}
+            onConversationNavigate={handleConversationNavigate}
+          />
+          <MessageThread
+            parentEvent={event}
+            project={null}
+            onConversationNavigate={handleConversationNavigate}
+          />
+        </div>
       );
     }
 

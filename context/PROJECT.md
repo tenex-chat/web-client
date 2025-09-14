@@ -6,8 +6,9 @@ The application offers a suite of tools for:
 * **Agent Management:** Defined through modular components, enabling the deployment and interaction with various AI agents. New enhancements make agent definitions adaptable and intuitive to manage.
 * **Project Coordination:** Centralization of project information, tasks, and communications. Recent improvements include visual indicators for project status, enhancing user visibility for active tasks.
 * **Secure Communication:** All interactions are maintained via the Nostr protocol, ensuring privacy and censorship resistance, with comprehensive logging of actions for transparency.
-* **Code Execution and Management:** Supports dynamic code execution within the system, facilitating interactions with features powered by AI tools. Error handling and state management have been improved based on user interactions.
+* **Code Execution and Management:** Supports dynamic code execution within the system, facilitating interactions with features powered by AI tools. Error handling and state management has been improved based on user interactions.
 * **Data Integrity and Persistence:** Management of project data is based on the NDK model, ensuring updates and deletions remain aligned with event handling protocols.
+* **Hashtag Event Stream:** A new feature allowing users to view a real-time stream of Nostr kind:1 events filtered by the project's defined hashtags, with configurable relay sources.
 
 ### Key Components and Concepts
 * **Nostr Protocol:** Central to all communication, this protocol maintains the secure and decentralized nature of interactions within TENEX Web.
@@ -30,3 +31,6 @@ All user interactions—including messaging and updates—are logged through Nos
 
 #### Data Persistence and Updates
 Project and agent data management leverages Nostr's replaceable events, ensuring persistence while allowing dynamic updates based on user needs.
+
+#### Hashtag Event Monitoring
+Users can access a dedicated tab to view a live feed of public Nostr posts (kind:1 events) tagged with the project's specified hashtags. The sources for these events (relays) can be customized through the application settings.

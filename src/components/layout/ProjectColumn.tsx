@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Users,
   Wrench,
+  Hash,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
@@ -36,8 +37,9 @@ import { bringProjectOnline } from "@/lib/utils/projectStatusUtils";
 import { ProjectStatusIndicator } from "@/components/status/ProjectStatusIndicator";
 import { FABMenu } from "@/components/ui/fab-menu";
 import { CallView } from "@/components/call/CallView";
+import { HashtagEventsList } from "@/components/hashtags/HashtagEventsList";
 
-type TabType = "conversations" | "docs" | "agents" | "settings";
+type TabType = "conversations" | "docs" | "agents" | "settings" | "hashtags";
 type ViewMode = "column" | "standalone";
 type ViewState = "list" | "detail";
 
@@ -280,6 +282,21 @@ export function ProjectColumn({
           </ScrollArea>
         );
 
+      case "hashtags":
+        return (
+          <HashtagEventsList 
+            project={project} 
+            onEventClick={(event: NDKEvent) => {
+              setSelectedItem(event);
+              if (mode === "standalone") {
+                setViewState("detail");
+              } else if (onItemClick) {
+                onItemClick(project, "hashtags", event);
+              }
+            }} 
+          />
+        );
+
       case "settings":
         return (
           <ScrollArea className="h-full">
@@ -378,6 +395,7 @@ export function ProjectColumn({
       { id: "conversations", icon: MessageSquare, label: "Conversations" },
       { id: "docs", icon: FileText, label: "Documentation" },
       { id: "agents", icon: Bot, label: "Agents" },
+      { id: "hashtags", icon: Hash, label: "Hashtags" },
     ];
 
     // Settings only in column mode

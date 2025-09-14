@@ -23,9 +23,11 @@ import { useIsMobile } from "@/hooks/useMediaQuery";
 interface MessageProps {
   event: NDKEvent;
   project?: NDKProject | null;
+  isRootEvent?: boolean;
   isConsecutive?: boolean;
   isNested?: boolean;
   onReply?: (event: NDKEvent) => void;
+  onQuote?: (event: NDKEvent) => void;
   onTimeClick?: (event: NDKEvent) => void;
   onConversationNavigate?: (event: NDKEvent) => void;
 }
@@ -37,16 +39,17 @@ interface MessageProps {
 export const Message = memo(function Message({
   event,
   project,
+  isRootEvent = false,
   isConsecutive = false,
   isNested = false,
   onReply,
+  onQuote,
   onTimeClick,
   onConversationNavigate,
 }: MessageProps) {
   const user = useNDKCurrentUser();
   const isMobile = useIsMobile();
   const [showMetadataDialog, setShowMetadataDialog] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
 
   // Get user status
   const userStatus = useMemo(() => {
@@ -187,8 +190,7 @@ export const Message = memo(function Message({
           <div className={cn("markdown-content", isNested && "ml-9")}>
             <MessageContent
               event={event}
-              isExpanded={isExpanded}
-              onExpand={() => setIsExpanded(!isExpanded)}
+              isRootEvent={isRootEvent}
               onConversationNavigate={onConversationNavigate}
               isMobile={isMobile}
             />
@@ -199,6 +201,7 @@ export const Message = memo(function Message({
               event={event}
               project={project}
               onReply={() => onReply?.(event)}
+              onQuote={() => onQuote?.(event)}
               onMetadataClick={() => setShowMetadataDialog(true)}
               llmMetadata={llmMetadata}
               isMobile={true}
@@ -246,6 +249,7 @@ export const Message = memo(function Message({
                   event={event}
                   project={project}
                   onReply={() => onReply?.(event)}
+                  onQuote={() => onQuote?.(event)}
                   onMetadataClick={() => setShowMetadataDialog(true)}
                   llmMetadata={llmMetadata}
                   isMobile={false}
@@ -257,8 +261,7 @@ export const Message = memo(function Message({
             <div className={cn("markdown-content", isConsecutive && "flex items-start justify-between gap-4")}>
               <MessageContent
                 event={event}
-                isExpanded={isExpanded}
-                onExpand={() => setIsExpanded(!isExpanded)}
+                isRootEvent={isRootEvent}
                 onConversationNavigate={onConversationNavigate}
                 isMobile={isMobile}
                 className="flex-1"
@@ -283,6 +286,7 @@ export const Message = memo(function Message({
                     event={event}
                     project={project}
                     onReply={() => onReply?.(event)}
+                    onQuote={() => onQuote?.(event)}
                     onMetadataClick={() => setShowMetadataDialog(true)}
                     llmMetadata={llmMetadata}
                     isMobile={false}

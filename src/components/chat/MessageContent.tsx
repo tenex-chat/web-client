@@ -10,11 +10,11 @@ import { AIReasoningBlock } from "./AIReasoningBlock";
 import { StreamingCaret } from "./StreamingCaret";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { EVENT_KINDS } from "@/lib/constants";
+import { ReadMore } from "./components/ReadMore";
 
 interface MessageContentProps {
   event: NDKEvent;
-  isExpanded: boolean;
-  onExpand: () => void;
+  isRootEvent?: boolean;
   onConversationNavigate?: (event: NDKEvent) => void;
   isMobile: boolean;
   className?: string;
@@ -26,8 +26,7 @@ interface MessageContentProps {
  */
 export const MessageContent = memo(function MessageContent({
   event,
-  isExpanded,
-  onExpand,
+  isRootEvent = false,
   onConversationNavigate,
   isMobile,
   className,
@@ -56,16 +55,7 @@ export const MessageContent = memo(function MessageContent({
   }, [isTaskEvent, ndk, event]);
 
   // Parse content
-  const { displayContent, shouldTruncate } = useMemo(() => {
-    const content = event.content ?? "";
-    const MAX_LENGTH = 280;
-    const shouldTruncate = isMobile && content.length > MAX_LENGTH && !isExpanded;
-
-    return {
-      displayContent: content,
-      shouldTruncate,
-    };
-  }, [event.content, isMobile, isExpanded]);
+  const displayContent = event.content ?? "";
 
   return (
     <div
@@ -75,7 +65,7 @@ export const MessageContent = memo(function MessageContent({
         className
       )}
     >
-      {isTaskEvent && task ? (
+      {isTaskEvent && task && !isRootEvent ? (
         <TaskContent
           task={task}
           onClick={() => onConversationNavigate?.(event)}
@@ -89,30 +79,18 @@ export const MessageContent = memo(function MessageContent({
           isMobile={isMobile}
         />
       ) : (
-        <>
+        <ReadMore maxHeight={400}>
           <div className="streamdown-wrapper [&_.mermaid-container]:!max-w-none [&_.mermaid-container]:overflow-x-auto">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={markdownComponents}
             >
-              {shouldTruncate && !isExpanded
-                ? displayContent.substring(0, 280)
-                : displayContent}
+              {displayContent}
             </ReactMarkdown>
           </div>
 
           {isStreamingResponse && <StreamingCaret className="ml-0.5" />}
-
-          {shouldTruncate && displayContent.length > 280 && (
-            <button
-              type="button"
-              onClick={onExpand}
-              className="text-xs text-blue-600 hover:text-blue-700 mt-1"
-            >
-              {isExpanded ? "Show less" : "Show more"}
-            </button>
-          )}
-        </>
+        </ReadMore>
       )}
     </div>
   );

@@ -46,7 +46,6 @@ interface FloatingWindowProps {
   onMinimize: () => void;
   onFocus: () => void;
   onAttach?: (content: DrawerContent) => void;
-  onQuote?: (quotedText: string) => void;
   onContentUpdate?: (content: DrawerContent) => void;
   isMinimized: boolean;
   zIndex: number;
@@ -59,7 +58,6 @@ export function FloatingWindow({
   onMinimize,
   onFocus,
   onAttach,
-  onQuote,
   onContentUpdate,
   isMinimized,
   zIndex,
@@ -163,7 +161,6 @@ export function FloatingWindow({
             <ChatInterface
               project={content.project}
               rootEvent={rootEvent}
-              onQuote={onQuote}
               onThreadCreated={(newThread) => {
                 // Update the window content when a new thread is created
                 if (newThread && onContentUpdate) {

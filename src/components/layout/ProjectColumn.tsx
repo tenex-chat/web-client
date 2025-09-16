@@ -328,7 +328,7 @@ export function ProjectColumn({
       onSettingsItemClick: (item: string) => {
         onItemClick?.(project, "settings", item);
       },
-      onEventClick: (event: NDKEvent) => {
+      onEventClick: async (event: NDKEvent) => {
         // Handle community event clicks - open in modal or navigate based on type
         if (event.kind === 24133) {
           // Conversation root - select as thread
@@ -336,6 +336,25 @@ export function ProjectColumn({
         } else if (event.kind === 30023) {
           // Document - handle as document
           onDocumentSelect?.(event as NDKArticle);
+        } else if (event.kind === 1111) {
+          // Reply event - find and open the parent conversation
+          const eTags = event.tags.filter(tag => tag[0] === 'e');
+          if (eTags.length > 0) {
+            // The first e-tag is typically the root/parent event
+            const parentId = eTags[0][1];
+            if (parentId) {
+              // Open the parent conversation
+              await handleThreadSelect(parentId);
+            } else {
+              // Fallback: open the reply in modal
+              setSelectedHashtagEvent(event);
+              setHashtagEventModalOpen(true);
+            }
+          } else {
+            // No e-tags found, open in modal
+            setSelectedHashtagEvent(event);
+            setHashtagEventModalOpen(true);
+          }
         } else {
           // Other events (hashtags, etc) - open in modal
           setSelectedHashtagEvent(event);

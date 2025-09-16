@@ -20,11 +20,13 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { formatCost } from "@/lib/utils/formatCost";
+import { useQuoteModal } from "@/stores/quote-modal";
+import { useReply } from "@/components/chat/contexts/ReplyContext";
+import { useChatInputFocus } from "@/stores/chat-input-focus";
 
 interface MessageActionsToolbarProps {
   event: NDKEvent;
   project?: NDKProject | null;
-  onReply?: () => void;
   onQuote?: () => void;
   onMetadataClick?: () => void;
   llmMetadata?: Record<string, unknown> | null;
@@ -34,7 +36,7 @@ interface MessageActionsToolbarProps {
 
 export function MessageActionsToolbar({
   event,
-  onReply,
+  project,
   onQuote,
   onMetadataClick,
   llmMetadata,
@@ -42,6 +44,9 @@ export function MessageActionsToolbar({
 }: MessageActionsToolbarProps) {
   const [showRawEventDialog, setShowRawEventDialog] = useState(false);
   const navigate = useNavigate();
+  const { openQuote } = useQuoteModal();
+  const { setReplyingTo } = useReply();
+  const { triggerFocus } = useChatInputFocus();
   const {
     play,
     stop,
@@ -102,14 +107,24 @@ export function MessageActionsToolbar({
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer text-xs"
-              onClick={() => onReply?.()}
+              onClick={() => {
+                setReplyingTo(event);
+                triggerFocus();
+              }}
             >
               <Reply className="h-3 w-3 mr-2" />
               Reply
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer text-xs"
-              onClick={() => onQuote?.()}
+              onClick={() => {
+                if (project) {
+                  const quotedContent = `nostr:${event.encode()}`;
+                  openQuote(quotedContent, project);
+                } else {
+                  onQuote?.();
+                }
+              }}
             >
               <Quote className="h-3 w-3 mr-2" />
               Quote
@@ -237,14 +252,24 @@ export function MessageActionsToolbar({
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer"
-              onClick={() => onReply?.()}
+              onClick={() => {
+                setReplyingTo(event);
+                triggerFocus();
+              }}
             >
               <Reply className="h-3.5 w-3.5 mr-2" />
               Reply
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer"
-              onClick={() => onQuote?.()}
+              onClick={() => {
+                if (project) {
+                  const quotedContent = `nostr:${event.encode()}`;
+                  openQuote(quotedContent, project);
+                } else {
+                  onQuote?.();
+                }
+              }}
             >
               <Quote className="h-3.5 w-3.5 mr-2" />
               Quote

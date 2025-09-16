@@ -21,6 +21,7 @@ import { NDKMCPTool } from "@/lib/ndk-events/NDKMCPTool";
 import { NDKAgentLesson } from "@/lib/ndk-events/NDKAgentLesson";
 import { GlobalTTSPlayer } from "@/components/tts/GlobalTTSPlayer";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { QuoteModal } from "@/components/chat/QuoteModal";
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -71,6 +72,7 @@ function RootComponent() {
               <div className="min-h-screen bg-background">
                 <Outlet />
                 <GlobalTTSPlayer />
+                <QuoteModal />
                 <Toaster
                   richColors
                   position="top-center"

@@ -5,10 +5,9 @@ import { AnimatePresence } from "framer-motion";
 
 interface WindowManagerProps {
   onAttach?: (content: DrawerContent) => void;
-  onQuote?: (quotedText: string, sourceWindow: DrawerContent) => void;
 }
 
-export function WindowManager({ onAttach, onQuote }: WindowManagerProps) {
+export function WindowManager({ onAttach }: WindowManagerProps) {
   const {
     windows,
     removeWindow,
@@ -22,12 +21,6 @@ export function WindowManager({ onAttach, onQuote }: WindowManagerProps) {
   const handleAttach = (windowId: string) => {
     if (onAttach) {
       attachToDrawer(windowId, onAttach);
-    }
-  };
-
-  const handleQuote = (quotedText: string, windowContent: DrawerContent) => {
-    if (onQuote) {
-      onQuote(quotedText, windowContent);
     }
   };
 
@@ -45,11 +38,6 @@ export function WindowManager({ onAttach, onQuote }: WindowManagerProps) {
             onAttach={
               onAttach
                 ? () => handleAttach(window.id)
-                : undefined
-            }
-            onQuote={
-              onQuote
-                ? (quotedText: string) => handleQuote(quotedText, window.content)
                 : undefined
             }
             onContentUpdate={(newContent) => updateWindowContent(window.id, newContent)}

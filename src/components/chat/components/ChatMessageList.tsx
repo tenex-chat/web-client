@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect, useMemo, useCallback } from "react";
+import React, { memo, useState, useEffect, useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ArrowDown } from "lucide-react";
@@ -15,7 +15,6 @@ import { EVENT_KINDS } from "@/lib/constants";
 import { useAI } from "@/hooks/useAI";
 import { extractTTSContent } from "@/lib/utils/extractTTSContent";
 import { isAudioEvent } from "@/lib/utils/audioEvents";
-import { useReply } from "@/components/chat/contexts/ReplyContext";
 import { useThreadViewModeStore } from "@/stores/thread-view-mode-store";
 
 interface ChatMessageListProps {
@@ -27,12 +26,10 @@ interface ChatMessageListProps {
   unreadCount: number;
   scrollToBottom: (smooth?: boolean) => void;
   onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
-  onReplyFocus: () => void;
   isNewThread: boolean;
   autoTTS?: boolean;
   currentUserPubkey?: string;
   onNavigate?: (event: NDKEvent) => void;
-  onQuote?: (quotedText: string) => void;
 }
 
 /**
@@ -48,18 +45,15 @@ export const ChatMessageList = memo(function ChatMessageList({
   unreadCount,
   scrollToBottom,
   onScroll,
-  onReplyFocus,
   isNewThread,
   autoTTS = false,
   currentUserPubkey,
   onNavigate,
-  onQuote,
 }: ChatMessageListProps) {
   const isMobile = useIsMobile();
   const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(
     null,
   );
-  const { setReplyingTo } = useReply();
   const { mode: viewMode } = useThreadViewModeStore();
 
   // TTS configuration
@@ -150,21 +144,7 @@ export const ChatMessageList = memo(function ChatMessageList({
     return { processedMessages: items, mainThreadEventIds: eventIds };
   }, [messages]);
 
-  const handleReply = useCallback((event: NDKEvent) => {
-    setReplyingTo(event);
-    onReplyFocus();
-  }, [setReplyingTo, onReplyFocus]);
 
-  const handleQuote = useCallback((event: NDKEvent) => {
-    // Get the bech32 encoded event identifier
-    const encodedEvent = event.encode();
-    const nostrIdentifier = `nostr:${encodedEvent}`;
-    
-    // Call the onQuote handler with the nostr: identifier
-    if (onQuote) {
-      onQuote(nostrIdentifier);
-    }
-  }, [onQuote]);
 
   return (
     <div className="flex-1 overflow-hidden relative">
@@ -188,21 +168,17 @@ export const ChatMessageList = memo(function ChatMessageList({
                       project={project}
                       isRootEvent={rootEvent?.id === message.event.id}
                       isConsecutive={isConsecutive}
-                      onReply={handleReply}
-                      onQuote={handleQuote}
                       onTimeClick={onNavigate}
                       onConversationNavigate={onNavigate}
                       message={message}
                     />
                     {/* Only show message thread UI in threaded mode */}
                     {viewMode === 'threaded' && (
-                      <div className={cn(isMobile ? "ml-9" : "ml-12")}>
+                      <div className={cn(isMobile ? "ml-9" : "ml-12 border-4 border-red-500")}>
                         <MessageThread
                           parentEvent={message.event}
                           project={project}
-                          onReply={handleReply}
-                          onQuote={handleQuote}
-                          onTimeClick={onNavigate}
+                                  onTimeClick={onNavigate}
                           onConversationNavigate={onNavigate}
                           mainThreadEventIds={mainThreadEventIds}
                         />

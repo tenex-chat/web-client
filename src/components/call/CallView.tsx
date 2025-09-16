@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PhoneOff, Mic, MicOff, Bot, Send, Volume2, AudioLines } from "lucide-react";
+import { PhoneOff, Mic, MicOff, Bot, Send, Volume2, AudioLines, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
@@ -222,6 +222,8 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
   const [speakingAgent, setSpeakingAgent] = useState<string | null>(null);
   const [targetAgent, setTargetAgent] = useState<AgentInstance | null>(null); // Agent to p-tag
   const [reasoningAgents, setReasoningAgents] = useState<Set<string>>(new Set());
+  const [lastPlayedMessage, setLastPlayedMessage] = useState<Message | null>(null);
+  const [isRepeating, setIsRepeating] = useState(false);
 
   // Audio settings for microphone name display
   const { audioSettings } = useCallSettings();
@@ -382,6 +384,9 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     }
   }, []);
 
+  // Create a ref to hold the STT instance for use in callbacks
+  const sttRef = useRef<ReturnType<typeof useUnifiedSTT> | null>(null);
+
   // Use agents in their original order from project configuration
   // The first agent is always the project manager by convention
   const agents = useMemo(() => {
@@ -395,6 +400,62 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
   const stt = useUnifiedSTT({
     onSilenceDetected: () => onSilenceDetectedRef.current?.(),
   });
+
+  // Store STT instance in ref for use in callbacks
+  useEffect(() => {
+    sttRef.current = stt;
+  }, [stt]);
+
+  // Handle repeat functionality
+  const handleRepeat = useCallback(async () => {
+    if (!lastPlayedMessage || !hasTTS || isRepeating || isPlaying) {
+      return;
+    }
+
+    const ttsContent = extractTTSContent(lastPlayedMessage.event.content);
+    if (!ttsContent) {
+      toast.error("No audio content to repeat");
+      return;
+    }
+
+    try {
+      setIsRepeating(true);
+
+      // Stop any currently playing audio
+      stopTTS();
+
+      // Stop listening if currently listening
+      if (sttRef.current?.isListening) {
+        sttRef.current.stopListening();
+        setConversationState("idle");
+      }
+
+      // Set the agent who spoke as the speaking agent
+      setSpeakingAgent(lastPlayedMessage.event.pubkey);
+      setConversationState("agent_speaking");
+
+      // Auto-target the agent whose message we're repeating
+      const speakingAgentInstance = agentsRaw.find(
+        (a) => a.pubkey === lastPlayedMessage.event.pubkey,
+      );
+      if (speakingAgentInstance) {
+        setTargetAgent(speakingAgentInstance);
+      }
+
+      // Replay the TTS with fresh generation
+      await playTTS(ttsContent);
+
+      setSpeakingAgent(null);
+      setConversationState("idle");
+    } catch (error) {
+      console.error("Failed to repeat audio:", error);
+      toast.error("Failed to repeat audio");
+      setSpeakingAgent(null);
+      setConversationState("idle");
+    } finally {
+      setIsRepeating(false);
+    }
+  }, [lastPlayedMessage, hasTTS, isRepeating, isPlaying, stopTTS, playTTS, agentsRaw]);
 
   // Select first agent (project manager) by default
   useEffect(() => {
@@ -653,6 +714,8 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
             );
             setCurrentAgentMessage(null);
             setSpeakingAgent(null);
+            // Save this message as the last played for repeat functionality
+            setLastPlayedMessage(latestAgentMessage);
 
             // Auto-resume listening after TTS completes
             setConversationState("user_speaking");
@@ -1106,6 +1169,36 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
             )}
           >
             <Send className="h-7 w-7" />
+          </motion.button>
+
+          {/* Repeat button */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={handleRepeat}
+            disabled={!lastPlayedMessage || isRepeating || isPlaying || conversationState === "agent_speaking"}
+            className={cn(
+              "w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-colors relative",
+              lastPlayedMessage && !isRepeating && !isPlaying && conversationState !== "agent_speaking"
+                ? "bg-blue-500 hover:bg-blue-600 text-white"
+                : "bg-gray-700 text-gray-400 cursor-not-allowed",
+              isRepeating && "animate-pulse"
+            )}
+            title={lastPlayedMessage ? "Repeat last message" : "No message to repeat"}
+          >
+            <RotateCcw className="h-7 w-7" />
+            {isRepeating && (
+              <motion.div
+                className="absolute inset-0 rounded-full border-2 border-white/50"
+                animate={{
+                  scale: [1, 1.2],
+                  opacity: [0.5, 0],
+                }}
+                transition={{
+                  duration: 1,
+                  repeat: Infinity,
+                }}
+              />
+            )}
           </motion.button>
         </div>
       </div>

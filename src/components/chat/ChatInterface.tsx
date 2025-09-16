@@ -17,6 +17,7 @@ import { ChatInputArea } from "./components/ChatInputArea";
 import { useAI } from "@/hooks/useAI";
 import { ReplyProvider } from "./contexts/ReplyContext";
 import { useThreadViewModeStore } from "@/stores/thread-view-mode-store";
+import { useChatInputFocus } from "@/stores/chat-input-focus";
 
 interface ChatInterfaceProps {
   project?: NDKProject | null;
@@ -27,7 +28,6 @@ interface ChatInterfaceProps {
   onDetach?: () => void;
   onThreadCreated?: (thread: NDKEvent) => void;
   onVoiceCallClick?: () => void;
-  onQuote?: (quotedText: string) => void;
 }
 
 /**
@@ -42,13 +42,21 @@ function ChatInterfaceInner({
   onDetach,
   onThreadCreated,
   onVoiceCallClick,
-  onQuote,
 }: ChatInterfaceProps) {
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
   const isMobile = useIsMobile();
   const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { setFocusCallback } = useChatInputFocus();
+
+  // Register focus callback
+  useEffect(() => {
+    setFocusCallback(() => {
+      textareaRef.current?.focus();
+    });
+    return () => setFocusCallback(null);
+  }, [setFocusCallback]);
 
   // TTS state
   const { voiceSettings } = useAI();
@@ -138,22 +146,6 @@ function ChatInterfaceInner({
 
   const isNewThread = !localRootEvent;
 
-  // Handle quote action
-  const handleQuote = useCallback((quotedText: string) => {
-    if (onQuote) {
-      // If parent handles quotes, delegate to it
-      onQuote(quotedText);
-    } else {
-      // Otherwise handle internally (legacy behavior)
-      // Clear the current thread to start a new one
-      setLocalRootEvent(null);
-      setNavigationStack([]);
-      // Pre-fill the input with the quoted text
-      setPrefilledContent(quotedText);
-      // Focus the input
-      setTimeout(() => textareaRef.current?.focus(), 100);
-    }
-  }, [onQuote]);
 
   // Handle navigation to parent event
   const handleNavigateToParent = useCallback(async (parentId: string) => {
@@ -207,12 +199,10 @@ function ChatInterfaceInner({
           unreadCount={scrollProps.unreadCount}
           scrollToBottom={scrollProps.scrollToBottom}
           onScroll={scrollProps.handleScroll}
-          onReplyFocus={() => textareaRef.current?.focus()}
           isNewThread={isNewThread}
           autoTTS={autoTTS}
           currentUserPubkey={user?.pubkey}
           onNavigate={pushToStack}
-          onQuote={handleQuote}
         />
 
         {/* Input Area - fully autonomous, publishes directly to Nostr */}

@@ -17,8 +17,6 @@ interface MessageThreadProps {
   parentEvent: NDKEvent;
   project?: NDKProject | null;
   depth?: number;
-  onReply?: (event: NDKEvent) => void;
-  onQuote?: (event: NDKEvent) => void;
   onTimeClick?: (event: NDKEvent) => void;
   onConversationNavigate?: (event: NDKEvent) => void;
   mainThreadEventIds?: Set<string>; // IDs of events already shown in main thread
@@ -32,8 +30,6 @@ export const MessageThread = memo(function MessageThread({
   parentEvent,
   project,
   depth = 0,
-  onReply,
-  onQuote,
   onTimeClick,
   onConversationNavigate,
   mainThreadEventIds,
@@ -136,7 +132,6 @@ export const MessageThread = memo(function MessageThread({
         <div
           className={cn(
             "border-l-2 border-muted mt-2",
-            isMobile ? "ml-3" : "ml-[48px]"
           )}
         >
           {/* Show messages */}
@@ -170,8 +165,6 @@ export const MessageThread = memo(function MessageThread({
                 <Message
                   event={message.event}
                   project={project}
-                  onReply={onReply}
-                  onQuote={onQuote}
                   isNested={true}
                   onTimeClick={onTimeClick}
                   onConversationNavigate={onConversationNavigate}
@@ -182,8 +175,6 @@ export const MessageThread = memo(function MessageThread({
                   parentEvent={message.event}
                   project={project}
                   depth={depth + 1}
-                  onReply={onReply}
-                  onQuote={onQuote}
                   onTimeClick={onTimeClick}
                   onConversationNavigate={onConversationNavigate}
                   mainThreadEventIds={mainThreadEventIds}

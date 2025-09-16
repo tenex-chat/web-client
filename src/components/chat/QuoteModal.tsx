@@ -5,24 +5,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { ChatInputArea } from "./components/ChatInputArea";
 import { useProjectStatus } from "@/stores/projects";
+import { useQuoteModal } from "@/stores/quote-modal";
 import type { AgentInstance } from "@/types/agent";
 
-interface QuoteModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  quotedText: string;
-  project: NDKProject | null;
-}
-
-export function QuoteModal({
-  isOpen,
-  onClose,
-  quotedText,
-  project,
-}: QuoteModalProps) {
+export function QuoteModal() {
+  const { isOpen, quotedText, project, closeQuote } = useQuoteModal();
   const textareaRef = useRef<HTMLTextAreaElement>(null) as React.RefObject<HTMLTextAreaElement>;
 
   // Get project status for available agents
@@ -57,11 +46,11 @@ export function QuoteModal({
 
   const handleThreadCreated = () => {
     // Close modal after successful publication
-    onClose();
+    closeQuote();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && closeQuote()}>
       <DialogContent className="sm:max-w-[700px] h-[500px] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-3 border-b">
           <DialogTitle>Quote Event</DialogTitle>

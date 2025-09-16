@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useRef, useEffect } from "react";
+import { memo, useMemo, useState, useEffect } from "react";
 import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
@@ -29,8 +29,6 @@ interface MessageProps {
   isRootEvent?: boolean;
   isConsecutive?: boolean;
   isNested?: boolean;
-  onReply?: (event: NDKEvent) => void;
-  onQuote?: (event: NDKEvent) => void;
   onTimeClick?: (event: NDKEvent) => void;
   onConversationNavigate?: (event: NDKEvent) => void;
   message?: {
@@ -50,8 +48,6 @@ export const Message = memo(function Message({
   isRootEvent = false,
   isConsecutive = false,
   isNested = false,
-  onReply,
-  onQuote,
   onTimeClick,
   onConversationNavigate,
   message,
@@ -171,7 +167,6 @@ export const Message = memo(function Message({
   }
 
   const paddingClass = isMobile ? "px-3 py-1" : "px-4 py-1";
-  const nestedMargin = isMobile ? "ml-4" : "ml-4";
   const contentGap = isMobile ? "gap-2" : "gap-3";
 
   return (
@@ -180,7 +175,6 @@ export const Message = memo(function Message({
       className={cn(
         "relative transition-colors hover:bg-muted/30",
         paddingClass,
-        isNested && nestedMargin,
         isMobile && "border-b border-border"
       )}
     >
@@ -229,8 +223,6 @@ export const Message = memo(function Message({
             <MessageActionsToolbar
               event={event}
               project={project}
-              onReply={() => onReply?.(event)}
-              onQuote={() => onQuote?.(event)}
               onMetadataClick={() => setShowMetadataDialog(true)}
               llmMetadata={llmMetadata}
               isMobile={true}
@@ -277,9 +269,7 @@ export const Message = memo(function Message({
                 <MessageActionsToolbar
                   event={event}
                   project={project}
-                  onReply={() => onReply?.(event)}
-                  onQuote={() => onQuote?.(event)}
-                  onMetadataClick={() => setShowMetadataDialog(true)}
+                          onMetadataClick={() => setShowMetadataDialog(true)}
                   llmMetadata={llmMetadata}
                   isMobile={false}
                   isConsecutive={false}
@@ -315,9 +305,7 @@ export const Message = memo(function Message({
                   <MessageActionsToolbar
                     event={event}
                     project={project}
-                    onReply={() => onReply?.(event)}
-                    onQuote={() => onQuote?.(event)}
-                    onMetadataClick={() => setShowMetadataDialog(true)}
+                                onMetadataClick={() => setShowMetadataDialog(true)}
                     llmMetadata={llmMetadata}
                     isMobile={false}
                     isConsecutive={true}

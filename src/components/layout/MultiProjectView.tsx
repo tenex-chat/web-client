@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { ProjectColumn } from "./ProjectColumn";
 import { ChatInterface } from "@/components/chat/ChatInterface";
@@ -18,7 +18,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { CallView } from "@/components/call/CallView";
 import { WindowManager } from "@/components/windows/WindowManager";
 import { useWindowManager } from "@/stores/windowManager";
-import { QuoteModal } from "@/components/chat/QuoteModal";
 import { useIsMobile, useIsDesktop } from "@/hooks/useMediaQuery";
 import { ArrowLeft, ExternalLink, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,11 +50,6 @@ export function MultiProjectView({
   const [callViewProject, setCallViewProject] = useState<NDKProject | null>(
     null,
   );
-  const [quoteModalState, setQuoteModalState] = useState<{
-    isOpen: boolean;
-    quotedText: string;
-    project: NDKProject | null;
-  }>({ isOpen: false, quotedText: "", project: null });
 
   const { addWindow, canAddWindow, windows } = useWindowManager();
   const isMobile = useIsMobile();
@@ -189,17 +183,6 @@ export function MultiProjectView({
     }
   };
 
-  const handleQuote = useCallback((quotedText: string) => {
-    if (!drawerContent?.project) return;
-    
-    // Open the quote modal with the quoted text and current project
-    setQuoteModalState({
-      isOpen: true,
-      quotedText,
-      project: drawerContent.project,
-    });
-  }, [drawerContent]);
-
   const handleAttachWindow = (content: DrawerContent) => {
     // Set up the drawer content based on the attached window content
     if (content.type === "conversations") {
@@ -260,7 +243,6 @@ export function MultiProjectView({
             onDetach={
               !isMobile && canAddWindow() ? handleDetachWindow : undefined
             }
-            onQuote={handleQuote}
             onThreadCreated={(newThread: NDKEvent) => {
               if (newThread) {
                 setSelectedThreadEvent(newThread);
@@ -582,28 +564,11 @@ export function MultiProjectView({
 
       {/* Floating Windows Manager - Desktop only */}
       {!isMobile && (
-        <WindowManager 
+        <WindowManager
           onAttach={handleAttachWindow}
-          onQuote={(quotedText: string, sourceWindow: DrawerContent) => {
-            // Open quote modal from floating window
-            if (sourceWindow.project) {
-              setQuoteModalState({
-                isOpen: true,
-                quotedText,
-                project: sourceWindow.project,
-              });
-            }
-          }}
         />
       )}
 
-      {/* Quote Modal */}
-      <QuoteModal
-        isOpen={quoteModalState.isOpen}
-        onClose={() => setQuoteModalState({ isOpen: false, quotedText: "", project: null })}
-        quotedText={quoteModalState.quotedText}
-        project={quoteModalState.project}
-      />
     </div>
   );
 }

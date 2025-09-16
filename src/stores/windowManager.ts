@@ -20,6 +20,7 @@ interface WindowManagerStore {
   canAddWindow: () => boolean;
   getWindowById: (id: string) => WindowState | undefined;
   isContentOpen: (content: DrawerContent) => boolean;
+  updateWindowContent: (id: string, content: DrawerContent) => void;
   attachToDrawer: (
     id: string,
     onAttach: (content: DrawerContent) => void,
@@ -195,6 +196,17 @@ export const useWindowManager = create<WindowManagerStore>((set, get) => ({
       }
     }
     return false;
+  },
+
+  updateWindowContent: (id: string, content: DrawerContent) => {
+    set((state) => {
+      const newWindows = new Map(state.windows);
+      const window = newWindows.get(id);
+      if (window) {
+        newWindows.set(id, { ...window, content });
+      }
+      return { windows: newWindows };
+    });
   },
 
   attachToDrawer: (id: string, onAttach: (content: DrawerContent) => void) => {

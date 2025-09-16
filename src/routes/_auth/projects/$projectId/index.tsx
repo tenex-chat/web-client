@@ -78,10 +78,16 @@ function AgentListItem({
 
 export const Route = createFileRoute("/_auth/projects/$projectId/")({
   component: ProjectDetailPage,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      threadId: search.threadId as string | undefined,
+    };
+  },
 });
 
 function ProjectDetailPage() {
   const { projectId } = Route.useParams();
+  const { threadId } = Route.useSearch();
   const navigate = useNavigate();
   const { ndk } = useNDK();
   const project = useProject(projectId);
@@ -118,6 +124,31 @@ function ProjectDetailPage() {
       useProjectActivityStore.getState().updateActivity(project.dTag);
     }
   }, [project]);
+
+  // Handle threadId from URL search params
+  useEffect(() => {
+    const loadThreadFromUrl = async () => {
+      if (threadId && ndk && !selectedThreadEvent) {
+        try {
+          const threadEvent = await ndk.fetchEvent(threadId);
+          if (threadEvent) {
+            setSelectedThreadEvent(threadEvent);
+            setActiveTab("conversations");
+            // Clear the search param after loading
+            navigate({
+              to: "/projects/$projectId",
+              params: { projectId },
+              replace: true,
+            });
+          }
+        } catch (error) {
+          console.error("Failed to load thread from URL:", error);
+        }
+      }
+    };
+
+    loadThreadFromUrl();
+  }, [threadId, ndk, projectId, navigate]);
 
   // On desktop, open the project in multi-column view and redirect
   useEffect(() => {
@@ -403,6 +434,7 @@ function ProjectDetailPage() {
                           extraTags: selectedThreadEvent
                             ? [["E", selectedThreadEvent.id]]
                             : undefined,
+                          rootEvent: selectedThreadEvent,
                         },
                       };
 
@@ -483,6 +515,7 @@ function ProjectDetailPage() {
           extraTags={
             selectedThreadEvent ? [["E", selectedThreadEvent.id]] : undefined
           }
+          rootEvent={selectedThreadEvent}
         />
       )}
     </div>

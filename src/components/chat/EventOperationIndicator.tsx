@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Activity, StopCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEventOperationStatus } from "@/hooks/useEventOperationStatus";
-import { useStopOperations } from "@/hooks/useStopOperations";
+import { stopEvent } from "@/lib/ndk-events/operations";
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
 
 interface EventOperationIndicatorProps {
   eventId: string;
-  projectId?: string;
+  projectId: string;
 }
 
 /**
@@ -17,16 +18,21 @@ export function EventOperationIndicator({
   eventId,
   projectId,
 }: EventOperationIndicatorProps) {
-  const { stopEvent } = useStopOperations(projectId);
-  const { isActive, agentCount } = useEventOperationStatus(eventId, projectId);
+  const { ndk } = useNDK();
   const [isStopping, setIsStopping] = useState(false);
+
+  const { isActive, agentCount } = useEventOperationStatus(
+    eventId,
+    projectId
+  );
 
   // Render only when active
   if (!isActive || agentCount === 0) return null;
 
   const handleStop = async () => {
+    if (!ndk) return;
     setIsStopping(true);
-    await stopEvent(eventId);
+    await stopEvent(ndk, projectId, eventId);
     // Note: isStopping state will reset when operation actually stops
     // This is optional local "stopping..." text that doesn't mutate store
     setTimeout(() => setIsStopping(false), 2000); // Fallback reset

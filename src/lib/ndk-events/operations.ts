@@ -15,15 +15,6 @@ export interface Kind24133Snapshot {
   eventId: string;
 }
 
-/**
- * Normalize project ID to consistent a-coordinate format
- * Trust NDK for validation - just return as-is to ensure publisher/subscriber use the same form
- */
-export function normalizeProjectA(project: string): string {
-  // Trust NDK validation - no manual hex checks
-  // Just pass through to ensure consistency between publisher and subscriber
-  return project;
-}
 
 /**
  * Parse kind 24133 (Operations Status) according to contract
@@ -97,17 +88,15 @@ export async function publishKind24134(
   ndk: NDK,
   { projectId, eIds }: { projectId: string; eIds: string[] },
 ): Promise<void> {
-  const normalizedProjectId = normalizeProjectA(projectId);
 
   // Use provided event IDs - trust NDK validation
   if (eIds.length === 0) return;
 
   const event = new NDKEvent(ndk);
   event.kind = 24134;
-  event.content = ""; // Must be empty per contract
 
   // Build tags
-  event.tags = [["a", normalizedProjectId]];
+  event.tags = [["a", projectId]];
 
   // Add each event ID as 'e' tag
   eIds.forEach((eId) => {
@@ -116,4 +105,38 @@ export async function publishKind24134(
 
   await event.sign();
   await event.publish();
+}
+
+/**
+ * Simple function to stop an event's operations
+ */
+export async function stopEvent(
+  ndk: NDK,
+  projectId: string,
+  eventId: string,
+): Promise<void> {
+  if (!ndk || !projectId || !eventId) return;
+
+  try {
+    await publishKind24134(ndk, { projectId, eIds: [eventId] });
+  } catch (error) {
+    console.warn("Failed to publish stop request:", error);
+  }
+}
+
+/**
+ * Simple function to stop a conversation's operations
+ */
+export async function stopConversation(
+  ndk: NDK,
+  projectId: string,
+  conversationRootId: string,
+): Promise<void> {
+  if (!ndk || !projectId || !conversationRootId) return;
+
+  try {
+    await publishKind24134(ndk, { projectId, eIds: [conversationRootId] });
+  } catch (error) {
+    console.warn("Failed to publish stop request:", error);
+  }
 }

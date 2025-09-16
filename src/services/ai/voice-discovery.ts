@@ -1,3 +1,5 @@
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+
 export type VoiceProvider = "openai" | "elevenlabs";
 
 export interface Voice {
@@ -143,6 +145,30 @@ export class VoiceDiscovery {
     }
   }
 
+  // Stream voice with progressive chunks for real-time playback
+  async streamVoice(
+    provider: VoiceProvider,
+    voiceId: string,
+    text: string,
+    apiKey: string,
+    onChunk?: (chunk: Uint8Array) => void,
+  ): Promise<Blob> {
+    switch (provider) {
+      case "openai":
+        // OpenAI doesn't support streaming in the same way, return full blob
+        const blob = await this.previewOpenAIVoice(voiceId, text, apiKey);
+        if (onChunk) {
+          const arrayBuffer = await blob.arrayBuffer();
+          onChunk(new Uint8Array(arrayBuffer));
+        }
+        return blob;
+      case "elevenlabs":
+        return this.streamElevenLabsVoice(voiceId, text, apiKey, onChunk);
+      default:
+        throw new Error(`Voice streaming not implemented for ${provider}`);
+    }
+  }
+
   private async previewOpenAIVoice(
     voiceId: string,
     text: string,
@@ -173,30 +199,91 @@ export class VoiceDiscovery {
     text: string,
     apiKey: string,
   ): Promise<Blob> {
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": apiKey,
-          "Content-Type": "application/json",
+    const client = new ElevenLabsClient({
+      apiKey: apiKey,
+    });
+
+    try {
+      // Use stream method with turbo model for lower latency
+      const audioStream = await client.textToSpeech.stream(voiceId, {
+        text: text,
+        model_id: "eleven_turbo_v2_5",
+        optimize_streaming_latency: 2,
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.5,
         },
-        body: JSON.stringify({
-          text,
-          model_id: "eleven_monolingual_v1",
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.5,
-          },
-        }),
-      },
-    );
+      });
 
-    if (!response.ok) {
-      throw new Error(`ElevenLabs TTS error: ${response.statusText}`);
+      // The stream method returns a ReadableStream directly
+      if (!audioStream) {
+        throw new Error("No audio stream received");
+      }
+
+      // Convert stream to Blob
+      const chunks: Uint8Array[] = [];
+      const reader = audioStream.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+
+      return new Blob(chunks, { type: 'audio/mpeg' });
+    } catch (error) {
+      throw new Error(`ElevenLabs TTS error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
 
-    return response.blob();
+  // New method for true streaming with progressive playback
+  async streamElevenLabsVoice(
+    voiceId: string,
+    text: string,
+    apiKey: string,
+    onChunk?: (chunk: Uint8Array) => void,
+  ): Promise<Blob> {
+    const client = new ElevenLabsClient({
+      apiKey: apiKey,
+    });
+
+    try {
+      // Use the streaming method from the SDK
+      const audioStream = await client.textToSpeech.stream(voiceId, {
+        text: text,
+        model_id: "eleven_turbo_v2_5",
+        optimize_streaming_latency: 3,
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.5,
+        },
+      });
+
+      // The stream method returns a ReadableStream directly
+      if (!audioStream) {
+        throw new Error("No audio stream received");
+      }
+
+      const chunks: Uint8Array[] = [];
+      const reader = audioStream.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        chunks.push(value);
+
+        // Call the callback with each chunk for progressive playback
+        if (onChunk) {
+          onChunk(value);
+        }
+      }
+
+      // Return the complete audio blob
+      return new Blob(chunks, { type: 'audio/mpeg' });
+    } catch (error) {
+      throw new Error(`ElevenLabs streaming error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   clearCache() {

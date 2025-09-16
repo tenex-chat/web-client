@@ -3,6 +3,7 @@ import { useAtomValue } from "jotai";
 import {
   activeProviderAtom,
   voiceSettingsAtom,
+  sttSettingsAtom,
   openAIApiKeyAtom,
 } from "@/stores/ai-config-store";
 import { aiService } from "@/services/ai/ai-service";
@@ -11,6 +12,7 @@ import { toast } from "sonner";
 export function useAI() {
   const activeProvider = useAtomValue(activeProviderAtom);
   const voiceSettings = useAtomValue(voiceSettingsAtom);
+  const sttSettings = useAtomValue(sttSettingsAtom);
   const openAIApiKey = useAtomValue(openAIApiKeyAtom);
 
   // Update AI service when provider changes
@@ -33,18 +35,34 @@ export function useAI() {
 
   const transcribe = useCallback(
     async (audio: Blob): Promise<string> => {
-      if (!openAIApiKey) {
-        throw new Error("OpenAI API key required for speech-to-text");
+      const provider = sttSettings.provider;
+      
+      // Check API key requirements based on provider
+      if (provider === "whisper" && !openAIApiKey) {
+        throw new Error("OpenAI API key required for Whisper speech-to-text");
+      }
+      
+      if (provider === "elevenlabs") {
+        // Use the shared ElevenLabs API key from voice settings
+        if (!voiceSettings.apiKey) {
+          throw new Error("ElevenLabs API key required for ElevenLabs speech-to-text");
+        }
       }
 
       try {
-        return await aiService.transcribe(audio, openAIApiKey);
+        const apiKey = provider === "whisper" 
+          ? openAIApiKey 
+          : provider === "elevenlabs" 
+            ? voiceSettings.apiKey
+            : undefined;
+            
+        return await aiService.transcribe(audio, provider, apiKey);
       } catch (error) {
         console.error("Transcription error:", error);
         throw error;
       }
     },
-    [openAIApiKey],
+    [sttSettings.provider, openAIApiKey, voiceSettings.apiKey],
   );
 
   const speak = useCallback(
@@ -83,6 +101,64 @@ export function useAI() {
     [voiceSettings, openAIApiKey],
   );
 
+  const streamSpeak = useCallback(
+    async (
+      text: string,
+      onChunk?: (chunk: Uint8Array) => void,
+    ): Promise<Blob> => {
+      if (!voiceSettings.enabled) {
+        throw new Error("Text-to-speech is disabled");
+      }
+
+      const apiKey =
+        voiceSettings.provider === "openai"
+          ? openAIApiKey
+          : voiceSettings.apiKey;
+
+      if (!apiKey) {
+        throw new Error(
+          `${voiceSettings.provider} API key required for text-to-speech`,
+        );
+      }
+
+      if (!voiceSettings.voiceId) {
+        throw new Error("No voice selected");
+      }
+
+      try {
+        return await aiService.streamSpeak(
+          text,
+          voiceSettings.voiceId,
+          voiceSettings.provider,
+          apiKey,
+          onChunk,
+        );
+      } catch (error) {
+        console.error("Streaming TTS error:", error);
+        throw error;
+      }
+    },
+    [voiceSettings, openAIApiKey],
+  );
+
+  // Determine if STT is available based on provider
+  const hasSTT = (() => {
+    if (!sttSettings.enabled) return false;
+    
+    switch (sttSettings.provider) {
+      case "whisper":
+        return !!openAIApiKey;
+      case "elevenlabs":
+        // Use the shared ElevenLabs API key
+        return !!voiceSettings.apiKey;
+      case "built-in-chrome":
+        // Check if Web Speech API is available
+        return !!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition;
+      default:
+        return false;
+    }
+  })();
+
   return {
     // Text operations
     cleanupText,
@@ -90,14 +166,16 @@ export function useAI() {
     // Voice operations
     transcribe,
     speak,
+    streamSpeak,
 
     // Configuration state
     hasProvider: !!activeProvider,
     hasTTS: voiceSettings.enabled && !!voiceSettings.voiceId,
-    hasSTT: !!openAIApiKey,
+    hasSTT,
 
     // Settings
     voiceSettings,
+    sttSettings,
     activeProvider,
   };
 }

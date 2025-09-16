@@ -15,6 +15,7 @@ export interface AIConfig {
   };
   sttSettings: {
     enabled: boolean;
+    provider: "whisper" | "elevenlabs" | "built-in-chrome";
     model: string;
   };
 }
@@ -31,6 +32,7 @@ const defaultConfig: AIConfig = {
   },
   sttSettings: {
     enabled: false,
+    provider: "whisper",
     model: "whisper-1",
   },
 };

@@ -43,7 +43,7 @@ export const ThreadList = memo(function ThreadList({
       .filter((thread) => thread.created_at !== undefined)
       .sort((a, b) => {
         // TypeScript now knows both have created_at
-        return b.created_at - a.created_at;
+        return (b.created_at || 0) - (a.created_at || 0);
       });
   }, [threadEvents]);
 

@@ -19,6 +19,8 @@ import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { NDKMCPTool } from "@/lib/ndk-events/NDKMCPTool";
 import { NDKAgentLesson } from "@/lib/ndk-events/NDKAgentLesson";
+import { GlobalTTSPlayer } from "@/components/tts/GlobalTTSPlayer";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -64,19 +66,22 @@ function RootComponent() {
       />
       <JotaiProvider>
         <ThemeProvider>
-          <ErrorBoundary>
-            <div className="min-h-screen bg-background">
-              <Outlet />
-              <Toaster
-                richColors
-                position="top-center"
-                toastOptions={{
-                  className: "font-sans",
-                }}
-              />
-              <ShadcnToaster />
-            </div>
-          </ErrorBoundary>
+          <TooltipProvider>
+            <ErrorBoundary>
+              <div className="min-h-screen bg-background">
+                <Outlet />
+                <GlobalTTSPlayer />
+                <Toaster
+                  richColors
+                  position="top-center"
+                  toastOptions={{
+                    className: "font-sans",
+                  }}
+                />
+                <ShadcnToaster />
+              </div>
+            </ErrorBoundary>
+          </TooltipProvider>
         </ThemeProvider>
       </JotaiProvider>
     </>

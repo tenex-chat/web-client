@@ -208,6 +208,22 @@
   }
 }
 
+/* Chat message word-breaking fix */
+.streamdown-wrapper,
+.streamdown-wrapper * {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Ensure code blocks and pre elements also break properly */
+.streamdown-wrapper pre,
+.streamdown-wrapper code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
 /* Mobile-specific overrides */
 @media (max-width: 768px) {
   /* Ensure minimum touch target sizes for interactive elements */

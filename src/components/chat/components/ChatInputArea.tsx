@@ -31,6 +31,9 @@ import { toast } from "sonner";
 import { useProjectStatus } from "@/stores/projects";
 import { findNostrEntities, type NostrEntity } from "@/lib/utils/nostrEntityParser";
 import { EventPreview } from "./EventPreview";
+import { BrainstormModeButton } from "./BrainstormModeButton";
+import { useBrainstormMode } from "@/stores/brainstorm-mode-store";
+import { isBrainstormMessage, getBrainstormModerator, getBrainstormParticipants } from "@/lib/utils/brainstorm";
 
 interface ChatInputAreaProps {
   project?: NDKProject | null;
@@ -42,6 +45,9 @@ interface ChatInputAreaProps {
   showVoiceButton?: boolean;
   className?: string;
   onThreadCreated?: (thread: NDKEvent) => void;
+  textareaRef?: React.RefObject<HTMLTextAreaElement>;
+  initialContent?: string;
+  onContentUsed?: () => void;
 }
 
 interface ImageUpload {
@@ -68,6 +74,9 @@ export const ChatInputArea = memo(function ChatInputArea({
   showVoiceButton = true,
   className,
   onThreadCreated,
+  textareaRef: externalTextareaRef,
+  initialContent = "",
+  onContentUsed,
 }: ChatInputAreaProps) {
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
@@ -87,8 +96,19 @@ export const ChatInputArea = memo(function ChatInputArea({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quotedEvents, setQuotedEvents] = useState<NostrEntity[]>([]);
 
+  // Handle initial content when it changes
+  useEffect(() => {
+    if (initialContent) {
+      setMessageInput(initialContent);
+      if (onContentUsed) {
+        onContentUsed();
+      }
+    }
+  }, [initialContent]);
+
   // Refs
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const internalTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = externalTextareaRef || internalTextareaRef;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Draft persistence
@@ -145,6 +165,17 @@ export const ChatInputArea = memo(function ChatInputArea({
     setSelectedAgent(null);
   }, [rootEvent?.id]);
 
+  // Get brainstorm mode settings
+  const { getCurrentSession, clearBrainstormSession } = useBrainstormMode();
+  const brainstormSession = getCurrentSession();
+
+  // Clear brainstorm session when thread changes or messages exist
+  useEffect(() => {
+    if (rootEvent || (recentMessages && recentMessages.length > 0)) {
+      clearBrainstormSession();
+    }
+  }, [rootEvent?.id, recentMessages?.length, clearBrainstormSession]);
+
   // When replying, automatically set the selected agent to the author of the message being replied to
   useEffect(() => {
     if (replyingTo) {
@@ -200,7 +231,11 @@ export const ChatInputArea = memo(function ChatInputArea({
     return matches;
   }, [messageInput, onlineAgents]);
 
-  const showAgentSelector = mentionedAgents.length === 0 && !replyingTo;
+  // Check if we're in a brainstorm conversation
+  const isInBrainstormConversation = brainstormSession?.enabled || 
+    (rootEvent && isBrainstormMessage(rootEvent));
+  
+  const showAgentSelector = mentionedAgents.length === 0 && !replyingTo && !isInBrainstormConversation;
 
   // Determine the default agent based on p-tag logic (same as AgentSelector)
   const defaultAgent = React.useMemo(() => {
@@ -306,7 +341,23 @@ export const ChatInputArea = memo(function ChatInputArea({
         newThreadEvent.tags.push(["mode", "voice"]);
       }
 
-      await newThreadEvent.sign();
+      // Handle brainstorm mode encoding
+      if (brainstormSession?.enabled && brainstormSession.moderatorPubkey) {
+        // Add brainstorm mode tags
+        newThreadEvent.tags.push(["mode", "brainstorm"]);
+        newThreadEvent.tags.push(["t", "brainstorm"]);
+        
+        // Clear existing p-tags and add only the moderator with p-tag
+        newThreadEvent.tags = newThreadEvent.tags.filter(tag => tag[0] !== "p");
+        newThreadEvent.tags.push(["p", brainstormSession.moderatorPubkey]);
+        
+        // Add participants as ["participant", "<pubkey>"] tags without p-tagging
+        brainstormSession.participantPubkeys.forEach(participantPubkey => {
+          newThreadEvent.tags.push(["participant", participantPubkey]);
+        });
+      }
+
+      await newThreadEvent.sign(undefined, { pTags: false });
       await newThreadEvent.publish();
 
       if (onThreadCreated) {
@@ -324,6 +375,8 @@ export const ChatInputArea = memo(function ChatInputArea({
       selectedAgent,
       autoTTS,
       onThreadCreated,
+      brainstormSession,
+      quotedEvents,
     ],
   );
 
@@ -392,7 +445,21 @@ export const ChatInputArea = memo(function ChatInputArea({
         replyEvent.tags.push(["mode", "voice"]);
       }
 
-      await replyEvent.sign();
+      // In brainstorm conversations, always p-tag the moderator
+      if (rootEvent && isBrainstormMessage(rootEvent)) {
+        const moderatorPubkey = rootEvent.tagValue("p");
+        if (moderatorPubkey) {
+          // Check if moderator is not already p-tagged
+          const hasModeratorPTag = replyEvent.tags.some(
+            tag => tag[0] === "p" && tag[1] === moderatorPubkey
+          );
+          if (!hasModeratorPTag) {
+            replyEvent.tags.push(["p", moderatorPubkey]);
+          }
+        }
+      }
+      
+      await replyEvent.sign(undefined, { pTags: false });
       await replyEvent.publish();
 
       return replyEvent;
@@ -447,6 +514,7 @@ export const ChatInputArea = memo(function ChatInputArea({
       clearDraft();
       setSelectedAgent(null);
       setQuotedEvents([]);
+      clearBrainstormSession(); // Clear brainstorm mode after sending
 
       if (replyingTo) {
         clearReply();
@@ -569,7 +637,7 @@ export const ChatInputArea = memo(function ChatInputArea({
   return (
     <div
       className={cn(
-        "flex-shrink-0 absolute bottom-0 left-0 right-0",
+        "flex-shrink-0 absolute bottom-0 left-0 right-0 z-20",
         isMobile ? "p-3 pb-safe" : "p-4",
         className,
       )}
@@ -577,7 +645,7 @@ export const ChatInputArea = memo(function ChatInputArea({
     >
       <div
         className={cn(
-          "flex flex-col w-full rounded-2xl",
+          "flex flex-col w-full rounded-2xl relative z-20",
           "bg-background/80 backdrop-blur-xl",
           "border border-border/50",
           "shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)]",
@@ -752,6 +820,7 @@ export const ChatInputArea = memo(function ChatInputArea({
           />
 
           <Textarea
+            id="chat-input-field"
             ref={textareaRef}
             value={messageInput}
             onChange={(e) => mentionProps.handleInputChange(e.target.value)}
@@ -783,7 +852,118 @@ export const ChatInputArea = memo(function ChatInputArea({
           >
             {onlineAgents &&
               onlineAgents.length > 0 &&
-              (showAgentSelector ? (
+              (isInBrainstormConversation ? (
+                // In brainstorm mode, show the participants or moderator info
+                <div className="flex items-center gap-1.5">
+                  {brainstormSession?.enabled ? (
+                    // New brainstorm session - show configured participants
+                    <>
+                      {/* Show moderator */}
+                      {brainstormSession.moderatorPubkey && (
+                        <div
+                          className={cn(
+                            "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
+                            "bg-purple-600/20 border border-purple-600/30",
+                            "text-sm",
+                          )}
+                        >
+                          <NostrProfile
+                            pubkey={brainstormSession.moderatorPubkey}
+                            variant="avatar"
+                            size="xs"
+                            className="flex-shrink-0"
+                          />
+                          <NostrProfile
+                            pubkey={brainstormSession.moderatorPubkey}
+                            variant="name"
+                            className="text-xs font-medium"
+                          />
+                          <span className="text-xs text-purple-600 font-medium">(mod)</span>
+                        </div>
+                      )}
+                      {/* Show participants */}
+                      {brainstormSession.participantPubkeys.map((participantPubkey) => {
+                        const agent = onlineAgents.find(a => a.pubkey === participantPubkey);
+                        if (!agent) return null;
+                        return (
+                          <div
+                            key={participantPubkey}
+                            className={cn(
+                              "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
+                              "bg-accent/50 border border-border/50",
+                              "text-sm",
+                            )}
+                          >
+                            <NostrProfile
+                              pubkey={participantPubkey}
+                              variant="avatar"
+                              size="xs"
+                              fallback={agent.slug}
+                              className="flex-shrink-0"
+                            />
+                            <span className="text-xs font-medium">{agent.slug}</span>
+                          </div>
+                        );
+                      })}
+                    </>
+                  ) : rootEvent && isBrainstormMessage(rootEvent) ? (
+                    // Replying to brainstorm conversation - show all participants
+                    <>
+                      {/* Show moderator */}
+                      {getBrainstormModerator(rootEvent) && (
+                        <div
+                          className={cn(
+                            "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
+                            "bg-purple-600/20 border border-purple-600/30",
+                            "text-sm",
+                          )}
+                        >
+                          <NostrProfile
+                            pubkey={getBrainstormModerator(rootEvent)!}
+                            variant="avatar"
+                            size="xs"
+                            className="flex-shrink-0"
+                          />
+                          <NostrProfile
+                            pubkey={getBrainstormModerator(rootEvent)!}
+                            variant="name"
+                            className="text-xs font-medium"
+                          />
+                          <span className="text-xs text-purple-600 font-medium">(mod)</span>
+                        </div>
+                      )}
+                      {/* Show participants */}
+                      {getBrainstormParticipants(rootEvent).map((participantPubkey) => {
+                        const agent = onlineAgents.find(a => a.pubkey === participantPubkey);
+                        return (
+                          <div
+                            key={participantPubkey}
+                            className={cn(
+                              "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
+                              "bg-accent/50 border border-border/50",
+                              "text-sm",
+                            )}
+                          >
+                            <NostrProfile
+                              pubkey={participantPubkey}
+                              variant="avatar"
+                              size="xs"
+                              fallback={agent?.slug}
+                              className="flex-shrink-0"
+                            />
+                            <NostrProfile
+                              pubkey={participantPubkey}
+                              variant="name"
+                              fallback={agent?.slug}
+                              className="text-xs font-medium"
+                            />
+                          </div>
+                        );
+                      })}
+                    </>
+                  ) : null}
+                </div>
+              ) : showAgentSelector ? (
                 <>
                   <AgentSelector
                     onlineAgents={onlineAgents}
@@ -888,7 +1068,15 @@ export const ChatInputArea = memo(function ChatInputArea({
             )}
           </div>
 
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            {/* Brainstorm Mode Button - show for new conversations, hide only after sending */}
+            {!rootEvent && (!recentMessages || recentMessages.length === 0) && (
+              <BrainstormModeButton
+                onlineAgents={onlineAgents}
+                disabled={disabled || isSubmitting}
+              />
+            )}
+
             <input
               ref={fileInputRef}
               type="file"

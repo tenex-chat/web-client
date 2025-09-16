@@ -46,23 +46,25 @@ interface FloatingWindowProps {
   onMinimize: () => void;
   onFocus: () => void;
   onAttach?: (content: DrawerContent) => void;
+  onQuote?: (quotedText: string) => void;
+  onContentUpdate?: (content: DrawerContent) => void;
   isMinimized: boolean;
   zIndex: number;
   initialPosition?: { x: number; y: number };
 }
 
 export function FloatingWindow({
-  content: initialContent,
+  content,
   onClose,
   onMinimize,
   onFocus,
   onAttach,
+  onQuote,
+  onContentUpdate,
   isMinimized,
   zIndex,
   initialPosition = { x: 100, y: 100 },
 }: FloatingWindowProps) {
-  // Store the content locally to prevent external updates
-  const [content] = useState(initialContent);
 
   const [isMaximized, setIsMaximized] = useState(false);
   // Use portrait aspect ratio for conversations (600x800), call gets a compact size (400x600), landscape for others (800x600)
@@ -151,11 +153,27 @@ export function FloatingWindow({
   const renderContent = () => {
     switch (content.type) {
       case "conversations":
-        if (content.item === "new" || content.data) {
+        if (content.item === "new" || content.data || content.item instanceof NDKEvent) {
+          // Get the root event from either content.item (NDKEvent) or content.data.event
+          const rootEvent = content.item instanceof NDKEvent
+            ? content.item
+            : content.data?.event;
+
           return (
             <ChatInterface
               project={content.project}
-              rootEvent={content.data}
+              rootEvent={rootEvent}
+              onQuote={onQuote}
+              onThreadCreated={(newThread) => {
+                // Update the window content when a new thread is created
+                if (newThread && onContentUpdate) {
+                  onContentUpdate({
+                    ...content,
+                    item: newThread,  // Pass the NDKEvent directly as item
+                    data: { event: newThread },  // Keep data structure consistent
+                  });
+                }
+              }}
               className="h-full w-full"
             />
           );
@@ -212,14 +230,16 @@ export function FloatingWindow({
         return (
           <CallView
             project={content.project}
-            onClose={() => {
+            extraTags={content.data?.rootEvent ? [["E", content.data.rootEvent.id]] : undefined}
+            rootEvent={content.data?.rootEvent}
+            isEmbedded={true}
+            onClose={(rootEvent) => {
               onClose();
               // Call the onCallEnd callback if provided
               if (content.data?.onCallEnd) {
-                content.data.onCallEnd(content.data.rootEvent);
+                content.data.onCallEnd(rootEvent);
               }
             }}
-            extraTags={content.data?.extraTags}
           />
         );
     }
@@ -248,7 +268,8 @@ export function FloatingWindow({
         }
       }}
       onResize={(e, direction, ref) => {
-        if (isShiftPressed) {
+        // Only update scale if we started resizing with shift pressed
+        if (isScaling && isShiftPressed) {
           // Calculate scale based on window size vs original size
           const newWidth = parseInt(ref.style.width);
           const newHeight = parseInt(ref.style.height);
@@ -272,13 +293,8 @@ export function FloatingWindow({
             height: newHeight,
           });
           setPosition(position);
-
-          // Only update scale when shift was pressed
-          // Scale persists through normal resizes
-          if (isShiftPressed) {
-            // Scale was already set in onResize
-          }
         }
+        // Always reset scaling state when resize ends
         setIsScaling(false);
       }}
       minWidth={400}

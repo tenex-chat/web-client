@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HashtagEventsList Fix Test</title>
+</head>
+<body>
+    <h1>HashtagEventsList Component Fix</h1>
+    <h2>Changes Made to Fix the useRef Error:</h2>
+    
+    <h3>1. Updated React Imports</h3>
+    <p>Changed all React imports to use <code>import * as React from 'react'</code> to ensure consistent React context across all components.</p>
+    
+    <h3>2. Files Modified:</h3>
+    <ul>
+        <li><strong>/src/components/ui/virtual-list.tsx</strong>
+            <ul>
+                <li>Changed import from <code>import React, { useRef, ReactNode } from "react"</code> to <code>import * as React from "react"</code></li>
+                <li>Updated <code>useRef</code> to <code>React.useRef</code></li>
+                <li>Updated <code>ReactNode</code> to <code>React.ReactNode</code></li>
+            </ul>
+        </li>
+        <li><strong>/src/components/hashtags/HashtagEventsList.tsx</strong>
+            <ul>
+                <li>Changed import from <code>import React, { useMemo } from 'react'</code> to <code>import * as React from 'react'</code></li>
+                <li>Updated all <code>useMemo</code> calls to <code>React.useMemo</code></li>
+                <li>Fixed props passed to VirtualList (changed <code>itemHeight</code> to <code>estimateSize</code>)</li>
+                <li>Removed unsupported <code>getItemKey</code> prop</li>
+            </ul>
+        </li>
+        <li><strong>/src/components/hashtags/HashtagEventItem.tsx</strong>
+            <ul>
+                <li>Changed import from <code>import React, { memo, useMemo } from 'react'</code> to <code>import * as React from 'react'</code></li>
+                <li>Updated all <code>useMemo</code> calls to <code>React.useMemo</code></li>
+                <li>Updated <code>memo</code> to <code>React.memo</code></li>
+            </ul>
+        </li>
+    </ul>
+    
+    <h3>3. Root Cause</h3>
+    <p>The error was caused by:</p>
+    <ul>
+        <li>Inconsistent React imports across components causing React context to be null in some cases</li>
+        <li>Incorrect props being passed to VirtualList component</li>
+        <li>Potential React version mismatch (project uses React 19 while some dependencies expect React 18)</li>
+    </ul>
+    
+    <h3>4. Solution</h3>
+    <p>By using <code>import * as React</code> consistently and referencing hooks as <code>React.useRef</code>, <code>React.useMemo</code>, etc., we ensure that React is always available in the correct context, preventing the "Cannot read properties of null" error.</p>
+    
+    <h3>5. Testing</h3>
+    <p>The build now completes successfully without errors. To verify the fix works in runtime:</p>
+    <ol>
+        <li>Navigate to http://localhost:3003/projects</li>
+        <li>Sign in using the test key</li>
+        <li>Click on the 'TW TENEX web' project</li>
+        <li>Click the hashtag icon button</li>
+        <li>The HashtagEventsList should render without errors</li>
+    </ol>
+</body>
+</html>

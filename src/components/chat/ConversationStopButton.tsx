@@ -1,11 +1,12 @@
 import { StopCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useConversationOperationStatus } from "@/hooks/useConversationOperationStatus";
-import { useStopOperations } from "@/hooks/useStopOperations";
+import { useEventOperationStatus } from "@/hooks/useEventOperationStatus";
+import { stopConversation } from "@/lib/ndk-events/operations";
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
 
 interface ConversationStopButtonProps {
-  conversationRootId?: string;
-  projectId?: string;
+  conversationRootId: string;
+  projectId: string;
   size?: "sm" | "default" | "icon";
 }
 
@@ -18,18 +19,18 @@ export function ConversationStopButton({
   projectId,
   size = "icon",
 }: ConversationStopButtonProps) {
-  const { stopConversation } = useStopOperations(projectId);
-  const { hasActiveOperations } = useConversationOperationStatus(
+  const { ndk } = useNDK();
+  const { hasActiveOperations } = useEventOperationStatus(
     conversationRootId,
     projectId,
   );
 
-  if (!conversationRootId) return null;
-
   if (!hasActiveOperations) return null;
 
   const handleStop = () => {
-    stopConversation(conversationRootId);
+    if (ndk) {
+      stopConversation(ndk, projectId, conversationRootId);
+    }
   };
 
   return (

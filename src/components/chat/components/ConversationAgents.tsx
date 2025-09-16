@@ -149,7 +149,7 @@ function AgentAvatar({
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
       <PopoverTrigger asChild>
         <button
-          className="group hover:opacity-80 transition-opacity"
+          className="group hover:opacity-80 transition-opacity relative z-10"
           title={displayName}
         >
           <Avatar
@@ -166,7 +166,7 @@ function AgentAvatar({
           </Avatar>
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-80" side="bottom" align="end">
+      <PopoverContent className="w-80 z-50" side="bottom" align="end">
         <div className="space-y-4">
           <div>
             <h4 className="text-sm font-semibold">
@@ -262,7 +262,7 @@ export function ConversationAgents({
 }: ConversationAgentsProps) {
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
-  useProfileValue(user?.pubkey || "");
+  useProfileValue(user?.pubkey);
   const onlineAgents = useProjectOnlineAgents(project.dTag);
   const availableModels = useProjectOnlineModels(project.dTag);
   const availableTools = useProjectAvailableTools(project.dTag);
@@ -372,8 +372,8 @@ export function ConversationAgents({
     <div
       className={
         isMobile
-          ? "flex items-center -space-x-1"
-          : "flex flex-wrap items-center gap-x-1.5 gap-y-1"
+          ? "flex items-center -space-x-1 relative"
+          : "flex flex-wrap items-center gap-x-1.5 gap-y-1 relative"
       }
     >
       {/* Show agents with popover for model selection */}

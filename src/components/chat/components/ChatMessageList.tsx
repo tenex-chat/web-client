@@ -9,19 +9,19 @@ import { useIsMobile } from "@/hooks/useMediaQuery";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
-import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import type { Message as MessageType } from "@/components/chat/hooks/useChatMessages";
 import { EVENT_KINDS } from "@/lib/constants";
 import { useAI } from "@/hooks/useAI";
 import { extractTTSContent } from "@/lib/utils/extractTTSContent";
 import { isAudioEvent } from "@/lib/utils/audioEvents";
-import { useAtomValue } from "jotai";
-import { expandedRepliesAtom } from "@/components/chat/atoms/expandedReplies";
 import { useReply } from "@/components/chat/contexts/ReplyContext";
+import { useThreadViewModeStore } from "@/stores/thread-view-mode-store";
 
 interface ChatMessageListProps {
   messages: MessageType[];
   project: NDKProject | null | undefined;
+  rootEvent?: NDKEvent | null;
   scrollAreaRef: React.RefObject<HTMLDivElement>;
   showScrollToBottom: boolean;
   unreadCount: number;
@@ -32,6 +32,7 @@ interface ChatMessageListProps {
   autoTTS?: boolean;
   currentUserPubkey?: string;
   onNavigate?: (event: NDKEvent) => void;
+  onQuote?: (quotedText: string) => void;
 }
 
 /**
@@ -41,6 +42,7 @@ interface ChatMessageListProps {
 export const ChatMessageList = memo(function ChatMessageList({
   messages,
   project,
+  rootEvent,
   scrollAreaRef,
   showScrollToBottom,
   unreadCount,
@@ -51,13 +53,14 @@ export const ChatMessageList = memo(function ChatMessageList({
   autoTTS = false,
   currentUserPubkey,
   onNavigate,
+  onQuote,
 }: ChatMessageListProps) {
   const isMobile = useIsMobile();
   const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(
     null,
   );
-  const expandedReplies = useAtomValue(expandedRepliesAtom);
   const { setReplyingTo } = useReply();
+  const { mode: viewMode } = useThreadViewModeStore();
 
   // TTS configuration
   const { speak, hasTTS } = useAI();
@@ -108,33 +111,60 @@ export const ChatMessageList = memo(function ChatMessageList({
     messages,
   ]);
 
-  // Calculate consecutive messages and collect main thread event IDs
-  const { messagesWithConsecutive, mainThreadEventIds } = useMemo(() => {
+  // Calculate consecutive messages
+  const { processedMessages, mainThreadEventIds } = useMemo(() => {
     const eventIds = new Set<string>();
-    const withConsecutive = messages.map((message, index) => {
+    const items: Array<{
+      message: MessageType;
+      isConsecutive: boolean;
+    }> = [];
+
+    messages.forEach((message, index) => {
       eventIds.add(message.event.id);
 
-      // Don't treat as consecutive if previous message has expanded replies
-      const previousMessageHasExpandedReplies =
-        index > 0 && expandedReplies.has(messages[index - 1].event.id);
+      // Skip metadata events for consecutive check
+      if (message.event.kind === EVENT_KINDS.CONVERSATION_METADATA) {
+        items.push({
+          message,
+          isConsecutive: false
+        });
+        return;
+      }
 
-      const isConsecutive =
-        index > 0 &&
+      // Check if this message has p-tags (breaks consecutive)
+      const hasPTags = message.event.tags?.some(tag => tag[0] === 'p') || false;
+
+      // Check if consecutive (same author as previous, no p-tags on either)
+      const isConsecutive = index > 0 &&
+        !hasPTags &&
         messages[index - 1].event.pubkey === message.event.pubkey &&
         messages[index - 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-        message.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-        !previousMessageHasExpandedReplies;
+        !messages[index - 1].event.tags?.some(tag => tag[0] === 'p');
 
-      return { message, isConsecutive };
+      items.push({
+        message,
+        isConsecutive
+      });
     });
 
-    return { messagesWithConsecutive: withConsecutive, mainThreadEventIds: eventIds };
-  }, [messages, expandedReplies]);
+    return { processedMessages: items, mainThreadEventIds: eventIds };
+  }, [messages]);
 
   const handleReply = useCallback((event: NDKEvent) => {
     setReplyingTo(event);
     onReplyFocus();
   }, [setReplyingTo, onReplyFocus]);
+
+  const handleQuote = useCallback((event: NDKEvent) => {
+    // Get the bech32 encoded event identifier
+    const encodedEvent = event.encode();
+    const nostrIdentifier = `nostr:${encodedEvent}`;
+    
+    // Call the onQuote handler with the nostr: identifier
+    if (onQuote) {
+      onQuote(nostrIdentifier);
+    }
+  }, [onQuote]);
 
   return (
     <div className="flex-1 overflow-hidden relative">
@@ -150,27 +180,34 @@ export const ChatMessageList = memo(function ChatMessageList({
         >
           <div className={isMobile ? "py-0 pb-48" : "py-2 pb-48"}>
             <div className="divide-y divide-transparent">
-              {messagesWithConsecutive.map(({ message, isConsecutive }) => (
+              {processedMessages.map(({ message, isConsecutive }) => (
                 <div key={message.id}>
                   <div className="relative">
                     <Message
                       event={message.event}
                       project={project}
+                      isRootEvent={rootEvent?.id === message.event.id}
                       isConsecutive={isConsecutive}
                       onReply={handleReply}
+                      onQuote={handleQuote}
                       onTimeClick={onNavigate}
                       onConversationNavigate={onNavigate}
+                      message={message}
                     />
-                    <div className={cn(isMobile ? "ml-9" : "ml-12")}>
-                      <MessageThread
-                        parentEvent={message.event}
-                        project={project}
-                        onReply={handleReply}
-                        onTimeClick={onNavigate}
-                        onConversationNavigate={onNavigate}
-                        mainThreadEventIds={mainThreadEventIds}
-                      />
-                    </div>
+                    {/* Only show message thread UI in threaded mode */}
+                    {viewMode === 'threaded' && (
+                      <div className={cn(isMobile ? "ml-9" : "ml-12")}>
+                        <MessageThread
+                          parentEvent={message.event}
+                          project={project}
+                          onReply={handleReply}
+                          onQuote={handleQuote}
+                          onTimeClick={onNavigate}
+                          onConversationNavigate={onNavigate}
+                          mainThreadEventIds={mainThreadEventIds}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

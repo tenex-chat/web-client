@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Component Event Test</title>
+</head>
+<body>
+    <h1>Test React Component Event</h1>
+    <p>This is a test to verify the React component rendering implementation.</p>
+    
+    <h2>Example Event Structure (kind: 1111)</h2>
+    <pre>
+{
+  "kind": 1111,
+  "content": "// Example React component code (plain JavaScript)\nconst ReactComponent = React.createElement(\n  'div',\n  { className: 'greeting-card', style: { padding: '20px', border: '1px solid #ccc', borderRadius: '8px' } },\n  React.createElement('h2', null, 'Hello from Dynamic Component!'),\n  React.createElement('p', null, 'This component was loaded from a Nostr event.'),\n  React.createElement('button', { onClick: () => alert('Button clicked!') }, 'Click Me')\n);",
+  "tags": [
+    ["component", "react"],
+    ["props", "{\"theme\": \"dark\", \"userName\": \"Alice\"}"]
+  ]
+}
+    </pre>
+    
+    <h2>Component Code Format</h2>
+    <p>The component code must:</p>
+    <ul>
+        <li>Be plain JavaScript (no JSX)</li>
+        <li>Use React.createElement() calls</li>
+        <li>Define a component named `ReactComponent`</li>
+        <li>Props are passed via the ["props", "json_string"] tag</li>
+    </ul>
+    
+    <h2>Example Component Code</h2>
+    <pre>
+// Simple counter component
+const ReactComponent = function(props) {
+  const [count, setCount] = React.useState(0);
+  
+  return React.createElement(
+    'div',
+    { style: { padding: '10px', border: '1px solid #ddd' } },
+    React.createElement('h3', null, props.title || 'Counter'),
+    React.createElement('p', null, 'Count: ' + count),
+    React.createElement(
+      'button',
+      { onClick: () => setCount(count + 1) },
+      'Increment'
+    )
+  );
+};
+    </pre>
+</body>
+</html>

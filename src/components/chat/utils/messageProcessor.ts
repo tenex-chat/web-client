@@ -2,6 +2,8 @@ import { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { EVENT_KINDS } from "@/lib/constants";
 import type { Message } from "@/components/chat/hooks/useChatMessages";
 import { DeltaContentAccumulator } from "@/lib/deltaContentAccumulator";
+import { findTagValue } from "@/lib/utils/nostrUtils";
+import { type ThreadViewMode } from "@/stores/thread-view-mode-store";
 
 interface StreamingSession {
   syntheticId: string;
@@ -43,10 +45,45 @@ export function processEvent(
     return;
   }
 
+  // Skip events with tool tags (similar to typing/reasoning indicators)
+  if (event.hasTag("tool")) {
+    return;
+  }
+
   // Metadata events should always be shown as final messages
   if (event.kind === EVENT_KINDS.CONVERSATION_METADATA) {
     finalMessages.push({ id: event.id, event: event });
     return;
+  }
+
+  // Check for React component events (kind 1111 with ["component", "react"] tag)
+  if (event.kind === NDKKind.GenericReply) {
+    const componentTag = event.tags.find(tag => tag[0] === "component" && tag[1] === "react");
+    if (componentTag) {
+      // Extract component code from content
+      const componentCode = event.content;
+      
+      // Extract props from ["props", "json_string"] tag if present
+      let reactComponentProps: Record<string, any> | undefined;
+      const propsTag = findTagValue(event, "props");
+      if (propsTag) {
+        try {
+          reactComponentProps = JSON.parse(propsTag);
+        } catch (error) {
+          console.error("Failed to parse React component props:", error);
+          reactComponentProps = undefined;
+        }
+      }
+
+      finalMessages.push({
+        id: event.id,
+        event: event,
+        isReactComponent: true,
+        reactComponentCode: componentCode,
+        reactComponentProps,
+      });
+      return;
+    }
   }
 
   if (event.kind === EVENT_KINDS.STREAMING_RESPONSE) {
@@ -153,11 +190,28 @@ function isDirectReplyToRoot(
 }
 
 /**
+ * Checks if an event has a "not-chosen" tag
+ * In brainstorm mode, messages with this tag should be hidden by default
+ */
+function hasNotChosenTag(event: NDKEvent): boolean {
+  return event.tags.some(tag => tag[0] === "not-chosen");
+}
+
+/**
+ * Checks if an event references the conversation root via uppercase "E" tag
+ * Used in flattened view mode to show all events referencing the root
+ */
+function hasUppercaseETag(event: NDKEvent, rootEventId: string): boolean {
+  return event.tags.some(tag => tag[0] === "E" && tag[1] === rootEventId);
+}
+
+/**
  * Processes all events into final messages with streaming session management
  */
 export function processEventsToMessages(
   events: NDKEvent[],
   rootEvent: NDKEvent | null = null,
+  viewMode: ThreadViewMode = 'threaded',
 ): Message[] {
   const finalMessages: Message[] = [];
   const streamingSessions = new Map<string, StreamingSession>();
@@ -167,10 +221,24 @@ export function processEventsToMessages(
 
   // Process each event
   for (const event of sortedEvents) {
-    // Only include direct replies to the root event in the main conversation view
-    // Nested replies will still be accessible through their parent's reply count
-    if (isDirectReplyToRoot(event, rootEvent)) {
-      processEvent(event, streamingSessions, finalMessages);
+    // Filter out events with "not-chosen" tag in brainstorm mode
+    if (hasNotChosenTag(event)) {
+      continue;
+    }
+    
+    // In flattened mode, include all events with uppercase E tag pointing to root
+    // In threaded mode, only include direct replies (lowercase e tag)
+    if (viewMode === 'flattened') {
+      // Include root event itself or any event with uppercase E tag for conversation root
+      if (event.id === rootEvent?.id || (rootEvent && hasUppercaseETag(event, rootEvent.id))) {
+        processEvent(event, streamingSessions, finalMessages);
+      }
+    } else {
+      // Threaded mode: only include direct replies to the root event
+      // Nested replies will still be accessible through their parent's reply count
+      if (isDirectReplyToRoot(event, rootEvent)) {
+        processEvent(event, streamingSessions, finalMessages);
+      }
     }
   }
 

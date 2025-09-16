@@ -1,25 +1,25 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PhoneOff, Mic, MicOff, Bot, Send } from "lucide-react";
+import { PhoneOff, Mic, MicOff, Bot, Send, Volume2, AudioLines } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { useChromeSpeechRecognition } from "@/hooks/useChromeSpeechRecognition";
-import { useSpeechToText } from "@/hooks/useSpeechToText";
+import { useUnifiedSTT } from "@/hooks/useUnifiedSTT";
 import { useThreadManagement } from "@/components/chat/hooks/useThreadManagement";
 import { useChatMessages } from "@/components/chat/hooks/useChatMessages";
 import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
 import { useAI } from "@/hooks/useAI";
 import { extractTTSContent } from "@/lib/utils/extractTTSContent";
 import { isAudioEvent } from "@/lib/utils/audioEvents";
-import { useProfile, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { useProfileValue, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { useCallSettings } from "@/stores/call-settings-store";
 import { CallSettings } from "./CallSettings";
 import { EVENT_KINDS } from "@/lib/constants";
+import { StreamingTTSPlayer } from "@/lib/audio/streaming-tts-player";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { AgentInstance } from "@/types/agent";
 import type { Message } from "@/components/chat/hooks/useChatMessages";
@@ -28,6 +28,8 @@ interface CallViewProps {
   project: NDKProject;
   onClose: (rootEvent?: NDKEvent | null) => void;
   extraTags?: string[][];
+  rootEvent?: NDKEvent | null;
+  isEmbedded?: boolean; // Whether this is embedded in a floating window
 }
 
 // Conversation state machine
@@ -44,6 +46,7 @@ interface AgentDisplayProps {
   isTyping: boolean;
   isSpeaking: boolean;
   isTargeted: boolean;
+  isReasoning: boolean;
   onClick?: () => void;
   size?: "sm" | "md" | "lg";
 }
@@ -53,10 +56,11 @@ function AgentDisplay({
   isTyping,
   isSpeaking,
   isTargeted,
+  isReasoning,
   onClick,
   size = "md",
 }: AgentDisplayProps) {
-  const profile = useProfile(agent.pubkey);
+  const profile = useProfileValue(agent.pubkey);
   const avatarUrl = profile?.image || profile?.picture;
   const displayName =
     agent.slug || profile?.displayName || profile?.name || "Agent";
@@ -120,6 +124,34 @@ function AgentDisplay({
           </AvatarFallback>
         </Avatar>
 
+        {/* Reasoning indicator - thinking animation */}
+        {isReasoning && !isTyping && (
+          <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full p-1.5 z-20">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              className="w-4 h-4"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="w-full h-full"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 2C13.3132 2 14.6136 2.25866 15.8268 2.7612C17.0401 3.26375 18.1425 4.00035 19.0711 4.92893C19.9997 5.85752 20.7362 6.95991 21.2388 8.17317C21.7413 9.38643 22 10.6868 22 12C22 14.6522 20.9464 17.1957 19.0711 19.0711C17.1957 20.9464 14.6522 22 12 22C10.6868 22 9.38643 21.7413 8.17317 21.2388C6.95991 20.7362 5.85752 19.9997 4.92893 19.0711C3.05357 17.1957 2 14.6522 2 12C2 9.34784 3.05357 6.8043 4.92893 4.92893C6.8043 3.05357 9.34784 2 12 2ZM12 7C11.7348 7 11.4804 7.10536 11.2929 7.29289C11.1054 7.48043 11 7.73478 11 8C11 8.26522 11.1054 8.51957 11.2929 8.70711C11.4804 8.89464 11.7348 9 12 9C12.2652 9 12.5196 8.89464 12.7071 8.70711C12.8946 8.51957 13 8.26522 13 8C13 7.73478 12.8946 7.48043 12.7071 7.29289C12.5196 7.10536 12.2652 7 12 7ZM12 11C11.7348 11 11.4804 11.1054 11.2929 11.2929C11.1054 11.4804 11 11.7348 11 12C11 12.2652 11.1054 12.5196 11.2929 12.7071C11.4804 12.8946 11.7348 13 12 13C12.2652 13 12.5196 12.8946 12.7071 12.7071C12.8946 12.5196 13 12.2652 13 12C13 11.7348 12.8946 11.4804 12.7071 11.2929C12.5196 11.1054 12.2652 11 12 11ZM12 15C11.7348 15 11.4804 15.1054 11.2929 15.2929C11.1054 15.4804 11 15.7348 11 16C11 16.2652 11.1054 16.5196 11.2929 16.7071C11.4804 16.8946 11.7348 17 12 17C12.2652 17 12.5196 16.8946 12.7071 16.7071C12.8946 16.5196 13 16.2652 13 16C13 15.7348 12.8946 15.4804 12.7071 15.2929C12.5196 15.1054 12.2652 15 12 15Z"
+                  fill="white"
+                  fillOpacity="0.9"
+                />
+              </svg>
+            </motion.div>
+          </div>
+        )}
+
         {/* Typing indicator */}
         {isTyping && (
           <div className="absolute -bottom-1 -right-1 bg-black/80 rounded-full px-2 py-1 z-20">
@@ -146,7 +178,7 @@ function AgentSelector({
   agent: AgentInstance;
   onClick: () => void;
 }) {
-  const profile = useProfile(agent.pubkey);
+  const profile = useProfileValue(agent.pubkey);
   const avatarUrl = profile?.image || profile?.picture;
   const displayName =
     agent.slug || profile?.displayName || profile?.name || "Agent";
@@ -169,52 +201,45 @@ function AgentSelector({
   );
 }
 
-export function CallView({ project, onClose, extraTags }: CallViewProps) {
+export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = false }: CallViewProps) {
   const user = useNDKCurrentUser();
   const [conversationState, setConversationState] =
     useState<ConversationState>("initializing");
   const [selectedAgent, setSelectedAgent] = useState<AgentInstance | null>(
     null,
   );
-  const [localRootEvent, setLocalRootEvent] = useState<NDKEvent | null>(null);
+  const [localRootEvent, setLocalRootEvent] = useState<NDKEvent | null>(rootEvent || null);
   const [playedMessageIds, setPlayedMessageIds] = useState<Set<string>>(
     new Set(),
   );
   const [currentAgentMessage, setCurrentAgentMessage] =
     useState<Message | null>(null);
   const [callDuration, setCallDuration] = useState(0);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
   const [participatingAgents, setParticipatingAgents] = useState<Set<string>>(
     new Set(),
   );
   const [typingAgents, setTypingAgents] = useState<Set<string>>(new Set());
   const [speakingAgent, setSpeakingAgent] = useState<string | null>(null);
   const [targetAgent, setTargetAgent] = useState<AgentInstance | null>(null); // Agent to p-tag
+  const [reasoningAgents, setReasoningAgents] = useState<Set<string>>(new Set());
 
-  // Audio settings
+  // Audio settings for microphone name display
   const { audioSettings } = useCallSettings();
 
   // Refs
   const callStartTimeRef = useRef<number>(Date.now());
   const selectedAgentRef = useRef<AgentInstance | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const audioBlobPromiseRef = useRef<Promise<Blob> | null>(null);
-  const audioBlobResolveRef = useRef<((blob: Blob) => void) | null>(null);
 
   // Hooks
   const agentsRaw = useProjectOnlineAgents(project.dTag);
   const threadManagement = useThreadManagement(
     project,
-    localRootEvent,
+    rootEvent || null,
     extraTags,
     undefined,
     agentsRaw,
   );
   const messages = useChatMessages(localRootEvent);
-  const { transcribe } = useSpeechToText();
 
   // Subscribe to typing indicators
   const { events: typingEvents } = useSubscribe(
@@ -255,16 +280,39 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
   // Track participating agents from messages and auto-select target
   useEffect(() => {
     const agents = new Set<string>();
+    const reasoning = new Set<string>();
     let lastAgentPubkey: string | null = null;
+
+    // Track which agents have sent their final (non-reasoning) message
+    const agentFinalMessages = new Map<string, number>();
+    const agentReasoningMessages = new Map<string, number>();
 
     messages.forEach((msg) => {
       if (msg.event.pubkey !== user?.pubkey) {
         agents.add(msg.event.pubkey);
         lastAgentPubkey = msg.event.pubkey;
+
+        // Track reasoning vs non-reasoning messages
+        if (msg.event.hasTag("reasoning")) {
+          const lastReasoning = agentReasoningMessages.get(msg.event.pubkey) || 0;
+          agentReasoningMessages.set(msg.event.pubkey, Math.max(lastReasoning, msg.event.created_at || 0));
+        } else if (msg.event.kind === 1111) { // Only track actual messages, not typing indicators
+          const lastFinal = agentFinalMessages.get(msg.event.pubkey) || 0;
+          agentFinalMessages.set(msg.event.pubkey, Math.max(lastFinal, msg.event.created_at || 0));
+        }
+      }
+    });
+
+    // Only show reasoning animation if reasoning message is newer than final message
+    agentReasoningMessages.forEach((reasoningTime, pubkey) => {
+      const finalTime = agentFinalMessages.get(pubkey) || 0;
+      if (reasoningTime > finalTime) {
+        reasoning.add(pubkey);
       }
     });
 
     setParticipatingAgents(agents);
+    setReasoningAgents(reasoning);
 
     // Auto-target the last agent who sent a message
     if (lastAgentPubkey && !targetAgent) {
@@ -276,89 +324,86 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
   }, [messages, user?.pubkey, agentsRaw, targetAgent]);
 
   // TTS configuration from AI hook
-  const { speak, hasTTS, voiceSettings } = useAI();
+  const { streamSpeak, hasTTS, voiceSettings } = useAI();
   const [isPlaying, setIsPlaying] = useState(false);
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const streamingPlayerRef = useRef<StreamingTTSPlayer | null>(null);
 
-  // Helper to play TTS audio
+  // Helper to play TTS audio with streaming
   const playTTS = useCallback(
     async (text: string) => {
       if (!hasTTS) return;
 
       try {
         setIsPlaying(true);
-        const audioBlob = await speak(text);
-        const audioUrl = URL.createObjectURL(audioBlob);
-
-        const audio = new Audio(audioUrl);
-        currentAudioRef.current = audio;
-
-        // Apply output device if set
-        if (
-          audioSettings.outputDeviceId &&
-          typeof audio.setSinkId === "function"
-        ) {
-          await audio.setSinkId(audioSettings.outputDeviceId).catch(() => {
-            console.warn("Failed to set audio output device");
-          });
-        }
-
+        
+        // Create new streaming player
+        const player = new StreamingTTSPlayer(audioSettings.outputDeviceId || undefined);
+        streamingPlayerRef.current = player;
+        
+        // Initialize the player
+        await player.initialize();
+        
         // Set playback speed
-        audio.playbackRate = voiceSettings.speed || 1.0;
-
-        await audio.play();
-
-        audio.onended = () => {
+        player.setPlaybackRate(voiceSettings.speed || 1.0);
+        
+        // Set up ended callback
+        player.onEnded(() => {
           setIsPlaying(false);
-          currentAudioRef.current = null;
-          URL.revokeObjectURL(audioUrl);
-        };
+          streamingPlayerRef.current = null;
+        });
+
+        // Start streaming with chunk callback
+        await streamSpeak(text, async (chunk) => {
+          // Add each chunk as it arrives for immediate playback
+          await player.addChunk(chunk);
+        });
+        
+        // Signal that stream has ended
+        await player.endStream();
+        
       } catch (error) {
-        console.error("TTS playback error:", error);
+        console.error("TTS streaming playback error:", error);
         setIsPlaying(false);
-        currentAudioRef.current = null;
+        if (streamingPlayerRef.current) {
+          streamingPlayerRef.current.stop();
+          streamingPlayerRef.current = null;
+        }
       }
     },
-    [speak, hasTTS, audioSettings.outputDeviceId, voiceSettings.speed],
+    [streamSpeak, hasTTS, audioSettings.outputDeviceId, voiceSettings.speed],
   );
 
   // Helper to stop TTS
   const stopTTS = useCallback(() => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
+    if (streamingPlayerRef.current) {
+      streamingPlayerRef.current.stop();
+      streamingPlayerRef.current = null;
       setIsPlaying(false);
     }
   }, []);
 
-  // Sort agents to put project-manager first
+  // Use agents in their original order from project configuration
+  // The first agent is always the project manager by convention
   const agents = useMemo(() => {
-    const sorted = [...agentsRaw];
-    sorted.sort((a, b) => {
-      if (a.slug === "project-manager") return -1;
-      if (b.slug === "project-manager") return 1;
-      return (a.slug || "").localeCompare(b.slug || "");
-    });
-    return sorted;
+    return [...agentsRaw];
   }, [agentsRaw]);
 
-  // Chrome speech recognition for real-time transcription
-  const {
-    fullTranscript,
-    isSupported: isChromeTranscriptionSupported,
-    isListening,
-    startListening,
-    stopListening,
-    resetTranscript,
-  } = useChromeSpeechRecognition();
+  // Callback ref for silence detection to avoid circular dependency
+  const onSilenceDetectedRef = useRef<(() => void) | null>(null);
 
-  // Select project-manager by default
+  // Unified STT hook
+  const stt = useUnifiedSTT({
+    onSilenceDetected: () => onSilenceDetectedRef.current?.(),
+  });
+
+  // Select first agent (project manager) by default
   useEffect(() => {
     if (agents.length > 0 && !selectedAgent) {
-      const projectManager = agents.find((a) => a.slug === "project-manager");
-      const agentToSelect = projectManager || agents[0];
-      setSelectedAgent(agentToSelect);
-      selectedAgentRef.current = agentToSelect;
+      // First agent in the array is always the project manager
+      // This follows the convention used throughout the app
+      const projectManager = agents[0];
+      setSelectedAgent(projectManager);
+      selectedAgentRef.current = projectManager;
     }
   }, [agents, selectedAgent]);
 
@@ -428,104 +473,22 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
     [localRootEvent, threadManagement, messages, targetAgent],
   );
 
-  // Start recording audio (for browsers without Chrome Speech API)
-  const startRecording = useCallback(async () => {
-    try {
-      const constraints: MediaStreamConstraints = {
-        audio: audioSettings.inputDeviceId
-          ? {
-              deviceId: { exact: audioSettings.inputDeviceId },
-              noiseSuppression: audioSettings.noiseSuppression,
-              echoCancellation: audioSettings.echoCancellation,
-              autoGainControl: audioSettings.voiceActivityDetection,
-            }
-          : {
-              noiseSuppression: audioSettings.noiseSuppression,
-              echoCancellation: audioSettings.echoCancellation,
-              autoGainControl: audioSettings.voiceActivityDetection,
-            },
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-
-      // Apply volume adjustment
-      if (audioSettings.inputVolume < 100) {
-        const audioContext = new AudioContext();
-        const source = audioContext.createMediaStreamSource(stream);
-        const gainNode = audioContext.createGain();
-        gainNode.gain.value = audioSettings.inputVolume / 100;
-        const destination = audioContext.createMediaStreamDestination();
-        source.connect(gainNode);
-        gainNode.connect(destination);
-        streamRef.current = destination.stream;
-      }
-
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : "audio/mp4";
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-
-      // Create a promise that will resolve when recording stops
-      audioBlobPromiseRef.current = new Promise<Blob>((resolve) => {
-        audioBlobResolveRef.current = resolve;
-      });
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        setAudioBlob(blob);
-        // Resolve the promise with the blob
-        if (audioBlobResolveRef.current) {
-          audioBlobResolveRef.current(blob);
-        }
-      };
-
-      mediaRecorder.start(1000);
-      setConversationState("user_speaking");
-      setIsRecording(true);
-    } catch {
-      toast.error("Failed to access microphone");
-    }
-  }, [audioSettings]);
-
-  // Stop recording audio
-  const stopRecording = useCallback(() => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state === "recording"
-    ) {
-      mediaRecorderRef.current.stop();
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-    setIsRecording(false);
-  }, []);
-
   // Handle auto-send on silence
   const handleSilenceDetected = useCallback(() => {
-    if (fullTranscript.trim() && isListening) {
+    if (stt.transcript.trim() && stt.isListening) {
       // Auto-send after silence
-      stopListening();
-      handleSendMessage(fullTranscript);
-      resetTranscript();
+      stt.stopListening().then((finalTranscript) => {
+        if (finalTranscript?.trim()) {
+          handleSendMessage(finalTranscript);
+        }
+      });
     }
-  }, [
-    fullTranscript,
-    isListening,
-    stopListening,
-    handleSendMessage,
-    resetTranscript,
-  ]);
+  }, [stt, handleSendMessage]);
+
+  // Update the ref whenever the callback changes
+  useEffect(() => {
+    onSilenceDetectedRef.current = handleSilenceDetected;
+  }, [handleSilenceDetected]);
 
   // Track if we've initialized to prevent double initialization
   const initializedRef = useRef(false);
@@ -555,16 +518,8 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
 
         // Small delay to ensure everything is ready
         setTimeout(() => {
-          if (isChromeTranscriptionSupported) {
-            try {
-              startListening(handleSilenceDetected);
-            } catch {
-              // Fallback to MediaRecorder silently
-              startRecording();
-            }
-          } else {
-            startRecording();
-          }
+          if (!initializedRef.current) return; // Double-check we haven't been cleaned up
+          stt.startListening();
         }, 500); // Increased delay to ensure everything is ready
       } catch {
         toast.error("Microphone access required for voice calls");
@@ -577,135 +532,73 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
     if (conversationState === "initializing") {
       initializeAudio();
     }
+    // Remove stt from dependencies to prevent re-initialization
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedAgent,
     conversationState,
-    handleSilenceDetected,
-    isChromeTranscriptionSupported,
-    startListening,
-    startRecording,
   ]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount ONLY
   useEffect(() => {
     return () => {
-      // Clean up all audio resources - call stop unconditionally
-      stopListening(); // Always call to ensure cleanup even if state says not listening
-
-      if (isRecording) {
-        stopRecording();
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-      if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state === "recording"
-      ) {
-        mediaRecorderRef.current.stop();
-      }
-      // Stop any playing TTS
-      stopTTS();
       // Reset initialization flag so it can work next time
       initializedRef.current = false;
     };
-  }, [isRecording, stopListening, stopRecording, stopTTS]);
+  }, []); // Empty deps - only cleanup on unmount
+
+  // Separate effect for final cleanup when component unmounts
+  useEffect(() => {
+    const currentStt = stt;
+    const currentStopTTS = stopTTS;
+    return () => {
+      // Clean up STT
+      if (currentStt.isListening) {
+        currentStt.stopListening();
+      }
+      // Stop any playing TTS
+      currentStopTTS();
+    };
+  }, []); // Empty deps - capture current values in closure
 
   // Handle microphone toggle
   const handleMicrophoneToggle = useCallback(() => {
     if (conversationState === "user_speaking") {
       // STOP capturing
-      if (isChromeTranscriptionSupported) {
-        stopListening();
-        resetTranscript();
-      } else {
-        stopRecording();
-      }
+      stt.stopListening();
+      stt.resetTranscript();
       setConversationState("idle");
     } else {
       // START capturing
-      if (isChromeTranscriptionSupported) {
-        startListening(handleSilenceDetected);
-      } else {
-        startRecording();
-      }
+      stt.startListening();
       setConversationState("user_speaking");
     }
   }, [
     conversationState,
-    isChromeTranscriptionSupported,
-    startListening,
-    stopListening,
-    resetTranscript,
-    handleSilenceDetected,
-    startRecording,
-    stopRecording,
+    stt,
   ]);
 
   // Handle manual send button
   const handleManualSend = useCallback(async () => {
-    // If we have Chrome transcript, use it
-    if (fullTranscript && fullTranscript.trim()) {
-      stopListening();
-      handleSendMessage(fullTranscript);
-      resetTranscript();
-    }
-    // If we're recording (Safari/non-Chrome), stop and wait for blob
-    else if (isRecording && !isChromeTranscriptionSupported) {
+    if (stt.isRealtime && stt.transcript.trim()) {
+      // Real-time STT (Chrome) - use current transcript
+      stt.stopListening();
+      handleSendMessage(stt.transcript);
+      stt.resetTranscript();
+    } else if (stt.isListening) {
+      // Non-realtime STT (ElevenLabs/Whisper) - stop and get final transcript
       setConversationState("processing_user_input");
-
-      // Stop recording which will trigger the blob creation
-      stopRecording();
-
-      // Wait for the blob using the promise
-      if (audioBlobPromiseRef.current) {
-        try {
-          const blob = await audioBlobPromiseRef.current;
-          const whisperTranscript = await transcribe(blob);
-          if (whisperTranscript?.trim()) {
-            handleSendMessage(whisperTranscript);
-          } else {
-            toast.error("Failed to transcribe audio");
-            setConversationState("idle");
-          }
-        } catch {
-          toast.error("Failed to transcribe audio");
-          setConversationState("idle");
-        } finally {
-          setAudioBlob(null);
-          audioBlobPromiseRef.current = null;
-          audioBlobResolveRef.current = null;
-        }
-      }
-    }
-    // Otherwise if we have recorded audio already, transcribe with Whisper
-    else if (audioBlob) {
-      setConversationState("processing_user_input");
-      try {
-        const whisperTranscript = await transcribe(audioBlob);
-        if (whisperTranscript?.trim()) {
-          handleSendMessage(whisperTranscript);
-        } else {
-          toast.error("Failed to transcribe audio");
-          setConversationState("idle");
-        }
-      } catch {
-        toast.error("Failed to transcribe audio");
+      const finalTranscript = await stt.stopListening();
+      if (finalTranscript?.trim()) {
+        handleSendMessage(finalTranscript);
+      } else {
+        toast.error("No speech detected");
         setConversationState("idle");
-      } finally {
-        setAudioBlob(null);
       }
     }
   }, [
-    fullTranscript,
-    audioBlob,
-    isRecording,
-    isChromeTranscriptionSupported,
-    stopListening,
-    stopRecording,
+    stt,
     handleSendMessage,
-    resetTranscript,
-    transcribe,
   ]);
 
   // Auto-play new agent messages with TTS
@@ -714,12 +607,26 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
       return;
     }
 
-    // Find unplayed agent messages
+    // Calculate the call start time in seconds (Nostr event timestamps are in seconds)
+    const callStartTimeInSeconds = Math.floor(callStartTimeRef.current / 1000);
+
+    // Find unplayed agent messages, excluding typing indicators and reasoning events
+    // IMPORTANT: Only consider messages created AFTER the call started
     const agentMessages = messages.filter(
       (msg) =>
         msg.event.pubkey !== user.pubkey &&
         !playedMessageIds.has(msg.id) &&
-        !isAudioEvent(msg.event),
+        !isAudioEvent(msg.event) &&
+        // Only messages created after the call started
+        (msg.event.created_at || 0) > callStartTimeInSeconds &&
+        // Exclude typing indicators
+        msg.event.kind !== EVENT_KINDS.TYPING_INDICATOR &&
+        msg.event.kind !== EVENT_KINDS.TYPING_INDICATOR_STOP &&
+        msg.event.kind !== EVENT_KINDS.STREAMING_RESPONSE &&
+        // Exclude reasoning events (they have the "reasoning" tag)
+        !msg.event.hasTag("reasoning") &&
+        // Exclude tool events (they have the "tool" tag)
+        !msg.event.hasTag("tool"),
     );
 
     if (agentMessages.length > 0) {
@@ -749,14 +656,8 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
 
             // Auto-resume listening after TTS completes
             setConversationState("user_speaking");
-            if (isChromeTranscriptionSupported) {
-              resetTranscript();
-              startListening(handleSilenceDetected);
-            } else {
-              setAudioBlob(null);
-              chunksRef.current = [];
-              startRecording();
-            }
+            stt.resetTranscript();
+            stt.startListening();
           })
           .catch(() => {
             toast.error("Voice playback failed - check TTS configuration");
@@ -774,13 +675,9 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
     isPlaying,
     agentsRaw,
     playTTS,
-    handleSilenceDetected,
-    isChromeTranscriptionSupported,
+    stt,
     messages,
     playedMessageIds,
-    resetTranscript,
-    startListening,
-    startRecording,
     user,
   ]);
 
@@ -798,18 +695,45 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // Helper to get display names for audio providers
+  const getSTTProviderName = () => {
+    if (!stt.isSupported) return "Disabled";
+    switch (stt.provider) {
+      case "whisper": return "Whisper";
+      case "elevenlabs": return "ElevenLabs";
+      case "chrome": return "Chrome";
+      case "built-in-chrome": return "Chrome";
+      default: return "Unknown";
+    }
+  };
+
+  const getTTSProviderName = () => {
+    if (!voiceSettings.enabled) return "Disabled";
+    switch (voiceSettings.provider) {
+      case "openai": return "OpenAI";
+      case "elevenlabs": return "ElevenLabs";
+      default: return "Unknown";
+    }
+  };
+
+  const getMicrophoneName = () => {
+    if (!audioSettings.inputDeviceId || audioSettings.inputDeviceId === "default") {
+      return "Default Mic";
+    }
+    // Could enhance this to get actual device names from navigator.mediaDevices.enumerateDevices()
+    return "Custom Mic";
+  };
+
   // Get display text based on state
   const getDisplayText = () => {
     switch (conversationState) {
       case "user_speaking":
-        if (isChromeTranscriptionSupported) {
-          return (
-            fullTranscript || (isListening ? "Listening..." : "Starting...")
-          );
+        if (stt.isRealtime) {
+          // For real-time (Chrome), show transcript or "Listening..."
+          return stt.transcript || (stt.isListening ? "Listening..." : "");
         } else {
-          return isRecording
-            ? "Recording... Tap Send when done"
-            : "Starting recording...";
+          // For non-realtime (ElevenLabs/Whisper), only show message when actually recording
+          return stt.isListening ? "Recording... Tap Send when done" : "";
         }
       case "processing_user_input":
         return "Processing...";
@@ -835,11 +759,19 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
     }));
   }, [messages, user, agents]);
 
+  // Get provider names for status bar
+  const sttProviderName = getSTTProviderName();
+  const ttsProviderName = getTTSProviderName();
+  const sameVoiceProvider = sttProviderName === ttsProviderName;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black">
-      <div className="relative flex flex-col h-full text-white">
+    <div className={cn(
+      "bg-black overflow-hidden",
+      isEmbedded ? "h-full" : "fixed inset-0 z-50"
+    )}>
+      <div className="relative flex flex-col h-full text-white overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 pt-safe-top">
+        <div className="flex items-center justify-between p-4 pt-safe-top flex-shrink-0">
           <div className="w-20" />
           <div className="flex items-center gap-2">
             <ProjectAvatar
@@ -859,8 +791,110 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
           </div>
         </div>
 
+        {/* Audio Status Bar */}
+        <div className="px-4 py-2 bg-black/40 backdrop-blur-md border-t border-white/10 flex-shrink-0">
+          <div className="flex items-center justify-center gap-6 text-xs">
+            {/* Microphone Status */}
+            <div className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors",
+              conversationState === "user_speaking" || stt.isListening
+                ? "bg-white/20 text-white"
+                : "bg-white/5 text-white/60"
+            )}>
+              <Mic className={cn(
+                "h-3.5 w-3.5",
+                conversationState === "user_speaking" || stt.isListening ? "text-green-400" : ""
+              )} />
+              <span className="font-medium">{getMicrophoneName()}</span>
+            </div>
+
+            {/* Voice Provider(s) - consolidate if STT and TTS are the same */}
+            {sameVoiceProvider ? (
+              // Combined voice provider display
+              <div className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors",
+                (stt.isProcessing || isPlaying || conversationState === "agent_speaking")
+                  ? "bg-white/20 text-white"
+                  : "bg-white/5 text-white/60"
+              )}>
+                <AudioLines className={cn(
+                  "h-3.5 w-3.5",
+                  stt.isProcessing ? "text-yellow-400" :
+                  (isPlaying || conversationState === "agent_speaking") ? "text-blue-400" : ""
+                )} />
+                <span>
+                  <span className="font-medium">Voice:</span> {sttProviderName}
+                </span>
+                {(stt.isSupported || voiceSettings.enabled) && (
+                  <span className={cn(
+                    "inline-block w-1.5 h-1.5 rounded-full",
+                    stt.isProcessing
+                      ? "bg-yellow-400 animate-pulse"
+                      : (isPlaying || conversationState === "agent_speaking")
+                      ? "bg-blue-400 animate-pulse"
+                      : "bg-green-400"
+                  )} />
+                )}
+              </div>
+            ) : (
+              // Separate STT and TTS displays
+              <>
+                {/* STT Provider */}
+                <div className={cn(
+                  "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors",
+                  stt.isProcessing
+                    ? "bg-white/20 text-white"
+                    : "bg-white/5 text-white/60"
+                )}>
+                  <AudioLines className={cn(
+                    "h-3.5 w-3.5",
+                    stt.isProcessing ? "text-yellow-400" : ""
+                  )} />
+                  <span>
+                    <span className="font-medium">STT:</span> {sttProviderName}
+                  </span>
+                  {stt.isSupported && (
+                    <span className={cn(
+                      "inline-block w-1.5 h-1.5 rounded-full",
+                      stt.isProcessing
+                        ? "bg-yellow-400 animate-pulse"
+                        : stt.isRealtime
+                          ? "bg-green-400"
+                          : "bg-blue-400"
+                    )} />
+                  )}
+                </div>
+
+                {/* TTS Provider */}
+                <div className={cn(
+                  "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors",
+                  isPlaying || conversationState === "agent_speaking"
+                    ? "bg-white/20 text-white"
+                    : "bg-white/5 text-white/60"
+                )}>
+                  <Volume2 className={cn(
+                    "h-3.5 w-3.5",
+                    isPlaying || conversationState === "agent_speaking" ? "text-blue-400" : ""
+                  )} />
+                  <span>
+                    <span className="font-medium">TTS:</span> {ttsProviderName}
+                  </span>
+                  {voiceSettings.enabled && (
+                    <span className={cn(
+                      "inline-block w-1.5 h-1.5 rounded-full",
+                      isPlaying || conversationState === "agent_speaking"
+                        ? "bg-blue-400 animate-pulse"
+                        : "bg-green-400"
+                    )} />
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
         {/* Main content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 overflow-y-auto min-h-0">
           {/* Participating Agents Display */}
           <div className="relative w-full max-w-2xl flex items-center justify-center">
             <div className="flex items-center justify-center gap-8">
@@ -881,6 +915,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
                           isTyping={typingAgents.has(agent.pubkey)}
                           isSpeaking={speakingAgent === agent.pubkey}
                           isTargeted={targetAgent?.pubkey === agent.pubkey}
+                          isReasoning={reasoningAgents.has(agent.pubkey)}
                           onClick={() => setTargetAgent(agent)}
                           size={
                             participatingAgents.size <= 2
@@ -907,6 +942,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
                     isTyping={false}
                     isSpeaking={false}
                     isTargeted={targetAgent?.pubkey === selectedAgent.pubkey}
+                    isReasoning={reasoningAgents.has(selectedAgent.pubkey)}
                     onClick={() => setTargetAgent(selectedAgent)}
                     size="lg"
                   />
@@ -926,26 +962,31 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
 
           {/* Current conversation display */}
           <div className="mt-8 min-h-[100px] max-w-md w-full">
-            {(conversationState === "user_speaking" ||
-              conversationState === "processing_user_input" ||
-              conversationState === "agent_speaking") && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white/10 backdrop-blur-sm rounded-2xl p-4"
-              >
-                <p className="text-sm text-white/90 leading-relaxed">
-                  {getDisplayText()}
-                </p>
-                {conversationState === "user_speaking" && (
-                  <p className="text-xs text-white/50 mt-2">
-                    {isChromeTranscriptionSupported
-                      ? "Pause for 2 seconds to auto-send, or tap Send"
-                      : "Tap Send to stop recording and send"}
+            {(() => {
+              const displayText = getDisplayText();
+              const shouldShowBox = displayText || conversationState === "processing_user_input";
+
+              if (!shouldShowBox) return null;
+
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white/10 backdrop-blur-sm rounded-2xl p-4"
+                >
+                  <p className="text-sm text-white/90 leading-relaxed">
+                    {displayText}
                   </p>
-                )}
-              </motion.div>
-            )}
+                  {conversationState === "user_speaking" && stt.isListening && (
+                    <p className="text-xs text-white/50 mt-2">
+                      {stt.isRealtime
+                        ? "Pause for 2 seconds to auto-send, or tap Send"
+                        : "Tap Send to stop recording and send"}
+                    </p>
+                  )}
+                </motion.div>
+              );
+            })()}
 
             {/* Message history when idle */}
             {conversationState === "idle" && recentMessages.length > 0 && (
@@ -966,7 +1007,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
         </div>
 
         {/* Agent selector - only show agents not in conversation */}
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-2 flex-shrink-0">
           {(() => {
             const availableAgents = agents.filter(
               (agent) => !participatingAgents.has(agent.pubkey),
@@ -974,7 +1015,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
 
             if (availableAgents.length === 0) {
               return (
-                <div className="flex items-center justify-center gap-2 text-white/60 py-4">
+                <div className="flex items-center justify-center gap-2 text-white/60 py-2">
                   <span className="text-sm">
                     All agents are in the conversation
                   </span>
@@ -983,7 +1024,7 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
             }
 
             return (
-              <ScrollArea className="w-full">
+              <ScrollArea className="w-full max-h-24">
                 <div className="flex gap-2 px-2 pb-1">
                   {availableAgents.map((agent) => (
                     <AgentSelector
@@ -1007,63 +1048,61 @@ export function CallView({ project, onClose, extraTags }: CallViewProps) {
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center justify-center gap-6 p-6 pb-safe-bottom">
+        <div className="flex items-center justify-center gap-4 px-6 pt-6 pb-10 flex-shrink-0">
+          {/* End call button */}
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               // Stop all audio/mic operations before closing
               stopTTS();
-              stopListening(); // Always call to ensure cleanup
-
-              if (isRecording) {
-                stopRecording();
-              }
-              if (streamRef.current) {
-                streamRef.current.getTracks().forEach((track) => track.stop());
+              if (stt.isListening) {
+                stt.stopListening();
               }
               // Reset initialization flag
               initializedRef.current = false;
               onClose(localRootEvent);
             }}
-            className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center shadow-xl hover:bg-red-700 transition-colors"
+            className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
           >
-            <PhoneOff className="h-7 w-7" />
+            <PhoneOff className="h-7 w-7 text-white" />
           </motion.button>
 
+          {/* Mic toggle button */}
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={handleMicrophoneToggle}
             disabled={conversationState === "processing_user_input"}
             className={cn(
-              "w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-colors",
+              "w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-colors",
               conversationState === "user_speaking"
-                ? "bg-white text-black hover:bg-white/90"
-                : "bg-white/20 text-white hover:bg-white/30",
+                ? "bg-white text-black hover:bg-gray-100"
+                : "bg-gray-700 text-white hover:bg-gray-600",
               conversationState === "processing_user_input" &&
                 "opacity-50 cursor-not-allowed",
             )}
           >
             {conversationState === "user_speaking" ? (
-              <Mic className="h-8 w-8" />
+              <Mic className="h-7 w-7" />
             ) : (
-              <MicOff className="h-8 w-8" />
+              <MicOff className="h-7 w-7" />
             )}
           </motion.button>
 
-          {/* ALWAYS SHOW THE FUCKING SEND BUTTON */}
+          {/* Send button */}
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={handleManualSend}
             disabled={
-              (!fullTranscript && !audioBlob && !isRecording && !isListening) ||
-              conversationState === "processing_user_input"
+              stt.isProcessing ||
+              (conversationState !== "user_speaking" && !stt.transcript)
             }
             className={cn(
-              "w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-colors",
-              (fullTranscript || audioBlob || isRecording || isListening) &&
-                conversationState !== "processing_user_input"
-                ? "bg-green-600 hover:bg-green-700"
-                : "bg-gray-600 opacity-50 cursor-not-allowed",
+              "w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-colors",
+              conversationState === "user_speaking" && !stt.isProcessing
+                ? "bg-green-500 hover:bg-green-600 text-white"
+                : stt.isProcessing
+                ? "bg-yellow-500 hover:bg-yellow-600 text-white animate-pulse"
+                : "bg-gray-700 text-gray-400 cursor-not-allowed",
             )}
           >
             <Send className="h-7 w-7" />

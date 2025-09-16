@@ -1,24 +1,21 @@
 import { useMemo } from "react";
 import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { parseKind24133, normalizeProjectA } from "@/lib/ndk-events/operations";
+import { parseKind24133 } from "@/lib/ndk-events/operations";
 
 /**
- * Component-level hook for event operation status
+ * Hook for checking operation status of any event
  * Subscribes to 24133 events for specific project and tracks specific event
  */
-export function useEventOperationStatus(eventId?: string, projectId?: string) {
-  // Normalize project ID for consistent filtering
-  const normalizedProjectId = projectId
-    ? normalizeProjectA(projectId)
-    : undefined;
-
+export function useEventOperationStatus(eventId: string, projectId: string) {
   // Subscribe to kind 24133 with exact filter for this project
+  // Only subscribe if we have valid IDs
   const { events } = useSubscribe(
-    normalizedProjectId
+    eventId && projectId
       ? [
           {
             kinds: [24133],
-            "#a": [normalizedProjectId],
+            "#a": [projectId],
+            "#e": [eventId],
             limit: 0, // Live-only telemetry as per requirements
           },
         ]
@@ -28,7 +25,7 @@ export function useEventOperationStatus(eventId?: string, projectId?: string) {
 
   // Process events and track status for our specific eventId
   const { isActive, agentCount } = useMemo(() => {
-    if (!events || !eventId || !normalizedProjectId) {
+    if (!events) {
       return { isActive: false, agentCount: 0 };
     }
 
@@ -39,7 +36,7 @@ export function useEventOperationStatus(eventId?: string, projectId?: string) {
     events.forEach((event) => {
       const snapshot = parseKind24133(event);
       if (!snapshot || snapshot.eId !== eventId) return;
-      if (normalizeProjectA(snapshot.projectId) !== normalizedProjectId) return;
+      if (snapshot.projectId !== projectId) return;
 
       // Last-write-wins logic
       if (snapshot.createdAt > latestCreatedAt) {
@@ -63,7 +60,8 @@ export function useEventOperationStatus(eventId?: string, projectId?: string) {
       isActive: hasAgents,
       agentCount: latestSnapshot.agentPubkeys.length,
     };
-  }, [events, eventId, normalizedProjectId]);
+  }, [events, eventId, projectId]);
 
-  return { isActive, agentCount };
+  // Also provide hasActiveOperations alias for backward compatibility
+  return { isActive, agentCount, hasActiveOperations: isActive };
 }

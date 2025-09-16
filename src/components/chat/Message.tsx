@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, useRef, useEffect } from "react";
 import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,9 @@ import { getUserStatus } from "@/lib/utils/userStatus";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
+// Global render counter for tracking
+const renderCounts = new Map<string, number>();
+
 interface MessageProps {
   event: NDKEvent;
   project?: NDKProject | null;
@@ -30,6 +33,11 @@ interface MessageProps {
   onQuote?: (event: NDKEvent) => void;
   onTimeClick?: (event: NDKEvent) => void;
   onConversationNavigate?: (event: NDKEvent) => void;
+  message?: {
+    isReactComponent?: boolean;
+    reactComponentCode?: string;
+    reactComponentProps?: Record<string, any>;
+  };
 }
 
 /**
@@ -46,10 +54,30 @@ export const Message = memo(function Message({
   onQuote,
   onTimeClick,
   onConversationNavigate,
+  message,
 }: MessageProps) {
   const user = useNDKCurrentUser();
   const isMobile = useIsMobile();
   const [showMetadataDialog, setShowMetadataDialog] = useState(false);
+
+  // Track render count
+  useEffect(() => {
+    const eventId = event.id || 'unknown';
+    const currentCount = renderCounts.get(eventId) || 0;
+    const newCount = currentCount + 1;
+    renderCounts.set(eventId, newCount);
+
+    console.log(`Rendering message ${eventId}: ${newCount} times`);
+
+    // Log summary of all render counts
+    if (renderCounts.size > 1) {
+      console.log('=== All message render counts ===');
+      renderCounts.forEach((count, id) => {
+        console.log(`  ${id.substring(0, 8)}...: ${count} renders`);
+      });
+      console.log('================================');
+    }
+  });
 
   // Get user status
   const userStatus = useMemo(() => {
@@ -193,6 +221,7 @@ export const Message = memo(function Message({
               isRootEvent={isRootEvent}
               onConversationNavigate={onConversationNavigate}
               isMobile={isMobile}
+              message={message}
             />
           </div>
 
@@ -265,6 +294,7 @@ export const Message = memo(function Message({
                 onConversationNavigate={onConversationNavigate}
                 isMobile={isMobile}
                 className="flex-1"
+                message={message}
               />
 
               {isConsecutive && (

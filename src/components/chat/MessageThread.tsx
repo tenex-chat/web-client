@@ -18,6 +18,7 @@ interface MessageThreadProps {
   project?: NDKProject | null;
   depth?: number;
   onReply?: (event: NDKEvent) => void;
+  onQuote?: (event: NDKEvent) => void;
   onTimeClick?: (event: NDKEvent) => void;
   onConversationNavigate?: (event: NDKEvent) => void;
   mainThreadEventIds?: Set<string>; // IDs of events already shown in main thread
@@ -32,6 +33,7 @@ export const MessageThread = memo(function MessageThread({
   project,
   depth = 0,
   onReply,
+  onQuote,
   onTimeClick,
   onConversationNavigate,
   mainThreadEventIds,
@@ -65,7 +67,9 @@ export const MessageThread = memo(function MessageThread({
 
   // Process replies into messages
   const replyMessages = useMemo(() => {
-    if (!directReplies || directReplies.length === 0) return [];
+    if (!directReplies || directReplies.length === 0) {
+      return [];
+    }
 
     // Filter out replies with root marker and those already in main thread
     const filtered = directReplies.filter((reply) => {
@@ -135,6 +139,7 @@ export const MessageThread = memo(function MessageThread({
             isMobile ? "ml-3" : "ml-[48px]"
           )}
         >
+          {/* Show messages */}
           {replyMessages.map((message, index) => {
             // Special handling for task events
             if (message.event.kind === 1934) {
@@ -166,6 +171,7 @@ export const MessageThread = memo(function MessageThread({
                   event={message.event}
                   project={project}
                   onReply={onReply}
+                  onQuote={onQuote}
                   isNested={true}
                   onTimeClick={onTimeClick}
                   onConversationNavigate={onConversationNavigate}
@@ -177,6 +183,7 @@ export const MessageThread = memo(function MessageThread({
                   project={project}
                   depth={depth + 1}
                   onReply={onReply}
+                  onQuote={onQuote}
                   onTimeClick={onTimeClick}
                   onConversationNavigate={onConversationNavigate}
                   mainThreadEventIds={mainThreadEventIds}

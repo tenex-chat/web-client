@@ -117,13 +117,10 @@ export const MessageShell = memo(function MessageShell({
                 </button>
               )}
               {recipientPubkeys.length > 0 && (
-                <>
-                  <span className="text-xs text-muted-foreground">→</span>
                   <RecipientAvatars
                     pubkeys={recipientPubkeys}
                     className="ml-1"
                   />
-                </>
               )}
             </div>
 

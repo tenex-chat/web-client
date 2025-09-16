@@ -1,17 +1,17 @@
-import React, { useState, useCallback } from 'react';
+import type React from 'react';
+import { useState, useCallback } from 'react';
 import { useHashtagRelays } from '@/hooks/useHashtagRelays';
-import { useNDK } from '@nostr-dev-kit/ndk-react';
+import { useNDK } from '@nostr-dev-kit/ndk-hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Trash2, Wifi, WifiOff, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function RelaySettings() {
-  const { relays, allRelays, enabled, setEnabled, addRelay, removeRelay } = useHashtagRelays();
+  const { relays, allRelays, addRelay, removeRelay } = useHashtagRelays();
   const { ndk } = useNDK();
   const [newRelayUrl, setNewRelayUrl] = useState('');
   const [error, setError] = useState('');
@@ -62,32 +62,7 @@ export function RelaySettings() {
 
   return (
     <div className="space-y-6">
-      {/* Enable/Disable Toggle */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Hashtag Events</CardTitle>
-          <CardDescription>
-            Enable or disable hashtag event streaming from Nostr relays
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="hashtag-enabled">Enable Hashtag Events</Label>
-              <p className="text-sm text-muted-foreground">
-                Stream events matching your project hashtags
-              </p>
-            </div>
-            <Switch
-              id="hashtag-enabled"
-              checked={enabled}
-              onCheckedChange={setEnabled}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Relay List */}
+      {/* Relay Configuration */}
       <Card>
         <CardHeader>
           <CardTitle>Hashtag Relays</CardTitle>
@@ -131,8 +106,8 @@ export function RelaySettings() {
               <div className="space-y-2">
                 {allRelays.map((url) => {
                   const status = getRelayStatus(url);
-                  const isActive = enabled && relays.includes(url);
-                  
+                  const isActive = relays.includes(url);
+
                   return (
                     <div
                       key={url}
@@ -152,14 +127,14 @@ export function RelaySettings() {
                             <WifiOff className="h-4 w-4 text-muted-foreground" />
                           )}
                         </div>
-                        
+
                         {/* Relay URL */}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-mono truncate">{url}</p>
                           <p className="text-xs text-muted-foreground">
                             {status === 'connected' ? 'Connected' :
                              status === 'connecting' ? 'Connecting...' :
-                             isActive ? 'Disconnected' : 'Not active'}
+                             'Disconnected'}
                           </p>
                         </div>
                       </div>

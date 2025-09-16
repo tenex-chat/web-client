@@ -1,6 +1,6 @@
-import React, { memo, useMemo } from 'react';
-import { NDKEvent } from '@nostr-dev-kit/ndk';
-import { useProfile } from '@nostr-dev-kit/ndk-react';
+import * as React from 'react';
+import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks';
+import { useProfileValue } from '@nostr-dev-kit/ndk-hooks';
 import { nip19 } from 'nostr-tools';
 import { formatRelativeTime } from '@/lib/utils/time';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,15 +13,15 @@ interface HashtagEventItemProps {
   onClick?: () => void;
 }
 
-export const HashtagEventItem = memo(function HashtagEventItem({ 
+export const HashtagEventItem = React.memo(function HashtagEventItem({ 
   event, 
   hashtags, 
   onClick 
 }: HashtagEventItemProps) {
-  const profile = useProfile(event.pubkey);
+  const profile = useProfileValue(event.pubkey);
   
   // Format author display name
-  const authorName = useMemo(() => {
+  const authorName = React.useMemo(() => {
     if (profile?.displayName || profile?.name) {
       return profile.displayName || profile.name;
     }
@@ -34,7 +34,7 @@ export const HashtagEventItem = memo(function HashtagEventItem({
   }, [profile, event.pubkey]);
 
   // Format event ID for display
-  const eventId = useMemo(() => {
+  const eventId = React.useMemo(() => {
     try {
       const note = nip19.noteEncode(event.id);
       return `${note.slice(0, 12)}...`;
@@ -44,7 +44,7 @@ export const HashtagEventItem = memo(function HashtagEventItem({
   }, [event.id]);
 
   // Highlight matching hashtags in content
-  const highlightedContent = useMemo(() => {
+  const highlightedContent = React.useMemo(() => {
     let content = event.content;
     
     // Truncate content if too long
@@ -85,7 +85,7 @@ export const HashtagEventItem = memo(function HashtagEventItem({
   }, [event.content, hashtags]);
 
   // Get event hashtags
-  const eventHashtags = useMemo(() => {
+  const eventHashtags = React.useMemo(() => {
     return event.tags
       .filter(tag => tag[0] === 't')
       .map(tag => tag[1])
@@ -95,53 +95,51 @@ export const HashtagEventItem = memo(function HashtagEventItem({
   return (
     <div
       className={cn(
-        "flex gap-3 px-3 py-3 hover:bg-accent/50 cursor-pointer transition-colors border-b",
+        "px-3 py-2.5 hover:bg-accent/50 cursor-pointer transition-colors border-b",
         "group"
       )}
       onClick={onClick}
     >
-      {/* Author Avatar */}
-      <Avatar className="h-9 w-9 shrink-0">
-        <AvatarImage src={profile?.image || profile?.picture} alt={authorName} />
-        <AvatarFallback>
-          <User className="h-4 w-4" />
-        </AvatarFallback>
-      </Avatar>
+      <div className="flex gap-2.5">
+        {/* Author Avatar */}
+        <Avatar className="h-8 w-8 shrink-0">
+          <AvatarImage src={profile?.image || profile?.picture} alt={authorName} />
+          <AvatarFallback>
+            <User className="h-3.5 w-3.5" />
+          </AvatarFallback>
+        </Avatar>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0 space-y-1">
         {/* Header */}
-        <div className="flex items-center gap-2 text-xs">
-          <span className="font-medium truncate">{authorName}</span>
-          <span className="text-muted-foreground">·</span>
-          <span className="text-muted-foreground">
-            {formatRelativeTime(event.created_at || 0)}
-          </span>
-          <span className="text-muted-foreground ml-auto text-[10px] font-mono">
-            {eventId}
-          </span>
-        </div>
-
-        {/* Message Content */}
-        <div className="text-sm text-foreground/90 break-words whitespace-pre-wrap">
-          {highlightedContent}
-        </div>
-
-        {/* Hashtags */}
-        {eventHashtags.length > 0 && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {eventHashtags.map((tag, index) => (
-              <div
-                key={index}
-                className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground"
-              >
-                <Hash className="h-2.5 w-2.5" />
-                <span>{tag}</span>
-              </div>
-            ))}
+        <div className="flex-1 min-w-0 flex items-center">
+          <div className="flex items-center gap-1.5 text-xs flex-wrap">
+            <span className="font-semibold">{authorName}</span>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-muted-foreground">
+              {formatRelativeTime(event.created_at || 0)}
+            </span>
           </div>
-        )}
+        </div>
       </div>
+
+      {/* Message Content - Now flows under avatar */}
+      <div className="mt-1 text-sm text-foreground/90 break-words whitespace-pre-wrap">
+        {highlightedContent}
+      </div>
+
+      {/* Hashtags */}
+      {eventHashtags.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap mt-1.5">
+          {eventHashtags.map((tag, index) => (
+            <div
+              key={index}
+              className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground"
+            >
+              <Hash className="h-3 w-3" />
+              <span>{tag}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 });

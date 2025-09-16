@@ -1,45 +1,53 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   MessageSquare,
   FileText,
   Bot,
   Settings,
   Plus,
-  ChevronRight,
-  Shield,
-  AlertTriangle,
   WifiOff,
   ArrowLeft,
-  Users,
-  Wrench,
   Hash,
+  Phone,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
 import { Button } from "@/components/ui/button";
-import { ThreadList } from "@/components/chat/ThreadList";
-import { DocumentationListSimple } from "@/components/documentation/DocumentationListSimple";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
-import { useProfile, useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { NDKArticle, NDKEvent } from "@nostr-dev-kit/ndk-hooks";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AddAgentsToProjectDialog } from "@/components/dialogs/AddAgentsToProjectDialog";
 import { useProjectStatus } from "@/stores/projects";
 import { bringProjectOnline } from "@/lib/utils/projectStatusUtils";
 import { ProjectStatusIndicator } from "@/components/status/ProjectStatusIndicator";
 import { FABMenu } from "@/components/ui/fab-menu";
-import { CallView } from "@/components/call/CallView";
-import { HashtagEventsList } from "@/components/hashtags/HashtagEventsList";
+import { EventModal } from "@/components/hashtags/EventModal";
+import { useWindowManager } from "@/stores/windowManager";
+import {
+  ConversationsContent,
+  DocsContent,
+  AgentsContent,
+  HashtagsContent,
+  SettingsContent,
+  CommunityContent,
+  TabContentProps,
+} from "./tab-contents";
 
-type TabType = "conversations" | "docs" | "agents" | "settings" | "hashtags";
+type TabType = "conversations" | "docs" | "agents" | "settings" | "hashtags" | "community";
 type ViewMode = "column" | "standalone";
 type ViewState = "list" | "detail";
 
@@ -61,49 +69,15 @@ function generateColorFromString(str: string): string {
   return `hsl(${hue}, 65%, 55%)`;
 }
 
-// Agent list item component - moved to top level to avoid conditional hook usage
-const AgentListItem = React.memo(
-  ({
-    agent,
-    isOnline,
-    onClick,
-  }: {
-    agent: { pubkey: string; slug: string; status?: string; lastSeen?: number };
-    isOnline: boolean;
-    onClick: () => void;
-  }) => {
-    const profile = useProfile(agent.pubkey);
-    const avatarUrl = profile?.image || profile?.picture;
-    const displayName =
-      agent.slug || profile?.displayName || profile?.name || "Unknown Agent";
-
-    return (
-      <div
-        className="flex items-start gap-3 px-3 py-2.5 hover:bg-accent/50 cursor-pointer transition-colors border-b"
-        onClick={onClick}
-      >
-        <div className="relative">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={avatarUrl} alt={displayName} />
-            <AvatarFallback>
-              <Bot className="h-4 w-4" />
-            </AvatarFallback>
-          </Avatar>
-          {isOnline && (
-            <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 border border-background" />
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm truncate">{displayName}</div>
-          <div className="text-xs text-muted-foreground mt-0.5">
-            {isOnline ? "Online" : "Offline"}
-          </div>
-        </div>
-        <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-1.5" />
-      </div>
-    );
-  },
-);
+// Map of tab types to their content components
+const TAB_CONTENT_COMPONENTS: Record<TabType, React.FC<TabContentProps>> = {
+  conversations: ConversationsContent,
+  docs: DocsContent,
+  agents: AgentsContent,
+  hashtags: HashtagsContent,
+  community: CommunityContent,
+  settings: SettingsContent,
+};
 
 interface ProjectColumnProps {
   project: NDKProject;
@@ -137,10 +111,17 @@ export function ProjectColumn({
   const [selectedItem, setSelectedItem] = useState<any>();
   const [viewState, setViewState] = useState<ViewState>("list");
   const [addAgentsDialogOpen, setAddAgentsDialogOpen] = useState(false);
-  const [showCallView, setShowCallView] = useState(false);
+  const [hashtagEventModalOpen, setHashtagEventModalOpen] = useState(false);
+  const [selectedHashtagEvent, setSelectedHashtagEvent] = useState<NDKEvent | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const { ndk } = useNDK();
   const agents = useProjectOnlineAgents(project?.dTag);
+  const windowManager = useWindowManager();
   const projectStatus = useProjectStatus(project?.dTag);
+  
+  // Long press detection refs
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const isLongPress = useRef(false);
 
   // Generate project color for the glow effect
   const projectColor = useMemo(() => {
@@ -154,6 +135,15 @@ export function ProjectColumn({
     setSelectedItem(undefined);
     setViewState("list");
   }, [project.dTag]);
+  
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+    };
+  }, []);
 
   const handleThreadSelect = useCallback(
     async (threadId: string) => {
@@ -216,6 +206,77 @@ export function ProjectColumn({
     },
     [handleThreadSelect],
   );
+  
+  // Handle long press for the add button
+  const handleAddButtonMouseDown = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
+    // Prevent default to avoid text selection on long press
+    e?.preventDefault();
+    
+    if (activeTab === "conversations") {
+      isLongPress.current = false;
+      longPressTimer.current = setTimeout(() => {
+        isLongPress.current = true;
+        setDropdownOpen(true);
+      }, 500); // 500ms for long press
+    }
+  }, [activeTab]);
+
+  const handleAddButtonMouseUp = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    
+    // If it wasn't a long press and it's conversations tab, trigger new conversation
+    if (!isLongPress.current) {
+      if (activeTab === "conversations") {
+        // Short press - trigger new conversation
+        if (onItemClick) {
+          onItemClick(project, "conversations", "new");
+        }
+      } else if (activeTab === "agents") {
+        setAddAgentsDialogOpen(true);
+      } else if (onItemClick) {
+        onItemClick(project, activeTab, "new");
+      }
+    }
+    
+    isLongPress.current = false;
+  }, [activeTab, onItemClick, project]);
+  
+  const handleAddButtonMouseLeave = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    isLongPress.current = false;
+  }, []);
+  
+  // Handle dropdown menu actions
+  const handleNewConversation = useCallback(() => {
+    setDropdownOpen(false);
+    if (onItemClick) {
+      onItemClick(project, "conversations", "new");
+    }
+  }, [onItemClick, project]);
+  
+  const handleNewVoiceCall = useCallback(() => {
+    setDropdownOpen(false);
+    // Open CallView in a floating window
+    windowManager.addWindow({
+      project,
+      type: "call" as any,
+      data: {
+        onCallEnd: (rootEvent: NDKEvent | null) => {
+          // If a conversation was created during the call, select it
+          if (rootEvent) {
+            setSelectedThread(rootEvent);
+            setViewState("detail");
+          }
+        }
+      }
+    });
+  }, [project, windowManager]);
 
   const renderContent = () => {
     // In standalone mode with detail view, render full content
@@ -230,164 +291,61 @@ export function ProjectColumn({
           setSelectedThread(undefined);
         },
         () => {
-          // Handle voice call click
-          setShowCallView(true);
+          // Handle voice call click - open in floating window
+          windowManager.addWindow({
+            project,
+            type: "call" as any,
+            data: {
+              rootEvent: selectedThread,
+              onCallEnd: (rootEvent: NDKEvent | null) => {
+                // If a conversation was created during the call, select it
+                if (rootEvent) {
+                  setSelectedThread(rootEvent);
+                  setViewState("detail");
+                }
+              }
+            }
+          });
         },
       );
     }
 
-    // Otherwise render list views
-    switch (activeTab) {
-      case "conversations":
-        return (
-          <ThreadList
-            project={project}
-            selectedThread={selectedThread}
-            onThreadSelect={handleThreadSelectWrapper}
-            className="h-full"
-          />
-        );
+    // Use component map to render the appropriate tab content
+    const ContentComponent = TAB_CONTENT_COMPONENTS[activeTab];
+    if (!ContentComponent) return null;
 
-      case "docs":
-        return (
-          <DocumentationListSimple
-            projectId={project.dTag}
-            onArticleSelect={handleDocumentSelect}
-            className="h-full"
-          />
-        );
+    // Prepare props for the content component
+    const contentProps: TabContentProps = {
+      project,
+      selectedThread,
+      onThreadSelect: handleThreadSelectWrapper,
+      onDocumentSelect: handleDocumentSelect,
+      onAgentSelect: handleAgentSelect,
+      onHashtagEventClick: (event: NDKEvent) => {
+        setSelectedHashtagEvent(event);
+        setHashtagEventModalOpen(true);
+      },
+      onSettingsItemClick: (item: string) => {
+        onItemClick?.(project, "settings", item);
+      },
+      onEventClick: (event: NDKEvent) => {
+        // Handle community event clicks - open in modal or navigate based on type
+        if (event.kind === 24133) {
+          // Conversation root - select as thread
+          handleThreadSelectWrapper(event);
+        } else if (event.kind === 30023) {
+          // Document - handle as document
+          onDocumentSelect?.(event as NDKArticle);
+        } else {
+          // Other events (hashtags, etc) - open in modal
+          setSelectedHashtagEvent(event);
+          setHashtagEventModalOpen(true);
+        }
+      },
+      agents,
+    };
 
-      case "agents":
-        return (
-          <ScrollArea className="h-full">
-            <div className="flex flex-col">
-              {agents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-32 gap-2 text-center px-3">
-                  <Bot className="h-8 w-8 text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground">
-                    No agents online
-                  </p>
-                </div>
-              ) : (
-                agents.map((agent) => (
-                  <AgentListItem
-                    key={agent.pubkey}
-                    agent={agent}
-                    isOnline={true}
-                    onClick={() => handleAgentSelect(agent.pubkey)}
-                  />
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        );
-
-      case "hashtags":
-        return (
-          <HashtagEventsList 
-            project={project} 
-            onEventClick={(event: NDKEvent) => {
-              setSelectedItem(event);
-              if (mode === "standalone") {
-                setViewState("detail");
-              } else if (onItemClick) {
-                onItemClick(project, "hashtags", event);
-              }
-            }} 
-          />
-        );
-
-      case "settings":
-        return (
-          <ScrollArea className="h-full">
-            <div className="p-2 space-y-1">
-              <Button
-                variant="ghost"
-                className="w-full justify-start p-2 h-auto"
-                onClick={() => onItemClick?.(project, "settings", "general")}
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <Settings className="h-4 w-4 shrink-0" />
-                  <div className="flex-1 text-left">
-                    <div className="text-sm font-medium">General</div>
-                    <div className="text-xs text-muted-foreground">
-                      Basic project information
-                    </div>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                </div>
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start p-2 h-auto"
-                onClick={() => onItemClick?.(project, "settings", "agents")}
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <Users className="h-4 w-4 shrink-0" />
-                  <div className="flex-1 text-left">
-                    <div className="text-sm font-medium">Agents</div>
-                    <div className="text-xs text-muted-foreground">
-                      Manage project agents
-                    </div>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                </div>
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start p-2 h-auto"
-                onClick={() => onItemClick?.(project, "settings", "tools")}
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <Wrench className="h-4 w-4 shrink-0" />
-                  <div className="flex-1 text-left">
-                    <div className="text-sm font-medium">Tools</div>
-                    <div className="text-xs text-muted-foreground">
-                      MCP tools configuration
-                    </div>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                </div>
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start p-2 h-auto"
-                onClick={() => onItemClick?.(project, "settings", "advanced")}
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <Shield className="h-4 w-4 shrink-0" />
-                  <div className="flex-1 text-left">
-                    <div className="text-sm font-medium">Advanced</div>
-                    <div className="text-xs text-muted-foreground">
-                      Advanced configuration
-                    </div>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                </div>
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start p-2 h-auto"
-                onClick={() => onItemClick?.(project, "settings", "danger")}
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
-                  <div className="flex-1 text-left">
-                    <div className="text-sm font-medium">Danger Zone</div>
-                    <div className="text-xs text-muted-foreground">
-                      Irreversible actions
-                    </div>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                </div>
-              </Button>
-            </div>
-          </ScrollArea>
-        );
-
-      default:
-        return null;
-    }
+    return <ContentComponent {...contentProps} />;
   };
 
   const tabs = useMemo(() => {
@@ -396,6 +354,7 @@ export function ProjectColumn({
       { id: "docs", icon: FileText, label: "Documentation" },
       { id: "agents", icon: Bot, label: "Agents" },
       { id: "hashtags", icon: Hash, label: "Hashtags" },
+      { id: "community", icon: Users, label: "Community" },
     ];
 
     // Settings only in column mode
@@ -411,46 +370,50 @@ export function ProjectColumn({
     // For conversations, let ChatInterface handle its own header
     if (activeTab === "conversations") {
       return (
-        <div className={cn("flex flex-col h-full relative", className)}>
-          {renderContent()}
-        </div>
+        <>
+          <div className={cn("flex flex-col h-full relative", className)}>
+            {renderContent()}
+          </div>
+        </>
       );
     }
 
     // For other tabs, keep the existing header
     return (
-      <div className={cn("flex flex-col h-full relative", className)}>
-        {/* Mobile-style header with back button */}
-        <div className="border-b px-4 py-3 flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 -ml-2"
-            onClick={() => {
-              setViewState("list");
-              setSelectedItem(undefined);
-              setSelectedThread(undefined);
-            }}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center gap-2 flex-1">
-            <ProjectAvatar
-              project={project}
-              className="h-8 w-8"
-              fallbackClassName="text-xs"
-            />
-            <div>
-              <h1 className="text-sm font-semibold">
-                {project.title || "Untitled Project"}
-              </h1>
+      <>
+        <div className={cn("flex flex-col h-full relative", className)}>
+          {/* Mobile-style header with back button */}
+          <div className="border-b px-4 py-3 flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 -ml-2"
+              onClick={() => {
+                setViewState("list");
+                setSelectedItem(undefined);
+                setSelectedThread(undefined);
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-2 flex-1">
+              <ProjectAvatar
+                project={project}
+                className="h-8 w-8"
+                fallbackClassName="text-xs"
+              />
+              <div>
+                <h1 className="text-sm font-semibold">
+                  {project.title || "Untitled Project"}
+                </h1>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Full content */}
-        <div className="flex-1 overflow-hidden">{renderContent()}</div>
-      </div>
+          {/* Full content */}
+          <div className="flex-1 overflow-hidden">{renderContent()}</div>
+        </div>
+      </>
     );
   }
 
@@ -549,7 +512,9 @@ export function ProjectColumn({
                   <Tooltip key={tab.id}>
                     <TooltipTrigger asChild>
                       <button
+                        id={`${tab.id}-tab`}
                         onClick={() => setActiveTab(tab.id)}
+                        data-test-id={`tab-button-${tab.id === 'docs' ? 'documentation' : tab.id}`}
                         className={cn(
                           "px-3 py-1.5 relative transition-all rounded-sm group",
                           activeTab === tab.id
@@ -601,20 +566,49 @@ export function ProjectColumn({
               (activeTab === "conversations" ||
                 activeTab === "docs" ||
                 activeTab === "agents") && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => {
-                    if (activeTab === "agents") {
-                      setAddAgentsDialogOpen(true);
-                    } else if (onItemClick) {
-                      onItemClick(project, activeTab, "new");
-                    }
-                  }}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
+                activeTab === "conversations" ? (
+                  <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onMouseDown={handleAddButtonMouseDown}
+                        onMouseUp={handleAddButtonMouseUp}
+                        onMouseLeave={handleAddButtonMouseLeave}
+                        onTouchStart={handleAddButtonMouseDown}
+                        onTouchEnd={handleAddButtonMouseUp}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" sideOffset={5}>
+                      <DropdownMenuItem onClick={handleNewConversation}>
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        New Conversation
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleNewVoiceCall}>
+                        <Phone className="mr-2 h-4 w-4" />
+                        New Voice Call
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => {
+                      if (activeTab === "agents") {
+                        setAddAgentsDialogOpen(true);
+                      } else if (onItemClick) {
+                        onItemClick(project, activeTab, "new");
+                      }
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                )
               )}
           </div>
         </div>
@@ -622,11 +616,10 @@ export function ProjectColumn({
         {/* Column Content */}
         <div className="flex-1 overflow-hidden">{renderContent()}</div>
 
-        {/* FAB for standalone mode - hide when CallView is active */}
+        {/* FAB for standalone mode */}
         {mode === "standalone" &&
           activeTab === "conversations" &&
-          viewState === "list" &&
-          !showCallView && (
+          viewState === "list" && (
             <FABMenu
               onTextClick={() => {
                 setSelectedThread(undefined);
@@ -634,27 +627,25 @@ export function ProjectColumn({
                 setViewState("detail");
               }}
               onVoiceClick={() => {
-                setShowCallView(true);
+                // Open CallView in a floating window
+                windowManager.addWindow({
+                  project,
+                  type: "call" as any,
+                  data: {
+                    onCallEnd: (rootEvent: NDKEvent | null) => {
+                      // If a conversation was created during the call, select it
+                      if (rootEvent) {
+                        setSelectedThread(rootEvent);
+                        setViewState("detail");
+                      }
+                    }
+                  }
+                });
               }}
               offset={{ bottom: "16px" }}
             />
           )}
 
-        {/* Call View Overlay */}
-        {showCallView && project && (
-          <CallView
-            project={project}
-            onClose={(rootEvent) => {
-              setShowCallView(false);
-              // If a conversation was created during the call, select it
-              if (rootEvent) {
-                setSelectedThread(rootEvent);
-                setViewState("detail");
-              }
-            }}
-            extraTags={selectedThread ? [["E", selectedThread.id]] : undefined}
-          />
-        )}
       </div>
 
       <AddAgentsToProjectDialog
@@ -662,6 +653,15 @@ export function ProjectColumn({
         onOpenChange={setAddAgentsDialogOpen}
         project={project}
         existingAgentIds={agents.map((a) => a.pubkey)}
+      />
+
+      <EventModal
+        event={selectedHashtagEvent}
+        isOpen={hashtagEventModalOpen}
+        onClose={() => {
+          setHashtagEventModalOpen(false);
+          setSelectedHashtagEvent(null);
+        }}
       />
     </>
   );

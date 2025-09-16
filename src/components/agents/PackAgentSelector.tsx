@@ -21,7 +21,7 @@ export function PackAgentSelector({
     return null;
   }
 
-  const agent = new NDKAgentDefinition(ndk, event);
+  const agent = new NDKAgentDefinition(ndk, event.rawEvent());
 
   return (
     <div
@@ -31,7 +31,7 @@ export function PackAgentSelector({
       )}
       onClick={onToggle}
     >
-      <AgentDefinitionCard agent={agent} />
+      <AgentDefinitionCard agent={agent} onClick={() => {}} />
       {selected && (
         <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
           <svg

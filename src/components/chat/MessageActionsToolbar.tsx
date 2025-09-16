@@ -2,10 +2,10 @@ import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Reply, MoreVertical, Cpu, DollarSign, User, Copy, Volume2, Square } from "lucide-react";
-import { useAI } from "@/hooks/useAI";
-import { extractTTSContent } from "@/lib/utils/extractTTSContent";
-import { useRef, useState, useEffect } from "react";
+import { Reply, MoreVertical, Cpu, DollarSign, User, Copy, Volume2, Square, Quote, ExternalLink } from "lucide-react";
+import { useTTSPlayer } from "@/hooks/useTTSPlayer";
+import { useState, useEffect } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,13 +19,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { formatCost } from "@/lib/utils/formatCost";
 
 interface MessageActionsToolbarProps {
   event: NDKEvent;
   project?: NDKProject | null;
   onReply?: () => void;
+  onQuote?: () => void;
   onMetadataClick?: () => void;
   llmMetadata?: Record<string, unknown> | null;
   isMobile: boolean;
@@ -34,47 +34,36 @@ interface MessageActionsToolbarProps {
 
 export function MessageActionsToolbar({
   event,
-  project,
   onReply,
+  onQuote,
   onMetadataClick,
   llmMetadata,
   isMobile,
-  isConsecutive = false,
 }: MessageActionsToolbarProps) {
   const [showRawEventDialog, setShowRawEventDialog] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { speak, hasTTS } = useAI();
+  const navigate = useNavigate();
+  const {
+    play,
+    stop,
+    currentMessageId,
+    isPlaying,
+    hasTTS
+  } = useTTSPlayer();
 
-  const handleTTS = async () => {
+  // Check if this message is currently playing
+  const isThisMessagePlaying = currentMessageId === event.id && isPlaying;
+
+  const handleTTS = () => {
     if (!hasTTS || !event.content) return;
 
-    if (isPlaying && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-      setIsPlaying(false);
+    if (isThisMessagePlaying) {
+      stop();
     } else {
-      const ttsContent = extractTTSContent(event.content);
-      if (ttsContent) {
-        try {
-          setIsPlaying(true);
-          const audioBlob = await speak(ttsContent);
-          const audioUrl = URL.createObjectURL(audioBlob);
-          const audio = new Audio(audioUrl);
-          audioRef.current = audio;
-
-          audio.onended = () => {
-            setIsPlaying(false);
-            URL.revokeObjectURL(audioUrl);
-            audioRef.current = null;
-          };
-
-          await audio.play();
-        } catch (error) {
-          console.error("TTS playback failed:", error);
-          setIsPlaying(false);
-        }
-      }
+      play(
+        event.content,
+        event.id,
+        event.pubkey
+      );
     }
   };
 
@@ -106,18 +95,32 @@ export function MessageActionsToolbar({
           <DropdownMenuContent align="end" className="w-40">
             <DropdownMenuItem
               className="cursor-pointer text-xs"
+              onClick={() => navigate({ to: `/chat/${event.id}` })}
+            >
+              <ExternalLink className="h-3 w-3 mr-2" />
+              Open
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer text-xs"
               onClick={() => onReply?.()}
             >
               <Reply className="h-3 w-3 mr-2" />
               Reply
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer text-xs"
+              onClick={() => onQuote?.()}
+            >
+              <Quote className="h-3 w-3 mr-2" />
+              Quote
             </DropdownMenuItem>
             {hasTTS && event.content && (
               <DropdownMenuItem
                 className="cursor-pointer text-xs"
                 onClick={handleTTS}
               >
-                {isPlaying ? <Square className="h-3 w-3 mr-2" /> : <Volume2 className="h-3 w-3 mr-2" />}
-                {isPlaying ? "Stop" : "Text to Speech"}
+                {isThisMessagePlaying ? <Square className="h-3 w-3 mr-2" /> : <Volume2 className="h-3 w-3 mr-2" />}
+                {isThisMessagePlaying ? "Stop" : "Text to Speech"}
               </DropdownMenuItem>
             )}
             {llmMetadata && (
@@ -187,8 +190,11 @@ export function MessageActionsToolbar({
 
         {/* Cost indicator - only show if meaningful */}
         {(() => {
+          const costValue = llmMetadata?.["llm-cost-usd"] || llmMetadata?.["llm-cost"];
           const cost = formatCost(
-            llmMetadata?.["llm-cost-usd"] || llmMetadata?.["llm-cost"],
+            typeof costValue === 'number' ? costValue :
+            typeof costValue === 'string' ? parseFloat(costValue) :
+            undefined
           );
           if (!cost) return null;
           return (
@@ -224,10 +230,24 @@ export function MessageActionsToolbar({
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem
               className="cursor-pointer"
+              onClick={() => navigate({ to: `/chat/${event.id}` })}
+            >
+              <ExternalLink className="h-3.5 w-3.5 mr-2" />
+              Open
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer"
               onClick={() => onReply?.()}
             >
               <Reply className="h-3.5 w-3.5 mr-2" />
               Reply
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => onQuote?.()}
+            >
+              <Quote className="h-3.5 w-3.5 mr-2" />
+              Quote
             </DropdownMenuItem>
             {hasTTS && event.content && (
               <DropdownMenuItem
@@ -305,8 +325,11 @@ export function MessageActionsToolbar({
 
         {/* Cost indicator - only show if meaningful */}
         {(() => {
+          const costValue = llmMetadata?.["llm-cost-usd"] || llmMetadata?.["llm-cost"];
           const cost = formatCost(
-            llmMetadata?.["llm-cost-usd"] || llmMetadata?.["llm-cost"],
+            typeof costValue === 'number' ? costValue :
+            typeof costValue === 'string' ? parseFloat(costValue) :
+            undefined
           );
           if (!cost) return null;
           return (

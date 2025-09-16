@@ -1,10 +1,10 @@
+import * as React from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface VirtualListProps<T> {
   items: T[];
-  renderItem: (item: T, index: number) => ReactNode;
+  renderItem: (item: T, index: number) => React.ReactNode;
   estimateSize?: number;
   overscan?: number;
   className?: string;
@@ -19,7 +19,7 @@ export function VirtualList<T>({
   className,
   containerClassName,
 }: VirtualListProps<T>) {
-  const parentRef = useRef<HTMLDivElement>(null);
+  const parentRef = React.useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
     count: items.length,

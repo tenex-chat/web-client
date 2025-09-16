@@ -1,5 +1,4 @@
-import { type NDKKind, type NDKEvent } from "@nostr-dev-kit/ndk-hooks";
-import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { type NDKKind, type NDKEvent, useSubscribe, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,6 +14,9 @@ import { MessageShell } from "@/components/chat/MessageShell";
 import { NDKAgentLesson } from "@/lib/ndk-events/NDKAgentLesson";
 import { LessonCard } from "./LessonCard";
 import { useNavigate } from "@tanstack/react-router";
+import { useWindowManager } from "@/stores/windowManager";
+import { NDKProject } from "@/lib/ndk-events/NDKProject";
+import { ArticleEmbedCard } from "@/components/embeds/ArticleEmbedCard";
 
 interface AgentEventsFeedProps {
   pubkey: string;
@@ -31,10 +33,40 @@ const EVENT_KIND_NAMES: Record<number, string> = {
   30078: "Application Specific Data",
   31337: "Audio",
   1111: "Generic Reply",
+  30023: "Long-form Article",
 };
 
 export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
   const navigate = useNavigate();
+  const { ndk } = useNDK();
+  const { addWindow, canAddWindow } = useWindowManager();
+
+  // Subscribe to all projects to create a map of project coordinates
+  const { events: projectEvents } = useSubscribe(
+    [
+      {
+        kinds: [30078 as any], // NDKProject kind
+      },
+    ],
+    {},
+    [],
+  );
+
+  // Create a map of event coordinates (kind:pubkey:d-tag) to project
+  const projectsMap = useMemo(() => {
+    const map = new Map<string, NDKProject>();
+    if (ndk) {
+      projectEvents.forEach((event) => {
+        const project = NDKProject.from(event);
+        // Create the event coordinate in the format kind:pubkey:d-tag
+        const coordinate = `${event.kind}:${event.pubkey}:${project.dTag}`;
+        if (project.dTag) {
+          map.set(coordinate, project);
+        }
+      });
+    }
+    return map;
+  }, [projectEvents, ndk]);
 
   // Subscribe to all events from this agent pubkey
   const { events } = useSubscribe(
@@ -117,6 +149,74 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
     [navigate],
   );
 
+  // Handle time click - open chat interface with this event as the conversation
+  const handleTimeClick = useCallback(
+    (event: NDKEvent) => {
+      console.log("handleTimeClick called in AgentEventsFeed!");
+      console.log("Event:", event);
+
+      // Check if we're in the /projects route where WindowManager is actually mounted
+      const isInProjectsRoute = window.location.pathname.includes('/projects');
+      console.log("Is in projects route?", isInProjectsRoute);
+
+      // Only try to open floating window if we're in the projects route
+      if (isInProjectsRoute && canAddWindow && canAddWindow()) {
+        try {
+          // Find project tag (a-tag) from the event
+          const projectTag = event.tags?.find((tag) => tag[0] === "a" && tag[1]);
+          if (projectTag && projectTag[1] && ndk) {
+            // The a-tag contains an event coordinate in the format kind:pubkey:d-tag
+            const coordinate = projectTag[1];
+
+            // Try to get the actual project from our map
+            let project = projectsMap.get(coordinate);
+            if (!project) {
+              // Parse the coordinate to extract d-tag
+              const parts = coordinate.split(":");
+              if (parts.length >= 3) {
+                const dTag = parts.slice(2).join(":"); // Handle d-tags that might contain colons
+
+                // Create a temporary project object with the d-tag
+                project = new NDKProject(ndk);
+                project.tags.push(["d", dTag]);
+                project.title = dTag; // Use d-tag as title fallback
+              } else {
+                // Invalid coordinate format, but continue to navigation fallback
+                console.warn("Invalid project coordinate format:", coordinate);
+              }
+            }
+
+            if (project) {
+              // Open the chat interface in a floating window with this event as the root
+              console.log("Opening in floating window");
+              addWindow({
+                project,
+                type: "conversations",
+                item: event,
+                data: { id: event.id, event },
+              });
+              return; // Successfully opened in floating window
+            }
+          }
+        } catch (error) {
+          console.log("Error opening floating window:", error);
+        }
+      }
+
+      // Fallback: Navigate to the dedicated chat route
+      // This is used when:
+      // 1. We're not in the /projects route (e.g., on /p/<pubkey>)
+      // 2. Window manager can't add more windows
+      // 3. There was an error opening the floating window
+      console.log("Navigating to chat route with event ID:", event.id);
+      navigate({
+        to: "/chat/$eventId",
+        params: { eventId: event.id },
+      });
+    },
+    [addWindow, canAddWindow, navigate, ndk, projectsMap],
+  );
+
   if (sortedEvents.length === 0) {
     return (
       <EmptyState
@@ -138,13 +238,26 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
             event={event}
             project={null}
             onConversationNavigate={handleConversationNavigate}
+            onTimeClick={handleTimeClick}
           />
           <MessageThread
             parentEvent={event}
             project={null}
             onConversationNavigate={handleConversationNavigate}
+            onTimeClick={handleTimeClick}
           />
         </div>
+      );
+    }
+
+    // Use ArticleEmbedCard for long-form article events (kind 30023)
+    if (kind === 30023) {
+      return (
+        <ArticleEmbedCard
+          key={event.id}
+          event={event}
+          onClick={() => handleConversationNavigate(event)}
+        />
       );
     }
 

@@ -8,6 +8,7 @@ import {
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { Message } from "./useChatMessages";
 import type { AgentInstance } from "@/types/agent";
+import { findNostrEntities } from "@/lib/utils/nostrEntityParser";
 
 export interface ImageUpload {
   url: string;
@@ -108,9 +109,9 @@ export function useThreadManagement(
         newThreadEvent.tags.push(["mode", "voice"]);
       }
 
-      await newThreadEvent.sign();
+      await newThreadEvent.sign(undefined, { pTags: false });
       setLocalRootEvent(newThreadEvent);
-      await newThreadEvent.publish();
+      newThreadEvent.publish();
 
       // Notify parent component about the new thread
       if (onThreadCreated) {
@@ -146,10 +147,7 @@ export function useThreadManagement(
 
       // Add project tag if project exists
       if (project) {
-        const tagId = project.tagId();
-        if (tagId) {
-          replyEvent.tags.push(["a", tagId]);
-        }
+        replyEvent.tags.push(["a", project.tagId()]);
       }
 
       // Add image tags for each uploaded image
@@ -203,7 +201,7 @@ export function useThreadManagement(
         replyEvent.tags.push(["mode", "voice"]);
       }
 
-      await replyEvent.sign();
+      await replyEvent.sign(undefined, { pTags: false });
       await replyEvent.publish();
 
       return replyEvent;

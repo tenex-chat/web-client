@@ -15,7 +15,7 @@ export function AgentDefinitionFromId({ eventId }: AgentDefinitionFromIdProps) {
 
   if (!event || !ndk) return null;
 
-  const agent = new NDKAgentDefinition(ndk, event);
+  const agent = new NDKAgentDefinition(ndk, event.rawEvent());
 
   const handleClick = () => {
     navigate({

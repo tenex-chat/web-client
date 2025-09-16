@@ -28,7 +28,7 @@ export function EventPreview({ entity, onRemove, onEventLoaded, className }: Eve
   }, [entity]);
 
   // Fetch the event using useEvent hook
-  const event = useEvent(eventId || "");
+  const event = useEvent(eventId);
   const isLoading = !event && !!eventId;
 
   // Notify parent when event is loaded

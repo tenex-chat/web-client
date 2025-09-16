@@ -11,6 +11,8 @@ import { StreamingCaret } from "./StreamingCaret";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { EVENT_KINDS } from "@/lib/constants";
 import { ReadMore } from "./components/ReadMore";
+import { ReactComponentRenderer } from "./components/ReactComponentRenderer";
+import { getMessageContent } from "@/lib/utils/brainstorm";
 
 interface MessageContentProps {
   event: NDKEvent;
@@ -18,6 +20,11 @@ interface MessageContentProps {
   onConversationNavigate?: (event: NDKEvent) => void;
   isMobile: boolean;
   className?: string;
+  message?: {
+    isReactComponent?: boolean;
+    reactComponentCode?: string;
+    reactComponentProps?: Record<string, any>;
+  };
 }
 
 /**
@@ -30,6 +37,7 @@ export const MessageContent = memo(function MessageContent({
   onConversationNavigate,
   isMobile,
   className,
+  message,
 }: MessageContentProps) {
   const { ndk } = useNDK();
 
@@ -54,8 +62,10 @@ export const MessageContent = memo(function MessageContent({
     return null;
   }, [isTaskEvent, ndk, event]);
 
-  // Parse content
-  const displayContent = event.content ?? "";
+  // Parse content - handle brainstorm mode messages
+  const displayContent = useMemo(() => {
+    return getMessageContent(event);
+  }, [event]);
 
   return (
     <div
@@ -65,7 +75,14 @@ export const MessageContent = memo(function MessageContent({
         className
       )}
     >
-      {isTaskEvent && task && !isRootEvent ? (
+      {message?.isReactComponent && message?.reactComponentCode ? (
+        <div className="react-component-container p-2 border rounded">
+          <ReactComponentRenderer 
+            componentCode={message.reactComponentCode} 
+            props={message.reactComponentProps}
+          />
+        </div>
+      ) : isTaskEvent && task && !isRootEvent ? (
         <TaskContent
           task={task}
           onClick={() => onConversationNavigate?.(event)}

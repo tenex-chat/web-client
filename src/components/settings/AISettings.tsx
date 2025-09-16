@@ -183,9 +183,84 @@ export function AISettings() {
               />
             </div>
             {sttSettings.enabled && (
-              <div className="pl-4 space-y-2 text-sm text-muted-foreground">
-                <p>Provider: OpenAI Whisper</p>
-                <p>Model: {sttSettings.model}</p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>STT Provider</Label>
+                  <RadioGroup
+                    value={sttSettings.provider}
+                    onValueChange={(provider: "whisper" | "elevenlabs" | "built-in-chrome") =>
+                      setSTTSettings({ provider })
+                    }
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="whisper" id="stt-whisper" />
+                      <Label htmlFor="stt-whisper">OpenAI Whisper</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="elevenlabs" id="stt-elevenlabs" />
+                      <Label htmlFor="stt-elevenlabs">ElevenLabs</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="built-in-chrome" id="stt-chrome" />
+                      <Label htmlFor="stt-chrome">Built-in Chrome</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
+                {sttSettings.provider === "whisper" && (
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="stt-openai-key"
+                      className="flex items-center gap-2"
+                    >
+                      <Key className="h-4 w-4" />
+                      OpenAI API Key for STT
+                    </Label>
+                    <Input
+                      id="stt-openai-key"
+                      type="password"
+                      placeholder="Enter your OpenAI API key"
+                      value={openAIApiKey || ""}
+                      onChange={(e) => setOpenAIApiKey(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Uses Whisper model: {sttSettings.model}
+                    </p>
+                  </div>
+                )}
+                
+                {sttSettings.provider === "elevenlabs" && (
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="stt-elevenlabs-key"
+                      className="flex items-center gap-2"
+                    >
+                      <Key className="h-4 w-4" />
+                      ElevenLabs API Key
+                    </Label>
+                    <Input
+                      id="stt-elevenlabs-key"
+                      type="password"
+                      placeholder="Enter your ElevenLabs API key"
+                      value={voiceSettings.apiKey || ""}
+                      onChange={(e) =>
+                        setVoiceSettings({ apiKey: e.target.value })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {voiceSettings.apiKey ? 
+                        "This key is shared with Text-to-Speech settings" : 
+                        "Get your API key from the ElevenLabs dashboard"}
+                    </p>
+                  </div>
+                )}
+                
+                {sttSettings.provider === "built-in-chrome" && (
+                  <div className="pl-4 space-y-2 text-sm text-muted-foreground">
+                    <p>Uses browser's built-in speech recognition</p>
+                    <p>No API key required</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -266,7 +341,9 @@ export function AISettings() {
                       }
                     />
                     <p className="text-xs text-muted-foreground">
-                      Get your API key from the ElevenLabs dashboard
+                      {voiceSettings.apiKey ? 
+                        "This key is shared with Speech-to-Text settings" : 
+                        "Get your API key from the ElevenLabs dashboard"}
                     </p>
                   </div>
                 )}
@@ -388,7 +465,7 @@ export function AISettings() {
           onClose={() => setShowVoiceSelection(false)}
           currentVoiceId={voiceSettings.voiceId}
           provider={voiceSettings.provider}
-          apiKey={voiceSettings.apiKey}
+          apiKey={voiceSettings.apiKey || null}
           onSelect={(voiceId) => {
             setVoiceSettings({ voiceId });
             toast.success("Voice selected successfully");

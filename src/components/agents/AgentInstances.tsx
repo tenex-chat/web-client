@@ -80,7 +80,7 @@ export function AgentInstances({ agentDefinitionId }: AgentInstancesProps) {
 
   const handleProjectClick = (e: React.MouseEvent, dTag: string) => {
     e.stopPropagation(); // Prevent agent card click
-    navigate({ to: "/projects/$projectId", params: { projectId: dTag } });
+    navigate({ to: "/projects/$projectId", params: { projectId: dTag }, search: {} });
   };
 
   if (agentInstances.length === 0) {
@@ -125,7 +125,7 @@ export function AgentInstances({ agentDefinitionId }: AgentInstancesProps) {
                   {agent.project && (
                     <div
                       className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded hover:bg-muted/70 transition-colors cursor-pointer"
-                      onClick={(e) => handleProjectClick(e, agent.project.dTag)}
+                      onClick={(e) => handleProjectClick(e, agent.project!.dTag)}
                     >
                       <FolderOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <span className="text-sm font-medium truncate">

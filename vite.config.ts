@@ -16,6 +16,24 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
-    allowedHosts: ['d1c684ca8fac.ngrok.app', '.ngrok.app', 'localhost']
+    strictPort: false, // Allow Vite to use next available port if 3000 is in use
+    allowedHosts: ['d1c684ca8fac.ngrok.app', '.ngrok.app', 'localhost'],
+    // WebSocket configuration for HMR - will auto-detect port
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+    },
+    // Ensure WebSocket connections work properly
+    cors: true,
+    // Handle proxy for WebSocket connections if needed
+    proxy: {
+      // Proxy WebSocket connections to the Nostr relay
+      '/relay': {
+        target: 'wss://tenex.chat',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/relay/, ''),
+      },
+    },
   },
 })

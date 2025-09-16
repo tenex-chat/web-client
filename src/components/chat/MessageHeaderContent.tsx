@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { getPhaseIcon } from "@/lib/utils/event-metadata";
 import { getPhaseColorClasses } from "@/lib/utils/phase-colors";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Brain } from "lucide-react";
 import { EventOperationIndicator } from "./EventOperationIndicator";
+import { isBrainstormMessage, getBrainstormModerator } from "@/lib/utils/brainstorm";
 
 interface MessageHeaderContentProps {
   event: NDKEvent;
@@ -66,11 +67,15 @@ export function MessageHeaderContent({
           )}
           {!hideTimestamp && (
             <button
-              onClick={() => onTimeClick?.(event)}
+              onClick={() => {
+                console.log("Time clicked! Event:", event);
+                console.log("onTimeClick function exists?", !!onTimeClick);
+                onTimeClick?.(event);
+              }}
               className="text-[10px] text-muted-foreground hover:text-foreground transition-colors hover:underline"
-              title={formatRelativeTime(event.created_at)}
+              title={formatRelativeTime(event.created_at || 0)}
             >
-              {formatCompactTime(event.created_at)}
+              {formatCompactTime(event.created_at || 0)}
             </button>
           )}
           {phase && (
@@ -95,6 +100,16 @@ export function MessageHeaderContent({
               <span>{phase}</span>
             </Badge>
           )}
+          {isBrainstormMessage(event) && (
+            <Badge
+              variant="secondary"
+              className="text-[9px] h-4 px-1 gap-0.5 bg-purple-600/20 text-purple-600 border-purple-600/30"
+              title={`Brainstorm mode - Moderator: ${getBrainstormModerator(event) || 'Unknown'}`}
+            >
+              <Brain className="w-2.5 h-2.5" />
+              <span>Brainstorm</span>
+            </Badge>
+          )}
           <EventOperationIndicator eventId={event.id} projectId={projectId} />
         </div>
 
@@ -115,19 +130,30 @@ export function MessageHeaderContent({
       <div className="flex items-center gap-2">
         {event.created_at && (
           <button
-            onClick={() => onTimeClick?.(event)}
+            onClick={() => {
+              console.log("Consecutive message time clicked! Event:", event);
+              console.log("onTimeClick function exists?", !!onTimeClick);
+              onTimeClick?.(event);
+            }}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer hover:underline"
             title="Open as root conversation"
           >
-            {formatRelativeTime(event.created_at)}
+            {formatRelativeTime(event.created_at || 0)}
           </button>
         )}
         {/* Show recipients for consecutive messages with p-tags */}
         {recipientPubkeys.length > 0 && (
-          <>
-            <span className="text-xs text-muted-foreground">→</span>
             <RecipientAvatars pubkeys={recipientPubkeys} className="scale-90" />
-          </>
+        )}
+        {isBrainstormMessage(event) && (
+          <Badge
+            variant="secondary"
+            className="text-[9px] h-4 px-1 gap-0.5 bg-purple-600/20 text-purple-600 border-purple-600/30"
+            title={`Brainstorm mode - Moderator: ${getBrainstormModerator(event) || 'Unknown'}`}
+          >
+            <Brain className="w-2.5 h-2.5" />
+            <span>Brainstorm</span>
+          </Badge>
         )}
         <EventOperationIndicator eventId={event.id} projectId={projectId} />
       </div>
@@ -156,7 +182,11 @@ export function MessageHeaderContent({
       )}
       {event.created_at && (
         <button
-          onClick={() => onTimeClick?.(event)}
+          onClick={() => {
+            console.log("Desktop time clicked! Event:", event);
+            console.log("onTimeClick function exists?", !!onTimeClick);
+            onTimeClick?.(event);
+          }}
           className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer hover:underline"
           title="Open as root conversation"
         >
@@ -187,6 +217,16 @@ export function MessageHeaderContent({
             ) : null;
           })()}
           <span className="ml-0.5">{phase}</span>
+        </Badge>
+      )}
+      {isBrainstormMessage(event) && (
+        <Badge
+          variant="secondary"
+          className="text-[10px] h-5 px-1.5 gap-0.5 bg-purple-600/20 text-purple-600 border-purple-600/30"
+          title={`Brainstorm mode - Moderator: ${getBrainstormModerator(event) || 'Unknown'}`}
+        >
+          <Brain className="w-3 h-3" />
+          <span className="ml-0.5">Brainstorm</span>
         </Badge>
       )}
       <EventOperationIndicator eventId={event.id} projectId={projectId} />

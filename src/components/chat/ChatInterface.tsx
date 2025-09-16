@@ -16,6 +16,7 @@ import { ChatMessageList } from "./components/ChatMessageList";
 import { ChatInputArea } from "./components/ChatInputArea";
 import { useAI } from "@/hooks/useAI";
 import { ReplyProvider } from "./contexts/ReplyContext";
+import { useThreadViewModeStore } from "@/stores/thread-view-mode-store";
 
 interface ChatInterfaceProps {
   project?: NDKProject | null;
@@ -26,6 +27,7 @@ interface ChatInterfaceProps {
   onDetach?: () => void;
   onThreadCreated?: (thread: NDKEvent) => void;
   onVoiceCallClick?: () => void;
+  onQuote?: (quotedText: string) => void;
 }
 
 /**
@@ -40,6 +42,7 @@ function ChatInterfaceInner({
   onDetach,
   onThreadCreated,
   onVoiceCallClick,
+  onQuote,
 }: ChatInterfaceProps) {
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
@@ -56,6 +59,7 @@ function ChatInterfaceInner({
   const [localRootEvent, setLocalRootEvent] = useState<NDKEvent | null>(
     rootEvent || null,
   );
+  const [prefilledContent, setPrefilledContent] = useState<string>("");
 
   // Update local root when rootEvent prop changes
   useEffect(() => {
@@ -94,8 +98,11 @@ function ChatInterfaceInner({
   // Get ONLINE agents for @mentions
   const onlineAgents = useProjectOnlineAgents(project?.dTag);
 
+  // Thread view mode
+  const { mode: viewMode } = useThreadViewModeStore();
+
   // Message management
-  const messages = useChatMessages(localRootEvent);
+  const messages = useChatMessages(localRootEvent, viewMode);
 
   // Scroll management
   const scrollProps = useChatScroll(messages);
@@ -131,6 +138,43 @@ function ChatInterfaceInner({
 
   const isNewThread = !localRootEvent;
 
+  // Handle quote action
+  const handleQuote = useCallback((quotedText: string) => {
+    if (onQuote) {
+      // If parent handles quotes, delegate to it
+      onQuote(quotedText);
+    } else {
+      // Otherwise handle internally (legacy behavior)
+      // Clear the current thread to start a new one
+      setLocalRootEvent(null);
+      setNavigationStack([]);
+      // Pre-fill the input with the quoted text
+      setPrefilledContent(quotedText);
+      // Focus the input
+      setTimeout(() => textareaRef.current?.focus(), 100);
+    }
+  }, [onQuote]);
+
+  // Handle navigation to parent event
+  const handleNavigateToParent = useCallback(async (parentId: string) => {
+    if (!ndk) return;
+    
+    try {
+      // Fetch the parent event
+      const parentEvent = await ndk.fetchEvent(parentId);
+      if (parentEvent) {
+        // Push current event to navigation stack
+        if (localRootEvent) {
+          setNavigationStack(prev => [...prev, localRootEvent]);
+        }
+        // Set the parent as the new root event
+        setLocalRootEvent(parentEvent);
+      }
+    } catch (error) {
+      console.error("Failed to fetch parent event:", error);
+    }
+  }, [ndk, localRootEvent]);
+
   return (
     <ChatDropZone
       className={cn("flex flex-col h-full overflow-hidden", className)}
@@ -150,12 +194,14 @@ function ChatInterfaceInner({
           messages={messages}
           project={project}
           onVoiceCallClick={onVoiceCallClick}
+          onNavigateToParent={handleNavigateToParent}
         />
 
         {/* Messages Area */}
         <ChatMessageList
           messages={messages}
           project={project}
+          rootEvent={localRootEvent}
           scrollAreaRef={scrollProps.scrollAreaRef}
           showScrollToBottom={scrollProps.showScrollToBottom}
           unreadCount={scrollProps.unreadCount}
@@ -166,6 +212,7 @@ function ChatInterfaceInner({
           autoTTS={autoTTS}
           currentUserPubkey={user?.pubkey}
           onNavigate={pushToStack}
+          onQuote={handleQuote}
         />
 
         {/* Input Area - fully autonomous, publishes directly to Nostr */}
@@ -178,6 +225,9 @@ function ChatInterfaceInner({
           disabled={!ndk || !user}
           showVoiceButton={!isMobile}
           onThreadCreated={handleThreadCreated}
+          textareaRef={textareaRef}
+          initialContent={prefilledContent}
+          onContentUsed={() => setPrefilledContent("")}
         />
       </div>
     </ChatDropZone>

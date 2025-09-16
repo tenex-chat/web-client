@@ -75,7 +75,7 @@ function AgentDisplay({
     : null;
 
   const agentPubkey = agentDefinition?.pubkey;
-  const profile = useProfile(agentPubkey || "");
+  const profile = useProfile(agentPubkey);
 
   const displayName =
     agentDefinition?.name || profile?.displayName || profile?.name || "";

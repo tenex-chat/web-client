@@ -1,10 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Volume2, Square } from "lucide-react";
-import { useMemo, useState, useRef } from "react";
+import { useMemo } from "react";
 import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
-import { useAI } from "@/hooks/useAI";
 import { useAgentVoiceConfig } from "@/hooks/useAgentVoiceConfig";
-import { extractTTSContent } from "@/lib/utils/extractTTSContent";
+import { useTTSPlayer } from "@/hooks/useTTSPlayer";
 import {
   Tooltip,
   TooltipContent,
@@ -15,6 +14,7 @@ import { cn } from "@/lib/utils";
 interface TTSButtonProps {
   content: string;
   authorPubkey: string;
+  messageId: string;
   projectId?: string;
   className?: string;
   size?: "default" | "sm" | "icon";
@@ -25,15 +25,20 @@ interface TTSButtonProps {
 export function TTSButton({
   content,
   authorPubkey,
+  messageId,
   projectId,
   className,
   size = "icon",
   variant = "ghost",
   tooltipEnabled = true,
 }: TTSButtonProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { speak, hasTTS } = useAI();
+  const {
+    play,
+    stop,
+    currentMessageId,
+    isPlaying,
+    hasTTS
+  } = useTTSPlayer();
 
   // Get online agents to find the agent's slug
   const onlineAgents = useProjectOnlineAgents(projectId);
@@ -49,36 +54,23 @@ export function TTSButton({
   const { config: voiceConfig } = useAgentVoiceConfig(agentSlug ?? undefined);
   const voiceName = voiceConfig?.voiceId || "Default";
 
+  // Check if this message is currently playing
+  const isThisMessagePlaying = currentMessageId === messageId && isPlaying;
+
   // Don't render if TTS is not configured
   if (!hasTTS || !content) return null;
 
-  const handleClick = async () => {
-    if (isPlaying && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-      setIsPlaying(false);
+  const handleClick = () => {
+    if (isThisMessagePlaying) {
+      stop();
     } else {
-      const ttsContent = extractTTSContent(content);
-      if (ttsContent) {
-        try {
-          setIsPlaying(true);
-          const audioBlob = await speak(ttsContent);
-          const audioUrl = URL.createObjectURL(audioBlob);
-          const audio = new Audio(audioUrl);
-          audioRef.current = audio;
-
-          audio.onended = () => {
-            setIsPlaying(false);
-            URL.revokeObjectURL(audioUrl);
-            audioRef.current = null;
-          };
-
-          await audio.play();
-        } catch (error) {
-          console.error("TTS playback failed:", error);
-          setIsPlaying(false);
-        }
-      }
+      play(
+        content,
+        messageId,
+        authorPubkey,
+        voiceConfig?.voiceId,
+        voiceConfig?.provider
+      );
     }
   };
 
@@ -89,7 +81,7 @@ export function TTSButton({
       className={cn("transition-all", className)}
       onClick={handleClick}
     >
-      {isPlaying ? (
+      {isThisMessagePlaying ? (
         <Square className="h-3.5 w-3.5" />
       ) : (
         <Volume2 className="h-3.5 w-3.5" />
@@ -106,7 +98,7 @@ export function TTSButton({
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent>
         <p className="text-xs">
-          {isPlaying ? "Stop" : "Play"} TTS ({voiceName})
+          {isThisMessagePlaying ? "Stop" : "Play"} TTS ({voiceName})
         </p>
       </TooltipContent>
     </Tooltip>

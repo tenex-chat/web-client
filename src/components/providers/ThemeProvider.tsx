@@ -1,8 +1,9 @@
-import { ReactNode, useEffect } from "react";
+import React from "react";
+import type { ReactNode } from "react";
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   // Also apply appearance settings on mount
-  useEffect(() => {
+  React.useEffect(() => {
     const saved = localStorage.getItem("appearance-settings");
     if (saved) {
       try {

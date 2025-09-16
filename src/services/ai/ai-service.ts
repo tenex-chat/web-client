@@ -1,6 +1,7 @@
 import { generateText } from "ai";
 import { providerRegistry, type ProviderConfig } from "./provider-registry";
 import { voiceDiscovery } from "./voice-discovery";
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 
 class AIService {
   private currentConfig: ProviderConfig | null = null;
@@ -34,7 +35,6 @@ class AIService {
 
 Text to clean: ${text}`,
         temperature: 0.3,
-        maxSteps: 1,
       });
 
       return cleaned;
@@ -51,38 +51,181 @@ Text to clean: ${text}`,
     }
   }
 
-  async transcribe(audio: Blob, openAIKey?: string): Promise<string> {
-    const apiKey =
-      openAIKey ||
-      (this.currentConfig?.provider === "openai"
-        ? this.currentConfig.apiKey
-        : null);
+  async transcribe(
+    audio: Blob,
+    provider: "whisper" | "elevenlabs" | "built-in-chrome",
+    apiKey?: string,
+  ): Promise<string> {
+    switch (provider) {
+      case "whisper": {
+        const key =
+          apiKey ||
+          (this.currentConfig?.provider === "openai"
+            ? this.currentConfig.apiKey
+            : null);
 
-    if (!apiKey) {
-      throw new Error("OpenAI API key required for transcription");
+        if (!key) {
+          throw new Error("OpenAI API key required for Whisper transcription");
+        }
+
+        const formData = new FormData();
+        formData.append("file", audio, "audio.webm");
+        formData.append("model", "whisper-1");
+
+        const response = await fetch(
+          "https://api.openai.com/v1/audio/transcriptions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${key}`,
+            },
+            body: formData,
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`Transcription failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.text;
+      }
+
+      case "elevenlabs": {
+        if (!apiKey) {
+          throw new Error("ElevenLabs API key required for transcription");
+        }
+        
+        return this.transcribeWithElevenLabs(audio, apiKey);
+      }
+
+      case "built-in-chrome": {
+        // Use browser's built-in Web Speech API
+        return this.transcribeWithWebSpeechAPI(audio);
+      }
+
+      default:
+        throw new Error(`Unsupported STT provider: ${provider}`);
     }
+  }
 
-    const formData = new FormData();
-    formData.append("file", audio, "audio.webm");
-    formData.append("model", "whisper-1");
+  private async transcribeWithElevenLabs(audio: Blob, apiKey: string): Promise<string> {
+    try {
+      // Initialize ElevenLabs client
+      const elevenlabs = new ElevenLabsClient({ apiKey });
 
-    const response = await fetch(
-      "https://api.openai.com/v1/audio/transcriptions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: formData,
-      },
-    );
+      // Convert Blob to File for the SDK
+      const file = new File([audio], "audio.webm", { 
+        type: audio.type || "audio/webm" 
+      });
 
-    if (!response.ok) {
-      throw new Error(`Transcription failed: ${response.statusText}`);
+      // Use the ElevenLabs SDK for transcription
+      const result = await elevenlabs.speechToText.convert({
+        file: file,
+        modelId: "scribe_v1",
+        tagAudioEvents: false, // Don't tag audio events for now
+        diarize: false, // Don't identify speakers for single-user mode
+      });
+
+      // Extract the transcribed text from the response
+      // The response can be one of three types based on the union
+      if ('text' in result && result.text) {
+        // SpeechToTextChunkResponseModel
+        return result.text;
+      } else if ('transcripts' in result && result.transcripts) {
+        // MultichannelSpeechToTextResponseModel - combine all channel transcripts
+        return result.transcripts.map((t: any) => t.text || '').join(' ');
+      } else if ('transcriptionId' in result && result.transcriptionId) {
+        // SpeechToTextWebhookResponseModel - this means it was sent to webhook
+        throw new Error("Transcription sent to webhook, not available immediately");
+      } else {
+        console.warn("Unexpected ElevenLabs response structure:", result);
+        throw new Error("Unable to extract transcription from ElevenLabs response");
+      }
+    } catch (error) {
+      console.error("ElevenLabs transcription error:", error);
+      throw error;
     }
+  }
 
-    const data = await response.json();
-    return data.text;
+  private async transcribeWithElevenLabsExperimental(audio: Blob, apiKey: string): Promise<string> {
+    try {
+      // Initialize ElevenLabs client
+      const elevenlabs = new ElevenLabsClient({ apiKey });
+
+      // Convert Blob to File for the SDK
+      const file = new File([audio], "audio.webm", { 
+        type: audio.type || "audio/webm" 
+      });
+
+      // Use the ElevenLabs SDK for transcription with experimental model
+      const result = await elevenlabs.speechToText.convert({
+        file: file,
+        modelId: "scribe_v1_experimental",
+        tagAudioEvents: false,
+        diarize: false,
+      });
+
+      // Extract the transcribed text from the response
+      if ('text' in result && result.text) {
+        // SpeechToTextChunkResponseModel
+        return result.text;
+      } else if ('transcripts' in result && result.transcripts) {
+        // MultichannelSpeechToTextResponseModel - combine all channel transcripts
+        return result.transcripts.map((t: any) => t.text || '').join(' ');
+      } else if ('transcriptionId' in result && result.transcriptionId) {
+        // SpeechToTextWebhookResponseModel - this means it was sent to webhook
+        throw new Error("Transcription sent to webhook, not available immediately");
+      } else {
+        console.warn("Unexpected ElevenLabs experimental response structure:", result);
+        throw new Error("Unable to extract transcription from ElevenLabs experimental response");
+      }
+    } catch (error) {
+      console.error("ElevenLabs experimental transcription error:", error);
+      throw error;
+    }
+  }
+
+  private async transcribeWithWebSpeechAPI(audio: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      // Check if Web Speech API is available
+      const SpeechRecognition =
+        (window as any).SpeechRecognition ||
+        (window as any).webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        reject(new Error("Web Speech API not supported in this browser"));
+        return;
+      }
+
+      // Convert blob to audio URL
+      const audioUrl = URL.createObjectURL(audio);
+      
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = "en-US";
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        URL.revokeObjectURL(audioUrl);
+        resolve(transcript);
+      };
+
+      recognition.onerror = (event: any) => {
+        URL.revokeObjectURL(audioUrl);
+        reject(new Error(`Speech recognition error: ${event.error}`));
+      };
+
+      recognition.onend = () => {
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      // Note: Web Speech API typically works with microphone input
+      // For pre-recorded audio, we might need a different approach
+      // This is a simplified implementation
+      reject(new Error("Built-in Chrome STT requires live microphone input, not pre-recorded audio"));
+    });
   }
 
   async speak(
@@ -92,6 +235,16 @@ Text to clean: ${text}`,
     apiKey: string,
   ): Promise<Blob> {
     return voiceDiscovery.previewVoice(voiceProvider, voiceId, text, apiKey);
+  }
+
+  async streamSpeak(
+    text: string,
+    voiceId: string,
+    voiceProvider: "openai" | "elevenlabs",
+    apiKey: string,
+    onChunk?: (chunk: Uint8Array) => void,
+  ): Promise<Blob> {
+    return voiceDiscovery.streamVoice(voiceProvider, voiceId, text, apiKey, onChunk);
   }
 
   private getDefaultModel(provider: string): string {

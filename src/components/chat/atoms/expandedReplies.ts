@@ -1,7 +1,7 @@
 import { atom } from "jotai";
 
 // Set of message IDs that have their replies expanded
-export const expandedRepliesAtom = atom<Set<string>>(new Set());
+export const expandedRepliesAtom = atom<Set<string>>(new Set<string>());
 
 // Atom to check if a specific message has expanded replies
 export const isRepliesExpandedAtom = atom(

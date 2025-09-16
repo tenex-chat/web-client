@@ -38,6 +38,7 @@ import { ProjectAvatar } from "@/components/ui/project-avatar";
 import { useConversationMetadata } from "@/hooks/useConversationMetadata";
 import { useAI } from "@/hooks/useAI";
 import { ConversationStopButton } from "@/components/chat/ConversationStopButton";
+import { ThreadViewToggle } from "./ThreadViewToggle";
 
 interface ChatHeaderProps {
   rootEvent: NDKEvent | null;
@@ -46,6 +47,7 @@ interface ChatHeaderProps {
   messages?: Message[];
   project?: NDKProject | null;
   onVoiceCallClick?: () => void;
+  onNavigateToParent?: (parentId: string) => void;
 }
 
 /**
@@ -59,6 +61,7 @@ export function ChatHeader({
   messages,
   project,
   onVoiceCallClick,
+  onNavigateToParent,
 }: ChatHeaderProps) {
   const isMobile = useIsMobile();
   const isNewThread = !rootEvent;
@@ -69,6 +72,9 @@ export function ChatHeader({
     null,
   );
   const { ndk } = useNDK();
+  
+  // Check if rootEvent has a parent "e" tag
+  const parentEventId = rootEvent?.tags?.find((tag: string[]) => tag[0] === "e")?.[1];
 
   // Subscribe to metadata updates for this conversation
   const metadata = useConversationMetadata(rootEvent?.id);
@@ -157,14 +163,14 @@ export function ChatHeader({
           isMobile ? "px-3 py-2" : "px-3 sm:px-4 py-3 sm:py-4",
         )}
       >
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 overflow-hidden">
           {/* Always show back button */}
           {onBack && (
             <Button
               variant="ghost"
               size="icon"
               onClick={onBack}
-              className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+              className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent flex-shrink-0"
               aria-label="Go back"
             >
               <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -178,37 +184,51 @@ export function ChatHeader({
               fallbackClassName="text-xs"
             />
           )}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 overflow-hidden">
             <h1
               className={cn(
                 "font-semibold text-foreground truncate",
-                isMobile ? "text-base max-w-40" : "text-lg sm:text-xl max-w-48",
+                isMobile ? "text-base" : "text-lg sm:text-xl",
               )}
             >
               {threadTitle}
             </h1>
-            {project?.title && (
-              <p
-                className={cn(
-                  "text-muted-foreground",
-                  isMobile ? "text-[10px] mt-0" : "text-xs mt-0.5",
-                )}
-              >
-                {project.title}
-              </p>
-            )}
+            <div className="flex items-center gap-2 flex-1">
+              {project?.title && (
+                <p
+                  className={cn(
+                    "text-muted-foreground",
+                    isMobile ? "text-[10px] mt-0" : "text-xs mt-0.5",
+                  )}
+                >
+                  {project.title}
+                </p>
+              )}
+              {parentEventId && onNavigateToParent && (
+                <button
+                  onClick={() => onNavigateToParent(parentEventId)}
+                  className="text-xs text-primary hover:underline cursor-pointer"
+                >
+                  Go to parent
+                </button>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-shrink-0">
           {/* Conversation Agents - show inline but smaller on mobile */}
           {rootEvent && messages && project && messages.length > 0 && (
-            <div className={cn(isMobile && "scale-75 -mr-1")}>
+            <div className={cn(isMobile && "scale-75 -mr-1", "flex-shrink-0")}>
               <ConversationAgents
                 messages={messages}
                 project={project}
                 rootEvent={rootEvent}
               />
             </div>
+          )}
+          {/* Thread View Toggle - only show when there's a conversation with messages */}
+          {rootEvent && messages && messages.length > 0 && (
+            <ThreadViewToggle />
           )}
           {/* Copy thread dropdown */}
           {rootEvent && messages && messages.length > 0 && (
@@ -252,10 +272,10 @@ export function ChatHeader({
             </DropdownMenu>
           )}
           {/* Conversation-level stop button */}
-          {rootEvent && (
+          {rootEvent && project?.tagId() && (
             <ConversationStopButton
               conversationRootId={rootEvent.id}
-              projectId={project?.tagId()}
+              projectId={project.tagId()}
             />
           )}
 

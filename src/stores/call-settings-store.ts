@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 
 export type InterruptionMode = "disabled" | "headphones";
 export type InterruptionSensitivity = "low" | "medium" | "high";
+export type VADMode = "disabled" | "auto" | "push-to-talk";
 
 export interface CallAudioSettings {
   // Device selection
@@ -15,6 +16,9 @@ export interface CallAudioSettings {
   echoCancellation: boolean;
   voiceActivityDetection: boolean;
   vadSensitivity: number; // 0-100, lower = more sensitive
+
+  // VAD mode for conversation flow
+  vadMode: VADMode; // "disabled" = manual only, "auto" = VAD detects speech, "push-to-talk" = current behavior
 
   // Interruption settings
   interruptionMode: InterruptionMode;
@@ -35,6 +39,7 @@ const defaultAudioSettings: CallAudioSettings = {
   echoCancellation: true,
   voiceActivityDetection: true,
   vadSensitivity: 50,
+  vadMode: "push-to-talk", // Default to current behavior
   interruptionMode: "disabled",
   interruptionSensitivity: "medium",
 };

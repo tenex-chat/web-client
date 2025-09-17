@@ -13,6 +13,10 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  optimizeDeps: {
+    exclude: ['onnxruntime-web'],
+    include: ['@ricky0123/vad-web'],
+  },
   server: {
     port: 3000,
     host: true,
@@ -25,6 +29,10 @@ export default defineConfig({
     },
     // Ensure WebSocket connections work properly
     cors: true,
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'credentialless',
+    },
     // Handle proxy for WebSocket connections if needed
     proxy: {
       // Proxy WebSocket connections to the Nostr relay

@@ -161,10 +161,12 @@ export function CollapsibleProjectsSidebar({
                 <SidebarTrigger className="h-8 w-8" />
               </div>
             </SidebarMenuItem>
-            {/* Sidebar toggle when collapsed - separate item */}
+            {/* House button when collapsed - at the top */}
             <SidebarMenuItem className="group-data-[collapsible=icon]:flex hidden">
-              <SidebarMenuButton asChild>
-                <SidebarTrigger />
+              <SidebarMenuButton size="lg" asChild>
+                <Link to="/projects" params={{}}>
+                  <Home className="size-5" />
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

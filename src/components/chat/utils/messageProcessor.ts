@@ -46,9 +46,9 @@ export function processEvent(
   }
 
   // Skip events with tool tags (similar to typing/reasoning indicators)
-  if (event.hasTag("tool")) {
-    return;
-  }
+  // if (event.hasTag("tool")) {
+  //   return;
+  // }
 
   // Metadata events should always be shown as final messages
   if (event.kind === EVENT_KINDS.CONVERSATION_METADATA) {

@@ -12,7 +12,7 @@ import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useChatMessages } from "./hooks/useChatMessages";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { ChatHeader } from "./components/ChatHeader";
-import { ChatMessageList } from "./components/ChatMessageList";
+import { ChatMessages } from "./ChatMessages";
 import { ChatInputArea } from "./components/ChatInputArea";
 import { useAI } from "@/hooks/useAI";
 import { ReplyProvider } from "./contexts/ReplyContext";
@@ -190,7 +190,7 @@ function ChatInterfaceInner({
         />
 
         {/* Messages Area */}
-        <ChatMessageList
+        <ChatMessages
           messages={messages}
           project={project}
           rootEvent={localRootEvent}

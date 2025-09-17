@@ -121,14 +121,19 @@ export function useUnifiedSTT(options: UseUnifiedSTTOptions = {}) {
   const startListening = useCallback(async () => {
     if (shouldUseChrome) {
       // Use Chrome Speech Recognition
+      console.log(`STT: Starting Chrome Speech Recognition - ${Date.now()}ms`);
       chromeSpeech.startListening(onSilenceDetected);
       setIsListening(true);
       setTranscript("");
     } else {
       // Use MediaRecorder for ElevenLabs/Whisper
+      console.log(`STT: Starting MediaRecorder for ElevenLabs/Whisper - ${Date.now()}ms`);
       const started = await startMediaRecording();
       if (started) {
+        console.log(`STT: MediaRecorder started successfully - ${Date.now()}ms`);
         setTranscript("");
+      } else {
+        console.error(`STT: Failed to start MediaRecorder - ${Date.now()}ms`);
       }
     }
   }, [shouldUseChrome, chromeSpeech, onSilenceDetected, startMediaRecording]);
@@ -138,6 +143,7 @@ export function useUnifiedSTT(options: UseUnifiedSTTOptions = {}) {
     if (shouldUseChrome) {
       // Chrome Speech Recognition - return current transcript
       const finalTranscript = chromeSpeech.fullTranscript;
+      console.log(`STT: Stopping Chrome Speech, transcript: "${finalTranscript}" - ${Date.now()}ms`);
       chromeSpeech.stopListening();
       setIsListening(false);
       setTranscript(finalTranscript);
@@ -148,8 +154,11 @@ export function useUnifiedSTT(options: UseUnifiedSTTOptions = {}) {
         ? Date.now() - recordingStartTimeRef.current
         : 0;
 
+      console.log(`STT: Stopping ElevenLabs/Whisper recording, duration: ${recordingDuration}ms - ${Date.now()}ms`);
+
       if (recordingDuration < 500) {
         // Too short, just stop without transcribing
+        console.log(`STT: Recording too short (${recordingDuration}ms), skipping transcription - ${Date.now()}ms`);
         stopMediaRecording();
         setIsListening(false);
         recordingStartTimeRef.current = null;
@@ -157,6 +166,7 @@ export function useUnifiedSTT(options: UseUnifiedSTTOptions = {}) {
       }
 
       // MediaRecorder - stop and transcribe
+      console.log(`STT: Processing audio for transcription - ${Date.now()}ms`);
       setIsProcessing(true);
       stopMediaRecording();
 
@@ -165,8 +175,10 @@ export function useUnifiedSTT(options: UseUnifiedSTTOptions = {}) {
           const blob = await audioBlobPromiseRef.current;
 
           // Check blob size to avoid sending empty audio
+          console.log(`STT: Audio blob size: ${blob.size} bytes - ${Date.now()}ms`);
+
           if (blob.size < 1000) {
-            console.warn("Audio blob too small, skipping transcription");
+            console.warn(`STT: Audio blob too small (${blob.size} bytes), skipping transcription - ${Date.now()}ms`);
             setTranscript("");
             setIsProcessing(false);
             audioBlobPromiseRef.current = null;
@@ -175,7 +187,9 @@ export function useUnifiedSTT(options: UseUnifiedSTTOptions = {}) {
             return null;
           }
 
+          console.log(`STT: Sending audio to transcription service - ${Date.now()}ms`);
           const transcribedText = await aiTranscribe(blob);
+          console.log(`STT: Transcription result: "${transcribedText}" - ${Date.now()}ms`);
           setTranscript(transcribedText || "");
           setIsProcessing(false);
           audioBlobPromiseRef.current = null;

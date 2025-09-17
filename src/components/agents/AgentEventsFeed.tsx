@@ -6,8 +6,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Activity } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils/time";
 import { Badge } from "@/components/ui/badge";
-import { Message } from "@/components/chat/Message";
-import { MessageThread } from "@/components/chat/MessageThread";
+import { ThreadedMessage } from "@/components/chat/ThreadedMessage";
 import { TaskContent } from "@/components/chat/TaskContent";
 import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { MessageShell } from "@/components/chat/MessageShell";
@@ -234,17 +233,13 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
     if (kind === 1111) {
       return (
         <div key={event.id}>
-          <Message
-            event={event}
+          <ThreadedMessage
+            message={{ id: event.id, event }}
+            depth={0}
             project={null}
-            onConversationNavigate={handleConversationNavigate}
             onTimeClick={handleTimeClick}
-          />
-          <MessageThread
-            parentEvent={event}
-            project={null}
             onConversationNavigate={handleConversationNavigate}
-            onTimeClick={handleTimeClick}
+            processedEventIds={new Set()}
           />
         </div>
       );

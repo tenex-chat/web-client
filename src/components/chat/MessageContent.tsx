@@ -1,5 +1,5 @@
-import { memo, useMemo } from "react";
-import { NDKEvent, useNDK } from "@nostr-dev-kit/ndk-hooks";
+import { memo, useMemo, useCallback } from "react";
+import { NDKEvent, NDKKind, useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,8 @@ import { EVENT_KINDS } from "@/lib/constants";
 import { ReadMore } from "./components/ReadMore";
 import { ReactComponentRenderer } from "./components/ReactComponentRenderer";
 import { getMessageContent } from "@/lib/utils/brainstorm";
+import { SuggestionButtons } from "./SuggestionButtons";
+import { toast } from "sonner";
 
 interface MessageContentProps {
   event: NDKEvent;
@@ -40,6 +42,7 @@ export const MessageContent = memo(function MessageContent({
   message,
 }: MessageContentProps) {
   const { ndk } = useNDK();
+  const user = useNDKCurrentUser();
 
   // Markdown configuration
   const markdownComponents = useMarkdownComponents({
@@ -51,7 +54,7 @@ export const MessageContent = memo(function MessageContent({
   // Check content type
   const isTaskEvent = event.kind === NDKTask.kind;
   const isReasoningEvent = event.hasTag("reasoning");
-  const isToolCallEvent = event.kind === 1111 && event.hasTag("tool");
+  const isToolCallEvent = event.kind === NDKKind.GenericReply && event.hasTag("tool");
   const isStreamingResponse = event.kind === EVENT_KINDS.STREAMING_RESPONSE;
 
   // Create task object if needed
@@ -66,6 +69,47 @@ export const MessageContent = memo(function MessageContent({
   const displayContent = useMemo(() => {
     return getMessageContent(event);
   }, [event]);
+
+  // Check if event has suggestion tags
+  const hasSuggestions = event.tags?.some(tag => tag[0] === "suggestion");
+
+  // Handle suggestion click - send the selected suggestion as a kind:1111 reply
+  const handleSuggestionClick = useCallback(async (suggestion: string, _index: number) => {
+    if (!ndk || !user) {
+      toast.error("Unable to send response. Please ensure you're logged in.");
+      return;
+    }
+
+    try {
+      // Create a kind:1111 (GenericReply) event with the selected suggestion as content
+      const replyEvent = new NDKEvent(ndk);
+      replyEvent.kind = NDKKind.GenericReply; // GenericReply event (kind: 1111)
+      replyEvent.content = suggestion;
+      
+      // Add necessary tags for the reply
+      replyEvent.tags = [
+        ["e", event.id, "", "reply"], // Reply to the event with suggestions
+      ];
+
+      // Add p-tag for the author of the original event (the one asking the question)
+      replyEvent.tags.push(["p", event.pubkey]);
+
+      // If this is in a project context, add the project tag
+      const projectTag = event.tags.find(tag => tag[0] === "a" && tag[1]?.startsWith("30803:"));
+      if (projectTag) {
+        replyEvent.tags.push(projectTag);
+      }
+
+      // Sign and publish the event
+      await replyEvent.sign();
+      await replyEvent.publish();
+
+      toast.success("Response sent!");
+    } catch (error) {
+      console.error("Failed to send suggestion response:", error);
+      toast.error("Failed to send response. Please try again.");
+    }
+  }, [ndk, user, event]);
 
   return (
     <div
@@ -96,18 +140,29 @@ export const MessageContent = memo(function MessageContent({
           isMobile={isMobile}
         />
       ) : (
-        <ReadMore maxHeight={400}>
-          <div className="streamdown-wrapper [&_.mermaid-container]:!max-w-none [&_.mermaid-container]:overflow-x-auto">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={markdownComponents}
-            >
-              {displayContent}
-            </ReactMarkdown>
-          </div>
+        <>
+          <ReadMore maxHeight={400}>
+            <div className="streamdown-wrapper [&_.mermaid-container]:!max-w-none [&_.mermaid-container]:overflow-x-auto">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={markdownComponents}
+              >
+                {displayContent}
+              </ReactMarkdown>
+            </div>
 
-          {isStreamingResponse && <StreamingCaret className="ml-0.5" />}
-        </ReadMore>
+            {isStreamingResponse && <StreamingCaret className="ml-0.5" />}
+          </ReadMore>
+
+          {/* Render suggestion buttons if they exist */}
+          {hasSuggestions && (
+            <SuggestionButtons
+              event={event}
+              onSuggestionClick={handleSuggestionClick}
+              isMobile={isMobile}
+            />
+          )}
+        </>
       )}
     </div>
   );

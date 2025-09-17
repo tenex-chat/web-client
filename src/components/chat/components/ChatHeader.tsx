@@ -33,6 +33,7 @@ import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import {
   formatThreadAsMarkdown,
   formatThreadAsJSON,
+  formatThreadAsJSONL,
 } from "@/components/chat/utils/copyThread";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
 import { useConversationMetadata } from "@/hooks/useConversationMetadata";
@@ -68,7 +69,7 @@ export function ChatHeader({
   const [showTTSInfo, setShowTTSInfo] = useState(false);
   const { hasTTS } = useAI();
   const ttsEnabled = hasTTS;
-  const [copiedFormat, setCopiedFormat] = useState<"markdown" | "json" | null>(
+  const [copiedFormat, setCopiedFormat] = useState<"markdown" | "json" | "jsonl" | null>(
     null,
   );
   const { ndk } = useNDK();
@@ -127,7 +128,7 @@ export function ChatHeader({
     [rootEvent?.id],
   );
 
-  const handleCopyThread = async (format: "markdown" | "json") => {
+  const handleCopyThread = async (format: "markdown" | "json" | "jsonl") => {
     if (messages) {
       try {
         let content: string;
@@ -137,6 +138,12 @@ export function ChatHeader({
             rootEvent,
             allThreadReplies || [],
             ndk || undefined,
+          );
+        } else if (format === "jsonl") {
+          content = await formatThreadAsJSONL(
+            messages,
+            rootEvent,
+            allThreadReplies || [],
           );
         } else {
           content = await formatThreadAsMarkdown(
@@ -265,6 +272,16 @@ export function ChatHeader({
                   <FileJson className="w-4 h-4 mr-2" />
                   Copy as JSON
                   {copiedFormat === "json" && (
+                    <Check className="w-4 h-4 ml-auto text-green-600" />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleCopyThread("jsonl")}
+                  className="cursor-pointer"
+                >
+                  <FileJson className="w-4 h-4 mr-2" />
+                  Copy as JSONL
+                  {copiedFormat === "jsonl" && (
                     <Check className="w-4 h-4 ml-auto text-green-600" />
                   )}
                 </DropdownMenuItem>

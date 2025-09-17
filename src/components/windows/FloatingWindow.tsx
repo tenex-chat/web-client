@@ -65,12 +65,12 @@ export function FloatingWindow({
 }: FloatingWindowProps) {
 
   const [isMaximized, setIsMaximized] = useState(false);
-  // Use portrait aspect ratio for conversations (600x800), call gets a compact size (400x600), landscape for others (800x600)
+  // Use portrait aspect ratio for conversations (600x800), call gets 80% of screen height (max 1000px), landscape for others (800x600)
   const defaultSize =
     content.type === "conversations"
       ? { width: 600, height: 800 }
       : content.type === "call"
-        ? { width: 400, height: 600 }
+        ? { width: 400, height: Math.min(window.innerHeight * 0.8, 1000) }
         : { width: 800, height: 600 };
   const [size, setSize] = useState(defaultSize);
   const [position, setPosition] = useState(initialPosition);

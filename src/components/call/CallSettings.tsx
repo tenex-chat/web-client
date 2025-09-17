@@ -14,6 +14,7 @@ import {
   useCallSettings,
   type InterruptionMode,
   type InterruptionSensitivity,
+  type VADMode,
 } from "@/stores/call-settings-store";
 import { useAudioDevices } from "@/hooks/useAudioDevices";
 import { useChromeSpeechRecognition } from "@/hooks/useChromeSpeechRecognition";
@@ -420,6 +421,64 @@ export function CallSettings({ className }: CallSettingsProps) {
                 </div>
               )}
             </div>
+          </div>
+
+          <Separator />
+
+          {/* VAD Mode for conversation flow */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium">Conversation Mode</h3>
+            
+            <RadioGroup
+              value={audioSettings.vadMode}
+              onValueChange={(value) =>
+                updateAudioSettings({ vadMode: value as VADMode })
+              }
+            >
+              <div className="flex items-start gap-3">
+                <RadioGroupItem value="auto" id="vad-auto" className="mt-1" />
+                <div className="space-y-1">
+                  <Label htmlFor="vad-auto" className="font-normal cursor-pointer">
+                    Auto-detect speech
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically detects when you start/stop speaking
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <RadioGroupItem value="push-to-talk" id="vad-ptt" className="mt-1" />
+                <div className="space-y-1">
+                  <Label htmlFor="vad-ptt" className="font-normal cursor-pointer">
+                    Push-to-talk with silence detection
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Tap mic to start, auto-send after 2s silence (current behavior)
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <RadioGroupItem value="disabled" id="vad-disabled" className="mt-1" />
+                <div className="space-y-1">
+                  <Label htmlFor="vad-disabled" className="font-normal cursor-pointer">
+                    Manual control only
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Tap mic to start, tap Send to finish (no auto-send)
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+            
+            {audioSettings.vadMode === "auto" && (
+              <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  💡 In auto mode, just start speaking naturally. The system will detect when you pause.
+                </p>
+              </div>
+            )}
           </div>
 
           <Separator />

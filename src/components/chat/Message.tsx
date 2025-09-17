@@ -28,6 +28,7 @@ interface MessageProps {
   project?: NDKProject | null;
   isRootEvent?: boolean;
   isConsecutive?: boolean;
+  hasNextConsecutive?: boolean;
   isNested?: boolean;
   onTimeClick?: (event: NDKEvent) => void;
   onConversationNavigate?: (event: NDKEvent) => void;
@@ -47,6 +48,7 @@ export const Message = memo(function Message({
   project,
   isRootEvent = false,
   isConsecutive = false,
+  hasNextConsecutive = false,
   isNested = false,
   onTimeClick,
   onConversationNavigate,
@@ -248,7 +250,18 @@ export const Message = memo(function Message({
               </Link>
             </div>
           ) : (
-            <div className="w-9 flex-shrink-0" />
+            <div className="w-9 flex-shrink-0 relative">
+              {/* Thread line for consecutive messages */}
+              <div
+                className="absolute left-1/2 -translate-x-1/2 w-px bg-border/60"
+                style={{
+                  top: '-4px',
+                  height: hasNextConsecutive ? 'calc(100% + 8px)' : '14px'
+                }}
+              />
+              {/* Dot indicator at message start */}
+              <div className="absolute left-1/2 -translate-x-1/2 top-2.5 w-1.5 h-1.5 bg-muted-foreground/80 rounded-full" />
+            </div>
           )}
 
           <div className="flex-1 min-w-0">

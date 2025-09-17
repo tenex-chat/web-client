@@ -9,6 +9,7 @@ import {
 } from "@nostr-dev-kit/ndk-hooks";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AISettings } from "@/components/settings/AISettings";
+import { AudioSettings } from "@/components/settings/AudioSettings";
 import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { BlossomSettings } from "@/components/settings/BlossomSettings";
@@ -19,6 +20,10 @@ export function SettingsPage() {
   const user = useNDKCurrentUser();
   const ndkLogout = useNDKSessionLogout();
   const userProfile = useCurrentUserProfile();
+  
+  // Get the tab from search params
+  const searchParams = new URLSearchParams(window.location.search);
+  const defaultTab = searchParams.get("tab") || "account";
 
   const handleBack = () => {
     navigate({ to: "/" });
@@ -47,10 +52,11 @@ export function SettingsPage() {
 
       {/* Content */}
       <div className="container max-w-6xl mx-auto px-4 py-8">
-        <Tabs defaultValue="account" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7 lg:w-[800px]">
+        <Tabs defaultValue={defaultTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-8 lg:w-[900px]">
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="ai">AI</TabsTrigger>
+            <TabsTrigger value="audio">Audio</TabsTrigger>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="blossom">Upload</TabsTrigger>
@@ -132,6 +138,11 @@ export function SettingsPage() {
           {/* AI Settings (LLM, TTS, STT) */}
           <TabsContent value="ai">
             <AISettings />
+          </TabsContent>
+
+          {/* Audio Settings (Microphone, Speaker, Call Settings) */}
+          <TabsContent value="audio">
+            <AudioSettings />
           </TabsContent>
 
           {/* Appearance Settings */}

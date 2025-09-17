@@ -1,11 +1,19 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PhoneOff, Mic, MicOff, Bot, Send, Volume2, AudioLines, RotateCcw } from "lucide-react";
+import { PhoneOff, Mic, MicOff, Bot, Send, Volume2, AudioLines, RotateCcw, Activity, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useUnifiedSTT } from "@/hooks/useUnifiedSTT";
 import { useThreadManagement } from "@/components/chat/hooks/useThreadManagement";
 import { useChatMessages } from "@/components/chat/hooks/useChatMessages";
@@ -20,6 +28,8 @@ import { useCallSettings } from "@/stores/call-settings-store";
 import { CallSettings } from "./CallSettings";
 import { EVENT_KINDS } from "@/lib/constants";
 import { StreamingTTSPlayer } from "@/lib/audio/streaming-tts-player";
+import { VADService } from "@/lib/audio/vad-service";
+import { useAudioDevices } from "@/hooks/useAudioDevices";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { AgentInstance } from "@/types/agent";
 import type { Message } from "@/components/chat/hooks/useChatMessages";
@@ -209,6 +219,12 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     null,
   );
   const [localRootEvent, setLocalRootEvent] = useState<NDKEvent | null>(rootEvent || null);
+  const localRootEventRef = useRef<NDKEvent | null>(rootEvent || null);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    localRootEventRef.current = localRootEvent;
+  }, [localRootEvent]);
   const [playedMessageIds, setPlayedMessageIds] = useState<Set<string>>(
     new Set(),
   );
@@ -224,19 +240,25 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
   const [reasoningAgents, setReasoningAgents] = useState<Set<string>>(new Set());
   const [lastPlayedMessage, setLastPlayedMessage] = useState<Message | null>(null);
   const [isRepeating, setIsRepeating] = useState(false);
+  const [isChangingDevice, setIsChangingDevice] = useState(false);
 
   // Audio settings for microphone name display
-  const { audioSettings } = useCallSettings();
+  const { audioSettings, updateAudioSettings } = useCallSettings();
+  
+  // Audio devices hook for dropdown
+  const { inputDevices, outputDevices, refreshDevices } = useAudioDevices();
 
   // Refs
   const callStartTimeRef = useRef<number>(Date.now());
   const selectedAgentRef = useRef<AgentInstance | null>(null);
+  const vadServiceRef = useRef<VADService | null>(null);
+  const isVadProcessingRef = useRef(false);
 
   // Hooks
   const agentsRaw = useProjectOnlineAgents(project.dTag);
   const threadManagement = useThreadManagement(
     project,
-    rootEvent || null,
+    localRootEvent,  // Use the state, not the prop!
     extraTags,
     undefined,
     agentsRaw,
@@ -386,6 +408,9 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
 
   // Create a ref to hold the STT instance for use in callbacks
   const sttRef = useRef<ReturnType<typeof useUnifiedSTT> | null>(null);
+  const [isVadActive, setIsVadActive] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const isMutedRef = useRef(false);
 
   // Use agents in their original order from project configuration
   // The first agent is always the project manager by convention
@@ -396,9 +421,11 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
   // Callback ref for silence detection to avoid circular dependency
   const onSilenceDetectedRef = useRef<(() => void) | null>(null);
 
-  // Unified STT hook
+  // Unified STT hook - only use silence detection in push-to-talk mode
   const stt = useUnifiedSTT({
-    onSilenceDetected: () => onSilenceDetectedRef.current?.(),
+    onSilenceDetected: audioSettings.vadMode === "push-to-talk" 
+      ? () => onSilenceDetectedRef.current?.() 
+      : undefined,
   });
 
   // Store STT instance in ref for use in callbacks
@@ -498,7 +525,7 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
       setConversationState("processing_user_input");
 
       try {
-        if (!localRootEvent) {
+        if (!localRootEventRef.current) {
           // Create initial thread
           const newThread = await threadManagement.createThread(
             transcript,
@@ -509,7 +536,9 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
           );
 
           if (newThread) {
-            setLocalRootEvent(newThread);
+            localRootEventRef.current = newThread;  // Update ref immediately
+            setLocalRootEvent(newThread);           // Update state for UI
+          } else {
           }
         } else {
           // Send reply to existing thread with target agent
@@ -534,9 +563,9 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     [localRootEvent, threadManagement, messages, targetAgent],
   );
 
-  // Handle auto-send on silence
+  // Handle auto-send on silence (only for push-to-talk mode)
   const handleSilenceDetected = useCallback(() => {
-    if (stt.transcript.trim() && stt.isListening) {
+    if (audioSettings.vadMode === "push-to-talk" && stt.transcript.trim() && stt.isListening) {
       // Auto-send after silence
       stt.stopListening().then((finalTranscript) => {
         if (finalTranscript?.trim()) {
@@ -544,7 +573,7 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
         }
       });
     }
-  }, [stt, handleSendMessage]);
+  }, [stt, handleSendMessage, audioSettings.vadMode]);
 
   // Update the ref whenever the callback changes
   useEffect(() => {
@@ -553,8 +582,93 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
 
   // Track if we've initialized to prevent double initialization
   const initializedRef = useRef(false);
+  
+  // Initialize VAD service when in auto mode
+  useEffect(() => {
+    if (audioSettings.vadMode === "auto" && audioSettings.voiceActivityDetection && selectedAgent) {
+      // Clean up existing VAD if any
+      if (vadServiceRef.current) {
+        vadServiceRef.current.destroy();
+        vadServiceRef.current = null;
+      }
+      
+      // Create new VAD service with better tuned settings
+      const vadService = new VADService({
+        onSpeechStart: () => {
+          // Don't start if muted (use ref for current value)
+          if (isMutedRef.current) {
+            return;
+          }
+          if (!isVadProcessingRef.current && conversationState !== "agent_speaking") {
+            setIsVadActive(true);
+            setConversationState("user_speaking");
+            sttRef.current?.resetTranscript();
+            sttRef.current?.startListening();
+          }
+        },
+        onSpeechEnd: async () => {
+          const currentStt = sttRef.current;
 
-  // Initialize call and START RECORDING IMMEDIATELY
+          if (currentStt?.isListening && !isVadProcessingRef.current) {
+            isVadProcessingRef.current = true;
+            setIsVadActive(false);
+
+            // Stop listening and get transcript
+            const finalTranscript = await currentStt.stopListening();
+
+            if (finalTranscript?.trim()) {
+              await handleSendMessage(finalTranscript);
+            } else {
+              setConversationState("idle");
+            }
+
+            isVadProcessingRef.current = false;
+          } else {
+          }
+        },
+        onError: (error) => {
+          console.error("VAD Error:", error);
+          toast.error("Voice detection error - falling back to push-to-talk");
+          updateAudioSettings({ vadMode: "push-to-talk" });
+        },
+        // Better tuned VAD settings for natural speech with ElevenLabs
+        positiveSpeechThreshold: 0.5,  // Lower threshold for detecting speech start
+        negativeSpeechThreshold: 0.15, // Much lower threshold for detecting speech end
+        redemptionFrames: 50,          // Wait ~1.6 seconds of silence before ending
+        preSpeechPadFrames: 15,        // Capture more audio before speech starts
+        minSpeechFrames: 10,           // Minimum frames (~320ms) for valid speech
+      });
+      
+      vadServiceRef.current = vadService;
+      
+      // Initialize and start VAD
+      vadService.initialize(audioSettings.inputDeviceId || undefined)
+        .then(async () => {
+          // Always start VAD immediately when switching agents if we've already initialized
+          if (initializedRef.current) {
+            try {
+              await vadService.start();
+            } catch (error) {
+              console.error("Failed to start VAD after agent switch:", error);
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to initialize VAD:", error);
+          toast.error("Voice detection unavailable - using push-to-talk");
+          updateAudioSettings({ vadMode: "push-to-talk" });
+        });
+    }
+    
+    return () => {
+      if (vadServiceRef.current) {
+        vadServiceRef.current.destroy();
+        vadServiceRef.current = null;
+      }
+    };
+  }, [audioSettings.vadMode, audioSettings.voiceActivityDetection, audioSettings.vadSensitivity, audioSettings.inputDeviceId, selectedAgent]);
+
+  // Initialize call based on VAD mode
   useEffect(() => {
     // Only run once when component mounts and we have a selected agent
     if (initializedRef.current || !selectedAgent) {
@@ -574,14 +688,20 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
             stream.getTracks().forEach((track) => track.stop());
           });
 
-        // Set state to user_speaking
-        setConversationState("user_speaking");
-
-        // Small delay to ensure everything is ready
-        setTimeout(() => {
-          if (!initializedRef.current) return; // Double-check we haven't been cleaned up
-          stt.startListening();
-        }, 500); // Increased delay to ensure everything is ready
+        if (audioSettings.vadMode === "auto" && vadServiceRef.current) {
+          // In auto mode, start VAD and wait for speech
+          setConversationState("idle");
+          await vadServiceRef.current.start();
+          toast.success("Voice detection active - just start speaking!");
+        } else {
+          // In push-to-talk or disabled mode, start recording immediately
+          setConversationState("user_speaking");
+          // Small delay to ensure everything is ready
+          setTimeout(() => {
+            if (!initializedRef.current) return; // Double-check we haven't been cleaned up
+            stt.startListening();
+          }, 500); // Increased delay to ensure everything is ready
+        }
       } catch {
         toast.error("Microphone access required for voice calls");
         setConversationState("error");
@@ -598,6 +718,7 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
   }, [
     selectedAgent,
     conversationState,
+    audioSettings.vadMode,
   ]);
 
   // Cleanup on unmount ONLY
@@ -605,6 +726,11 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     return () => {
       // Reset initialization flag so it can work next time
       initializedRef.current = false;
+      // Clean up VAD
+      if (vadServiceRef.current) {
+        vadServiceRef.current.destroy();
+        vadServiceRef.current = null;
+      }
     };
   }, []); // Empty deps - only cleanup on unmount
 
@@ -624,19 +750,45 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
 
   // Handle microphone toggle
   const handleMicrophoneToggle = useCallback(() => {
-    if (conversationState === "user_speaking") {
-      // STOP capturing
-      stt.stopListening();
-      stt.resetTranscript();
-      setConversationState("idle");
+    if (audioSettings.vadMode === "auto") {
+      // In auto mode, toggle mute/unmute
+      if (isMuted) {
+        // Unmute - resume VAD
+        setIsMuted(false);
+        isMutedRef.current = false;
+        vadServiceRef.current?.resume();
+        toast.info("Voice detection resumed - start speaking");
+      } else {
+        // Mute - pause VAD and stop any active recording
+        setIsMuted(true);
+        isMutedRef.current = true;
+        if (stt.isListening) {
+          stt.stopListening();
+          stt.resetTranscript();
+        }
+        vadServiceRef.current?.pause();
+        setIsVadActive(false);
+        setConversationState("idle");
+        toast.info("Voice detection paused - tap mic to resume");
+      }
     } else {
-      // START capturing
-      stt.startListening();
-      setConversationState("user_speaking");
+      // Push-to-talk or disabled mode
+      if (conversationState === "user_speaking") {
+        // STOP capturing
+        stt.stopListening();
+        stt.resetTranscript();
+        setConversationState("idle");
+      } else {
+        // START capturing
+        stt.startListening();
+        setConversationState("user_speaking");
+      }
     }
   }, [
     conversationState,
     stt,
+    audioSettings.vadMode,
+    isVadActive,
   ]);
 
   // Handle manual send button
@@ -717,10 +869,20 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
             // Save this message as the last played for repeat functionality
             setLastPlayedMessage(latestAgentMessage);
 
-            // Auto-resume listening after TTS completes
-            setConversationState("user_speaking");
-            stt.resetTranscript();
-            stt.startListening();
+            // Auto-resume based on VAD mode
+            if (audioSettings.vadMode === "auto" && vadServiceRef.current) {
+              // In auto mode, resume VAD
+              setConversationState("idle");
+              vadServiceRef.current.resume();
+            } else if (audioSettings.vadMode === "push-to-talk") {
+              // In push-to-talk mode, auto-resume listening
+              setConversationState("user_speaking");
+              stt.resetTranscript();
+              stt.startListening();
+            } else {
+              // In disabled mode, stay idle
+              setConversationState("idle");
+            }
           })
           .catch(() => {
             toast.error("Voice playback failed - check TTS configuration");
@@ -783,8 +945,16 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     if (!audioSettings.inputDeviceId || audioSettings.inputDeviceId === "default") {
       return "Default Mic";
     }
-    // Could enhance this to get actual device names from navigator.mediaDevices.enumerateDevices()
-    return "Custom Mic";
+    const device = inputDevices.find(d => d.deviceId === audioSettings.inputDeviceId);
+    return device?.label || "Unknown Mic";
+  };
+
+  const getSpeakerName = () => {
+    if (!audioSettings.outputDeviceId || audioSettings.outputDeviceId === "default") {
+      return "Default Speaker";
+    }
+    const device = outputDevices.find(d => d.deviceId === audioSettings.outputDeviceId);
+    return device?.label || "Unknown Speaker";
   };
 
   // Get display text based on state
@@ -804,6 +974,11 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
         return currentAgentMessage
           ? extractTTSContent(currentAgentMessage.event.content)
           : "";
+      case "idle":
+        if (audioSettings.vadMode === "auto" && vadServiceRef.current?.isActive) {
+          return "Listening for speech...";
+        }
+        return "";
       default:
         return "";
     }
@@ -856,20 +1031,158 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
 
         {/* Audio Status Bar */}
         <div className="px-4 py-2 bg-black/40 backdrop-blur-md border-t border-white/10 flex-shrink-0">
-          <div className="flex items-center justify-center gap-6 text-xs">
-            {/* Microphone Status */}
-            <div className={cn(
-              "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors",
-              conversationState === "user_speaking" || stt.isListening
-                ? "bg-white/20 text-white"
-                : "bg-white/5 text-white/60"
-            )}>
-              <Mic className={cn(
-                "h-3.5 w-3.5",
-                conversationState === "user_speaking" || stt.isListening ? "text-green-400" : ""
-              )} />
-              <span className="font-medium">{getMicrophoneName()}</span>
-            </div>
+          <div className="flex items-center justify-center gap-4 text-xs">
+            {/* Microphone Status with Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className={cn(
+                  "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors cursor-pointer hover:bg-white/25",
+                  conversationState === "user_speaking" || stt.isListening
+                    ? "bg-white/20 text-white"
+                    : "bg-white/5 text-white/60",
+                  isChangingDevice && "animate-pulse"
+                )}>
+                  <Mic className={cn(
+                    "h-3.5 w-3.5",
+                    conversationState === "user_speaking" || stt.isListening ? "text-green-400" : "",
+                    isChangingDevice && "animate-spin"
+                  )} />
+                  <span className="font-medium">
+                    {isChangingDevice ? "Changing..." : getMicrophoneName()}
+                  </span>
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-64">
+                <DropdownMenuLabel>Select Microphone</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={async () => {
+                    setIsChangingDevice(true);
+                    updateAudioSettings({ inputDeviceId: null });
+                    // Restart VAD if in auto mode with new device
+                    if (audioSettings.vadMode === "auto" && vadServiceRef.current) {
+                      await vadServiceRef.current.destroy();
+                      vadServiceRef.current = null;
+                      // VAD will be reinitialized by the effect
+                    }
+                    toast.success("Switched to system default microphone");
+                    setIsChangingDevice(false);
+                  }}
+                  className={cn(
+                    "cursor-pointer",
+                    (!audioSettings.inputDeviceId || audioSettings.inputDeviceId === "default") && "bg-accent"
+                  )}
+                >
+                  <Mic className="h-3.5 w-3.5 mr-2" />
+                  System Default
+                </DropdownMenuItem>
+                {inputDevices.map((device) => (
+                  <DropdownMenuItem
+                    key={device.deviceId}
+                    onClick={async () => {
+                      setIsChangingDevice(true);
+                      updateAudioSettings({ inputDeviceId: device.deviceId });
+                      // Restart VAD if in auto mode with new device
+                      if (audioSettings.vadMode === "auto" && vadServiceRef.current) {
+                        await vadServiceRef.current.destroy();
+                        vadServiceRef.current = null;
+                        // VAD will be reinitialized by the effect
+                      }
+                      toast.success(`Switched to ${device.label}`);
+                      setIsChangingDevice(false);
+                    }}
+                    className={cn(
+                      "cursor-pointer",
+                      audioSettings.inputDeviceId === device.deviceId && "bg-accent"
+                    )}
+                  >
+                    <Mic className="h-3.5 w-3.5 mr-2" />
+                    {device.label}
+                  </DropdownMenuItem>
+                ))}
+                {inputDevices.length === 0 && (
+                  <DropdownMenuItem disabled className="text-muted-foreground">
+                    No microphones detected
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => refreshDevices()}
+                  className="cursor-pointer"
+                >
+                  <Activity className="h-3.5 w-3.5 mr-2" />
+                  Refresh Devices
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Speaker/Output Status with Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className={cn(
+                  "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors cursor-pointer hover:bg-white/25",
+                  isPlaying || conversationState === "agent_speaking"
+                    ? "bg-white/20 text-white"
+                    : "bg-white/5 text-white/60"
+                )}>
+                  <Volume2 className={cn(
+                    "h-3.5 w-3.5",
+                    isPlaying || conversationState === "agent_speaking" ? "text-blue-400" : ""
+                  )} />
+                  <span className="font-medium">
+                    {getSpeakerName()}
+                  </span>
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-64">
+                <DropdownMenuLabel>Select Speaker</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    updateAudioSettings({ outputDeviceId: null });
+                    toast.success("Switched to system default speaker");
+                  }}
+                  className={cn(
+                    "cursor-pointer",
+                    (!audioSettings.outputDeviceId || audioSettings.outputDeviceId === "default") && "bg-accent"
+                  )}
+                >
+                  <Volume2 className="h-3.5 w-3.5 mr-2" />
+                  System Default
+                </DropdownMenuItem>
+                {outputDevices.map((device) => (
+                  <DropdownMenuItem
+                    key={device.deviceId}
+                    onClick={() => {
+                      updateAudioSettings({ outputDeviceId: device.deviceId });
+                      toast.success(`Switched to ${device.label}`);
+                    }}
+                    className={cn(
+                      "cursor-pointer",
+                      audioSettings.outputDeviceId === device.deviceId && "bg-accent"
+                    )}
+                  >
+                    <Volume2 className="h-3.5 w-3.5 mr-2" />
+                    {device.label}
+                  </DropdownMenuItem>
+                ))}
+                {outputDevices.length === 0 && (
+                  <DropdownMenuItem disabled className="text-muted-foreground">
+                    No speakers detected
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => refreshDevices()}
+                  className="cursor-pointer"
+                >
+                  <Activity className="h-3.5 w-3.5 mr-2" />
+                  Refresh Devices
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Voice Provider(s) - consolidate if STT and TTS are the same */}
             {sameVoiceProvider ? (
@@ -952,6 +1265,28 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
                   )}
                 </div>
               </>
+            )}
+            
+            {/* VAD Mode Indicator */}
+            {audioSettings.vadMode !== "disabled" && (
+              <div className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors",
+                audioSettings.vadMode === "auto" && vadServiceRef.current?.isActive
+                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                  : "bg-white/5 text-white/60"
+              )}>
+                <Activity className="h-3.5 w-3.5" />
+                <span className="font-medium">
+                  {audioSettings.vadMode === "auto" ? "Auto-detect" : "Push-to-talk"}
+                </span>
+                {audioSettings.vadMode === "auto" && vadServiceRef.current?.isActive && (
+                  <motion.span 
+                    className="inline-block w-1.5 h-1.5 rounded-full bg-green-400"
+                    animate={{ opacity: [1, 0.4, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -1042,7 +1377,9 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
                   </p>
                   {conversationState === "user_speaking" && stt.isListening && (
                     <p className="text-xs text-white/50 mt-2">
-                      {stt.isRealtime
+                      {audioSettings.vadMode === "auto"
+                        ? "Stop speaking to send automatically"
+                        : audioSettings.vadMode === "push-to-talk" && stt.isRealtime
                         ? "Pause for 2 seconds to auto-send, or tap Send"
                         : "Tap Send to stop recording and send"}
                     </p>
@@ -1136,18 +1473,30 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
             onClick={handleMicrophoneToggle}
             disabled={conversationState === "processing_user_input"}
             className={cn(
-              "w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-colors",
-              conversationState === "user_speaking"
+              "w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-colors relative",
+              isMuted
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : conversationState === "user_speaking" || isVadActive
                 ? "bg-white text-black hover:bg-gray-100"
                 : "bg-gray-700 text-white hover:bg-gray-600",
               conversationState === "processing_user_input" &&
                 "opacity-50 cursor-not-allowed",
             )}
           >
-            {conversationState === "user_speaking" ? (
+            {isMuted ? (
+              <MicOff className="h-7 w-7" />
+            ) : conversationState === "user_speaking" || isVadActive ? (
               <Mic className="h-7 w-7" />
             ) : (
               <MicOff className="h-7 w-7" />
+            )}
+            {/* VAD indicator */}
+            {audioSettings.vadMode === "auto" && vadServiceRef.current?.isActive && !isVadActive && (
+              <motion.div
+                className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
             )}
           </motion.button>
 

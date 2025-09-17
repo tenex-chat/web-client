@@ -66,7 +66,7 @@ export function ReadMore({
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
-            "mt-2 flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors",
+            "relative z-10 mt-2 flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors",
             buttonClassName
           )}
         >

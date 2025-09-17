@@ -14,6 +14,7 @@ import {
   Server,
   Layers,
   BookOpen,
+  ChevronDown,
 } from "lucide-react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
@@ -37,6 +38,12 @@ import { AgentInstances } from "./AgentInstances";
 import { AgentDefinitionLessons } from "./AgentDefinitionLessons";
 import { NDKMCPTool } from "@/lib/ndk-events/NDKMCPTool";
 import type { NDKKind } from "@nostr-dev-kit/ndk-hooks";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // This component shows an NDKAgentDefinition definition (the "class" not the instance)
 export function AgentDefinitionDetailPage() {
@@ -47,6 +54,7 @@ export function AgentDefinitionDetailPage() {
   const navigate = useNavigate();
   const [copiedId, setCopiedId] = useState(false);
   const [forkDialogOpen, setForkDialogOpen] = useState(false);
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
 
   // Fetch the agent event by ID
@@ -76,6 +84,10 @@ export function AgentDefinitionDetailPage() {
 
   const handleFork = () => {
     setForkDialogOpen(true);
+  };
+
+  const handleClone = () => {
+    setCloneDialogOpen(true);
   };
 
   const agentColor = agent ? generateAgentColor(agent.name || agent.id) : "";
@@ -143,10 +155,24 @@ export function AgentDefinitionDetailPage() {
                 </button>
               </div>
             </div>
-            <Button onClick={handleFork}>
-              <GitFork className="w-4 h-4 mr-2" />
-              Fork
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <ChevronDown className="w-4 h-4 mr-2" />
+                  Actions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleFork}>
+                  <GitFork className="w-4 h-4 mr-2" />
+                  Fork
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleClone}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Clone
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -420,6 +446,14 @@ export function AgentDefinitionDetailPage() {
         open={forkDialogOpen}
         onOpenChange={setForkDialogOpen}
         forkFromAgent={agent}
+      />
+
+      {/* Clone Dialog */}
+      <CreateAgentDialog
+        open={cloneDialogOpen}
+        onOpenChange={setCloneDialogOpen}
+        forkFromAgent={agent}
+        cloneMode={true}
       />
     </div>
   );

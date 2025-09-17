@@ -13,6 +13,7 @@ import {
   FileText,
   Bot,
   Plus,
+  Rss,
 } from "lucide-react";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { ThreadList } from "@/components/chat/ThreadList";
@@ -48,12 +49,21 @@ function AgentListItem({
   isOnline: boolean;
 }) {
   const profile = useProfile(agent.pubkey);
+  const navigate = useNavigate();
   const avatarUrl = profile?.image || profile?.picture;
   const displayName =
     agent.slug || profile?.displayName || profile?.name || "Unknown Agent";
 
+  const handleClick = () => {
+    // Navigate to the agent profile page
+    navigate({ to: "/p/$pubkey", params: { pubkey: agent.pubkey } });
+  };
+
   return (
-    <div className="flex items-start gap-3 px-3 py-2.5 hover:bg-accent/50 cursor-pointer transition-colors border-b">
+    <div 
+      className="flex items-start gap-3 px-3 py-2.5 hover:bg-accent/50 cursor-pointer transition-colors border-b"
+      onClick={handleClick}
+    >
       <div className="relative">
         <Avatar className="h-8 w-8">
           <AvatarImage src={avatarUrl} alt={displayName} />
@@ -150,13 +160,13 @@ function ProjectDetailPage() {
     loadThreadFromUrl();
   }, [threadId, ndk, projectId, navigate]);
 
-  // On desktop, open the project in multi-column view and redirect
+  // On desktop, ensure the project is marked as open (but don't redirect)
   useEffect(() => {
     if (!isMobile && project) {
       openSingleProject(project);
-      navigate({ to: "/projects" });
+      // Don't automatically redirect - let the user stay on the project page
     }
-  }, [project, isMobile, openSingleProject, navigate]);
+  }, [project, isMobile, openSingleProject]);
 
   // Helper functions for backwards compatibility
   const getOverallStatus = () =>
@@ -286,7 +296,7 @@ function ProjectDetailPage() {
                 className="gap-1.5 h-8"
                 onClick={() => setActiveTab("docs")}
               >
-                <FileText className="h-3.5 w-3.5" />
+                <Rss className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Documentation</span>
               </Button>
               <Button

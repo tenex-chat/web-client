@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthSettingsRouteImport } from './routes/_auth/settings'
 import { Route as AuthProjectsRouteImport } from './routes/_auth/projects'
+import { Route as AuthInboxRouteImport } from './routes/_auth/inbox'
 import { Route as AuthAgentsRouteImport } from './routes/_auth/agents'
 import { Route as AuthProjectsIndexRouteImport } from './routes/_auth/projects/index'
 import { Route as AuthAgentsIndexRouteImport } from './routes/_auth/agents/index'
@@ -56,6 +57,11 @@ const AuthSettingsRoute = AuthSettingsRouteImport.update({
 const AuthProjectsRoute = AuthProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthInboxRoute = AuthInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthAgentsRoute = AuthAgentsRouteImport.update({
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/mcp-tools': typeof McpToolsRoute
   '/agents': typeof AuthAgentsRouteWithChildren
+  '/inbox': typeof AuthInboxRoute
   '/projects': typeof AuthProjectsRouteWithChildren
   '/settings': typeof AuthSettingsRoute
   '/agent-definition/$agentDefinitionEventId': typeof AuthAgentDefinitionAgentDefinitionEventIdRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/mcp-tools': typeof McpToolsRoute
+  '/inbox': typeof AuthInboxRoute
   '/settings': typeof AuthSettingsRoute
   '/agent-definition/$agentDefinitionEventId': typeof AuthAgentDefinitionAgentDefinitionEventIdRoute
   '/agents/requests': typeof AuthAgentsRequestsRoute
@@ -171,6 +179,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/mcp-tools': typeof McpToolsRoute
   '/_auth/agents': typeof AuthAgentsRouteWithChildren
+  '/_auth/inbox': typeof AuthInboxRoute
   '/_auth/projects': typeof AuthProjectsRouteWithChildren
   '/_auth/settings': typeof AuthSettingsRoute
   '/_auth/agent-definition/$agentDefinitionEventId': typeof AuthAgentDefinitionAgentDefinitionEventIdRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp-tools'
     | '/agents'
+    | '/inbox'
     | '/projects'
     | '/settings'
     | '/agent-definition/$agentDefinitionEventId'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/mcp-tools'
+    | '/inbox'
     | '/settings'
     | '/agent-definition/$agentDefinitionEventId'
     | '/agents/requests'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp-tools'
     | '/_auth/agents'
+    | '/_auth/inbox'
     | '/_auth/projects'
     | '/_auth/settings'
     | '/_auth/agent-definition/$agentDefinitionEventId'
@@ -296,6 +308,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof AuthProjectsRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/inbox': {
+      id: '/_auth/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AuthInboxRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/agents': {
@@ -440,6 +459,7 @@ const AuthProjectsRouteWithChildren = AuthProjectsRoute._addFileChildren(
 
 interface AuthRouteChildren {
   AuthAgentsRoute: typeof AuthAgentsRouteWithChildren
+  AuthInboxRoute: typeof AuthInboxRoute
   AuthProjectsRoute: typeof AuthProjectsRouteWithChildren
   AuthSettingsRoute: typeof AuthSettingsRoute
   AuthAgentDefinitionAgentDefinitionEventIdRoute: typeof AuthAgentDefinitionAgentDefinitionEventIdRoute
@@ -450,6 +470,7 @@ interface AuthRouteChildren {
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthAgentsRoute: AuthAgentsRouteWithChildren,
+  AuthInboxRoute: AuthInboxRoute,
   AuthProjectsRoute: AuthProjectsRouteWithChildren,
   AuthSettingsRoute: AuthSettingsRoute,
   AuthAgentDefinitionAgentDefinitionEventIdRoute:

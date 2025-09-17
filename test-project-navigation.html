@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TENEX Project Navigation Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007AFF;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #666;
+            margin-top: 30px;
+        }
+        .test-section {
+            background: #f5f5f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .test-step {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007AFF;
+        }
+        .expected {
+            color: #28a745;
+            font-weight: 600;
+        }
+        .action {
+            color: #007AFF;
+            font-weight: 600;
+        }
+        code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'SF Mono', Monaco, monospace;
+        }
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #28a745;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 TENEX Project Navigation Test Guide</h1>
+    
+    <div class="note">
+        <strong>📝 Test Environment:</strong> 
+        <a href="http://localhost:3004" target="_blank">http://localhost:3004</a>
+    </div>
+
+    <div class="test-section">
+        <h2>✅ Test Scenario 1: Multi-Column View on /projects</h2>
+        
+        <div class="test-step">
+            <div class="action">Initial Setup:</div>
+            <ol>
+                <li>Navigate to <code>/projects</code> page</li>
+                <li>Ensure you have at least 2-3 projects created</li>
+            </ol>
+        </div>
+        
+        <div class="test-step">
+            <div class="action">Test 1.1: Click project in sidebar</div>
+            <p>Click (normal click) on a project in the sidebar</p>
+            <div class="expected">Expected Result:</div>
+            <ul>
+                <li>✓ Should toggle the project column open/closed</li>
+                <li>✓ Should NOT navigate away from /projects page</li>
+                <li>✓ URL should remain <code>/projects</code></li>
+                <li>✓ Multi-column view should be preserved</li>
+            </ul>
+        </div>
+        
+        <div class="test-step">
+            <div class="action">Test 1.2: Click multiple projects</div>
+            <p>Click on 2-3 different projects in the sidebar</p>
+            <div class="expected">Expected Result:</div>
+            <ul>
+                <li>✓ Each project should open in its own column</li>
+                <li>✓ Columns should appear side by side</li>
+                <li>✓ URL should remain <code>/projects</code></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔗 Test Scenario 2: Navigation to Project Detail Page</h2>
+        
+        <div class="test-step">
+            <div class="action">Test 2.1: Long-press project in sidebar</div>
+            <p>Click and hold on a project in the sidebar for ~500ms</p>
+            <div class="expected">Expected Result:</div>
+            <ul>
+                <li>✓ Should navigate to <code>/projects/{project-id}</code></li>
+                <li>✓ Should show the individual project page</li>
+                <li>✓ Should NOT show multi-column view</li>
+            </ul>
+        </div>
+        
+        <div class="test-step">
+            <div class="action">Test 2.2: Click project title in column</div>
+            <p>In the multi-column view, click on the project title (link) at the top of any project column</p>
+            <div class="expected">Expected Result:</div>
+            <ul>
+                <li>✓ Project title should be styled as a link (underline on hover)</li>
+                <li>✓ Clicking should navigate to <code>/projects/{project-id}</code></li>
+                <li>✓ Should show the individual project page</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔄 Test Scenario 3: Behavior When Already on Project Page</h2>
+        
+        <div class="test-step">
+            <div class="action">Test 3.1: Click project while on project detail page</div>
+            <p>While viewing <code>/projects/{project-id}</code>, click another project in sidebar</p>
+            <div class="expected">Expected Result:</div>
+            <ul>
+                <li>✓ Should navigate to the new project's detail page</li>
+                <li>✓ URL should change to new <code>/projects/{new-project-id}</code></li>
+            </ul>
+        </div>
+        
+        <div class="test-step">
+            <div class="action">Test 3.2: Return to multi-column view</div>
+            <p>Click the TENEX home button or navigate to <code>/projects</code></p>
+            <div class="expected">Expected Result:</div>
+            <ul>
+                <li>✓ Should return to multi-column view</li>
+                <li>✓ Previously opened columns should be restored (if any)</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Test Scenario 4: Edge Cases</h2>
+        
+        <div class="test-step">
+            <div class="action">Test 4.1: Toggle open project</div>
+            <p>On <code>/projects</code>, click an already open project</p>
+            <div class="expected">Expected Result:</div>
+            <ul>
+                <li>✓ Should close the project column</li>
+                <li>✓ Check mark should disappear from sidebar</li>
+            </ul>
+        </div>
+        
+        <div class="test-step">
+            <div class="action">Test 4.2: Click from other pages</div>
+            <p>Navigate to <code>/inbox</code> or <code>/agents</code>, then click a project</p>
+            <div class="expected">Expected Result:</div>
+            <ul>
+                <li>✓ Should toggle project column</li>
+                <li>✓ Should remain on current page (inbox/agents)</li>
+                <li>✓ Multi-column view should appear alongside current content</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="success">
+        <h3>✨ Summary of Changes</h3>
+        <ul>
+            <li><strong>Sidebar behavior on /projects:</strong> Now toggles columns instead of navigating</li>
+            <li><strong>Long-press navigation:</strong> Hold for 500ms to navigate to project detail</li>
+            <li><strong>Project title links:</strong> Click title in column header to navigate to detail page</li>
+            <li><strong>Multi-column preserved:</strong> The /projects page now maintains multi-column view as intended</li>
+        </ul>
+    </div>
+
+    <div class="note">
+        <strong>🐛 Debug Tips:</strong>
+        <ul>
+            <li>Open browser console to see debug logs (look for "[Sidebar]" messages)</li>
+            <li>Check the URL bar to verify navigation behavior</li>
+            <li>Test on both desktop and tablet views</li>
+        </ul>
+    </div>
+</body>
+</html>

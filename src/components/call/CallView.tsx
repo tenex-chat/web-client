@@ -301,6 +301,28 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     setTypingAgents(newTypingAgents);
   }, [typingEvents]);
 
+  // Initialize target agent when opening an existing conversation
+  useEffect(() => {
+    // Only run this initialization once when we have messages from an existing conversation
+    if (!rootEvent || targetAgent || messages.length === 0) return;
+    
+    // Find the last agent (non-user) message
+    const lastAgentMessage = [...messages]
+      .reverse()
+      .find((msg) => 
+        msg.event.pubkey !== user?.pubkey && 
+        msg.event.kind === 1111 && // Only consider actual messages
+        !msg.event.hasTag("reasoning") // Exclude reasoning messages
+      );
+    
+    if (lastAgentMessage) {
+      const agent = agentsRaw.find((a) => a.pubkey === lastAgentMessage.event.pubkey);
+      if (agent) {
+        setTargetAgent(agent);
+      }
+    }
+  }, [rootEvent, messages, user?.pubkey, agentsRaw]); // Note: targetAgent is intentionally excluded to run only once
+
   // Track participating agents from messages and auto-select target
   useEffect(() => {
     const agents = new Set<string>();
@@ -314,8 +336,7 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     messages.forEach((msg) => {
       if (msg.event.pubkey !== user?.pubkey) {
         agents.add(msg.event.pubkey);
-        lastAgentPubkey = msg.event.pubkey;
-
+        
         // Track reasoning vs non-reasoning messages
         if (msg.event.hasTag("reasoning")) {
           const lastReasoning = agentReasoningMessages.get(msg.event.pubkey) || 0;
@@ -323,6 +344,8 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
         } else if (msg.event.kind === 1111) { // Only track actual messages, not typing indicators
           const lastFinal = agentFinalMessages.get(msg.event.pubkey) || 0;
           agentFinalMessages.set(msg.event.pubkey, Math.max(lastFinal, msg.event.created_at || 0));
+          // Update lastAgentPubkey only for non-reasoning messages
+          lastAgentPubkey = msg.event.pubkey;
         }
       }
     });
@@ -338,8 +361,9 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     setParticipatingAgents(agents);
     setReasoningAgents(reasoning);
 
-    // Auto-target the last agent who sent a message
-    if (lastAgentPubkey && !targetAgent) {
+    // Auto-target the last agent who sent a message during the call
+    // This dynamically updates to always target the last speaker
+    if (lastAgentPubkey) {
       const agent = agentsRaw.find((a) => a.pubkey === lastAgentPubkey);
       if (agent) {
         setTargetAgent(agent);

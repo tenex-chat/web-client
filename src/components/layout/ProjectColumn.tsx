@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
 import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
 import {
   Tooltip,
   TooltipContent,
@@ -498,7 +499,14 @@ export function ProjectColumn({
                   fallbackClassName="text-xs"
                 />
                 <h3 className="font-medium text-sm truncate flex-1 flex items-center gap-1.5">
-                  {project.title || "Untitled Project"}
+                  <Link 
+                    to="/projects/$projectId" 
+                    params={{ projectId: project.dTag || project.encode() }}
+                    className="hover:underline hover:text-primary transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {project.title || "Untitled Project"}
+                  </Link>
                   {(!projectStatus || !projectStatus.isOnline) && (
                     <TooltipProvider>
                       <Tooltip>

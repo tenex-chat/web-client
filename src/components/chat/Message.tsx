@@ -174,12 +174,17 @@ export const Message = memo(function Message({
   return (
     <div
       data-message-author={event.pubkey}
+      data-is-consecutive={isConsecutive}
+      data-has-next-consecutive={hasNextConsecutive}
       className={cn(
-        "relative transition-colors hover:bg-muted/30",
+        "relative transition-colors hover:bg-muted/30 thread-message",
         paddingClass,
-        isMobile && "border-b border-border"
+        isMobile && "border-b border-border",
+        isConsecutive && "is-consecutive",
+        hasNextConsecutive && "has-next-consecutive"
       )}
     >
+      {/* Add thread-message class for CSS styling */}
       {isMobile ? (
         // Mobile layout
         <div className="flex-1">
@@ -235,7 +240,7 @@ export const Message = memo(function Message({
         // Desktop layout
         <div className={cn("flex", contentGap)}>
           {!isConsecutive ? (
-            <div className="flex-shrink-0 pt-0.5">
+            <div className="flex-shrink-0 pt-0.5 relative">
               <Link
                 to="/p/$pubkey"
                 params={{ pubkey: event.pubkey }}
@@ -248,19 +253,17 @@ export const Message = memo(function Message({
                   className="h-9 w-9 rounded-md"
                 />
               </Link>
+              {/* Line extending down from avatar if next message is consecutive */}
+              {hasNextConsecutive && (
+                <div className="absolute left-1/2 -translate-x-1/2 top-9 bottom-0 border-l border-border/60" />
+              )}
             </div>
           ) : (
             <div className="w-9 flex-shrink-0 relative">
-              {/* Thread line for consecutive messages */}
-              <div
-                className="absolute left-1/2 -translate-x-1/2 w-px bg-border/60"
-                style={{
-                  top: '-4px',
-                  height: hasNextConsecutive ? 'calc(100% + 8px)' : '14px'
-                }}
-              />
-              {/* Dot indicator at message start */}
-              <div className="absolute left-1/2 -translate-x-1/2 top-2.5 w-1.5 h-1.5 bg-muted-foreground/80 rounded-full" />
+              {/* Border line on the left that extends the full height */}
+              <div className="absolute left-1/2 -translate-x-1/2 inset-y-0 border-l border-border/60" />
+              {/* Dot indicator */}
+              <div className="absolute left-1/2 -translate-x-1/2 top-2.5 w-1.5 h-1.5 bg-muted-foreground/80 rounded-full z-10" />
             </div>
           )}
 

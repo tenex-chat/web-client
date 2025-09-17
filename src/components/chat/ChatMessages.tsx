@@ -53,7 +53,6 @@ export const ChatMessages = memo(function ChatMessages({
   const [lastPlayedMessageId, setLastPlayedMessageId] = useState<string | null>(
     null,
   );
-  const { mode: viewMode } = useThreadViewModeStore();
 
   // TTS configuration
   const { speak, hasTTS } = useAI();

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Profile Metadata Conversion Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        h2 {
+            color: #666;
+            font-size: 1.2rem;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 5px;
+        }
+        .description {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-left: 4px solid #4CAF50;
+            border-radius: 4px;
+        }
+        .workflow {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .workflow-step {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .arrow {
+            font-size: 1.5rem;
+            color: #2196F3;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background: #ff9800;
+            color: white;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-left: 10px;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Agent Profile Metadata Conversion</h1>
+        <div class="description">
+            This feature enables TENEX to parse agent-specific metadata from Nostr kind:0 (profile) events 
+            and convert them into structured NDKAgentDefinition events for better compatibility and features.
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Implementation Overview</h2>
+        
+        <div class="highlight">
+            <strong>🎯 Goal:</strong> Allow agents that store their configuration in kind:0 profile metadata 
+            to be converted to the standardized NDKAgentDefinition format (kind:4199).
+        </div>
+
+        <h2>Key Features Implemented</h2>
+        <ul class="feature-list">
+            <li><strong>Metadata Parsing:</strong> Extract agent-specific fields from kind:0 events (system prompt, instructions, use criteria)</li>
+            <li><strong>Visual Indicators:</strong> Show when an agent has metadata but no definition</li>
+            <li><strong>Conversion UI:</strong> One-click conversion button with pre-populated form</li>
+            <li><strong>Data Migration:</strong> Seamless transfer of all agent metadata to the new format</li>
+        </ul>
+
+        <h2>Workflow</h2>
+        <div class="workflow">
+            <div class="workflow-step">
+                <strong>1. Detection</strong><br>
+                System detects kind:0 event with agent metadata
+            </div>
+            <div class="arrow">→</div>
+            <div class="workflow-step">
+                <strong>2. Display</strong><br>
+                Shows metadata with conversion prompt
+            </div>
+            <div class="arrow">→</div>
+            <div class="workflow-step">
+                <strong>3. Convert</strong><br>
+                User clicks button to open pre-filled form
+            </div>
+            <div class="arrow">→</div>
+            <div class="workflow-step">
+                <strong>4. Publish</strong><br>
+                Creates NDKAgentDefinition event
+            </div>
+        </div>
+
+        <h2>Supported Metadata Fields</h2>
+        <div class="code-block">
+// Kind:0 Event Content (JSON)
+{
+  "name": "Agent Name",
+  "about": "Agent description",
+  "picture": "https://example.com/avatar.png",
+  "system_prompt": "You are a helpful assistant...",
+  "instructions": "Detailed instructions for the agent...",
+  "role": "assistant",
+  "use_criteria": [
+    "When user needs help with coding",
+    "For technical documentation tasks"
+  ]
+}
+
+// Additional fields can be in tags:
+["system-prompt", "Alternative system prompt..."]
+["instructions", "Alternative instructions..."]
+["use-criteria", "Specific use case"]
+["role", "developer"]
+        </div>
+
+        <h2>Files Modified</h2>
+        <ul>
+            <li><code>/src/utils/parseAgentMetadata.ts</code> <span class="badge">NEW</span> - Utility functions for parsing agent metadata</li>
+            <li><code>/src/components/agents/AgentProfilePage.tsx</code> - Enhanced to display kind:0 metadata and conversion UI</li>
+            <li><code>/src/components/dialogs/CreateAgentDialog.tsx</code> - Added conversion mode for kind:0 metadata</li>
+        </ul>
+
+        <h2>User Experience</h2>
+        <div class="container" style="background: #f8f9fa;">
+            <p>When viewing an agent profile that only has kind:0 metadata:</p>
+            <ol>
+                <li>The profile page displays the agent's metadata from their kind:0 event</li>
+                <li>A prominent "Convert to Agent Definition" button appears with a sparkle icon</li>
+                <li>An informational card explains the benefits of conversion</li>
+                <li>Clicking the button opens a pre-populated form with all existing metadata</li>
+                <li>User can review, edit, and add additional configuration</li>
+                <li>Upon submission, a new NDKAgentDefinition event is published</li>
+            </ol>
+        </div>
+
+        <h2>Testing the Feature</h2>
+        <div class="highlight">
+            <strong>To test this feature:</strong>
+            <ol>
+                <li>Navigate to an agent profile that only has kind:0 metadata (no kind:4199 event)</li>
+                <li>Look for the "Convert to Agent Definition" button in the header</li>
+                <li>Check the Details tab for the conversion prompt card</li>
+                <li>Click the conversion button to open the pre-filled dialog</li>
+                <li>Review the imported data and complete the conversion</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

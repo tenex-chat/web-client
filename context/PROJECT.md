@@ -27,10 +27,25 @@ Users and project managers define new AI agents with designated roles and functi
 Tasks can be delegated to specific AI agents or groups, with improved tracking of execution performance and outcome feedback, enhancing overall task management.
 
 #### Secure Communication and Collaboration
-All user interactions—including messaging and updates—are logged through Nostr events, strengthening secure collaboration within the project.
+All user interactions013including messaging and updates013are logged through Nostr events, strengthening secure collaboration within the project.
 
 #### Data Persistence and Updates
 Project and agent data management leverages Nostr's replaceable events, ensuring persistence while allowing dynamic updates based on user needs.
 
 #### Hashtag Event Monitoring
 Users can access a dedicated tab to view a live feed of public Nostr posts (kind:1 events) tagged with the project's specified hashtags. The sources for these events (relays) can be customized through the application settings.
+
+### User Interaction for Ask Tool in Voice Mode
+
+**Description**: In the voice mode, the system should read aloud the question sent by the ask tool. When the tool's tag value specifically indicates 'ask', it triggers the audio reading of the question. 
+
+**User Flow**:
+1. **Reception of Query**: When an agent sends a question through the ask tool, the system will read out the question to the user.
+2. **Display of Options**: Alongside the audio, clickable options will be presented on the UI, allowing the user to respond by tapping on one of the available buttons. 
+3. **Response Mechanism**: The user can simply tap the option they choose, which will trigger the corresponding response back to the agent. 
+
+**Impact on User Experience**:
+- **Enhanced Understanding**: Users will be able to hear the question clearly, improving their response accuracy.
+- **Quick Interaction**: The ability to tap buttons for responses streamlines communication, making it more efficient for users in a conversational context. 
+
+**Core Functionality**: The ask tool must ensure any question posed is audible and visually represented as options to foster an interactive dialogue through voice interfaces and tap responses.

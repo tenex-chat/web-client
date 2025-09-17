@@ -95,6 +95,7 @@ export const ChatInputArea = memo(function ChatInputArea({
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quotedEvents, setQuotedEvents] = useState<NostrEntity[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
 
   // Handle initial content when it changes
   useEffect(() => {
@@ -565,36 +566,43 @@ export const ChatInputArea = memo(function ChatInputArea({
     [handlePaste],
   );
 
-  // Handle voice completion
+  // Handle voice completion - auto send without showing dialog
   const handleVoiceComplete = useCallback(
-    async (data: { transcription: string }) => {
+    async (data: { transcription: string; autoSend?: boolean }) => {
       if (data.transcription.trim()) {
-        setMessageInput(data.transcription);
-        // Auto-send voice messages
-        const content = data.transcription;
-        const mentions = mentionProps.extractMentions(content);
-        const completedUploads = uploadQueue
-          .filter((item) => item.status === "completed" && item.url)
-          .map((upload) => ({
-            url: upload.url!,
-            metadata: upload.metadata,
-          }));
+        // If autoSend is true, send immediately without user editing
+        if (data.autoSend) {
+          const content = data.transcription;
+          const mentions = mentionProps.extractMentions(content);
+          const completedUploads = uploadQueue
+            .filter((item) => item.status === "completed" && item.url)
+            .map((upload) => ({
+              url: upload.url!,
+              metadata: upload.metadata,
+            }));
 
-        setIsSubmitting(true);
-        try {
-          if (!rootEvent) {
-            await createThread(content, mentions, completedUploads);
-          } else {
-            await sendReply(content, mentions, completedUploads);
+          setIsSubmitting(true);
+          try {
+            if (!rootEvent) {
+              await createThread(content, mentions, completedUploads);
+            } else {
+              await sendReply(content, mentions, completedUploads);
+            }
+            setMessageInput("");
+            clearCompleted();
+            clearDraft();
+            toast.success("Voice message sent");
+          } catch (error) {
+            console.error("Failed to send voice message:", error);
+            toast.error("Failed to send voice message");
+          } finally {
+            setIsSubmitting(false);
+            setIsVoiceDialogOpen(false);
+            setIsRecording(false);
           }
-          setMessageInput("");
-          clearCompleted();
-          clearDraft();
-        } catch (error) {
-          console.error("Failed to send voice message:", error);
-          toast.error("Failed to send voice message");
-        } finally {
-          setIsSubmitting(false);
+        } else {
+          // Traditional flow - just set the text for user to review
+          setMessageInput(data.transcription);
         }
       }
     },
@@ -1051,19 +1059,26 @@ export const ChatInputArea = memo(function ChatInputArea({
               />
             </Button>
 
-            {!isMobile && showVoiceButton && (
+            {showVoiceButton && (
               <Button
-                onClick={() => setIsVoiceDialogOpen(true)}
+                onClick={() => {
+                  setIsRecording(true);
+                  setIsVoiceDialogOpen(true);
+                }}
                 size="icon"
                 variant="ghost"
-                disabled={disabled || isSubmitting}
+                disabled={disabled || isSubmitting || isRecording}
                 className={cn(
                   "rounded-sm transition-all duration-200",
                   "hover:bg-accent/80",
-                  "h-9 w-9",
+                  isMobile ? "h-8 w-8" : "h-9 w-9",
+                  isRecording && "bg-red-500/20 hover:bg-red-500/30",
                 )}
               >
-                <Mic className="h-4 w-4" />
+                <Mic className={cn(
+                  isMobile ? "h-3.5 w-3.5" : "h-4 w-4",
+                  isRecording && "text-red-500 animate-pulse"
+                )} />
               </Button>
             )}
           </div>
@@ -1116,11 +1131,17 @@ export const ChatInputArea = memo(function ChatInputArea({
       {/* Voice Dialog */}
       <VoiceDialog
         open={isVoiceDialogOpen}
-        onOpenChange={setIsVoiceDialogOpen}
+        onOpenChange={(open) => {
+          setIsVoiceDialogOpen(open);
+          if (!open) {
+            setIsRecording(false);
+          }
+        }}
         onComplete={handleVoiceComplete}
         conversationId={rootEvent?.id}
         projectId={project?.tagId()}
         publishAudioEvent={true}
+        autoRecordAndSend={isRecording}
       />
 
       {/* Upload Queue Overlay */}

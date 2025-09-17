@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Inbox Redirect Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .fail {
+            color: red;
+            font-weight: bold;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        iframe {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #ddd;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Testing Inbox Redirect Fix</h1>
+    
+    <div class="test-section">
+        <h2>Test Instructions</h2>
+        <ol>
+            <li>Open the app in a new tab at <a href="http://localhost:3002" target="_blank">http://localhost:3002</a></li>
+            <li>Log in if required</li>
+            <li>Navigate to the Inbox by clicking the Inbox button in the sidebar</li>
+            <li>Verify that:
+                <ul>
+                    <li>✅ The URL should show <code>/inbox</code></li>
+                    <li>✅ You should see the Inbox page content (not the projects page)</li>
+                    <li>✅ Clicking on projects in the sidebar should NOT redirect you away from /inbox</li>
+                    <li>✅ The Inbox page should remain stable without any redirects</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>Expected Behavior</h2>
+        <ul>
+            <li><span class="success">FIXED:</span> Clicking the Inbox button should navigate to /inbox</li>
+            <li><span class="success">FIXED:</span> The /inbox route should remain stable without redirecting to /projects</li>
+            <li><span class="success">FIXED:</span> Toggling projects in the sidebar while on /inbox should NOT navigate away</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>What Was Fixed</h2>
+        <p>The issue was in the <code>CollapsibleProjectsSidebar</code> component. When toggling projects (opening/closing them in the sidebar), the code was always navigating to <code>/projects</code>, even when the user was on a different route like <code>/inbox</code>.</p>
+        <p><strong>Solution:</strong> Modified the project toggle handler to check the current route. It now only navigates to <code>/projects</code> if the user is not on another specific route (inbox, agents, settings, or chat).</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Code Change</h2>
+        <pre><code>// Before (always redirected to /projects):
+onClick={(e) => {
+    e.preventDefault();
+    toggleProject(project);
+    navigate({ to: "/projects" });
+    onProjectSelect?.();
+}}
+
+// After (respects current route):
+onClick={(e) => {
+    e.preventDefault();
+    toggleProject(project);
+    // Only navigate if not on specific routes
+    const currentPath = location.pathname;
+    if (!currentPath.startsWith('/inbox') && 
+        !currentPath.startsWith('/agents') && 
+        !currentPath.startsWith('/settings') &&
+        !currentPath.startsWith('/chat')) {
+      navigate({ to: "/projects" });
+    }
+    onProjectSelect?.();
+}}</code></pre>
+    </div>
+</body>
+</html>

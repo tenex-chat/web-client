@@ -3,6 +3,7 @@ import { Square, Edit2, Check, X, RotateCcw, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import NDKBlossom from "@nostr-dev-kit/ndk-blossom";
 import { useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
@@ -16,14 +17,16 @@ interface VoiceDialogProps {
   onOpenChange: (open: boolean) => void;
   onComplete: (data: {
     transcription: string;
-    audioUrl: string;
-    duration: number;
+    audioUrl?: string;
+    duration?: number;
+    autoSend?: boolean;
   }) => void;
   conversationId?: string;
   projectId?: string;
   replyToId?: string;
   mentionedAgents?: string[];
   publishAudioEvent?: boolean; // Whether to publish NIP-94 event
+  autoRecordAndSend?: boolean; // Auto-record on open and send after transcription
 }
 
 export function VoiceDialog({
@@ -35,6 +38,7 @@ export function VoiceDialog({
   replyToId,
   mentionedAgents,
   publishAudioEvent = false,
+  autoRecordAndSend = false,
 }: VoiceDialogProps) {
   const { ndk } = useNDK();
   const [isRecording, setIsRecording] = useState(false);
@@ -182,6 +186,27 @@ export function VoiceDialog({
     }
     return undefined;
   }, [open, isRecording, audioBlob]);
+
+  // Auto-process when recording stops in auto mode
+  useEffect(() => {
+    if (autoRecordAndSend && audioBlob && !isProcessing && !transcription) {
+      handleProcess();
+    }
+  }, [autoRecordAndSend, audioBlob, isProcessing, transcription]);
+
+  // Auto-send when transcription is ready in auto mode
+  useEffect(() => {
+    if (autoRecordAndSend && transcription && !isProcessing) {
+      // Send immediately without showing the edit UI
+      onComplete({
+        transcription: transcription,
+        audioUrl: uploadedAudioUrl,
+        duration: recordingDuration,
+        autoSend: true,
+      });
+      resetState();
+    }
+  }, [autoRecordAndSend, transcription, isProcessing, uploadedAudioUrl, recordingDuration]);
 
   const startRecording = async () => {
     try {
@@ -446,7 +471,10 @@ export function VoiceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-lg p-0 overflow-hidden">
+      <DialogContent className={cn(
+        "w-full p-0 overflow-hidden",
+        autoRecordAndSend ? "max-w-sm" : "max-w-lg"
+      )}>
         <div className="px-6 py-4 border-b">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-medium">Voice Message</h2>
@@ -464,22 +492,27 @@ export function VoiceDialog({
         {!audioBlob && !transcription && (
           <div className="px-6 py-8">
             <div className="flex flex-col items-center space-y-8">
-              <div className="w-full max-w-md">
-                <canvas
-                  ref={canvasRef}
-                  width={400}
-                  height={120}
-                  className="w-full h-30 rounded-lg"
-                  style={{ maxWidth: "100%", height: "auto" }}
-                />
-              </div>
+              {!autoRecordAndSend && (
+                <div className="w-full max-w-md">
+                  <canvas
+                    ref={canvasRef}
+                    width={400}
+                    height={120}
+                    className="w-full h-30 rounded-lg"
+                    style={{ maxWidth: "100%", height: "auto" }}
+                  />
+                </div>
+              )}
 
               <div className="text-center">
-                <div className="text-5xl font-light tracking-tight tabular-nums">
+                <div className={cn(
+                  "font-light tracking-tight tabular-nums",
+                  autoRecordAndSend ? "text-4xl" : "text-5xl"
+                )}>
                   {formatDuration(recordingDuration)}
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {isRecording ? "Tap to stop recording" : "Initializing..."}
+                  {isRecording ? (autoRecordAndSend ? "Recording... Tap to send" : "Tap to stop recording") : "Initializing..."}
                 </p>
               </div>
 
@@ -488,10 +521,19 @@ export function VoiceDialog({
                 className="relative group"
                 disabled={!isRecording}
               >
-                <div className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center transition-all group-hover:scale-110 group-active:scale-95">
-                  <Square className="w-8 h-8 text-white fill-white" />
+                <div className={cn(
+                  "bg-red-500 rounded-full flex items-center justify-center transition-all group-hover:scale-110 group-active:scale-95",
+                  autoRecordAndSend ? "w-16 h-16" : "w-20 h-20"
+                )}>
+                  <Square className={cn(
+                    "text-white fill-white",
+                    autoRecordAndSend ? "w-6 h-6" : "w-8 h-8"
+                  )} />
                 </div>
-                <div className="absolute inset-0 w-20 h-20 bg-red-500 rounded-full animate-ping opacity-25" />
+                <div className={cn(
+                  "absolute inset-0 bg-red-500 rounded-full animate-ping opacity-25",
+                  autoRecordAndSend ? "w-16 h-16" : "w-20 h-20"
+                )} />
               </button>
             </div>
           </div>
@@ -499,50 +541,59 @@ export function VoiceDialog({
 
         {audioBlob && !transcription && (
           <div className="px-6 py-8">
-            <div className="space-y-6">
-              <div className="bg-muted rounded-xl p-4">
-                <audio controls src={audioUrl || ""} className="w-full" />
-                <div className="mt-3 flex items-center justify-between text-sm">
-                  <span>Duration</span>
-                  <span className="font-medium">
-                    {formatDuration(recordingDuration)}
-                  </span>
+            {autoRecordAndSend ? (
+              // Simpler UI for auto mode - just show processing state
+              <div className="flex flex-col items-center space-y-4">
+                <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-muted-foreground">Processing your voice message...</p>
+              </div>
+            ) : (
+              // Traditional UI with playback and options
+              <div className="space-y-6">
+                <div className="bg-muted rounded-xl p-4">
+                  <audio controls src={audioUrl || ""} className="w-full" />
+                  <div className="mt-3 flex items-center justify-between text-sm">
+                    <span>Duration</span>
+                    <span className="font-medium">
+                      {formatDuration(recordingDuration)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      resetState();
+                      startRecording();
+                    }}
+                    className="flex-1"
+                    disabled={isProcessing}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Re-record
+                  </Button>
+                  <Button
+                    onClick={handleProcess}
+                    disabled={isProcessing}
+                    className="flex-1"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin mr-2" />
+                        Processing
+                      </>
+                    ) : (
+                      "Continue"
+                    )}
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    resetState();
-                    startRecording();
-                  }}
-                  className="flex-1"
-                  disabled={isProcessing}
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Re-record
-                </Button>
-                <Button
-                  onClick={handleProcess}
-                  disabled={isProcessing}
-                  className="flex-1"
-                >
-                  {isProcessing ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin mr-2" />
-                      Processing
-                    </>
-                  ) : (
-                    "Continue"
-                  )}
-                </Button>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
-        {transcription && (
+        {transcription && !autoRecordAndSend && (
           <div className="flex flex-col h-full">
             <div className="px-6 py-4 space-y-4">
               <div className="flex items-center justify-between">

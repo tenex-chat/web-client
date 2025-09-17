@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import {
   Plus,
   Settings,
@@ -13,6 +13,7 @@ import {
   Moon,
   Monitor,
   Check,
+  Inbox,
 } from "lucide-react";
 import { useAtom } from "jotai";
 import { CreateProjectDialog } from "@/components/dialogs/CreateProjectDialog";
@@ -20,9 +21,11 @@ import { GlobalSearchDialog } from "@/components/dialogs/GlobalSearchDialog";
 import { useGlobalSearchShortcut } from "@/hooks/useKeyboardShortcuts";
 import { useSortedProjects } from "@/hooks/useSortedProjects";
 import { useTheme } from "@/hooks/useTheme";
+import { useInboxUnreadCount } from "@/hooks/useInboxEvents";
 import { useGlobalAgents } from "@/stores/agents";
 import { useProfile } from "@nostr-dev-kit/ndk-hooks";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
 import {
@@ -123,6 +126,7 @@ export function CollapsibleProjectsSidebar({
   const userProfile = useProfileValue(currentPubkey);
   const ndkLogout = useNDKSessionLogout();
   const navigate = useNavigate();
+  const location = useLocation();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -132,6 +136,9 @@ export function CollapsibleProjectsSidebar({
 
   // Add keyboard shortcut for global search
   useGlobalSearchShortcut(() => setSearchDialogOpen(true));
+  
+  // Get inbox unread count
+  const inboxUnreadCount = useInboxUnreadCount();
 
   const handleLogout = () => {
     if (currentUser) {
@@ -152,21 +159,29 @@ export function CollapsibleProjectsSidebar({
             {/* Header content - only visible when expanded */}
             <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
               <div className="flex items-center justify-between">
-                <SidebarMenuButton size="lg" asChild>
-                  <Link to="/projects" params={{}}>
-                    <Home className="size-4" />
-                    <span className="font-bold">TENEX</span>
-                  </Link>
+                <SidebarMenuButton 
+                  size="lg" 
+                  onClick={() => {
+                    console.log('[Sidebar] TENEX home button clicked, navigating to /projects');
+                    navigate({ to: "/projects" });
+                  }}
+                >
+                  <Home className="size-4" />
+                  <span className="font-bold">TENEX</span>
                 </SidebarMenuButton>
                 <SidebarTrigger className="h-8 w-8" />
               </div>
             </SidebarMenuItem>
             {/* House button when collapsed - at the top */}
             <SidebarMenuItem className="group-data-[collapsible=icon]:flex hidden">
-              <SidebarMenuButton size="lg" asChild>
-                <Link to="/projects" params={{}}>
-                  <Home className="size-5" />
-                </Link>
+              <SidebarMenuButton 
+                size="lg" 
+                onClick={() => {
+                  console.log('[Sidebar] Home icon clicked (collapsed), navigating to /projects');
+                  navigate({ to: "/projects" });
+                }}
+              >
+                <Home className="size-5" />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -217,18 +232,100 @@ export function CollapsibleProjectsSidebar({
                         const projectIdentifier =
                           project.dTag || project.encode();
                         const isOpen = isProjectOpen(projectIdentifier);
+                        
+                        // Long press detection state
+                        let longPressTimer: NodeJS.Timeout | null = null;
+                        let isLongPress = false;
+                        
+                        const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+                          // Prevent default to avoid text selection
+                          e.preventDefault();
+                          isLongPress = false;
+                          longPressTimer = setTimeout(() => {
+                            isLongPress = true;
+                            // Navigate to project detail page on long press
+                            const projectId = project.dTag || project.encode();
+                            console.log('[Sidebar] Long press detected, navigating to project detail:', projectId);
+                            navigate({ 
+                              to: "/projects/$projectId", 
+                              params: { projectId }
+                            });
+                            onProjectSelect?.();
+                          }, 500); // 500ms for long press
+                        };
+                        
+                        const handleMouseUp = () => {
+                          if (longPressTimer) {
+                            clearTimeout(longPressTimer);
+                            longPressTimer = null;
+                          }
+                          
+                          // If it wasn't a long press, handle normal click
+                          if (!isLongPress) {
+                            const currentPath = location.pathname;
+                            const projectId = project.dTag || project.encode();
+                            console.log('[Sidebar] Project clicked:', projectId, 'Current path:', currentPath);
+                            
+                            // If we're on the base /projects page, toggle the column
+                            if (currentPath === '/projects' || currentPath === '/projects/') {
+                              console.log('[Sidebar] Toggling project column:', projectId);
+                              toggleProject(project);
+                            } else if (currentPath.startsWith('/projects/')) {
+                              // We're already viewing a project detail page, navigate to the new one
+                              console.log('[Sidebar] Switching to project:', projectId);
+                              navigate({ 
+                                to: "/projects/$projectId", 
+                                params: { projectId }
+                              });
+                            } else {
+                              // We're on a non-project page (inbox, agents, etc.)
+                              // Toggle the project for multi-column view and stay on current page
+                              toggleProject(project);
+                              
+                              // List of routes where we should stay on the current page
+                              const protectedRoutes = [
+                                '/inbox',
+                                '/agents', 
+                                '/settings',
+                                '/chat',
+                                '/p/',
+                                '/mcp-tools'
+                              ];
+                              
+                              const shouldStayOnCurrentPage = protectedRoutes.some(route => 
+                                currentPath.startsWith(route)
+                              );
+                              
+                              if (!shouldStayOnCurrentPage) {
+                                // For any other pages, navigate to the multi-column projects view
+                                console.log('[Sidebar] Navigating to /projects for multi-column view');
+                                navigate({ to: "/projects" });
+                              }
+                            }
+                            
+                            onProjectSelect?.();
+                          }
+                          isLongPress = false;
+                        };
+                        
+                        const handleMouseLeave = () => {
+                          if (longPressTimer) {
+                            clearTimeout(longPressTimer);
+                            longPressTimer = null;
+                          }
+                          isLongPress = false;
+                        };
+                        
                         return (
                           <SidebarMenuItem key={projectIdentifier}>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <SidebarMenuButton
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    toggleProject(project);
-                                    // Always navigate to projects view when toggling projects
-                                    navigate({ to: "/projects" });
-                                    onProjectSelect?.();
-                                  }}
+                                  onMouseDown={handleMouseDown}
+                                  onMouseUp={handleMouseUp}
+                                  onMouseLeave={handleMouseLeave}
+                                  onTouchStart={handleMouseDown}
+                                  onTouchEnd={handleMouseUp}
                                   isActive={isOpen}
                                   className={isOpen ? "bg-accent" : ""}
                                 >
@@ -288,6 +385,60 @@ export function CollapsibleProjectsSidebar({
             </div>
           </ScrollArea>
         </SidebarContent>
+
+        {/* Inbox button above footer */}
+        <div className="border-t px-3 py-2">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <SidebarMenuButton 
+                      asChild
+                      className="w-full justify-start group-data-[collapsible=icon]:justify-center relative"
+                    >
+                      <Link 
+                        to="/inbox" 
+                        params={{}}
+                        onClick={(e) => {
+                          console.log('[Sidebar] Navigating to inbox');
+                          // Let the Link component handle navigation
+                        }}
+                      >
+                        <div className="relative">
+                          <Inbox className="h-5 w-5" />
+                          {inboxUnreadCount > 0 && (
+                            <Badge 
+                              variant="destructive" 
+                              className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] animate-pulse-glow shadow-lg"
+                              style={{ boxShadow: '0 0 10px rgba(239, 68, 68, 0.6)' }}
+                            >
+                              {inboxUnreadCount > 99 ? "99+" : inboxUnreadCount}
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="group-data-[collapsible=icon]:hidden ml-2">
+                          Inbox
+                          {inboxUnreadCount > 0 && (
+                            <Badge variant="secondary" className="ml-2">
+                              {inboxUnreadCount}
+                            </Badge>
+                          )}
+                        </span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>
+                      Inbox
+                      {inboxUnreadCount > 0 && ` (${inboxUnreadCount} unread)`}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </div>
 
         <SidebarFooter>
           <SidebarMenu>

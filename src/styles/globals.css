@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Thread visualization for consecutive messages */
+@layer components {
+  /* Thread line extending from avatar */
+  .thread-avatar-container.has-thread-continuation .thread-line {
+    height: calc(100% + 1rem);
+  }
+
+  /* Thread line through consecutive messages */
+  .thread-dot-container .thread-line-through {
+    height: calc(100% + 0.5rem);
+    margin-top: -0.5rem;
+  }
+
+  /* Last consecutive message - shorter line */
+  .thread-message.is-consecutive:not(.has-next-consecutive) .thread-line-through {
+    height: 1rem;
+    margin-top: -0.25rem;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -117,6 +137,42 @@
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground/30;
   }
+}
+
+/* Enhanced animations for inbox indicators */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+  }
+}
+
+@keyframes glow-bar {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.8), 
+                inset 0 0 8px rgba(59, 130, 246, 0.6);
+  }
+  50% {
+    opacity: 0.9;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 1), 
+                inset 0 0 12px rgba(59, 130, 246, 0.8);
+  }
+}
+
+/* Custom animation classes for inbox */
+.animate-pulse-glow {
+  animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-glow-bar {
+  animation: glow-bar 2.5s ease-in-out infinite;
 }
 
 /* Telegram-style animations */

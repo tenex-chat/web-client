@@ -115,8 +115,8 @@ export const ThreadedMessage = memo(function ThreadedMessage({
           {/* Toggle button for replies (only in threaded mode) */}
           {viewMode === 'threaded' && (
             <div className={cn(
-              depth === 0 ? (isMobile ? "ml-9" : "ml-12") : (isMobile ? "ml-3" : "ml-4"),
-              "mt-1.5"
+              isMobile ? "ml-9" : "ml-12",
+              "mt-1.5 relative"
             )}>
               <button
                 type="button"
@@ -153,26 +153,24 @@ export const ThreadedMessage = memo(function ThreadedMessage({
 
           {/* Render reply messages */}
           {isExpanded && (
-            <div
-              className={cn(
-                isMobile ? "ml-9" : "ml-12",
-                "border-l-2 mt-2",
-                depth === 0 ? "border-muted" : "border-muted/50"
-              )}
-            >
+            <div className={cn(isMobile ? "ml-9" : "ml-12", "mt-2")}>
               {replies.map((reply, index) => {
                 // Calculate consecutive status
                 const isReplyConsecutive =
                   index > 0 &&
                   replies[index - 1].event.pubkey === reply.event.pubkey &&
                   replies[index - 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-                  reply.event.kind !== EVENT_KINDS.CONVERSATION_METADATA;
+                  reply.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+                  !reply.event.tags?.some(tag => tag[0] === 'p') &&
+                  !replies[index - 1].event.tags?.some(tag => tag[0] === 'p');
 
                 const hasNextReplyConsecutive =
                   index < replies.length - 1 &&
                   replies[index + 1].event.pubkey === reply.event.pubkey &&
                   replies[index + 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-                  reply.event.kind !== EVENT_KINDS.CONVERSATION_METADATA;
+                  reply.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+                  !replies[index + 1].event.tags?.some(tag => tag[0] === 'p') &&
+                  !reply.event.tags?.some(tag => tag[0] === 'p');
 
                 return (
                   <ThreadedMessage

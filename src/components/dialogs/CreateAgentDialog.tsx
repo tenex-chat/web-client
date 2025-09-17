@@ -33,6 +33,16 @@ interface CreateAgentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   forkFromAgent?: NDKAgentDefinition;
+  cloneMode?: boolean;
+  fromKind0Metadata?: {
+    name: string;
+    description: string;
+    role: string;
+    instructions: string;
+    useCriteria: string[];
+    picture?: string;
+  };
+  conversionMode?: boolean;
 }
 
 type WizardStep =
@@ -47,6 +57,9 @@ export function CreateAgentDialog({
   open,
   onOpenChange,
   forkFromAgent,
+  cloneMode = false,
+  fromKind0Metadata,
+  conversionMode = false,
 }: CreateAgentDialogProps) {
   const { ndk } = useNDK();
   const [isCreating, setIsCreating] = useState(false);
@@ -68,29 +81,65 @@ export function CreateAgentDialog({
     phases: [] as Array<{ name: string; instructions: string }>,
   });
 
-  // Load fork data when agent changes
+  // Load fork/clone data when agent changes
   useEffect(() => {
-    if (forkFromAgent) {
-      // Parse existing version and bump it
-      const existingVersion = Number.parseInt(forkFromAgent.version || "1");
-      const newVersion = Number.isNaN(existingVersion)
-        ? 2
-        : existingVersion + 1;
-
+    if (fromKind0Metadata && conversionMode) {
+      // Convert from kind:0 metadata
+      const baseSlug = fromKind0Metadata.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      
       setAgentData({
-        name: `${forkFromAgent.name || "Unnamed"}`,
-        description: forkFromAgent.description || "",
-        role: forkFromAgent.role || "",
-        instructions: forkFromAgent.instructions || "",
-        useCriteria: forkFromAgent.useCriteria?.join("\n") || "",
-        version: String(newVersion),
-        slug: forkFromAgent.slug || "",
-        tools: forkFromAgent.tools || [],
-        mcpServers: forkFromAgent.mcpServers || [],
-        phases: forkFromAgent.phases || [],
+        name: fromKind0Metadata.name,
+        description: fromKind0Metadata.description || "",
+        role: fromKind0Metadata.role || "assistant",
+        instructions: fromKind0Metadata.instructions || "",
+        useCriteria: fromKind0Metadata.useCriteria?.join("\n") || "",
+        version: "1",
+        slug: baseSlug,
+        tools: [],
+        mcpServers: [],
+        phases: [],
       });
+    } else if (forkFromAgent) {
+      if (cloneMode) {
+        // For cloning: keep the same version, append " (Copy)" to name, generate unique slug
+        const baseName = forkFromAgent.name || "Unnamed";
+        const timestamp = Date.now().toString(36).slice(-6);
+        const baseSlug = forkFromAgent.slug || baseName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        
+        setAgentData({
+          name: `${baseName} (Copy)`,
+          description: forkFromAgent.description || "",
+          role: forkFromAgent.role || "",
+          instructions: forkFromAgent.instructions || "",
+          useCriteria: forkFromAgent.useCriteria?.join("\n") || "",
+          version: "1", // Reset version for clones
+          slug: `${baseSlug}-copy-${timestamp}`, // Generate unique slug with 'copy' indicator
+          tools: forkFromAgent.tools || [],
+          mcpServers: forkFromAgent.mcpServers || [],
+          phases: forkFromAgent.phases || [],
+        });
+      } else {
+        // For forking: Parse existing version and bump it
+        const existingVersion = Number.parseInt(forkFromAgent.version || "1");
+        const newVersion = Number.isNaN(existingVersion)
+          ? 2
+          : existingVersion + 1;
+
+        setAgentData({
+          name: `${forkFromAgent.name || "Unnamed"}`,
+          description: forkFromAgent.description || "",
+          role: forkFromAgent.role || "",
+          instructions: forkFromAgent.instructions || "",
+          useCriteria: forkFromAgent.useCriteria?.join("\n") || "",
+          version: String(newVersion),
+          slug: forkFromAgent.slug || "",
+          tools: forkFromAgent.tools || [],
+          mcpServers: forkFromAgent.mcpServers || [],
+          phases: forkFromAgent.phases || [],
+        });
+      }
     } else {
-      // Reset form when not forking
+      // Reset form when not forking/cloning
       setAgentData({
         name: "",
         description: "",
@@ -106,7 +155,7 @@ export function CreateAgentDialog({
     }
     // Reset to first step when dialog opens/closes
     setCurrentStep("basics");
-  }, [forkFromAgent, open]);
+  }, [forkFromAgent, open, cloneMode, fromKind0Metadata, conversionMode]);
 
   const handleCreate = async () => {
     if (!ndk) {
@@ -152,16 +201,24 @@ export function CreateAgentDialog({
       agent.mcpServers = agentData.mcpServers;
       agent.phases = agentData.phases;
 
-      // If forking, add an "e" tag to reference the previous version
-      if (forkFromAgent) {
+      // If forking (not cloning), add an "e" tag to reference the previous version
+      if (forkFromAgent && !cloneMode) {
         agent.tags.push(["e", forkFromAgent.id]);
+      }
+      // If cloning, optionally add a reference tag (not "e") for tracking origin
+      if (forkFromAgent && cloneMode) {
+        // Add a custom tag to indicate this was cloned from another definition
+        // This is for reference only, not for version linking
+        agent.tags.push(["cloned-from", forkFromAgent.id]);
       }
 
       await agent.publish();
 
       toast.success(
         forkFromAgent
-          ? "Agent definition forked successfully!"
+          ? cloneMode
+            ? "Agent definition cloned successfully!"
+            : "Agent definition forked successfully!"
           : "Agent definition created successfully!",
       );
       onOpenChange(false);
@@ -183,7 +240,9 @@ export function CreateAgentDialog({
       console.error("Failed to save agent");
       toast.error(
         forkFromAgent
-          ? "Failed to fork agent definition"
+          ? cloneMode
+            ? "Failed to clone agent definition"
+            : "Failed to fork agent definition"
           : "Failed to create agent definition",
       );
     } finally {
@@ -311,8 +370,12 @@ export function CreateAgentDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            {forkFromAgent
-              ? "Fork Agent Definition"
+            {conversionMode
+              ? "Convert Profile to Agent Definition"
+              : forkFromAgent
+              ? cloneMode
+                ? "Clone Agent Definition"
+                : "Fork Agent Definition"
               : "Create Agent Definition"}
           </DialogTitle>
           <DialogDescription>
@@ -678,11 +741,12 @@ Complex problem solving is needed"
               {isCreating ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {forkFromAgent ? "Forking..." : "Creating..."}
+                  {conversionMode ? "Converting..." : forkFromAgent ? (cloneMode ? "Cloning..." : "Forking...") : "Creating..."}
                 </>
               ) : currentStep === "criteria" ? (
+                conversionMode ? "Convert" : 
                 forkFromAgent ? (
-                  "Fork"
+                  cloneMode ? "Clone" : "Fork"
                 ) : (
                   "Create"
                 )

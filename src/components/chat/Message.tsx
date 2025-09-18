@@ -30,6 +30,7 @@ interface MessageProps {
   isConsecutive?: boolean;
   hasNextConsecutive?: boolean;
   isNested?: boolean;
+  isLastMessage?: boolean;
   onTimeClick?: (event: NDKEvent) => void;
   onConversationNavigate?: (event: NDKEvent) => void;
   message?: {
@@ -50,6 +51,7 @@ export const Message = memo(function Message({
   isConsecutive = false,
   hasNextConsecutive = false,
   isNested = false,
+  isLastMessage = false,
   onTimeClick,
   onConversationNavigate,
   message,

@@ -108,7 +108,6 @@ export function FloatingWindow({
   useEffect(() => {
     if (content.type === "call") {
       const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-        console.log("FloatingWindow: Window unload detected for call view");
         // The CallView component will handle its own cleanup via its beforeunload handler
         // But we can trigger onClose to ensure proper state cleanup
         onClose();

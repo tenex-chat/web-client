@@ -386,9 +386,10 @@ export function CollapsibleProjectsSidebar({
           </ScrollArea>
         </SidebarContent>
 
-        {/* Inbox button above footer */}
+        {/* Inbox and Settings buttons above footer */}
         <div className="border-t px-3 py-2">
           <SidebarMenu>
+            {/* Inbox button */}
             <SidebarMenuItem>
               <TooltipProvider>
                 <Tooltip>
@@ -396,6 +397,7 @@ export function CollapsibleProjectsSidebar({
                     <SidebarMenuButton 
                       asChild
                       className="w-full justify-start group-data-[collapsible=icon]:justify-center relative"
+                      data-testid="sidebar-inbox-button"
                     >
                       <Link 
                         to="/inbox" 
@@ -437,6 +439,38 @@ export function CollapsibleProjectsSidebar({
                 </Tooltip>
               </TooltipProvider>
             </SidebarMenuItem>
+            
+            {/* Settings button - dedicated and always visible */}
+            <SidebarMenuItem>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <SidebarMenuButton 
+                      asChild
+                      className="w-full justify-start group-data-[collapsible=icon]:justify-center"
+                      data-testid="sidebar-settings-button"
+                    >
+                      <Link 
+                        to="/settings" 
+                        params={{}}
+                        onClick={(e) => {
+                          console.log('[Sidebar] Navigating to settings');
+                          // Let the Link component handle navigation
+                        }}
+                      >
+                        <Settings className="h-5 w-5" />
+                        <span className="group-data-[collapsible=icon]:hidden ml-2">
+                          Settings
+                        </span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Settings</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </SidebarMenuItem>
           </SidebarMenu>
         </div>
 
@@ -448,6 +482,7 @@ export function CollapsibleProjectsSidebar({
                   <SidebarMenuButton
                     size="lg"
                     className="w-full justify-start group-data-[collapsible=icon]:justify-center"
+                    data-testid="user-avatar-menu-button"
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage
@@ -490,7 +525,7 @@ export function CollapsibleProjectsSidebar({
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/settings" params={{}}>
+                    <Link to="/settings" params={{}} data-testid="dropdown-settings-button">
                       <Settings className="h-4 w-4 mr-2" />
                       Settings
                     </Link>

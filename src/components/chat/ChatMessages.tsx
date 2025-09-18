@@ -17,7 +17,6 @@ interface ChatMessagesProps {
   unreadCount: number;
   scrollToBottom: (smooth?: boolean) => void;
   onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
-  isNewThread: boolean;
   onNavigate?: (event: NDKEvent) => void;
 }
 
@@ -33,7 +32,6 @@ export const ChatMessages = memo(function ChatMessages({
   unreadCount,
   scrollToBottom,
   onScroll,
-  isNewThread,
   onNavigate,
 }: ChatMessagesProps) {
   const isMobile = useIsMobile();

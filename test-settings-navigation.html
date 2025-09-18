@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings Navigation Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .success {
+            color: #22c55e;
+            font-weight: bold;
+        }
+        .info {
+            color: #3b82f6;
+        }
+        .warning {
+            color: #f59e0b;
+        }
+        pre {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        ul {
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <h1>Settings Navigation Test Report</h1>
+    
+    <div class="test-section">
+        <h2 class="success">✅ Problem Identified and Fixed</h2>
+        <p>The settings page was difficult to access because the Settings link was hidden in a dropdown menu. Users had to:</p>
+        <ol>
+            <li>Click on their user avatar in the bottom-left corner</li>
+            <li>Find and click "Settings" in the dropdown menu</li>
+        </ol>
+        <p>This made the settings page hard to discover, especially for automated testing.</p>
+    </div>
+
+    <div class="test-section">
+        <h2 class="success">✅ Solution Implemented</h2>
+        <h3>1. Added Dedicated Settings Button</h3>
+        <ul>
+            <li>✅ New dedicated Settings button added to the sidebar</li>
+            <li>✅ Positioned above the footer, next to Inbox button</li>
+            <li>✅ Always visible and easily accessible</li>
+            <li>✅ Works in both expanded and collapsed sidebar states</li>
+        </ul>
+        
+        <h3>2. Added Test IDs for Automation</h3>
+        <ul>
+            <li>✅ <code>data-testid="sidebar-settings-button"</code> - Main settings button in sidebar</li>
+            <li>✅ <code>data-testid="sidebar-inbox-button"</code> - Inbox button for reference</li>
+            <li>✅ <code>data-testid="user-avatar-menu-button"</code> - User avatar dropdown trigger</li>
+            <li>✅ <code>data-testid="dropdown-settings-button"</code> - Settings in dropdown (kept as secondary option)</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2 class="info">ℹ️ How to Access Settings Now</h2>
+        <h3>Primary Method (New):</h3>
+        <ol>
+            <li>Look for the Settings button in the sidebar (gear icon)</li>
+            <li>Click it to navigate directly to <code>/settings</code></li>
+        </ol>
+        
+        <h3>Alternative Method (Existing):</h3>
+        <ol>
+            <li>Click on user avatar in bottom-left</li>
+            <li>Select "Settings" from dropdown menu</li>
+        </ol>
+        
+        <h3>Direct URL Access:</h3>
+        <ul>
+            <li>Navigate directly to <code>/settings</code> in the browser</li>
+            <li>No redirects - works as expected</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2 class="success">✅ Testing Recommendations</h2>
+        <p>For the web-tester agent or automated testing, use these selectors:</p>
+        <pre><code>// Primary method - click dedicated settings button
+await page.click('[data-testid="sidebar-settings-button"]');
+
+// Alternative - via dropdown
+await page.click('[data-testid="user-avatar-menu-button"]');
+await page.click('[data-testid="dropdown-settings-button"]');
+
+// Or navigate directly
+await page.goto('/settings');</code></pre>
+    </div>
+
+    <div class="test-section">
+        <h2 class="success">✅ Summary</h2>
+        <p><strong>The settings page is now easily accessible through:</strong></p>
+        <ul>
+            <li>✅ A dedicated, always-visible Settings button in the sidebar</li>
+            <li>✅ The existing dropdown menu (as a secondary option)</li>
+            <li>✅ Direct URL navigation to <code>/settings</code></li>
+        </ul>
+        <p class="info">All methods have proper test IDs for automated testing, making the settings page reliably accessible for both users and testing agents.</p>
+    </div>
+</body>
+</html>

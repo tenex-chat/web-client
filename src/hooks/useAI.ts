@@ -66,7 +66,7 @@ export function useAI() {
   );
 
   const speak = useCallback(
-    async (text: string): Promise<Blob> => {
+    async (text: string, authorPubkey: string): Promise<Blob> => {
       if (!voiceSettings.enabled) {
         throw new Error("Text-to-speech is disabled");
       }
@@ -82,14 +82,25 @@ export function useAI() {
         );
       }
 
-      if (!voiceSettings.voiceId) {
+      // Determine which voice to use
+      let selectedVoiceId: string;
+
+      if (voiceSettings.voiceIds && voiceSettings.voiceIds.length > 0) {
+        // Multi-voice mode: use deterministic assignment based on pubkey
+        const { getDeterministicVoiceIndex } = await import("@/services/ai/voice-profile-manager");
+        const index = getDeterministicVoiceIndex(authorPubkey, voiceSettings.voiceIds.length);
+        selectedVoiceId = voiceSettings.voiceIds[index];
+      } else if (voiceSettings.voiceId) {
+        // Single voice mode
+        selectedVoiceId = voiceSettings.voiceId;
+      } else {
         throw new Error("No voice selected");
       }
 
       try {
         return await aiService.speak(
           text,
-          voiceSettings.voiceId,
+          selectedVoiceId,
           voiceSettings.provider,
           apiKey,
         );
@@ -104,6 +115,7 @@ export function useAI() {
   const streamSpeak = useCallback(
     async (
       text: string,
+      authorPubkey: string,
       onChunk?: (chunk: Uint8Array) => void,
     ): Promise<Blob> => {
       if (!voiceSettings.enabled) {
@@ -121,14 +133,25 @@ export function useAI() {
         );
       }
 
-      if (!voiceSettings.voiceId) {
+      // Determine which voice to use
+      let selectedVoiceId: string;
+
+      if (voiceSettings.voiceIds && voiceSettings.voiceIds.length > 0) {
+        // Multi-voice mode: use deterministic assignment based on pubkey
+        const { getDeterministicVoiceIndex } = await import("@/services/ai/voice-profile-manager");
+        const index = getDeterministicVoiceIndex(authorPubkey, voiceSettings.voiceIds.length);
+        selectedVoiceId = voiceSettings.voiceIds[index];
+      } else if (voiceSettings.voiceId) {
+        // Single voice mode
+        selectedVoiceId = voiceSettings.voiceId;
+      } else {
         throw new Error("No voice selected");
       }
 
       try {
         return await aiService.streamSpeak(
           text,
-          voiceSettings.voiceId,
+          selectedVoiceId,
           voiceSettings.provider,
           apiKey,
           onChunk,
@@ -170,7 +193,7 @@ export function useAI() {
 
     // Configuration state
     hasProvider: !!activeProvider,
-    hasTTS: voiceSettings.enabled && !!voiceSettings.voiceId,
+    hasTTS: voiceSettings.enabled && (!!voiceSettings.voiceId || (voiceSettings.voiceIds && voiceSettings.voiceIds.length > 0)),
     hasSTT,
 
     // Settings

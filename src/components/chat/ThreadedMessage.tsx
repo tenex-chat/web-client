@@ -57,6 +57,52 @@ export const ThreadedMessage = memo(function ThreadedMessage({
       msg => msg.event.hasTag?.("reasoning")
     );
     
+    // In flattened mode, render all messages directly without recursion
+    if (viewMode === 'flattened') {
+      return (
+        <>
+          {messages.map((msg, index) => {
+            // Calculate consecutive status
+            const isConsec =
+              index > 0 &&
+              messages[index - 1].event.pubkey === msg.event.pubkey &&
+              messages[index - 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+              msg.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+              !msg.event.tags?.some(tag => tag[0] === 'p') &&
+              !messages[index - 1].event.tags?.some(tag => tag[0] === 'p');
+
+            const hasNextConsec =
+              index < messages.length - 1 &&
+              messages[index + 1].event.pubkey === msg.event.pubkey &&
+              messages[index + 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+              msg.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+              !messages[index + 1].event.tags?.some(tag => tag[0] === 'p') &&
+              !msg.event.tags?.some(tag => tag[0] === 'p');
+              
+            // Check if this message has reasoning and is the last one with reasoning
+            const isLastReasoningMessage = index === lastReasoningMessageIndex;
+
+            // In flattened mode, render directly without recursion
+            return (
+              <Message
+                key={msg.id}
+                event={msg.event}
+                project={project}
+                isConsecutive={isConsec}
+                hasNextConsecutive={hasNextConsec}
+                isNested={false}
+                onTimeClick={onTimeClick}
+                onConversationNavigate={onConversationNavigate}
+                message={msg}
+                isLastMessage={isLastReasoningMessage}
+              />
+            );
+          })}
+        </>
+      );
+    }
+    
+    // Threaded mode: render with recursion
     return (
       <>
         {messages.map((msg, index) => {

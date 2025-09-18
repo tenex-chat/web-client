@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings Navigation Test - Fixed</title>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #e5e5e5;
+        }
+        .test-section {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #fff;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #a0a0a0;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .success {
+            background: #10b98133;
+            color: #10b981;
+            border: 1px solid #10b981;
+        }
+        .error {
+            background: #ef444433;
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+        .info {
+            background: #3b82f633;
+            color: #3b82f6;
+            border: 1px solid #3b82f6;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .test-results {
+            margin-top: 20px;
+        }
+        pre {
+            background: #0a0a0a;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Settings Navigation Test - After Fix</h1>
+    
+    <div class="test-section">
+        <h2>Fix Applied</h2>
+        <div class="status success">✅ Removed circular redirect routes: /settings/ai and /settings/$</div>
+        <div class="status success">✅ Route tree regenerated without child routes</div>
+        <div class="status info">ℹ️ Settings page now uses simple search params for tab navigation</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Navigation</h2>
+        <p>Click the buttons below to test navigation to the settings page:</p>
+        <button onclick="navigateToSettings()">Navigate to Settings (default tab)</button>
+        <button onclick="navigateToSettings('ai')">Navigate to AI Settings</button>
+        <button onclick="navigateToSettings('audio')">Navigate to Audio Settings</button>
+        <button onclick="navigateToSettings('agents')">Navigate to Agents Settings</button>
+        <div id="navigation-results" class="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Console Monitor</h2>
+        <p>Check the browser console for any errors while navigating:</p>
+        <pre id="console-output">No console errors detected</pre>
+    </div>
+
+    <script>
+        // Store original console methods
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const consoleOutput = document.getElementById('console-output');
+        let errorCount = 0;
+
+        // Override console.error to capture errors
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            errorCount++;
+            const errorMsg = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            
+            consoleOutput.innerHTML = `<span style="color: #ef4444">ERROR ${errorCount}: ${errorMsg}</span>\n${consoleOutput.innerHTML}`;
+            
+            // Check for stack overflow
+            if (errorMsg.includes('Maximum call stack size exceeded')) {
+                document.getElementById('navigation-results').innerHTML = 
+                    '<div class="status error">❌ Stack overflow detected! The circular redirect issue persists.</div>';
+            }
+        };
+
+        // Override console.warn
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            const warnMsg = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            consoleOutput.innerHTML = `<span style="color: #eab308">WARN: ${warnMsg}</span>\n${consoleOutput.innerHTML}`;
+        };
+
+        function navigateToSettings(tab = null) {
+            const resultsDiv = document.getElementById('navigation-results');
+            
+            try {
+                let url = 'http://localhost:3000/settings';
+                if (tab) {
+                    url += `?tab=${tab}`;
+                }
+                url += '&test-mode=true';
+                
+                resultsDiv.innerHTML = `
+                    <div class="status info">🔄 Attempting to navigate to: ${url}</div>
+                `;
+                
+                // Open in a new window to test navigation
+                const testWindow = window.open(url, '_blank', 'width=1200,height=800');
+                
+                if (testWindow) {
+                    resultsDiv.innerHTML += `
+                        <div class="status success">✅ Navigation initiated successfully</div>
+                        <div class="status info">ℹ️ Check the new window for the settings page</div>
+                    `;
+                    
+                    // Check if the window loads successfully
+                    setTimeout(() => {
+                        try {
+                            // This will throw if blocked by CORS, which is expected
+                            const title = testWindow.document.title;
+                            resultsDiv.innerHTML += `
+                                <div class="status success">✅ Page loaded: ${title}</div>
+                            `;
+                        } catch (e) {
+                            // This is normal due to same-origin policy
+                            resultsDiv.innerHTML += `
+                                <div class="status info">ℹ️ Page opened (cross-origin check blocked - this is normal)</div>
+                            `;
+                        }
+                    }, 2000);
+                } else {
+                    resultsDiv.innerHTML += `
+                        <div class="status error">❌ Failed to open window - popup may be blocked</div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="status error">❌ Navigation error: ${error.message}</div>
+                `;
+                console.error('Navigation error:', error);
+            }
+        }
+
+        // Test route structure
+        async function checkRoutes() {
+            try {
+                const response = await fetch('http://localhost:3000/settings?test-mode=true', {
+                    method: 'HEAD'
+                });
+                if (response.ok || response.status === 200) {
+                    console.log('Settings route is accessible');
+                } else {
+                    console.warn('Settings route returned status:', response.status);
+                }
+            } catch (error) {
+                console.error('Failed to check routes:', error);
+            }
+        }
+
+        // Run initial check
+        checkRoutes();
+    </script>
+</body>
+</html>

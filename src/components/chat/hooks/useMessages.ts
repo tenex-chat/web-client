@@ -4,23 +4,30 @@ import { processEventsToMessages } from "@/components/chat/utils/messageProcesso
 import type { ThreadViewMode } from "@/stores/thread-view-mode-store";
 
 /**
- * Generic hook for fetching an event and its direct replies
+ * Generic hook for fetching an event and its replies
  * Handles streaming message processing and returns stable message objects
+ * In flattened mode, fetches ALL events in the conversation hierarchy
+ * In threaded mode, fetches only direct replies
  */
 export function useMessages(
   eventId: string | null,
   viewMode: ThreadViewMode = 'threaded'
 ) {
-  // Subscribe to the event itself and its direct replies
+  // Subscribe based on view mode
   const { events } = useSubscribe(
     eventId
-      ? [
-          { ids: [eventId] },  // Get the event itself
-          { "#e": [eventId] }  // Get direct replies to it
-        ]
+      ? viewMode === 'flattened'
+        ? [ { ids: [eventId] },       // Get the conversation event itself
+            { "#E": [eventId] },      // Get ALL events that reference this conversation (uppercase E)
+            { "#e": [eventId] }       // Also include direct replies (lowercase e) for completeness
+          ]
+        : [
+            { ids: [eventId] },       // Get the event itself
+            { "#e": [eventId] }       // Get only direct replies to it (threaded mode)
+          ]
       : false,
     { closeOnEose: false, groupable: false },
-    [eventId]
+    [eventId, viewMode]
   );
 
   // Process events with streaming support

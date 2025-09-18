@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings Route Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            cursor: pointer;
+            border: none;
+            font-size: 14px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <h1>Settings Route Test</h1>
+    
+    <div class="test-section">
+        <h2>Direct Navigation Tests</h2>
+        <p>Click these links to test direct navigation to settings pages:</p>
+        
+        <a href="http://localhost:3001/settings?test-mode=1" target="_blank" class="test-button">
+            /settings (Default)
+        </a>
+        
+        <a href="http://localhost:3001/settings?tab=ai&test-mode=1" target="_blank" class="test-button">
+            /settings?tab=ai
+        </a>
+        
+        <a href="http://localhost:3001/settings/ai?test-mode=1" target="_blank" class="test-button">
+            /settings/ai
+        </a>
+        
+        <a href="http://localhost:3001/settings?tab=audio&test-mode=1" target="_blank" class="test-button">
+            /settings?tab=audio
+        </a>
+        
+        <a href="http://localhost:3001/settings?tab=appearance&test-mode=1" target="_blank" class="test-button">
+            /settings?tab=appearance
+        </a>
+    </div>
+    
+    <div class="test-section">
+        <h2>Automated Test</h2>
+        <button onclick="runAutomatedTest()" class="test-button">Run Automated Test</button>
+        <div id="test-results"></div>
+    </div>
+    
+    <script>
+        async function runAutomatedTest() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '<div class="result">Running tests...</div>';
+            
+            const tests = [
+                { url: 'http://localhost:3001/settings?test-mode=1', expected: 'Settings page should load' },
+                { url: 'http://localhost:3001/settings?tab=ai&test-mode=1', expected: 'AI tab should be selected' },
+                { url: 'http://localhost:3001/settings/ai?test-mode=1', expected: 'Should redirect to AI tab' },
+                { url: 'http://localhost:3001/settings?tab=audio&test-mode=1', expected: 'Audio tab should be selected' }
+            ];
+            
+            let results = [];
+            
+            for (const test of tests) {
+                try {
+                    const response = await fetch(test.url, { mode: 'no-cors' });
+                    results.push(`✅ ${test.url} - Test accessible`);
+                } catch (error) {
+                    results.push(`❌ ${test.url} - Failed: ${error.message}`);
+                }
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="result ${results.every(r => r.startsWith('✅')) ? 'success' : 'error'}">
+                    <h3>Test Results:</h3>
+                    ${results.map(r => `<div>${r}</div>`).join('')}
+                    <br>
+                    <strong>Note:</strong> Due to CORS, we can only verify that the URLs are reachable. 
+                    Please click the direct navigation links above to manually verify the correct tabs are selected.
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

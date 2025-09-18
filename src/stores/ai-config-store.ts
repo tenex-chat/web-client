@@ -2,6 +2,11 @@ import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 import type { ProviderConfig } from "@/services/ai/provider-registry";
 
+// Extended provider config with a user-friendly name
+export interface LLMConfig extends ProviderConfig {
+  name: string; // User-defined name (e.g., "My OpenAI Key", "Work GPT")
+}
+
 // Simplified AI configuration
 export interface AIConfig {
   activeProvider?: ProviderConfig;
@@ -39,16 +44,48 @@ const defaultConfig: AIConfig = {
   },
 };
 
-// Main storage atom
+// Main storage atom (kept for backwards compatibility during transition)
 export const aiConfigAtom = atomWithStorage<AIConfig>(
   "ai-config-v2",
   defaultConfig,
 );
 
-// Active provider atom
+// NEW: Atom to hold all saved LLM configurations
+export const llmConfigsAtom = atomWithStorage<LLMConfig[]>("llm-configs", []);
+
+// NEW: Atom to hold the ID of the currently active configuration
+export const activeLLMConfigIdAtom = atomWithStorage<string | null>(
+  "active-llm-config-id",
+  null,
+);
+
+// NEW: Derived atom to get the full active configuration object
+export const activeLLMConfigAtom = atom<LLMConfig | null>((get) => {
+  const configs = get(llmConfigsAtom);
+  const activeId = get(activeLLMConfigIdAtom);
+  
+  if (!activeId) {
+    // If no active ID, default to the first config in the list
+    if (configs.length > 0) return configs[0];
+    return null;
+  }
+  
+  return configs.find(config => config.id === activeId) ?? null;
+});
+
+// Active provider atom (updated to use new LLM config system)
 export const activeProviderAtom = atom(
-  (get) => get(aiConfigAtom).activeProvider,
+  (get) => {
+    // Try to get from new LLM config system first
+    const llmConfig = get(activeLLMConfigAtom);
+    if (llmConfig) {
+      return llmConfig as ProviderConfig;
+    }
+    // Fall back to old system for backwards compatibility
+    return get(aiConfigAtom).activeProvider;
+  },
   (get, set, provider: ProviderConfig | undefined) => {
+    // For backwards compatibility, also update the old atom
     const config = get(aiConfigAtom);
     set(aiConfigAtom, { ...config, activeProvider: provider });
   },

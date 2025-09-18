@@ -158,24 +158,20 @@ export function useChromeSpeechRecognition() {
     }
 
     return () => {
-      console.log("useChromeSpeechRecognition: Cleanup on unmount");
-      
       // Set flags to prevent auto-restart
       isListeningRef.current = false;
       setIsListening(false);
 
       // Stop and release recognition
       if (recognitionRef.current) {
-        console.log("useChromeSpeechRecognition: Stopping speech recognition");
         try {
           recognitionRef.current.stop();
         } catch (e) {
-          console.log("useChromeSpeechRecognition: Stop failed, using abort");
           // If stop fails, use abort as fallback
           try {
             recognitionRef.current.abort();
           } catch (abortError) {
-            console.error("useChromeSpeechRecognition: Abort also failed", abortError);
+            // Silently handle errors
           }
         }
         // Clear event handlers to prevent memory leaks

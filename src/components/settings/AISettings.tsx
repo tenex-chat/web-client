@@ -5,6 +5,9 @@ import {
   voiceSettingsAtom,
   sttSettingsAtom,
   openAIApiKeyAtom,
+  llmConfigsAtom,
+  activeLLMConfigIdAtom,
+  type LLMConfig,
 } from "@/stores/ai-config-store";
 import {
   Card,
@@ -19,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Plus, Volume2, Key, Users } from "lucide-react";
+import { Loader2, Plus, Volume2, Key, Users, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AddProviderDialog } from "./AddProviderDialog";
 import { VoiceSelectionDialog } from "./VoiceSelectionDialog";
@@ -27,24 +30,21 @@ import { providerRegistry } from "@/services/ai/provider-registry";
 import { voiceDiscovery } from "@/services/ai/voice-discovery";
 
 export function AISettings() {
-  const [activeProvider, setActiveProvider] = useAtom(activeProviderAtom);
+  const [activeProvider] = useAtom(activeProviderAtom);
   const [voiceSettings, setVoiceSettings] = useAtom(voiceSettingsAtom);
   const [sttSettings, setSTTSettings] = useAtom(sttSettingsAtom);
   const [openAIApiKey, setOpenAIApiKey] = useAtom(openAIApiKeyAtom);
+  const [llmConfigs, setLLMConfigs] = useAtom(llmConfigsAtom);
+  const [activeConfigId, setActiveConfigId] = useAtom(activeLLMConfigIdAtom);
   const [showAddProvider, setShowAddProvider] = useState(false);
-  const [showVoiceSelection, setShowVoiceSelection] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false);
+  const [showVoiceSelection, setShowVoiceSelection] = useState<boolean | 'multi'>(false);
+  const [testingConnection, setTestingConnection] = useState<string | null>(null);
   const [previewingVoice, setPreviewingVoice] = useState(false);
 
-  const handleTestConnection = async () => {
-    if (!activeProvider) {
-      toast.error("No provider configured");
-      return;
-    }
-
-    setTestingConnection(true);
+  const handleTestConnection = async (config: LLMConfig) => {
+    setTestingConnection(config.id);
     try {
-      const result = await providerRegistry.testConnection(activeProvider);
+      const result = await providerRegistry.testConnection(config);
       if (result.success) {
         toast.success("Connection successful!");
       } else {
@@ -53,8 +53,28 @@ export function AISettings() {
     } catch {
       toast.error("Failed to test connection");
     } finally {
-      setTestingConnection(false);
+      setTestingConnection(null);
     }
+  };
+
+  const handleDeleteConfig = (configId: string) => {
+    setLLMConfigs(prev => prev.filter(c => c.id !== configId));
+    // If the deleted config was the active one, select a new active config
+    if (activeConfigId === configId) {
+      const remaining = llmConfigs.filter(c => c.id !== configId);
+      setActiveConfigId(remaining.length > 0 ? remaining[0].id : null);
+    }
+    toast.success("LLM configuration removed");
+  };
+
+  const handleAddConfig = (newConfig: LLMConfig) => {
+    setLLMConfigs(prev => [...prev, newConfig]);
+    // If it's the first one, make it active
+    if (llmConfigs.length === 0) {
+      setActiveConfigId(newConfig.id);
+    }
+    setShowAddProvider(false);
+    toast.success("LLM configuration added successfully");
   };
 
   const handlePreviewVoice = async () => {
@@ -100,61 +120,87 @@ export function AISettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <span>🤖</span> AI Provider
+            <span>🤖</span> AI Providers
           </CardTitle>
           <CardDescription>
-            Configure your AI provider for text generation
+            Manage your LLM configurations for text generation
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {activeProvider ? (
+          {llmConfigs.length > 0 ? (
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="space-y-1">
+              {llmConfigs.map((config) => (
+                <div
+                  key={config.id}
+                  className={`flex items-center justify-between p-4 border rounded-lg ${
+                    activeConfigId === config.id ? "border-primary" : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <RadioGroup value={activeConfigId || ""}>
+                      <RadioGroupItem
+                        value={config.id}
+                        checked={activeConfigId === config.id}
+                        onClick={() => setActiveConfigId(config.id)}
+                      />
+                    </RadioGroup>
+                    <div className="space-y-1">
+                      <div className="font-medium">{config.name}</div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className="capitalize">{config.provider}</span>
+                        <span>•</span>
+                        <span>{config.model || "default"}</span>
+                        <span>•</span>
+                        <span>•••••{config.apiKey.slice(-4)}</span>
+                      </div>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium capitalize">
-                      {activeProvider.provider}
-                    </span>
-                    <span className="text-sm text-muted-foreground">•</span>
-                    <span className="text-sm text-muted-foreground">
-                      {activeProvider.model}
-                    </span>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    API Key: •••••••{activeProvider.apiKey.slice(-4)}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleTestConnection}
-                    disabled={testingConnection}
-                  >
-                    {testingConnection ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      "Test Connection"
+                    {activeConfigId === config.id && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded text-xs text-primary">
+                        <Check className="h-3 w-3" />
+                        Active
+                      </div>
                     )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setActiveProvider(undefined)}
-                  >
-                    Remove
-                  </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleTestConnection(config)}
+                      disabled={testingConnection === config.id}
+                    >
+                      {testingConnection === config.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Test"
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteConfig(config.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              ))}
+              <Button
+                onClick={() => setShowAddProvider(true)}
+                variant="outline"
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Configuration
+              </Button>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
               <p className="text-sm text-muted-foreground">
-                No AI provider configured
+                No LLM configurations added yet
               </p>
               <Button onClick={() => setShowAddProvider(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Provider
+                Add Your First Configuration
               </Button>
             </div>
           )}
@@ -409,7 +455,7 @@ export function AISettings() {
                           );
                           return;
                         }
-                        setShowVoiceSelection(true);
+                        setShowVoiceSelection('multi');
                       }}
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -438,10 +484,32 @@ export function AISettings() {
                             );
                             return;
                           }
-                          setShowVoiceSelection(true);
+                          setShowVoiceSelection(true);  // Single select mode
                         }}
                       >
                         Select Voice
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const hasApiKey =
+                            voiceSettings.provider === "openai"
+                              ? !!openAIApiKey
+                              : !!voiceSettings.apiKey;
+
+                          if (!hasApiKey) {
+                            toast.error(
+                              `Please enter your ${voiceSettings.provider === "openai" ? "OpenAI" : "ElevenLabs"} API key first`,
+                            );
+                            return;
+                          }
+                          // Force multi-select mode by passing a flag to the dialog
+                          setShowVoiceSelection('multi');
+                        }}
+                      >
+                        <Users className="h-4 w-4 mr-2" />
+                        Select Multiple Voices
                       </Button>
                       <Button
                         variant="outline"
@@ -457,6 +525,10 @@ export function AISettings() {
                         Preview
                       </Button>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Single voice: All agents use the same voice<br/>
+                      Multiple voices: Each agent gets a consistent voice based on their ID
+                    </p>
                   </div>
                 )}
 
@@ -498,10 +570,17 @@ export function AISettings() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={handleTestConnection}
-              disabled={!activeProvider || testingConnection}
+              onClick={() => {
+                const activeConfig = llmConfigs.find(c => c.id === activeConfigId);
+                if (activeConfig) {
+                  handleTestConnection(activeConfig);
+                } else {
+                  toast.error("No active configuration selected");
+                }
+              }}
+              disabled={!activeConfigId || testingConnection !== null}
             >
-              Test Connection
+              Test Active Connection
             </Button>
             <Button
               variant="outline"
@@ -521,24 +600,20 @@ export function AISettings() {
         <AddProviderDialog
           open={showAddProvider}
           onClose={() => setShowAddProvider(false)}
-          onAdd={(provider) => {
-            setActiveProvider(provider);
-            setShowAddProvider(false);
-            toast.success("Provider added successfully");
-          }}
+          onAdd={handleAddConfig}
         />
       )}
 
       {/* Voice Selection Dialog */}
       {showVoiceSelection && (
         <VoiceSelectionDialog
-          open={showVoiceSelection}
+          open={!!showVoiceSelection}
           onClose={() => setShowVoiceSelection(false)}
           currentVoiceId={voiceSettings.voiceId}
           currentVoiceIds={voiceSettings.voiceIds}
           provider={voiceSettings.provider}
-          apiKey={voiceSettings.apiKey || null}
-          multiSelect={voiceSettings.voiceIds && voiceSettings.voiceIds.length > 0}
+          apiKey={voiceSettings.apiKey || undefined}
+          multiSelect={showVoiceSelection === 'multi'}
           onSelect={(voiceId) => {
             setVoiceSettings({ voiceId, voiceIds: [] });
             toast.success("Voice selected successfully");

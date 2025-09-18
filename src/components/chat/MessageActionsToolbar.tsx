@@ -129,10 +129,16 @@ export function MessageActionsToolbar({
               <Quote className="h-3 w-3 mr-2" />
               Quote
             </DropdownMenuItem>
-            {hasTTS && event.content && (
+            {event.content && (
               <DropdownMenuItem
                 className="cursor-pointer text-xs"
-                onClick={handleTTS}
+                onClick={() => {
+                  if (!hasTTS) {
+                    toast.error("Please enable Text-to-Speech in AI Settings first");
+                    return;
+                  }
+                  handleTTS();
+                }}
               >
                 {isThisMessagePlaying ? <Square className="h-3 w-3 mr-2" /> : <Volume2 className="h-3 w-3 mr-2" />}
                 {isThisMessagePlaying ? "Stop" : "Text to Speech"}
@@ -274,13 +280,19 @@ export function MessageActionsToolbar({
               <Quote className="h-3.5 w-3.5 mr-2" />
               Quote
             </DropdownMenuItem>
-            {hasTTS && event.content && (
+            {event.content && (
               <DropdownMenuItem
                 className="cursor-pointer"
-                onClick={handleTTS}
+                onClick={() => {
+                  if (!hasTTS) {
+                    toast.error("Please enable Text-to-Speech in AI Settings first");
+                    return;
+                  }
+                  handleTTS();
+                }}
               >
-                {isPlaying ? <Square className="h-3.5 w-3.5 mr-2" /> : <Volume2 className="h-3.5 w-3.5 mr-2" />}
-                {isPlaying ? "Stop" : "Text to Speech"}
+                {isThisMessagePlaying ? <Square className="h-3.5 w-3.5 mr-2" /> : <Volume2 className="h-3.5 w-3.5 mr-2" />}
+                {isThisMessagePlaying ? "Stop" : "Text to Speech"}
               </DropdownMenuItem>
             )}
             {llmMetadata && (

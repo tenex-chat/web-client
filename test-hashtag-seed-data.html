@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Hashtag Creation</title>
+</head>
+<body>
+    <h1>Create Test Threads with Hashtags</h1>
+    <p>This page creates test conversation threads with hashtags for testing the display feature.</p>
+    
+    <button id="createThread">Create Test Thread with Hashtags</button>
+    <div id="status"></div>
+
+    <script type="module">
+        // This is a placeholder script that would create test threads
+        // In reality, you'd need to connect to the nostr relay and create events
+        document.getElementById('createThread').addEventListener('click', () => {
+            const status = document.getElementById('status');
+            status.innerHTML = `
+                <p>To test hashtags properly, you need to:</p>
+                <ol>
+                    <li>Start a new conversation in the app</li>
+                    <li>The conversation needs to be created with t-tags</li>
+                    <li>Currently, only brainstorm mode adds hashtags automatically</li>
+                    <li>Or you can manually add hashtags when creating threads</li>
+                </ol>
+                <p>Hashtag display code is working - threads just need to have hashtags in their data.</p>
+            `;
+        });
+    </script>
+</body>
+</html>

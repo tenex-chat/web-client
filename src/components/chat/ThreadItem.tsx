@@ -8,6 +8,19 @@ import { formatRelativeTime } from "@/lib/utils/time";
 import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useConversationMetadata } from "@/hooks/useConversationMetadata";
 
+/**
+ * Generate a deterministic color hue based on hashtag string
+ * Returns a hue value between 0-360 for HSL color
+ */
+function getHashtagColor(tag: string): number {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  // Convert to positive number and map to 0-360 range
+  return Math.abs(hash) % 360;
+}
+
 interface ThreadItemProps {
   thread: NDKEvent;
   isSelected: boolean;
@@ -127,27 +140,12 @@ export const ThreadItem = memo(
               )}
             </div>
 
-            {/* T-tags display */}
-            {tTags.length > 0 && (
-              <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                {tTags.map((tag, index) => (
-                  <Badge
-                    key={index}
-                    variant="outline"
-                    className="text-xs px-1.5 py-0 h-4"
-                  >
-                    #{tag}
-                  </Badge>
-                ))}
-              </div>
-            )}
-
             <p className="text-sm text-muted-foreground truncate mt-1">
               {lastMessage || thread.content}
             </p>
 
-            {/* Thread Meta */}
-            <div className="flex items-center gap-2 mt-1">
+            {/* Thread Meta - Combined reply/agent counters and hashtags */}
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               {replyCount > 0 && (
                 <Badge variant="secondary" className="text-xs px-1.5 py-0">
                   <MessageSquare className="h-3 w-3 mr-1" />
@@ -161,6 +159,22 @@ export const ThreadItem = memo(
                   {participants.size}
                 </Badge>
               )}
+
+              {/* T-tags display - now inline with counters */}
+              {tTags.length > 0 && tTags.map((tag, index) => (
+                <Badge
+                  key={index}
+                  variant="outline"
+                  className="text-xs px-1.5 py-0 h-4"
+                  style={{
+                    backgroundColor: `hsl(${getHashtagColor(tag)}, 70%, 50%, 0.15)`,
+                    borderColor: `hsl(${getHashtagColor(tag)}, 70%, 50%, 0.4)`,
+                    color: `hsl(${getHashtagColor(tag)}, 70%, 50%)`,
+                  }}
+                >
+                  #{tag}
+                </Badge>
+              ))}
             </div>
           </div>
 

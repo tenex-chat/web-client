@@ -338,6 +338,17 @@ export const ChatInputArea = memo(function ChatInputArea({
         newThreadEvent.tags.push(["p", projectManager.pubkey]);
       }
 
+      // Extract and add hashtags from content
+      const hashtagRegex = /#(\w+)/g;
+      const hashtags = new Set<string>();
+      let match;
+      while ((match = hashtagRegex.exec(content)) !== null) {
+        hashtags.add(match[1].toLowerCase());
+      }
+      hashtags.forEach(tag => {
+        newThreadEvent.tags.push(["t", tag]);
+      });
+
       if (autoTTS) {
         newThreadEvent.tags.push(["mode", "voice"]);
       }
@@ -420,6 +431,17 @@ export const ChatInputArea = memo(function ChatInputArea({
 
       mentions.forEach((agent) => {
         replyEvent.tags.push(["p", agent.pubkey]);
+      });
+
+      // Extract and add hashtags from reply content
+      const hashtagRegex = /#(\w+)/g;
+      const hashtags = new Set<string>();
+      let match;
+      while ((match = hashtagRegex.exec(content)) !== null) {
+        hashtags.add(match[1].toLowerCase());
+      }
+      hashtags.forEach(tag => {
+        replyEvent.tags.push(["t", tag]);
       });
 
       const hasUnresolvedMentions =

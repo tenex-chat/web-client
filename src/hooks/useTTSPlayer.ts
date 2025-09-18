@@ -129,7 +129,7 @@ export function useTTSPlayer() {
         });
 
         // Get audio blob from AI service
-        const audioBlob = await speak(ttsContent);
+        const audioBlob = await speak(ttsContent, authorPubkey || messageId);
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
 

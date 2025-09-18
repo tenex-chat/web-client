@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Multi-Voice Selection</title>
+</head>
+<body>
+    <h1>Test Instructions for Multi-Voice Selection</h1>
+    
+    <h2>Steps to Test:</h2>
+    <ol>
+        <li>Open the app at <a href="http://localhost:3002" target="_blank">http://localhost:3002</a></li>
+        <li>Navigate to Settings (gear icon)</li>
+        <li>Go to the "Voice Settings" section</li>
+        <li>Enable "Text-to-Speech" toggle</li>
+        <li>Choose your voice provider (OpenAI or ElevenLabs)</li>
+        <li>Enter your API key for the selected provider</li>
+        <li>Click the "Select Multiple Voices" button</li>
+        <li>In the dialog that opens:
+            <ul>
+                <li>You should see CHECKBOXES (not radio buttons)</li>
+                <li>You should be able to select multiple voices</li>
+                <li>The dialog title should say "Select Voices" (plural)</li>
+                <li>There should be a count of selected voices</li>
+                <li>The confirm button should say "Select X Voices"</li>
+            </ul>
+        </li>
+        <li>Select 2-3 voices and click the confirm button</li>
+        <li>After selection, you should see all selected voices listed with X buttons to remove them</li>
+        <li>The UI should show "Selected Voices (X)" where X is the number of voices</li>
+    </ol>
+    
+    <h2>Expected Behavior:</h2>
+    <ul>
+        <li>✅ Multiple voice selection using checkboxes</li>
+        <li>✅ Visual indication of selected voices count</li>
+        <li>✅ Ability to remove individual voices from selection</li>
+        <li>✅ Deterministic voice assignment message shown</li>
+        <li>✅ "Add Voices" button to add more voices to existing selection</li>
+    </ul>
+    
+    <h2>Known Working Features:</h2>
+    <ul>
+        <li>Single voice selection via "Select Voice" button</li>
+        <li>Multi-voice selection via "Select Multiple Voices" button</li>
+        <li>Voice preview functionality</li>
+        <li>Switching between single and multi-voice modes</li>
+    </ul>
+</body>
+</html>

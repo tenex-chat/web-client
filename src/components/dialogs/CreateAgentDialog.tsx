@@ -22,12 +22,14 @@ import {
   Plus,
   X,
   Layers,
+  Sparkles,
 } from "lucide-react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import ReactMarkdown from "react-markdown";
 import { ToolSelector } from "@/components/common/ToolSelector";
 import { useAvailableTools } from "@/hooks/useAvailableTools";
 import { useAvailableMCPServers } from "@/hooks/useAvailableMCPServers";
+import { AIAssistedPromptEditor } from "./AIAssistedPromptEditor";
 
 interface CreateAgentDialogProps {
   open: boolean;
@@ -64,6 +66,7 @@ export function CreateAgentDialog({
   const { ndk } = useNDK();
   const [isCreating, setIsCreating] = useState(false);
   const [currentStep, setCurrentStep] = useState<WizardStep>("basics");
+  const [showAIAssist, setShowAIAssist] = useState(false);
   const availableTools = useAvailableTools();
   const mcpServers = useAvailableMCPServers();
 
@@ -364,8 +367,9 @@ export function CreateAgentDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
         className={`${getDialogWidth()} max-h-[90vh] flex flex-col`}
       >
         <DialogHeader>
@@ -445,7 +449,18 @@ export function CreateAgentDialog({
           {currentStep === "prompt" && (
             <div className="space-y-4">
               <div className="grid gap-2">
-                <Label htmlFor="instructions">System Prompt *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="instructions">System Prompt *</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAIAssist(true)}
+                    type="button"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    AI Edit
+                  </Button>
+                </div>
                 <div className="text-sm text-muted-foreground mb-2">
                   Define the agent's behavior, capabilities, and constraints.
                   Use Markdown for formatting.
@@ -761,5 +776,17 @@ Complex problem solving is needed"
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    
+    {/* AI-Assisted Prompt Editor */}
+    <AIAssistedPromptEditor
+      isOpen={showAIAssist}
+      onOpenChange={setShowAIAssist}
+      currentPrompt={agentData.instructions}
+      onUpdatePrompt={(newPrompt) => {
+        setAgentData({ ...agentData, instructions: newPrompt });
+        setShowAIAssist(false);
+      }}
+    />
+  </>
   );
 }

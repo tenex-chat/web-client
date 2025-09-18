@@ -226,13 +226,12 @@ export function processEventsToMessages(
       continue;
     }
     
-    // In flattened mode, include all events with uppercase E tag pointing to root
+    // In flattened mode, include ALL events that we've fetched
     // In threaded mode, only include direct replies (lowercase e tag)
     if (viewMode === 'flattened') {
-      // Include root event itself or any event with uppercase E tag for conversation root
-      if (event.id === rootEvent?.id || (rootEvent && hasUppercaseETag(event, rootEvent.id))) {
-        processEvent(event, streamingSessions, finalMessages);
-      }
+      // In flattened mode, we already fetched the right events via the filters
+      // Just process all of them chronologically
+      processEvent(event, streamingSessions, finalMessages);
     } else {
       // Threaded mode: only include direct replies to the root event
       // Nested replies will still be accessible through their parent's reply count

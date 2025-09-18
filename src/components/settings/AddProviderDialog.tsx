@@ -25,12 +25,13 @@ import {
   type ProviderConfig,
   type ProviderType,
 } from "@/services/ai/provider-registry";
+import { type LLMConfig } from "@/stores/ai-config-store";
 import { modelDiscovery, type Model } from "@/services/ai/model-discovery";
 
 interface AddProviderDialogProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (provider: ProviderConfig) => void;
+  onAdd: (provider: LLMConfig) => void;
 }
 
 export function AddProviderDialog({
@@ -38,6 +39,7 @@ export function AddProviderDialog({
   onClose,
   onAdd,
 }: AddProviderDialogProps) {
+  const [name, setName] = useState("");
   const [provider, setProvider] = useState<ProviderType>("openai");
   const [apiKey, setApiKey] = useState("");
   const [baseURL, setBaseURL] = useState("");
@@ -107,6 +109,11 @@ export function AddProviderDialog({
   };
 
   const handleAdd = () => {
+    if (!name.trim()) {
+      toast.error("Configuration name is required");
+      return;
+    }
+
     if (!apiKey) {
       toast.error("API key is required");
       return;
@@ -117,8 +124,9 @@ export function AddProviderDialog({
       return;
     }
 
-    const config: ProviderConfig = {
-      id: `${provider}-${Date.now()}`,
+    const config: LLMConfig = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
       provider,
       apiKey,
       model: model || undefined,
@@ -126,19 +134,38 @@ export function AddProviderDialog({
     };
 
     onAdd(config);
+    // Reset form
+    setName("");
+    setApiKey("");
+    setModel("");
+    setBaseURL("");
+    setModels([]);
   };
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add AI Provider</DialogTitle>
+          <DialogTitle>Add LLM Configuration</DialogTitle>
           <DialogDescription>
-            Configure a new AI provider for text generation
+            Configure a new LLM provider for text generation
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Configuration Name */}
+          <div className="space-y-2">
+            <Label htmlFor="config-name">Configuration Name *</Label>
+            <Input
+              id="config-name"
+              placeholder="e.g., Personal OpenAI, Work GPT-4"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              A friendly name to identify this configuration
+            </p>
+          </div>
           {/* Provider Selection */}
           <div className="space-y-2">
             <Label htmlFor="provider">Provider</Label>
@@ -264,8 +291,8 @@ export function AddProviderDialog({
               "Test"
             )}
           </Button>
-          <Button onClick={handleAdd} disabled={!apiKey || !model}>
-            Add Provider
+          <Button onClick={handleAdd} disabled={!name.trim() || !apiKey || !model}>
+            Add Configuration
           </Button>
         </DialogFooter>
       </DialogContent>

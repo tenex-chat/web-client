@@ -433,6 +433,7 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
   // Create a ref to hold the STT instance for use in callbacks
   const sttRef = useRef<ReturnType<typeof useUnifiedSTT> | null>(null);
   const [isVadActive, setIsVadActive] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const isMutedRef = useRef(false);
 
@@ -546,11 +547,19 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
         return;
       }
 
+      console.log("CallView: Sending message", {
+        transcript: transcript.substring(0, 50),
+        targetAgent: agentToTag.slug,
+        hasRootEvent: !!localRootEventRef.current,
+        autoTTS: true
+      });
+
       setConversationState("processing_user_input");
 
       try {
         if (!localRootEventRef.current) {
           // Create initial thread
+          console.log("CallView: Creating new thread with auto-TTS");
           const newThread = await threadManagement.createThread(
             transcript,
             [agentToTag],
@@ -560,12 +569,15 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
           );
 
           if (newThread) {
+            console.log("CallView: Thread created", newThread.id);
             localRootEventRef.current = newThread;  // Update ref immediately
             setLocalRootEvent(newThread);           // Update state for UI
           } else {
+            console.error("CallView: Failed to create thread");
           }
         } else {
           // Send reply to existing thread with target agent
+          console.log("CallView: Sending reply to existing thread", localRootEventRef.current.id);
           await threadManagement.sendReply(
             transcript,
             [agentToTag],
@@ -574,11 +586,13 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
             messages,
             agentToTag.pubkey, // Target agent
           );
+          console.log("CallView: Reply sent successfully");
         }
 
         setConversationState("idle");
-      } catch {
+      } catch (error) {
         // Error sending message
+        console.error("CallView: Error sending message", error);
         toast.error("Failed to send message");
         setConversationState("error");
         setTimeout(() => setConversationState("idle"), 2000);
@@ -770,46 +784,61 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     stopTTS();
   }, [stopTTS]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount ONLY - no dependencies to prevent re-runs
   useEffect(() => {
-    // Store current values to avoid stale closures
-    const currentStt = stt;
-    const currentPerformCleanup = performCleanup;
-    
     // Also handle window unload events for floating windows
     const handleWindowUnload = (e: BeforeUnloadEvent) => {
       console.log("CallView: Window unload detected, performing cleanup");
-      currentPerformCleanup();
+      // Access current refs directly instead of through closure
+      initializedRef.current = false;
+      
+      if (vadServiceRef.current) {
+        console.log("CallView: Destroying VAD service on unload");
+        vadServiceRef.current.destroy();
+        vadServiceRef.current = null;
+      }
+      
+      if (sttRef.current?.isListening) {
+        console.log("CallView: Stopping STT on unload");
+        sttRef.current.stopListening();
+      }
     };
     
     // Add beforeunload listener to catch window close events
     window.addEventListener('beforeunload', handleWindowUnload);
     
-    // Cleanup function
+    // Cleanup function - runs ONLY on unmount
     return () => {
       console.log("CallView: Component unmounting, performing cleanup");
       
       // Remove event listener
       window.removeEventListener('beforeunload', handleWindowUnload);
       
-      // Perform all cleanup
-      currentPerformCleanup();
+      // Perform cleanup using refs directly
+      initializedRef.current = false;
       
-      // Additional cleanup for current STT instance
-      if (currentStt.isListening) {
-        currentStt.stopListening();
+      if (vadServiceRef.current) {
+        console.log("CallView: Destroying VAD service on unmount");
+        vadServiceRef.current.destroy();
+        vadServiceRef.current = null;
+      }
+      
+      if (sttRef.current?.isListening) {
+        console.log("CallView: Stopping STT on unmount");
+        sttRef.current.stopListening();
       }
     };
-  }, [stt, performCleanup]); // Include dependencies
+  }, []); // Empty dependency array - only run on mount/unmount
 
   // Add visibility change handler to pause/resume when window is hidden
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden && stt.isListening) {
+      // Use refs to check state without causing re-renders
+      if (document.hidden && sttRef.current?.isListening) {
         console.log("CallView: Window hidden, pausing recording");
         // When window is hidden, pause recording
-        stt.stopListening();
-        stt.resetTranscript();
+        sttRef.current.stopListening();
+        sttRef.current.resetTranscript();
         setConversationState("idle");
         
         // Pause VAD if active
@@ -824,7 +853,7 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [stt]);
+  }, []); // No dependencies - use refs instead
 
   // Handle microphone toggle
   const handleMicrophoneToggle = useCallback(() => {
@@ -894,35 +923,86 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
 
   // Auto-play new agent messages with TTS
   useEffect(() => {
+    console.log("TTS Auto-play effect triggered", {
+      hasTTS,
+      hasUser: !!user,
+      isPlaying,
+      messagesCount: messages.length,
+      playedCount: playedMessageIds.size
+    });
+
     if (!hasTTS || !user || isPlaying) {
       return;
     }
 
     // Calculate the call start time in seconds (Nostr event timestamps are in seconds)
     const callStartTimeInSeconds = Math.floor(callStartTimeRef.current / 1000);
+    console.log("Call start time (seconds):", callStartTimeInSeconds, "Current time (seconds):", Math.floor(Date.now() / 1000));
+
+    // Log all messages for debugging
+    console.log("All messages:", messages.map(msg => ({
+      id: msg.id.substring(0, 8),
+      pubkey: msg.event.pubkey.substring(0, 8),
+      kind: msg.event.kind,
+      content: msg.event.content.substring(0, 50),
+      created_at: msg.event.created_at,
+      isAfterCallStart: (msg.event.created_at || 0) > callStartTimeInSeconds,
+      hasReasoning: msg.event.hasTag("reasoning"),
+      hasTool: msg.event.hasTag("tool"),
+      isUser: msg.event.pubkey === user.pubkey,
+      isPlayed: playedMessageIds.has(msg.id)
+    })));
 
     // Find unplayed agent messages, excluding typing indicators and reasoning events
-    // IMPORTANT: Only consider messages created AFTER the call started
+    // Check if this is a voice mode message (has "mode":"voice" tag)
+    const isVoiceModeMessage = (event: NDKEvent) => {
+      const modeTag = event.getTag("mode");
+      return modeTag && modeTag[1] === "voice";
+    };
+
     const agentMessages = messages.filter(
-      (msg) =>
-        msg.event.pubkey !== user.pubkey &&
-        !playedMessageIds.has(msg.id) &&
-        !isAudioEvent(msg.event) &&
-        // Only messages created after the call started
-        (msg.event.created_at || 0) > callStartTimeInSeconds &&
-        // Exclude typing indicators
-        msg.event.kind !== EVENT_KINDS.TYPING_INDICATOR &&
-        msg.event.kind !== EVENT_KINDS.TYPING_INDICATOR_STOP &&
-        msg.event.kind !== EVENT_KINDS.STREAMING_RESPONSE &&
-        // Exclude reasoning events (they have the "reasoning" tag)
-        !msg.event.hasTag("reasoning") &&
-        // Exclude tool events (they have the "tool" tag)
-        !msg.event.hasTag("tool"),
+      (msg) => {
+        // Basic checks
+        if (msg.event.pubkey === user.pubkey) return false; // Skip user messages
+        if (playedMessageIds.has(msg.id)) return false; // Skip already played
+        if (isAudioEvent(msg.event)) return false; // Skip audio events
+
+        // Check message kind - we want kind 1111 (GenericReply)
+        if (msg.event.kind !== 1111) {
+          // Skip typing indicators and streaming responses
+          if (msg.event.kind === EVENT_KINDS.TYPING_INDICATOR ||
+              msg.event.kind === EVENT_KINDS.TYPING_INDICATOR_STOP ||
+              msg.event.kind === EVENT_KINDS.STREAMING_RESPONSE) {
+            return false;
+          }
+        }
+
+        // Skip reasoning and tool messages
+        if (msg.event.hasTag("reasoning") || msg.event.hasTag("tool")) {
+          return false;
+        }
+
+        // For voice mode messages, always play them regardless of timestamp
+        // This ensures agent responses in voice calls are played
+        if (isVoiceModeMessage(msg.event)) {
+          console.log("Found voice mode message to play:", msg.id.substring(0, 8));
+          return true;
+        }
+
+        // For non-voice messages, only play if created after call start
+        return (msg.event.created_at || 0) > callStartTimeInSeconds;
+      }
     );
+
+    console.log("Filtered agent messages to play:", agentMessages.length, agentMessages.map(msg => ({
+      id: msg.id.substring(0, 8),
+      content: msg.event.content.substring(0, 50)
+    })));
 
     if (agentMessages.length > 0) {
       const latestAgentMessage = agentMessages[agentMessages.length - 1];
       const ttsContent = extractTTSContent(latestAgentMessage.event.content);
+      console.log("TTS content to play:", ttsContent?.substring(0, 100));
 
       if (ttsContent) {
         // Auto-target the agent that just spoke
@@ -1531,8 +1611,31 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => {
-              // Use the comprehensive cleanup function
-              performCleanup();
+              console.log("CallView: End Call button clicked, performing cleanup");
+              // Perform cleanup using refs directly
+              initializedRef.current = false;
+              
+              if (vadServiceRef.current) {
+                console.log("CallView: Destroying VAD service");
+                vadServiceRef.current.destroy();
+                vadServiceRef.current = null;
+              }
+              
+              if (sttRef.current?.isListening) {
+                console.log("CallView: Stopping STT");
+                sttRef.current.stopListening();
+              }
+              
+              // Stop TTS
+              stopTTS();
+              
+              // Clear state flags
+              setIsVadActive(false);
+              setIsAutoMode(false);
+              setConversationState("idle");
+              setIsProcessing(false);
+              
+              // Finally call onClose
               onClose(localRootEvent);
             }}
             className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"

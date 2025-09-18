@@ -18,7 +18,8 @@ import {
 import { useAtom } from "jotai";
 import { CreateProjectDialog } from "@/components/dialogs/CreateProjectDialog";
 import { GlobalSearchDialog } from "@/components/dialogs/GlobalSearchDialog";
-import { useGlobalSearchShortcut } from "@/hooks/useKeyboardShortcuts";
+import { InboxPopover } from "@/components/inbox/InboxPopover";
+import { useGlobalSearchShortcut, useInboxShortcut } from "@/hooks/useKeyboardShortcuts";
 import { useSortedProjects } from "@/hooks/useSortedProjects";
 import { useTheme } from "@/hooks/useTheme";
 import { useInboxUnreadCount } from "@/hooks/useInboxEvents";
@@ -129,13 +130,15 @@ export function CollapsibleProjectsSidebar({
   const location = useLocation();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [inboxPopoverOpen, setInboxPopoverOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const [openProjects] = useAtom(openProjectsAtom);
   const [, toggleProject] = useAtom(toggleProjectAtom);
   const isProjectOpen = useAtom(isProjectOpenAtom)[0];
 
-  // Add keyboard shortcut for global search
+  // Add keyboard shortcuts
   useGlobalSearchShortcut(() => setSearchDialogOpen(true));
+  useInboxShortcut(() => setInboxPopoverOpen(!inboxPopoverOpen));
   
   // Get inbox unread count
   const inboxUnreadCount = useInboxUnreadCount();
@@ -389,22 +392,18 @@ export function CollapsibleProjectsSidebar({
         {/* Inbox and Settings buttons above footer */}
         <div className="border-t px-3 py-2">
           <SidebarMenu>
-            {/* Inbox button */}
+            {/* Inbox button with popover */}
             <SidebarMenuItem>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <SidebarMenuButton 
-                      asChild
-                      className="w-full justify-start group-data-[collapsible=icon]:justify-center relative"
-                      data-testid="sidebar-inbox-button"
-                    >
-                      <Link 
-                        to="/inbox" 
-                        params={{}}
+              <InboxPopover open={inboxPopoverOpen} onOpenChange={setInboxPopoverOpen}>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <SidebarMenuButton 
+                        className="w-full justify-start group-data-[collapsible=icon]:justify-center relative"
+                        data-testid="sidebar-inbox-button"
                         onClick={(e) => {
-                          console.log('[Sidebar] Navigating to inbox');
-                          // Let the Link component handle navigation
+                          e.preventDefault();
+                          setInboxPopoverOpen(!inboxPopoverOpen);
                         }}
                       >
                         <div className="relative">
@@ -427,49 +426,18 @@ export function CollapsibleProjectsSidebar({
                             </Badge>
                           )}
                         </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>
-                      Inbox
-                      {inboxUnreadCount > 0 && ` (${inboxUnreadCount} unread)`}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </SidebarMenuItem>
-            
-            {/* Settings button - dedicated and always visible */}
-            <SidebarMenuItem>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <SidebarMenuButton 
-                      asChild
-                      className="w-full justify-start group-data-[collapsible=icon]:justify-center"
-                      data-testid="sidebar-settings-button"
-                    >
-                      <Link 
-                        to="/settings" 
-                        params={{}}
-                        onClick={(e) => {
-                          console.log('[Sidebar] Navigating to settings');
-                          // Let the Link component handle navigation
-                        }}
-                      >
-                        <Settings className="h-5 w-5" />
-                        <span className="group-data-[collapsible=icon]:hidden ml-2">
-                          Settings
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>Settings</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                      </SidebarMenuButton>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p>
+                        Inbox
+                        {inboxUnreadCount > 0 && ` (${inboxUnreadCount} unread)`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">⌘I</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </InboxPopover>
             </SidebarMenuItem>
           </SidebarMenu>
         </div>

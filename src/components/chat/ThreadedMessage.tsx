@@ -193,18 +193,19 @@ export const ThreadedMessage = memo(function ThreadedMessage({
                 className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 transition-colors font-medium hover:bg-blue-50 dark:hover:bg-blue-950/30 px-2 py-1 rounded"
               >
                 <div className="flex -space-x-1.5">
-                  {replies.slice(0, 20).map((reply, idx) => (
-                    <div key={reply.id} style={{ zIndex: 20 - idx }}>
+                  {/* Get unique pubkeys from replies to avoid showing duplicates */}
+                  {[...new Set(replies.map(r => r.event.pubkey))].slice(0, 20).map((pubkey, idx) => (
+                    <div key={pubkey} style={{ zIndex: 20 - idx }}>
                       <NostrProfile
-                        pubkey={reply.event.pubkey}
+                        pubkey={pubkey}
                         variant="avatar"
                         className="w-5 h-5 border-2 border-background rounded"
                       />
                     </div>
                   ))}
-                  {replies.length > 20 && (
+                  {[...new Set(replies.map(r => r.event.pubkey))].length > 20 && (
                     <span className="ml-1 text-[10px] text-muted-foreground">
-                      +{replies.length - 20}
+                      +{[...new Set(replies.map(r => r.event.pubkey))].length - 20}
                     </span>
                   )}
                 </div>

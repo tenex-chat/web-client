@@ -92,25 +92,23 @@ export function useAgentVoiceConfig(
     if (agentConfig?.voiceId) {
       return agentConfig.voiceId;
     }
-    
-    // 2. Second try: Multi-voice deterministic selection
-    // If multiple voices are configured, use deterministic assignment
-    if (globalVoiceSettings.voiceIds && 
+
+    // 2. Use global voice settings
+    if (globalVoiceSettings.voiceIds &&
         globalVoiceSettings.voiceIds.length > 0 &&
         agentPubkey) {
-      
+
       const voiceIds = globalVoiceSettings.voiceIds;
-      // Always use deterministic assignment based on agent pubkey
+      // For single voice, use it for everyone
+      if (voiceIds.length === 1) {
+        return voiceIds[0];
+      }
+      // For multiple voices, use deterministic assignment based on agent pubkey
       const index = getDeterministicVoiceIndex(agentPubkey, voiceIds.length);
       return voiceIds[index];
     }
-    
-    // 3. Third try: Global single voice setting
-    if (globalVoiceSettings.voiceId) {
-      return globalVoiceSettings.voiceId;
-    }
-    
-    // 4. Ultimate fallback: Default voice
+
+    // 3. Ultimate fallback: Default voice
     return "alloy";
   };
 
@@ -158,7 +156,7 @@ export function useAgentVoiceConfig(
       setAgentConfigs((currentConfigs) => {
         const existingConfig = currentConfigs.get(agentPubkey);
         const globalDefaults = {
-          voiceId: globalVoiceSettings.voiceId || "alloy",
+          voiceId: globalVoiceSettings.voiceIds?.[0] || "alloy",
           provider: globalVoiceSettings.provider,
           speed: globalVoiceSettings.speed,
           pitch: 1.0,
@@ -229,12 +227,12 @@ export function useAgentVoiceConfig(
       if (!agentPubkey) return;
       
       // For deterministic strategy, pass the voice IDs from global settings
-      const strategyConfig = strategy === "deterministic" 
-        ? { 
-            type: strategy as const, 
-            config: { voiceIds: globalVoiceSettings.voiceIds || [] } 
+      const strategyConfig = strategy === "deterministic"
+        ? {
+            type: strategy,
+            config: { voiceIds: globalVoiceSettings.voiceIds || [] }
           }
-        : { type: strategy as const };
+        : { type: strategy };
       
       const profile = voiceProfileManager.assignVoiceToAgent(
         agentPubkey,

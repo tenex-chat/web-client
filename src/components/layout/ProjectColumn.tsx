@@ -36,7 +36,7 @@ import { AddAgentsToProjectDialog } from "@/components/dialogs/AddAgentsToProjec
 import { useProjectStatus } from "@/stores/projects";
 import { bringProjectOnline } from "@/lib/utils/projectStatusUtils";
 import { ProjectStatusIndicator } from "@/components/status/ProjectStatusIndicator";
-import { FABMenu } from "@/components/ui/fab-menu";
+// import { FABMenu } from "@/components/ui/fab-menu"; // TODO: Create FABMenu component
 import { EventModal } from "@/components/hashtags/EventModal";
 import { useWindowManager } from "@/stores/windowManager";
 import {
@@ -682,8 +682,8 @@ export function ProjectColumn({
         {/* Column Content */}
         <div className="flex-1 overflow-hidden">{renderContent()}</div>
 
-        {/* FAB for standalone mode */}
-        {mode === "standalone" &&
+        {/* FAB for standalone mode - TODO: Implement FABMenu component */}
+        {/* {mode === "standalone" &&
           activeTab === "conversations" &&
           viewState === "list" && (
             <FABMenu
@@ -710,7 +710,7 @@ export function ProjectColumn({
               }}
               offset={{ bottom: "16px" }}
             />
-          )}
+          )} */}
 
       </div>
 

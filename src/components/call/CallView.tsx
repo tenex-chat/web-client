@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PhoneOff, Mic, MicOff, Bot, Send, Volume2, AudioLines, RotateCcw, Activity, ChevronDown } from "lucide-react";
+import { PhoneOff, Mic, MicOff, Bot, Send, Volume2, AudioLines, RotateCcw, Activity, ChevronDown, Pause } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
@@ -244,6 +244,12 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
 
   // Audio settings for microphone name display
   const { audioSettings, updateAudioSettings } = useCallSettings();
+  const vadModeRef = useRef(audioSettings.vadMode);
+
+  // Keep vadModeRef in sync
+  useEffect(() => {
+    vadModeRef.current = audioSettings.vadMode;
+  }, [audioSettings.vadMode]);
   
   // Audio devices hook for dropdown
   const { inputDevices, outputDevices, refreshDevices } = useAudioDevices();
@@ -374,34 +380,44 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
   // TTS configuration from AI hook
   const { streamSpeak, hasTTS, voiceSettings } = useAI();
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isTTSPaused, setIsTTSPaused] = useState(false);
   const streamingPlayerRef = useRef<StreamingTTSPlayer | null>(null);
+  const ttsInterruptedTimeRef = useRef<number | null>(null);
+  const ttsWasPausedRef = useRef<boolean>(false);
+  const ttsPausedPositionRef = useRef<number>(0);
 
   // Helper to play TTS audio with streaming
   const playTTS = useCallback(
-    async (text: string) => {
+    async (text: string, authorPubkey: string) => {
       if (!hasTTS) return;
 
       try {
         setIsPlaying(true);
-        
+        setIsTTSPaused(false);
+        ttsWasPausedRef.current = false;
+        ttsPausedPositionRef.current = 0;
+
         // Create new streaming player
         const player = new StreamingTTSPlayer(audioSettings.outputDeviceId || undefined);
         streamingPlayerRef.current = player;
-        
+
         // Initialize the player
         await player.initialize();
-        
+
         // Set playback speed
         player.setPlaybackRate(voiceSettings.speed || 1.0);
-        
+
         // Set up ended callback
         player.onEnded(() => {
           setIsPlaying(false);
+          setIsTTSPaused(false);
           streamingPlayerRef.current = null;
+          ttsWasPausedRef.current = false;
+          ttsPausedPositionRef.current = 0;
         });
 
         // Start streaming with chunk callback
-        await streamSpeak(text, async (chunk) => {
+        await streamSpeak(text, authorPubkey, async (chunk) => {
           // Add each chunk as it arrives for immediate playback
           await player.addChunk(chunk);
         });
@@ -412,10 +428,13 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
       } catch (error) {
         console.error("TTS streaming playback error:", error);
         setIsPlaying(false);
+        setIsTTSPaused(false);
         if (streamingPlayerRef.current) {
           streamingPlayerRef.current.stop();
           streamingPlayerRef.current = null;
         }
+        ttsWasPausedRef.current = false;
+        ttsPausedPositionRef.current = 0;
       }
     },
     [streamSpeak, hasTTS, audioSettings.outputDeviceId, voiceSettings.speed],
@@ -427,6 +446,37 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
       streamingPlayerRef.current.stop();
       streamingPlayerRef.current = null;
       setIsPlaying(false);
+      setIsTTSPaused(false);
+      ttsWasPausedRef.current = false;
+      ttsPausedPositionRef.current = 0;
+    }
+  }, []);
+
+  // Helper to pause TTS (for interruption)
+  const pauseTTS = useCallback(() => {
+    if (streamingPlayerRef.current && streamingPlayerRef.current.playing) {
+      const audioElement = streamingPlayerRef.current.getAudioElement();
+      if (audioElement) {
+        ttsPausedPositionRef.current = audioElement.currentTime;
+        streamingPlayerRef.current.pause();
+        ttsWasPausedRef.current = true;
+        ttsInterruptedTimeRef.current = Date.now();
+        setIsTTSPaused(true);
+        console.log('TTS paused at position:', ttsPausedPositionRef.current);
+        toast.info("Speech paused - continue speaking to stop, or pause to resume", { duration: 2000 });
+      }
+    }
+  }, []);
+
+  // Helper to resume TTS (after brief interruption)
+  const resumeTTS = useCallback(() => {
+    if (streamingPlayerRef.current && ttsWasPausedRef.current) {
+      streamingPlayerRef.current.play();
+      ttsWasPausedRef.current = false;
+      ttsInterruptedTimeRef.current = null;
+      setIsTTSPaused(false);
+      console.log('TTS resumed from position:', ttsPausedPositionRef.current);
+      toast.success("Speech resumed", { duration: 1500 });
     }
   }, []);
 
@@ -495,7 +545,7 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
       }
 
       // Replay the TTS with fresh generation
-      await playTTS(ttsContent);
+      await playTTS(ttsContent, lastPlayedMessage.event.pubkey);
 
       setSpeakingAgent(null);
       setConversationState("idle");
@@ -550,14 +600,14 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
       console.log("CallView: Sending message", {
         transcript: transcript.substring(0, 50),
         targetAgent: agentToTag.slug,
-        hasRootEvent: !!localRootEventRef.current,
+        hasRootEvent: !!localRootEvent,
         autoTTS: true
       });
 
       setConversationState("processing_user_input");
 
       try {
-        if (!localRootEventRef.current) {
+        if (!localRootEvent) {
           // Create initial thread
           console.log("CallView: Creating new thread with auto-TTS");
           const newThread = await threadManagement.createThread(
@@ -577,7 +627,7 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
           }
         } else {
           // Send reply to existing thread with target agent
-          console.log("CallView: Sending reply to existing thread", localRootEventRef.current.id);
+          console.log("CallView: Sending reply to existing thread", localRootEvent.id);
           await threadManagement.sendReply(
             transcript,
             [agentToTag],
@@ -601,17 +651,35 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     [localRootEvent, threadManagement, messages, targetAgent],
   );
 
-  // Handle auto-send on silence (only for push-to-talk mode)
+  // Handle auto-send on silence (only for push-to-talk mode with Chrome STT)
   const handleSilenceDetected = useCallback(() => {
-    if (audioSettings.vadMode === "push-to-talk" && stt.transcript.trim() && stt.isListening) {
-      // Auto-send after silence
+    if (audioSettings.vadMode === "push-to-talk" && stt.transcript.trim() && stt.isListening && stt.isRealtime) {
+      // Chrome STT detected silence - auto-send after silence
       stt.stopListening().then((finalTranscript) => {
         if (finalTranscript?.trim()) {
+          // User spoke something - stop TTS if it was paused
+          if (ttsWasPausedRef.current) {
+            console.log('Auto-send on silence: Stopping TTS');
+            stopTTS();
+          }
           handleSendMessage(finalTranscript);
+        } else {
+          // No meaningful speech - check if we should resume TTS
+          if (ttsWasPausedRef.current && ttsInterruptedTimeRef.current) {
+            const interruptDuration = Date.now() - ttsInterruptedTimeRef.current;
+            if (interruptDuration < 2000) {
+              console.log('Silence detected: Brief interruption - resuming TTS');
+              resumeTTS();
+            } else {
+              console.log('Silence detected: Long interruption - stopping TTS');
+              stopTTS();
+              toast.info("Playback stopped", { duration: 1500 });
+            }
+          }
         }
       });
     }
-  }, [stt, handleSendMessage, audioSettings.vadMode]);
+  }, [stt, handleSendMessage, audioSettings.vadMode, stopTTS, resumeTTS]);
 
   // Update the ref whenever the callback changes
   useEffect(() => {
@@ -637,6 +705,13 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
           if (isMutedRef.current) {
             return;
           }
+          
+          // Handle TTS interruption when user starts speaking
+          if (streamingPlayerRef.current && streamingPlayerRef.current.playing) {
+            console.log('User started speaking - pausing TTS');
+            pauseTTS();
+          }
+          
           if (!isVadProcessingRef.current && conversationState !== "agent_speaking") {
             setIsVadActive(true);
             setConversationState("user_speaking");
@@ -655,8 +730,26 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
             const finalTranscript = await currentStt.stopListening();
 
             if (finalTranscript?.trim()) {
+              // User spoke something meaningful - stop TTS completely
+              if (ttsWasPausedRef.current) {
+                console.log('User completed speech - stopping TTS');
+                stopTTS();
+              }
               await handleSendMessage(finalTranscript);
             } else {
+              // User didn't say anything meaningful
+              // Check if this was a brief interruption (< 2 seconds for faster response)
+              if (ttsWasPausedRef.current && ttsInterruptedTimeRef.current) {
+                const interruptDuration = Date.now() - ttsInterruptedTimeRef.current;
+                if (interruptDuration < 2000) {
+                  console.log('Brief interruption detected - resuming TTS');
+                  resumeTTS();
+                } else {
+                  console.log('Long interruption - stopping TTS');
+                  stopTTS();
+                  toast.info("Playback stopped", { duration: 1500 });
+                }
+              }
               setConversationState("idle");
             }
 
@@ -670,11 +763,11 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
           updateAudioSettings({ vadMode: "push-to-talk" });
         },
         // Better tuned VAD settings for natural speech with ElevenLabs
-        positiveSpeechThreshold: 0.5,  // Lower threshold for detecting speech start
+        positiveSpeechThreshold: 0.4,  // Even lower threshold for quicker speech detection
         negativeSpeechThreshold: 0.15, // Much lower threshold for detecting speech end
-        redemptionFrames: 50,          // Wait ~1.6 seconds of silence before ending
+        redemptionFrames: 40,          // Wait ~1.3 seconds of silence before ending (faster response)
         preSpeechPadFrames: 15,        // Capture more audio before speech starts
-        minSpeechFrames: 10,           // Minimum frames (~320ms) for valid speech
+        minSpeechFrames: 8,            // Minimum frames (~256ms) for valid speech (faster detection)
       });
       
       vadServiceRef.current = vadService;
@@ -704,7 +797,7 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
         vadServiceRef.current = null;
       }
     };
-  }, [audioSettings.vadMode, audioSettings.voiceActivityDetection, audioSettings.vadSensitivity, audioSettings.inputDeviceId, selectedAgent]);
+  }, [audioSettings.vadMode, audioSettings.voiceActivityDetection, audioSettings.vadSensitivity, audioSettings.inputDeviceId, selectedAgent, pauseTTS, resumeTTS, stopTTS]);
 
   // Initialize call based on VAD mode
   useEffect(() => {
@@ -885,8 +978,31 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
         stt.stopListening();
         stt.resetTranscript();
         setConversationState("idle");
+        
+        // Check if TTS was paused and handle accordingly
+        if (ttsWasPausedRef.current && ttsInterruptedTimeRef.current) {
+          const interruptDuration = Date.now() - ttsInterruptedTimeRef.current;
+          if (interruptDuration < 2000 && !stt.transcript.trim()) {
+            // Brief interruption with no speech - resume TTS
+            console.log('Push-to-talk: Brief interruption - resuming TTS');
+            resumeTTS();
+          } else {
+            // Long interruption or user spoke - stop TTS
+            console.log('Push-to-talk: Stopping TTS');
+            stopTTS();
+            if (!stt.transcript.trim()) {
+              toast.info("Playback stopped", { duration: 1500 });
+            }
+          }
+        }
       } else {
         // START capturing
+        // Handle TTS interruption when user starts speaking
+        if (streamingPlayerRef.current && streamingPlayerRef.current.playing) {
+          console.log('Push-to-talk: User started speaking - pausing TTS');
+          pauseTTS();
+        }
+        
         stt.startListening();
         setConversationState("user_speaking");
       }
@@ -896,6 +1012,10 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     stt,
     audioSettings.vadMode,
     isVadActive,
+    isMuted,
+    pauseTTS,
+    resumeTTS,
+    stopTTS,
   ]);
 
   // Handle manual send button
@@ -903,6 +1023,13 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     if (stt.isRealtime && stt.transcript.trim()) {
       // Real-time STT (Chrome) - use current transcript
       stt.stopListening();
+      
+      // User is sending a message - stop TTS if it was paused
+      if (ttsWasPausedRef.current) {
+        console.log('Manual send: User sending message - stopping TTS');
+        stopTTS();
+      }
+      
       handleSendMessage(stt.transcript);
       stt.resetTranscript();
     } else if (stt.isListening) {
@@ -910,53 +1037,51 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
       setConversationState("processing_user_input");
       const finalTranscript = await stt.stopListening();
       if (finalTranscript?.trim()) {
+        // User is sending a message - stop TTS if it was paused
+        if (ttsWasPausedRef.current) {
+          console.log('Manual send: User sending message - stopping TTS');
+          stopTTS();
+        }
+        
         handleSendMessage(finalTranscript);
       } else {
         toast.error("No speech detected");
         setConversationState("idle");
+        
+        // No speech detected - check if we should resume TTS
+        if (ttsWasPausedRef.current && ttsInterruptedTimeRef.current) {
+          const interruptDuration = Date.now() - ttsInterruptedTimeRef.current;
+          if (interruptDuration < 2000) {
+            console.log('Manual send cancelled: Brief interruption - resuming TTS');
+            resumeTTS();
+          } else {
+            console.log('Manual send cancelled: Long interruption - stopping TTS');
+            stopTTS();
+            toast.info("Playback stopped", { duration: 1500 });
+          }
+        }
       }
     }
   }, [
     stt,
     handleSendMessage,
+    stopTTS,
+    resumeTTS,
   ]);
 
   // Auto-play new agent messages with TTS
   useEffect(() => {
-    console.log("TTS Auto-play effect triggered", {
-      hasTTS,
-      hasUser: !!user,
-      isPlaying,
-      messagesCount: messages.length,
-      playedCount: playedMessageIds.size
-    });
-
     if (!hasTTS || !user || isPlaying) {
       return;
     }
 
     // Calculate the call start time in seconds (Nostr event timestamps are in seconds)
     const callStartTimeInSeconds = Math.floor(callStartTimeRef.current / 1000);
-    console.log("Call start time (seconds):", callStartTimeInSeconds, "Current time (seconds):", Math.floor(Date.now() / 1000));
-
-    // Log all messages for debugging
-    console.log("All messages:", messages.map(msg => ({
-      id: msg.id.substring(0, 8),
-      pubkey: msg.event.pubkey.substring(0, 8),
-      kind: msg.event.kind,
-      content: msg.event.content.substring(0, 50),
-      created_at: msg.event.created_at,
-      isAfterCallStart: (msg.event.created_at || 0) > callStartTimeInSeconds,
-      hasReasoning: msg.event.hasTag("reasoning"),
-      hasTool: msg.event.hasTag("tool"),
-      isUser: msg.event.pubkey === user.pubkey,
-      isPlayed: playedMessageIds.has(msg.id)
-    })));
 
     // Find unplayed agent messages, excluding typing indicators and reasoning events
     // Check if this is a voice mode message (has "mode":"voice" tag)
     const isVoiceModeMessage = (event: NDKEvent) => {
-      const modeTag = event.getTag("mode");
+      const modeTag = event.tagValue("mode");
       return modeTag && modeTag[1] === "voice";
     };
 
@@ -985,7 +1110,6 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
         // For voice mode messages, always play them regardless of timestamp
         // This ensures agent responses in voice calls are played
         if (isVoiceModeMessage(msg.event)) {
-          console.log("Found voice mode message to play:", msg.id.substring(0, 8));
           return true;
         }
 
@@ -994,15 +1118,9 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
       }
     );
 
-    console.log("Filtered agent messages to play:", agentMessages.length, agentMessages.map(msg => ({
-      id: msg.id.substring(0, 8),
-      content: msg.event.content.substring(0, 50)
-    })));
-
     if (agentMessages.length > 0) {
       const latestAgentMessage = agentMessages[agentMessages.length - 1];
       const ttsContent = extractTTSContent(latestAgentMessage.event.content);
-      console.log("TTS content to play:", ttsContent?.substring(0, 100));
 
       if (ttsContent) {
         // Auto-target the agent that just spoke
@@ -1017,7 +1135,7 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
         setConversationState("agent_speaking");
         setSpeakingAgent(latestAgentMessage.event.pubkey);
 
-        playTTS(ttsContent)
+        playTTS(ttsContent, latestAgentMessage.event.pubkey)
           .then(() => {
             setPlayedMessageIds((prev) =>
               new Set(prev).add(latestAgentMessage.id),
@@ -1027,16 +1145,30 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
             // Save this message as the last played for repeat functionality
             setLastPlayedMessage(latestAgentMessage);
 
-            // Auto-resume based on VAD mode
-            if (audioSettings.vadMode === "auto" && vadServiceRef.current) {
+            // Auto-resume based on VAD mode (use ref to avoid dependency issues)
+            const currentVadMode = vadModeRef.current;
+            const currentStt = sttRef.current;
+
+            if (currentVadMode === "auto" && vadServiceRef.current) {
               // In auto mode, resume VAD
               setConversationState("idle");
               vadServiceRef.current.resume();
-            } else if (audioSettings.vadMode === "push-to-talk") {
+            } else if (currentVadMode === "push-to-talk" && currentStt) {
               // In push-to-talk mode, auto-resume listening
-              setConversationState("user_speaking");
-              stt.resetTranscript();
-              stt.startListening();
+              // Add a small delay to ensure everything is cleaned up before restarting
+              setTimeout(async () => {
+                console.log("CallView: Auto-resuming STT after agent speech completed");
+                setConversationState("user_speaking");
+                currentStt.resetTranscript();
+                try {
+                  await currentStt.startListening();
+                  console.log("CallView: STT resumed successfully");
+                } catch (error) {
+                  console.error("CallView: Failed to resume STT after agent speech:", error);
+                  toast.error("Failed to resume listening - tap mic to restart");
+                  setConversationState("idle");
+                }
+              }, 200); // Slightly longer delay to ensure cleanup
             } else {
               // In disabled mode, stay idle
               setConversationState("idle");
@@ -1058,7 +1190,6 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     isPlaying,
     agentsRaw,
     playTTS,
-    stt,
     messages,
     playedMessageIds,
     user,
@@ -1518,6 +1649,21 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
 
           {/* Current conversation display */}
           <div className="mt-8 min-h-[100px] max-w-md w-full">
+            {/* TTS Paused Indicator */}
+            {isTTSPaused && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="mb-3 flex items-center justify-center gap-2 bg-yellow-500/20 backdrop-blur-sm rounded-lg px-3 py-2 border border-yellow-500/30"
+              >
+                <Pause className="h-4 w-4 text-yellow-400" />
+                <span className="text-sm text-yellow-400 font-medium">
+                  Playback paused - continue speaking or wait to resume
+                </span>
+              </motion.div>
+            )}
+            
             {(() => {
               const displayText = getDisplayText();
               const shouldShowBox = displayText || conversationState === "processing_user_input";
@@ -1633,7 +1779,6 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
               setIsVadActive(false);
               setIsAutoMode(false);
               setConversationState("idle");
-              setIsProcessing(false);
               
               // Finally call onClose
               onClose(localRootEvent);

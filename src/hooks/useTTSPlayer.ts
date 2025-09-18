@@ -25,8 +25,6 @@ import {
   removeFromQueueAtom,
   clearQueueAtom,
   stopPlaybackAtom,
-  pausePlaybackAtom,
-  resumePlaybackAtom,
   seekToAtom,
   skipForwardAtom,
   skipBackwardAtom,
@@ -43,9 +41,9 @@ export function useTTSPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // State atoms
-  const [playerState, setPlayerState] = useAtom(ttsPlayerStateAtom);
-  const [playbackRate, setPlaybackRate] = useAtom(ttsPlaybackRateAtom);
-  const [volume, setVolume] = useAtom(ttsVolumeAtom);
+  const playerState = useAtomValue(ttsPlayerStateAtom);
+  const playbackRate = useAtomValue(ttsPlaybackRateAtom);
+  const volume = useAtomValue(ttsVolumeAtom);
   const [autoPlayNext, setAutoPlayNext] = useAtom(ttsAutoPlayNextAtom);
 
   // Read-only atoms
@@ -71,8 +69,6 @@ export function useTTSPlayer() {
   const removeFromQueue = useSetAtom(removeFromQueueAtom);
   const clearQueue = useSetAtom(clearQueueAtom);
   const stopPlayback = useSetAtom(stopPlaybackAtom);
-  const pausePlayback = useSetAtom(pausePlaybackAtom);
-  const resumePlayback = useSetAtom(resumePlaybackAtom);
   const seekTo = useSetAtom(seekToAtom);
   const skipForward = useSetAtom(skipForwardAtom);
   const skipBackward = useSetAtom(skipBackwardAtom);
@@ -95,9 +91,7 @@ export function useTTSPlayer() {
     async (
       content: string,
       messageId: string,
-      authorPubkey?: string,
-      voiceId?: string,
-      voiceProvider?: string
+      authorPubkey?: string
     ) => {
       if (!hasTTS || !content) {
         console.warn("TTS not available or no content provided");
@@ -156,9 +150,7 @@ export function useTTSPlayer() {
               await play(
                 nextItem.content,
                 nextItem.messageId,
-                nextItem.authorPubkey,
-                nextItem.voiceId,
-                nextItem.voiceProvider
+                nextItem.authorPubkey
               );
             }
           } else {

@@ -133,6 +133,7 @@ export function useThreadManagement(
       recentMessages: Message[],
       targetAgent: string | null,
     ) => {
+      console.log('send reply', { ndk: !!ndk, user: !!user, localRootEvent: !!localRootEvent })
       if (!ndk || !user || !localRootEvent) return null;
 
       // If replying to a specific message, use that as the reply target
@@ -149,6 +150,8 @@ export function useThreadManagement(
       // Add project tag if project exists
       if (project) {
         replyEvent.tags.push(["a", project.tagId()]);
+      } else {
+        console.warn("NO PROJECT ON REPLY")
       }
 
       // Add image tags for each uploaded image

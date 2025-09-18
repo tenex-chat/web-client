@@ -83,18 +83,19 @@ export function useAI() {
       }
 
       // Determine which voice to use
-      let selectedVoiceId: string;
+      if (!voiceSettings.voiceIds || voiceSettings.voiceIds.length === 0) {
+        throw new Error("No voices configured");
+      }
 
-      if (voiceSettings.voiceIds && voiceSettings.voiceIds.length > 0) {
-        // Multi-voice mode: use deterministic assignment based on pubkey
+      let selectedVoiceId: string;
+      if (voiceSettings.voiceIds.length === 1) {
+        // Single voice - use it for everyone
+        selectedVoiceId = voiceSettings.voiceIds[0];
+      } else {
+        // Multi-voice - use deterministic assignment based on pubkey
         const { getDeterministicVoiceIndex } = await import("@/services/ai/voice-profile-manager");
         const index = getDeterministicVoiceIndex(authorPubkey, voiceSettings.voiceIds.length);
         selectedVoiceId = voiceSettings.voiceIds[index];
-      } else if (voiceSettings.voiceId) {
-        // Single voice mode
-        selectedVoiceId = voiceSettings.voiceId;
-      } else {
-        throw new Error("No voice selected");
       }
 
       try {
@@ -134,18 +135,19 @@ export function useAI() {
       }
 
       // Determine which voice to use
-      let selectedVoiceId: string;
+      if (!voiceSettings.voiceIds || voiceSettings.voiceIds.length === 0) {
+        throw new Error("No voices configured");
+      }
 
-      if (voiceSettings.voiceIds && voiceSettings.voiceIds.length > 0) {
-        // Multi-voice mode: use deterministic assignment based on pubkey
+      let selectedVoiceId: string;
+      if (voiceSettings.voiceIds.length === 1) {
+        // Single voice - use it for everyone
+        selectedVoiceId = voiceSettings.voiceIds[0];
+      } else {
+        // Multi-voice - use deterministic assignment based on pubkey
         const { getDeterministicVoiceIndex } = await import("@/services/ai/voice-profile-manager");
         const index = getDeterministicVoiceIndex(authorPubkey, voiceSettings.voiceIds.length);
         selectedVoiceId = voiceSettings.voiceIds[index];
-      } else if (voiceSettings.voiceId) {
-        // Single voice mode
-        selectedVoiceId = voiceSettings.voiceId;
-      } else {
-        throw new Error("No voice selected");
       }
 
       try {
@@ -193,7 +195,7 @@ export function useAI() {
 
     // Configuration state
     hasProvider: !!activeProvider,
-    hasTTS: voiceSettings.enabled && (!!voiceSettings.voiceId || (voiceSettings.voiceIds && voiceSettings.voiceIds.length > 0)),
+    hasTTS: voiceSettings.enabled && voiceSettings.voiceIds.length > 0,
     hasSTT,
 
     // Settings

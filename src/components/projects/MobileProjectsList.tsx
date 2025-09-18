@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FAB } from "@/components/ui/fab";
+// import { FAB } from "@/components/ui/fab"; // TODO: Create FAB component
 
 export function MobileProjectsList() {
   const userProfile = useCurrentUserProfile();
@@ -208,8 +208,8 @@ export function MobileProjectsList() {
         onOpenChange={setSearchDialogOpen}
       />
 
-      {/* FAB for creating new project */}
-      <FAB
+      {/* FAB for creating new project - TODO: Implement FAB component */}
+      {/* <FAB
         onClick={() => setCreateDialogOpen(true)}
         label="New Project"
         showLabel={false}
@@ -217,7 +217,7 @@ export function MobileProjectsList() {
         size="default"
       >
         <Plus />
-      </FAB>
+      </FAB> */}
     </div>
   );
 }

@@ -78,7 +78,7 @@ export function AISettings() {
   };
 
   const handlePreviewVoice = async () => {
-    if (!voiceSettings.voiceId) {
+    if (!voiceSettings.voiceIds || voiceSettings.voiceIds.length === 0) {
       toast.error("No voice selected");
       return;
     }
@@ -92,9 +92,10 @@ export function AISettings() {
 
     setPreviewingVoice(true);
     try {
+      // Preview the first voice in the list
       const audioBlob = await voiceDiscovery.previewVoice(
         voiceSettings.provider,
-        voiceSettings.voiceId,
+        voiceSettings.voiceIds[0],
         "Hello! This is a preview of the selected voice.",
         apiKey,
       );
@@ -395,7 +396,7 @@ export function AISettings() {
                 )}
 
                 {/* Voice Selection */}
-                {voiceSettings.voiceIds && voiceSettings.voiceIds.length > 0 ? (
+                {voiceSettings.voiceIds && voiceSettings.voiceIds.length > 1 ? (
                   // Multi-voice selection (deterministic assignment)
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
@@ -418,17 +419,10 @@ export function AISettings() {
                                 const updatedVoiceIds = voiceSettings.voiceIds?.filter(
                                   (id) => id !== voiceId
                                 );
-                                // If removing leaves only one voice, switch to single voice mode
-                                if (updatedVoiceIds?.length === 1) {
-                                  setVoiceSettings({
-                                    voiceId: updatedVoiceIds[0],
-                                    voiceIds: [],
-                                  });
-                                } else {
-                                  setVoiceSettings({
-                                    voiceIds: updatedVoiceIds,
-                                  });
-                                }
+                                // Update the voiceIds array
+                                setVoiceSettings({
+                                  voiceIds: updatedVoiceIds,
+                                });
                               }}
                             >
                               ×
@@ -466,7 +460,7 @@ export function AISettings() {
                   // Single voice selection
                   <div className="space-y-2">
                     <Label>
-                      Voice: {voiceSettings.voiceId || "None selected"}
+                      Voice: {voiceSettings.voiceIds?.[0] || "None selected"}
                     </Label>
                     <div className="flex gap-2">
                       <Button
@@ -515,7 +509,7 @@ export function AISettings() {
                         variant="outline"
                         size="sm"
                         onClick={handlePreviewVoice}
-                        disabled={!voiceSettings.voiceId || previewingVoice}
+                        disabled={!voiceSettings.voiceIds?.length || previewingVoice}
                       >
                         {previewingVoice ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -609,25 +603,17 @@ export function AISettings() {
         <VoiceSelectionDialog
           open={!!showVoiceSelection}
           onClose={() => setShowVoiceSelection(false)}
-          currentVoiceId={voiceSettings.voiceId}
           currentVoiceIds={voiceSettings.voiceIds}
           provider={voiceSettings.provider}
           apiKey={voiceSettings.apiKey || undefined}
           multiSelect={showVoiceSelection === 'multi'}
           onSelect={(voiceId) => {
-            setVoiceSettings({ voiceId, voiceIds: [] });
+            setVoiceSettings({ voiceIds: [voiceId] });
             toast.success("Voice selected successfully");
           }}
           onMultiSelect={(voiceIds) => {
-            // If multiple voices are selected, use multi-voice mode
-            // If only one voice is selected, use single voice mode
-            if (voiceIds.length === 1) {
-              setVoiceSettings({ voiceId: voiceIds[0], voiceIds: [] });
-              toast.success("Voice selected successfully");
-            } else if (voiceIds.length > 1) {
-              setVoiceSettings({ voiceIds, voiceId: undefined });
-              toast.success(`${voiceIds.length} voices selected for deterministic assignment`);
-            }
+            setVoiceSettings({ voiceIds });
+            toast.success(`${voiceIds.length} voice${voiceIds.length > 1 ? 's' : ''} selected`);
           }}
         />
       )}

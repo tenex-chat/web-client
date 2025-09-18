@@ -18,7 +18,6 @@ import { openAIApiKeyAtom } from "@/stores/ai-config-store";
 interface VoiceSelectionDialogProps {
   open: boolean;
   onClose: () => void;
-  currentVoiceId?: string | null;
   currentVoiceIds?: string[];
   provider: "openai" | "elevenlabs";
   apiKey?: string;
@@ -30,7 +29,6 @@ interface VoiceSelectionDialogProps {
 export function VoiceSelectionDialog({
   open,
   onClose,
-  currentVoiceId,
   currentVoiceIds,
   provider,
   apiKey,
@@ -41,7 +39,7 @@ export function VoiceSelectionDialog({
   const [voices, setVoices] = useState<Voice[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>(
-    currentVoiceId || "",
+    currentVoiceIds?.[0] || "",
   );
   const [selectedVoiceIds, setSelectedVoiceIds] = useState<string[]>(
     currentVoiceIds || []

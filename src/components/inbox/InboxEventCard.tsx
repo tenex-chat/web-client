@@ -25,9 +25,10 @@ import {
 interface InboxEventCardProps {
   event: NDKEvent;
   isUnread?: boolean;
+  compact?: boolean;
 }
 
-export function InboxEventCard({ event, isUnread = false }: InboxEventCardProps) {
+export function InboxEventCard({ event, isUnread = false, compact = false }: InboxEventCardProps) {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
   const profile = useProfileValue(event.pubkey);
@@ -137,7 +138,8 @@ export function InboxEventCard({ event, isUnread = false }: InboxEventCardProps)
   return (
     <div
       className={cn(
-        "relative flex gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer group",
+        "relative flex gap-3 hover:bg-muted/50 transition-colors cursor-pointer group",
+        compact ? "p-3" : "p-4",
         isUnread && "bg-primary/5"
       )}
       onClick={handleNavigate}
@@ -162,7 +164,7 @@ export function InboxEventCard({ event, isUnread = false }: InboxEventCardProps)
       <NostrProfile 
         pubkey={event.pubkey}
         variant="avatar"
-        size="md"
+        size={compact ? "sm" : "md"}
         className={cn("flex-shrink-0", isUnread && "ml-3")}
       />
 
@@ -191,7 +193,7 @@ export function InboxEventCard({ event, isUnread = false }: InboxEventCardProps)
         </div>
 
         {/* Project info (if present) - show prominently */}
-        {project && (
+        {project && !compact && (
           <div className="flex items-center gap-1.5 mb-2">
             <TooltipProvider>
               <Tooltip>
@@ -222,25 +224,27 @@ export function InboxEventCard({ event, isUnread = false }: InboxEventCardProps)
               {event.content}
             </div>
           ) : (
-            <div className="line-clamp-2">{contentPreview}</div>
+            <div className={compact ? "line-clamp-1" : "line-clamp-2"}>{contentPreview}</div>
           )}
         </div>
 
-        {/* Action buttons (shown on hover) */}
-        <div className="mt-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleNavigate();
-            }}
-          >
-            View Context
-            <ChevronRight className="ml-1 h-3 w-3" />
-          </Button>
-        </div>
+        {/* Action buttons (shown on hover) - hide in compact mode */}
+        {!compact && (
+          <div className="mt-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNavigate();
+              }}
+            >
+              View Context
+              <ChevronRight className="ml-1 h-3 w-3" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

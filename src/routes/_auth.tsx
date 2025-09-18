@@ -3,6 +3,8 @@ import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { useEffect } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { useProjectSubscriptions } from "@/hooks/useProjectSubscriptions";
+import { InboxFABMenu } from "@/components/inbox/InboxFABMenu";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 
 export const Route = createFileRoute("/_auth")({
   component: AuthLayout,
@@ -11,6 +13,7 @@ export const Route = createFileRoute("/_auth")({
 function AuthLayout() {
   const user = useNDKCurrentUser();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // Initialize project subscriptions once at the auth layout level
   useProjectSubscriptions();
@@ -36,8 +39,12 @@ function AuthLayout() {
   // In test mode, we render the app shell even without a user
   // The components inside need to handle the absence of user data gracefully
   return (
-    <AppShell>
-      <Outlet />
-    </AppShell>
+    <>
+      <AppShell>
+        <Outlet />
+      </AppShell>
+      {/* Floating inbox menu - only show on desktop */}
+      {!isMobile && <InboxFABMenu />}
+    </>
   );
 }

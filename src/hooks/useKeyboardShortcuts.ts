@@ -53,3 +53,18 @@ export function useGlobalSearchShortcut(openSearch: () => void) {
     },
   ]);
 }
+
+export function useInboxShortcut(toggleInbox: () => void) {
+  useKeyboardShortcuts([
+    {
+      key: "i",
+      metaKey: true, // Cmd+I on Mac
+      handler: toggleInbox,
+    },
+    {
+      key: "i",
+      ctrlKey: true, // Ctrl+I on Windows/Linux
+      handler: toggleInbox,
+    },
+  ]);
+}

@@ -9,6 +9,7 @@ import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { Message } from "./useChatMessages";
 import type { AgentInstance } from "@/types/agent";
 import { findNostrEntities } from "@/lib/utils/nostrEntityParser";
+import { isBrainstormMessage } from "@/lib/utils/brainstorm";
 
 export interface ImageUpload {
   url: string;
@@ -199,6 +200,47 @@ export function useThreadManagement(
       // Add voice mode tag if auto-TTS is enabled
       if (autoTTS) {
         replyEvent.tags.push(["mode", "voice"]);
+      }
+
+      // In brainstorm conversations, preserve brainstorm mode tags and always p-tag the moderator
+      if (localRootEvent && isBrainstormMessage(localRootEvent)) {
+        // Add brainstorm mode tags to the reply
+        const hasBrainstormMode = replyEvent.tags.some(
+          tag => tag[0] === "mode" && tag[1] === "brainstorm"
+        );
+        if (!hasBrainstormMode) {
+          replyEvent.tags.push(["mode", "brainstorm"]);
+        }
+        
+        const hasBrainstormTag = replyEvent.tags.some(
+          tag => tag[0] === "t" && tag[1] === "brainstorm"
+        );
+        if (!hasBrainstormTag) {
+          replyEvent.tags.push(["t", "brainstorm"]);
+        }
+        
+        // Also preserve participant tags from the root event
+        const participantTags = localRootEvent.tags.filter(tag => tag[0] === "participant");
+        participantTags.forEach(participantTag => {
+          const hasThisParticipant = replyEvent.tags.some(
+            tag => tag[0] === "participant" && tag[1] === participantTag[1]
+          );
+          if (!hasThisParticipant) {
+            replyEvent.tags.push(participantTag);
+          }
+        });
+        
+        // P-tag the moderator
+        const moderatorPubkey = localRootEvent.tagValue("p");
+        if (moderatorPubkey) {
+          // Check if moderator is not already p-tagged
+          const hasModeratorPTag = replyEvent.tags.some(
+            tag => tag[0] === "p" && tag[1] === moderatorPubkey
+          );
+          if (!hasModeratorPTag) {
+            replyEvent.tags.push(["p", moderatorPubkey]);
+          }
+        }
       }
 
       await replyEvent.sign(undefined, { pTags: false });

@@ -1,13 +1,14 @@
 import { NDKArticle, NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { useSubscribe, useProfile } from "@nostr-dev-kit/ndk-hooks";
-import { FileText, Clock, Hash } from "lucide-react";
+import { FileText, Clock, Hash, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatRelativeTime } from "@/lib/utils/time";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useProjectsStore } from "@/stores/projects";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 interface DocumentationListSimpleProps {
   projectId?: string;
@@ -93,6 +94,7 @@ export function DocumentationListSimple({
   onArticleSelect,
   className,
 }: DocumentationListSimpleProps) {
+  const [searchQuery, setSearchQuery] = useState("");
   const projectsMap = useProjectsStore((state) => state.projects);
 
   // Get the project
@@ -121,15 +123,42 @@ export function DocumentationListSimple({
     },
   );
 
-  // Sort articles by date
+  // Filter and sort articles by date
   const sortedArticles = useMemo(() => {
     if (!articles) return [];
-    return [...articles].sort(
+
+    let filteredArticles = [...articles];
+
+    // Apply search filter if there's a search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filteredArticles = filteredArticles.filter((article) => {
+        // Search in title
+        if (article.title?.toLowerCase().includes(query)) return true;
+
+        // Search in summary
+        if (article.summary?.toLowerCase().includes(query)) return true;
+
+        // Search in content
+        if (article.content?.toLowerCase().includes(query)) return true;
+
+        // Search in tags
+        const tags = article.tags
+          .filter((tag) => tag[0] === "t")
+          .map((tag) => tag[1].toLowerCase());
+        if (tags.some((tag) => tag.includes(query))) return true;
+
+        return false;
+      });
+    }
+
+    return filteredArticles.sort(
       (a, b) => (b.created_at || 0) - (a.created_at || 0),
     );
-  }, [articles]);
+  }, [articles, searchQuery]);
 
-  if (sortedArticles.length === 0) {
+  // Show empty state only when no search query and no articles
+  if (sortedArticles.length === 0 && !searchQuery.trim()) {
     return (
       <div
         className={cn(
@@ -144,16 +173,45 @@ export function DocumentationListSimple({
   }
 
   return (
-    <ScrollArea className={cn("h-full", className)}>
-      <div className="flex flex-col">
-        {sortedArticles.map((article) => (
-          <DocumentationItem
-            key={article.id}
-            article={article}
-            onSelect={() => onArticleSelect?.(article)}
+    <div className={cn("flex flex-col h-full", className)}>
+      {/* Search Input */}
+      <div className="p-3 border-b">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            type="text"
+            placeholder="Search docs..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 pl-8 text-sm"
           />
-        ))}
+        </div>
       </div>
-    </ScrollArea>
+
+      {/* Results */}
+      {sortedArticles.length === 0 && searchQuery.trim() ? (
+        <div className="flex flex-col items-center justify-center h-32 gap-2 text-center px-3">
+          <FileText className="h-8 w-8 text-muted-foreground/30" />
+          <p className="text-sm text-muted-foreground">
+            No documentation matches your search
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Try a different search term
+          </p>
+        </div>
+      ) : (
+        <ScrollArea className="flex-1">
+          <div className="flex flex-col">
+            {sortedArticles.map((article) => (
+              <DocumentationItem
+                key={article.id}
+                article={article}
+                onSelect={() => onArticleSelect?.(article)}
+              />
+            ))}
+          </div>
+        </ScrollArea>
+      )}
+    </div>
   );
 }

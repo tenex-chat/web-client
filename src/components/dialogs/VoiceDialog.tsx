@@ -163,6 +163,18 @@ export function VoiceDialog({
     }
   }, []);
 
+  // Cleanup when dialog closes
+  useEffect(() => {
+    if (!open) {
+      // Dialog is closing, ensure we stop recording
+      stopRecording();
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    }
+  }, [open, audioUrl, stopRecording]);
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopRecording();
@@ -470,7 +482,16 @@ export function VoiceDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        if (!newOpen) {
+          // Dialog is closing - ensure cleanup
+          resetState();
+        }
+        onOpenChange(newOpen);
+      }}
+    >
       <DialogContent className={cn(
         "w-full p-0 overflow-hidden",
         autoRecordAndSend ? "max-w-sm" : "max-w-lg"

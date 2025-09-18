@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Plus, Volume2, Key } from "lucide-react";
+import { Loader2, Plus, Volume2, Key, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AddProviderDialog } from "./AddProviderDialog";
 import { VoiceSelectionDialog } from "./VoiceSelectionDialog";
@@ -348,11 +348,52 @@ export function AISettings() {
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label>
-                    Voice: {voiceSettings.voiceId || "None selected"}
-                  </Label>
-                  <div className="flex gap-2">
+                {/* Voice Selection */}
+                {voiceSettings.voiceIds && voiceSettings.voiceIds.length > 0 ? (
+                  // Multi-voice selection (deterministic assignment)
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Selected Voices ({voiceSettings.voiceIds.length})
+                    </Label>
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {voiceSettings.voiceIds.map((voiceId) => (
+                          <div
+                            key={voiceId}
+                            className="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md text-sm"
+                          >
+                            <span>{voiceId}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-4 w-4 p-0"
+                              onClick={() => {
+                                const updatedVoiceIds = voiceSettings.voiceIds?.filter(
+                                  (id) => id !== voiceId
+                                );
+                                // If removing leaves only one voice, switch to single voice mode
+                                if (updatedVoiceIds?.length === 1) {
+                                  setVoiceSettings({
+                                    voiceId: updatedVoiceIds[0],
+                                    voiceIds: [],
+                                  });
+                                } else {
+                                  setVoiceSettings({
+                                    voiceIds: updatedVoiceIds,
+                                  });
+                                }
+                              }}
+                            >
+                              ×
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Each agent will be assigned a consistent voice based on their ID
+                      </p>
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
@@ -371,23 +412,53 @@ export function AISettings() {
                         setShowVoiceSelection(true);
                       }}
                     >
-                      Select Voice
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePreviewVoice}
-                      disabled={!voiceSettings.voiceId || previewingVoice}
-                    >
-                      {previewingVoice ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Volume2 className="h-4 w-4 mr-2" />
-                      )}
-                      Preview
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Voices
                     </Button>
                   </div>
-                </div>
+                ) : (
+                  // Single voice selection
+                  <div className="space-y-2">
+                    <Label>
+                      Voice: {voiceSettings.voiceId || "None selected"}
+                    </Label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const hasApiKey =
+                            voiceSettings.provider === "openai"
+                              ? !!openAIApiKey
+                              : !!voiceSettings.apiKey;
+
+                          if (!hasApiKey) {
+                            toast.error(
+                              `Please enter your ${voiceSettings.provider === "openai" ? "OpenAI" : "ElevenLabs"} API key first`,
+                            );
+                            return;
+                          }
+                          setShowVoiceSelection(true);
+                        }}
+                      >
+                        Select Voice
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePreviewVoice}
+                        disabled={!voiceSettings.voiceId || previewingVoice}
+                      >
+                        {previewingVoice ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Volume2 className="h-4 w-4 mr-2" />
+                        )}
+                        Preview
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label>Speed: {voiceSettings.speed}x</Label>
@@ -464,11 +535,24 @@ export function AISettings() {
           open={showVoiceSelection}
           onClose={() => setShowVoiceSelection(false)}
           currentVoiceId={voiceSettings.voiceId}
+          currentVoiceIds={voiceSettings.voiceIds}
           provider={voiceSettings.provider}
           apiKey={voiceSettings.apiKey || null}
+          multiSelect={voiceSettings.voiceIds && voiceSettings.voiceIds.length > 0}
           onSelect={(voiceId) => {
-            setVoiceSettings({ voiceId });
+            setVoiceSettings({ voiceId, voiceIds: [] });
             toast.success("Voice selected successfully");
+          }}
+          onMultiSelect={(voiceIds) => {
+            // If multiple voices are selected, use multi-voice mode
+            // If only one voice is selected, use single voice mode
+            if (voiceIds.length === 1) {
+              setVoiceSettings({ voiceId: voiceIds[0], voiceIds: [] });
+              toast.success("Voice selected successfully");
+            } else if (voiceIds.length > 1) {
+              setVoiceSettings({ voiceIds, voiceId: undefined });
+              toast.success(`${voiceIds.length} voices selected for deterministic assignment`);
+            }
           }}
         />
       )}

@@ -1,27 +1,28 @@
-import { memo, useMemo, useCallback } from "react";
-import { NDKEvent, NDKKind, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
+import { memo, useCallback } from "react";
+import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NostrProfile } from "@/components/common/NostrProfile";
 import { Message } from "./Message";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { EVENT_KINDS } from "@/lib/constants";
-import { processEventsToMessages } from "@/components/chat/utils/messageProcessor";
 import { useAtomValue, useSetAtom } from "jotai";
 import { expandedRepliesAtom, toggleRepliesAtom } from "./atoms/expandedReplies";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useThreadViewModeStore } from "@/stores/thread-view-mode-store";
+import { useMessages } from "./hooks/useMessages";
 import type { Message as MessageType } from "@/components/chat/hooks/useChatMessages";
 
 interface ThreadedMessageProps {
-  message: MessageType;
+  eventId?: string;
+  message?: MessageType;
   depth: number;
   project?: NDKProject | null;
   onTimeClick?: (event: NDKEvent) => void;
   onConversationNavigate?: (event: NDKEvent) => void;
-  processedEventIds: Set<string>;
   isConsecutive?: boolean;
   hasNextConsecutive?: boolean;
+  isFirstInRoot?: boolean; // Is this the first message at root level
 }
 
 /**
@@ -29,71 +30,81 @@ interface ThreadedMessageProps {
  * Handles subscriptions for replies and depth-based styling
  */
 export const ThreadedMessage = memo(function ThreadedMessage({
+  eventId,
   message,
   depth,
   project,
   onTimeClick,
   onConversationNavigate,
-  processedEventIds,
   isConsecutive = false,
   hasNextConsecutive = false,
+  isFirstInRoot = false,
 }: ThreadedMessageProps) {
   const isMobile = useIsMobile();
   const { mode: viewMode } = useThreadViewModeStore();
   const expandedReplies = useAtomValue(expandedRepliesAtom);
   const toggleReplies = useSetAtom(toggleRepliesAtom);
 
+  // Use the hook to get messages for this event
+  const messages = useMessages(eventId || message?.event.id || null, viewMode);
+
+  // If we're rendering by eventId (root level), render all messages
+  if (eventId && depth === 0) {
+    return (
+      <>
+        {messages.map((msg, index) => {
+          // Calculate consecutive status
+          const isConsec =
+            index > 0 &&
+            messages[index - 1].event.pubkey === msg.event.pubkey &&
+            messages[index - 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+            msg.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+            !msg.event.tags?.some(tag => tag[0] === 'p') &&
+            !messages[index - 1].event.tags?.some(tag => tag[0] === 'p');
+
+          const hasNextConsec =
+            index < messages.length - 1 &&
+            messages[index + 1].event.pubkey === msg.event.pubkey &&
+            messages[index + 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+            msg.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
+            !messages[index + 1].event.tags?.some(tag => tag[0] === 'p') &&
+            !msg.event.tags?.some(tag => tag[0] === 'p');
+
+          return (
+            <ThreadedMessage
+              key={msg.id}
+              message={msg}
+              depth={1}
+              project={project}
+              onTimeClick={onTimeClick}
+              onConversationNavigate={onConversationNavigate}
+              isConsecutive={isConsec}
+              hasNextConsecutive={hasNextConsec}
+              isFirstInRoot={index === 0} // Mark the first message
+            />
+          );
+        })}
+      </>
+    );
+  }
+
   // In flattened mode, everything is always expanded
   // In threaded mode, only expand if explicitly in the expanded set
-  const isExpanded = viewMode === 'flattened' || expandedReplies.has(message.event.id);
+  const isExpanded = viewMode === 'flattened' || expandedReplies.has(message?.event.id || '');
 
-  // Subscribe to direct replies
-  const { events: replyEvents } = useSubscribe(
-    message.event.kind === NDKKind.GenericReply
-      ? [
-          {
-            kinds: [
-              NDKKind.GenericReply,
-              1934, // Task
-              EVENT_KINDS.STREAMING_RESPONSE,
-            ] as any,
-            "#e": [message.event.id],
-          },
-        ]
-      : false,
-    {
-      closeOnEose: false,
-      groupable: true,
-    },
-    [message.event.id]
-  );
-
-  // Process replies
-  const replies = useMemo(() => {
-    if (!replyEvents || replyEvents.length === 0) {
-      return [];
-    }
-
-    // Filter out root markers
-    const filtered = replyEvents.filter((reply) => {
-      const eTags = reply.tags?.filter((tag) => tag[0] === "e");
-      const hasRootMarker = eTags?.some((tag) => tag[3] === "root");
-      return !hasRootMarker;
-    });
-
-    return processEventsToMessages(filtered, null);
-  }, [replyEvents]);
+  // Get replies for this message using the same hook
+  // Filter to exclude the message itself from its own replies
+  // Skip replies if this is the first message at root level (they're already displayed)
+  const replies = isFirstInRoot ? [] : messages.filter(msg => msg.event.id !== message?.event.id);
 
   const handleToggle = useCallback(() => {
-    toggleReplies(message.event.id);
-  }, [message.event.id, toggleReplies]);
+    if (message) {
+      toggleReplies(message.event.id);
+    }
+  }, [message?.event.id, toggleReplies]);
 
-  // Mark this event as processed
-  const updatedProcessedIds = useMemo(() => {
-    const newSet = new Set(processedEventIds);
-    newSet.add(message.event.id);
-    return newSet;
-  }, [processedEventIds, message.event.id]);
+  // Single message handling (depth > 0)
+  if (!message) return null;
 
   return (
     <div>
@@ -180,7 +191,6 @@ export const ThreadedMessage = memo(function ThreadedMessage({
                     project={project}
                     onTimeClick={onTimeClick}
                     onConversationNavigate={onConversationNavigate}
-                    processedEventIds={updatedProcessedIds}
                     isConsecutive={isReplyConsecutive}
                     hasNextConsecutive={hasNextReplyConsecutive}
                   />

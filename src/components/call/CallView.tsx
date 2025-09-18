@@ -745,32 +745,86 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
     audioSettings.vadMode,
   ]);
 
-  // Cleanup on unmount ONLY
-  useEffect(() => {
-    return () => {
-      // Reset initialization flag so it can work next time
-      initializedRef.current = false;
-      // Clean up VAD
-      if (vadServiceRef.current) {
-        vadServiceRef.current.destroy();
-        vadServiceRef.current = null;
-      }
-    };
-  }, []); // Empty deps - only cleanup on unmount
+  // Comprehensive cleanup function
+  const performCleanup = useCallback(() => {
+    console.log("CallView: Performing comprehensive cleanup");
+    
+    // Reset initialization flag so it can work next time
+    initializedRef.current = false;
+    
+    // Clean up VAD
+    if (vadServiceRef.current) {
+      console.log("CallView: Destroying VAD service");
+      vadServiceRef.current.destroy();
+      vadServiceRef.current = null;
+    }
+    
+    // Clean up STT
+    if (sttRef.current?.isListening) {
+      console.log("CallView: Stopping STT");
+      sttRef.current.stopListening();
+    }
+    
+    // Stop any playing TTS
+    console.log("CallView: Stopping TTS");
+    stopTTS();
+  }, [stopTTS]);
 
-  // Separate effect for final cleanup when component unmounts
+  // Cleanup on unmount
   useEffect(() => {
+    // Store current values to avoid stale closures
     const currentStt = stt;
-    const currentStopTTS = stopTTS;
+    const currentPerformCleanup = performCleanup;
+    
+    // Also handle window unload events for floating windows
+    const handleWindowUnload = (e: BeforeUnloadEvent) => {
+      console.log("CallView: Window unload detected, performing cleanup");
+      currentPerformCleanup();
+    };
+    
+    // Add beforeunload listener to catch window close events
+    window.addEventListener('beforeunload', handleWindowUnload);
+    
+    // Cleanup function
     return () => {
-      // Clean up STT
+      console.log("CallView: Component unmounting, performing cleanup");
+      
+      // Remove event listener
+      window.removeEventListener('beforeunload', handleWindowUnload);
+      
+      // Perform all cleanup
+      currentPerformCleanup();
+      
+      // Additional cleanup for current STT instance
       if (currentStt.isListening) {
         currentStt.stopListening();
       }
-      // Stop any playing TTS
-      currentStopTTS();
     };
-  }, []); // Empty deps - capture current values in closure
+  }, [stt, performCleanup]); // Include dependencies
+
+  // Add visibility change handler to pause/resume when window is hidden
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && stt.isListening) {
+        console.log("CallView: Window hidden, pausing recording");
+        // When window is hidden, pause recording
+        stt.stopListening();
+        stt.resetTranscript();
+        setConversationState("idle");
+        
+        // Pause VAD if active
+        if (vadServiceRef.current) {
+          vadServiceRef.current.pause();
+        }
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [stt]);
 
   // Handle microphone toggle
   const handleMicrophoneToggle = useCallback(() => {
@@ -1477,13 +1531,8 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => {
-              // Stop all audio/mic operations before closing
-              stopTTS();
-              if (stt.isListening) {
-                stt.stopListening();
-              }
-              // Reset initialization flag
-              initializedRef.current = false;
+              // Use the comprehensive cleanup function
+              performCleanup();
               onClose(localRootEvent);
             }}
             className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"

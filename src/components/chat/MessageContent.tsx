@@ -1,5 +1,5 @@
 import { memo, useMemo, useCallback } from "react";
-import { NDKEvent, NDKKind, useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
+import { NDKEvent, NDKKind, NDKProject, useNDK, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
@@ -88,14 +88,14 @@ export const MessageContent = memo(function MessageContent({
       
       // Add necessary tags for the reply
       replyEvent.tags = [
-        ["e", event.id, "", "reply"], // Reply to the event with suggestions
+        ["e", event.id], // Reply to the event with suggestions
       ];
 
       // Add p-tag for the author of the original event (the one asking the question)
       replyEvent.tags.push(["p", event.pubkey]);
 
       // If this is in a project context, add the project tag
-      const projectTag = event.tags.find(tag => tag[0] === "a" && tag[1]?.startsWith("30803:"));
+      const projectTag = event.tags.find(tag => tag[0] === "a" && tag[1]?.startsWith(NDKProject.kind.toString()));
       if (projectTag) {
         replyEvent.tags.push(projectTag);
       }

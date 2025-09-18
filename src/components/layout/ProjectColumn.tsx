@@ -10,6 +10,7 @@ import {
   Hash,
   Phone,
   Users,
+  Rss,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
@@ -44,7 +45,7 @@ import {
   AgentsContent,
   HashtagsContent,
   SettingsContent,
-  CommunityContent,
+  FeedContent,
   TabContentProps,
 } from "./tab-contents";
 
@@ -76,7 +77,7 @@ const TAB_CONTENT_COMPONENTS: Record<TabType, React.FC<TabContentProps>> = {
   docs: DocsContent,
   agents: AgentsContent,
   hashtags: HashtagsContent,
-  community: CommunityContent,
+  community: FeedContent,
   settings: SettingsContent,
 };
 
@@ -96,7 +97,7 @@ interface ProjectColumnProps {
     onVoiceCallClick?: () => void,
   ) => React.ReactNode;
   className?: string;
-  onNavigateToSettings?: () => void;
+  viewMode?: "mobile" | "desktop";
 }
 
 export function ProjectColumn({
@@ -105,7 +106,7 @@ export function ProjectColumn({
   mode = "column",
   renderFullContent,
   className,
-  onNavigateToSettings,
+  viewMode = "mobile",
 }: ProjectColumnProps) {
   const [activeTab, setActiveTab] = useState<TabType>("conversations");
   const [selectedThread, setSelectedThread] = useState<NDKEvent>();
@@ -374,16 +375,12 @@ export function ProjectColumn({
       { id: "docs", icon: FileText, label: "Documentation" },
       { id: "agents", icon: Bot, label: "Agents" },
       { id: "hashtags", icon: Hash, label: "Hashtags" },
-      { id: "community", icon: Users, label: "Community" },
+      { id: "community", icon: Rss, label: "Feed" },
+      { id: "settings", icon: Settings, label: "Settings" },
     ];
 
-    // Settings only in column mode
-    if (mode === "column") {
-      baseTabs.push({ id: "settings", icon: Settings, label: "Settings" });
-    }
-
     return baseTabs;
-  }, [mode]);
+  }, []);
 
   // For standalone mode with detail view, render differently
   if (mode === "standalone" && viewState === "detail") {
@@ -457,38 +454,78 @@ export function ProjectColumn({
         {/* Column Header */}
         <div className="border-b relative">
           {mode === "standalone" ? (
-            // Standalone header with status indicator and settings
-            <div className="px-4 py-3">
-              <div className="flex items-center gap-3">
-                <ProjectAvatar
-                  project={project}
-                  className="h-10 w-10"
-                  fallbackClassName="text-sm"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-base font-semibold">
-                      {project.title || "Untitled Project"}
-                    </h1>
-                    <ProjectStatusIndicator
-                      status={projectStatus?.isOnline ? "online" : "offline"}
-                      size="sm"
-                      onClick={handleBringOnline}
+            // Standalone header - different styles for mobile vs desktop
+            viewMode === "desktop" ? (
+              // Desktop standalone header with inline tabs
+              <div>
+                <div className="px-4 pt-4 pb-2">
+                  <div className="flex items-center gap-4">
+                    <ProjectAvatar
+                      project={project}
+                      className="h-10 w-10"
+                      fallbackClassName="text-sm"
                     />
+                    <div className="flex-1 flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-lg font-semibold">
+                          {project.title || "Untitled Project"}
+                        </h1>
+                        <ProjectStatusIndicator
+                          status={projectStatus?.isOnline ? "online" : "offline"}
+                          size="sm"
+                          onClick={handleBringOnline}
+                        />
+                      </div>
+
+                      {/* Desktop inline tabs */}
+                      <div className="flex items-center gap-1 ml-auto">
+                        {tabs.map((tab) => (
+                          <Button
+                            key={tab.id}
+                            variant={activeTab === tab.id ? "secondary" : "ghost"}
+                            size="sm"
+                            className="gap-1.5 h-8"
+                            onClick={() => setActiveTab(tab.id)}
+                          >
+                            <tab.icon className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">{tab.label}</span>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Users className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-                {onNavigateToSettings && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={onNavigateToSettings}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
-            </div>
+            ) : (
+              // Mobile standalone header
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <ProjectAvatar
+                    project={project}
+                    className="h-10 w-10"
+                    fallbackClassName="text-sm"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-base font-semibold">
+                        {project.title || "Untitled Project"}
+                      </h1>
+                      <ProjectStatusIndicator
+                        status={projectStatus?.isOnline ? "online" : "offline"}
+                        size="sm"
+                        onClick={handleBringOnline}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
           ) : (
             // Column mode header (original)
             <div className="px-3 py-2">
@@ -531,12 +568,13 @@ export function ProjectColumn({
             </div>
           )}
 
-          {/* Icon Tab Bar */}
-          <div className="flex items-center justify-between px-2 pb-1">
-            <TooltipProvider>
-              <div className="flex gap-1">
-                {tabs.map((tab) => (
-                  <Tooltip key={tab.id}>
+          {/* Icon Tab Bar - hide in desktop standalone mode since tabs are inline */}
+          {!(mode === "standalone" && viewMode === "desktop") && (
+            <div className="flex items-center justify-between px-2 pb-1">
+              <TooltipProvider>
+                <div className="flex gap-1">
+                  {tabs.map((tab) => (
+                    <Tooltip key={tab.id}>
                     <TooltipTrigger asChild>
                       <button
                         id={`${tab.id}-tab`}
@@ -584,8 +622,8 @@ export function ProjectColumn({
                       <p>{tab.label}</p>
                     </TooltipContent>
                   </Tooltip>
-                ))}
-              </div>
+                  ))}
+                </div>
             </TooltipProvider>
 
             {/* Add button - conditionally shown based on active tab and mode */}
@@ -637,7 +675,8 @@ export function ProjectColumn({
                   </Button>
                 )
               )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Column Content */}

@@ -88,6 +88,24 @@ export function CreateProjectDialog({
     );
   }, [rawPacks, ndk]);
 
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setCurrentStep("details");
+      setProjectData({
+        name: "",
+        description: "",
+        tags: [],
+        imageUrl: "",
+        repoUrl: "",
+      });
+      setSelectedAgents(new Set());
+      setSelectedTools(new Set());
+      setSelectedPackId(null);
+      setIsCreating(false);
+    }
+  }, [open]);
+
   // Fetch agents
   useEffect(() => {
     if (!ndk || !open) return;
@@ -696,14 +714,16 @@ export function CreateProjectDialog({
         <div className="min-h-[350px]">{renderStepContent()}</div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStepIndex === 0 || isCreating}
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
+          {currentStepIndex > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              disabled={isCreating}
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          )}
 
           {currentStep === "review" ? (
             <Button onClick={handleCreate} disabled={isCreating}>

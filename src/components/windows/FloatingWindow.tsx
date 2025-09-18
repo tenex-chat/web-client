@@ -103,6 +103,24 @@ export function FloatingWindow({
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
+  
+  // Add cleanup for window unload events (for call views especially)
+  useEffect(() => {
+    if (content.type === "call") {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        console.log("FloatingWindow: Window unload detected for call view");
+        // The CallView component will handle its own cleanup via its beforeunload handler
+        // But we can trigger onClose to ensure proper state cleanup
+        onClose();
+      };
+      
+      window.addEventListener("beforeunload", handleBeforeUnload);
+      
+      return () => {
+        window.removeEventListener("beforeunload", handleBeforeUnload);
+      };
+    }
+  }, [content.type, onClose]);
 
   // Hide window when minimized
   if (isMinimized) {

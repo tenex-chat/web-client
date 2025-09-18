@@ -9,6 +9,7 @@ export interface AIConfig {
     enabled: boolean;
     provider: "openai" | "elevenlabs";
     voiceId?: string;
+    voiceIds?: string[]; // Array of voice IDs for multi-voice selection (deterministic assignment)
     apiKey?: string; // For ElevenLabs
     speed: number;
     autoSpeak: boolean;
@@ -27,6 +28,7 @@ const defaultConfig: AIConfig = {
     enabled: false,
     provider: "openai",
     voiceId: "alloy",
+    voiceIds: [], // Start with empty array
     speed: 1.0,
     autoSpeak: false,
   },

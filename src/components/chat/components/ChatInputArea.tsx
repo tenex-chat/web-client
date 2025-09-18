@@ -446,8 +446,35 @@ export const ChatInputArea = memo(function ChatInputArea({
         replyEvent.tags.push(["mode", "voice"]);
       }
 
-      // In brainstorm conversations, always p-tag the moderator
+      // In brainstorm conversations, preserve brainstorm mode tags and always p-tag the moderator
       if (rootEvent && isBrainstormMessage(rootEvent)) {
+        // Add brainstorm mode tags to the reply
+        const hasBrainstormMode = replyEvent.tags.some(
+          tag => tag[0] === "mode" && tag[1] === "brainstorm"
+        );
+        if (!hasBrainstormMode) {
+          replyEvent.tags.push(["mode", "brainstorm"]);
+        }
+        
+        const hasBrainstormTag = replyEvent.tags.some(
+          tag => tag[0] === "t" && tag[1] === "brainstorm"
+        );
+        if (!hasBrainstormTag) {
+          replyEvent.tags.push(["t", "brainstorm"]);
+        }
+        
+        // Also preserve participant tags from the root event
+        const participantTags = rootEvent.tags.filter(tag => tag[0] === "participant");
+        participantTags.forEach(participantTag => {
+          const hasThisParticipant = replyEvent.tags.some(
+            tag => tag[0] === "participant" && tag[1] === participantTag[1]
+          );
+          if (!hasThisParticipant) {
+            replyEvent.tags.push(participantTag);
+          }
+        });
+        
+        // P-tag the moderator
         const moderatorPubkey = rootEvent.tagValue("p");
         if (moderatorPubkey) {
           // Check if moderator is not already p-tagged

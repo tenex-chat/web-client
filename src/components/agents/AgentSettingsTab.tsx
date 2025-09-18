@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback, memo } from "react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { ProjectAgent } from "@/lib/ndk-events/NDKProjectStatus";
-import { Volume2, Save, Settings2, RotateCcw } from "lucide-react";
+import { Volume2, Save, Settings2, RotateCcw, Wand2, Target, Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAgentVoiceConfig } from "@/hooks/useAgentVoiceConfig";
+import type { AgentCharacteristics } from "@/services/ai/voice-profile-manager";
 import { useProjectStatusMap, useProjectsArray } from "@/stores/projects";
 import { useProjectOnlineModels } from "@/hooks/useProjectOnlineModels";
 import { useProjectAvailableTools } from "@/hooks/useProjectAvailableTools";
@@ -117,11 +118,12 @@ const ProjectSettingsCard = memo(function ProjectSettingsCard({
   );
 });
 
-export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
+export function AgentSettingsTab({ agent, agentSlug }: AgentSettingsTabProps) {
   const [projectSettings, setProjectSettings] = useState<
     Map<string, ProjectAgentSettings>
   >(new Map());
   const [isSaving, setIsSaving] = useState(false);
+  const [showRecommendations, setShowRecommendations] = useState(false);
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
   const projectStatusMap = useProjectStatusMap();
@@ -129,6 +131,14 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
 
   // Use the agent's pubkey for voice config
   const agentPubkey = agentSlug; // agentSlug is actually the pubkey in profile pages
+  
+  // Extract agent characteristics for intelligent voice matching
+  const agentCharacteristics: AgentCharacteristics = {
+    role: agent?.tags?.find(t => t[0] === "role")?.[1],
+    personality: agent?.tags?.find(t => t[0] === "personality")?.[1],
+    expertise: agent?.tags?.filter(t => t[0] === "expertise").map(t => t[1]),
+  };
+  
   const {
     config: voiceConfig,
     availableVoices,
@@ -137,7 +147,12 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
     removeConfig: removeVoiceConfig,
     testVoice,
     hasCustomConfig,
-  } = useAgentVoiceConfig(agentPubkey);
+    voiceProfile,
+    availableProfiles,
+    assignVoiceByStrategy,
+    assignVoiceProfile,
+    getRecommendedVoices,
+  } = useAgentVoiceConfig(agentPubkey, agentCharacteristics);
 
   // Filter projects where this agent is assigned
   const agentProjects = projects.filter((project) => {
@@ -164,10 +179,8 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
         newSettings.set(project.dTag || "", {
           projectDTag: project.dTag || "",
           projectTitle: project.title || "Untitled",
-          selectedModel: agentStatus.modelOverride || agentStatus.model || "",
-          selectedTools: new Set(
-            agentStatus.toolOverrides || agentStatus.tools || [],
-          ),
+          selectedModel: agentStatus.model || "",
+          selectedTools: new Set(agentStatus.tools || []),
           originalModel: agentStatus.model,
           originalTools: agentStatus.tools,
         });
@@ -312,6 +325,85 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Current Voice Profile */}
+          {voiceProfile && (
+            <div className="p-3 bg-muted rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Current Profile: {voiceProfile.name}</p>
+                  <p className="text-xs text-muted-foreground">{voiceProfile.characteristics.personality}</p>
+                </div>
+                <Badge variant="outline">{voiceProfile.provider}</Badge>
+              </div>
+            </div>
+          )}
+
+          {/* Intelligent Assignment Options */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                assignVoiceByStrategy("characteristic-match");
+                toast.success("Voice assigned based on agent characteristics");
+              }}
+            >
+              <Target className="h-4 w-4 mr-2" />
+              Smart Match
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                assignVoiceByStrategy("random");
+                toast.success("Random voice assigned");
+              }}
+            >
+              <Shuffle className="h-4 w-4 mr-2" />
+              Random Voice
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowRecommendations(!showRecommendations)}
+            >
+              <Wand2 className="h-4 w-4 mr-2" />
+              Get Recommendations
+            </Button>
+          </div>
+
+          {/* Voice Recommendations */}
+          {showRecommendations && (
+            <div className="space-y-2">
+              <Label>Recommended Voices</Label>
+              <div className="space-y-2">
+                {getRecommendedVoices(3).map((profile) => (
+                  <div
+                    key={profile.id}
+                    className="flex items-center justify-between p-2 border rounded hover:bg-accent cursor-pointer"
+                    onClick={() => {
+                      assignVoiceProfile(profile.id);
+                      toast.success(`Assigned ${profile.name}`);
+                      setShowRecommendations(false);
+                    }}
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{profile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {profile.characteristics.personality} • {profile.characteristics.gender}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="ghost">
+                      Select
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Voice Provider */}
           <div className="space-y-2">
             <Label>Voice Provider</Label>
@@ -331,9 +423,9 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
             </Select>
           </div>
 
-          {/* Voice Selection */}
+          {/* Voice Selection (Manual) */}
           <div className="space-y-2">
-            <Label>Voice</Label>
+            <Label>Manual Voice Selection</Label>
             <Select
               value={voiceConfig.voiceId}
               onValueChange={handleVoiceChange}
@@ -347,6 +439,35 @@ export function AgentSettingsTab({ agentSlug }: AgentSettingsTabProps) {
                 />
               </SelectTrigger>
               <SelectContent>
+                {/* Show profiles first */}
+                {availableProfiles.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                      Voice Profiles
+                    </div>
+                    {availableProfiles
+                      .filter(p => p.provider === voiceConfig.provider)
+                      .map((profile) => (
+                        <SelectItem key={`profile-${profile.id}`} value={profile.voiceId}>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">Profile</Badge>
+                            <div className="flex flex-col">
+                              <span>{profile.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {profile.characteristics.personality}
+                              </span>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    <div className="my-1 h-px bg-border" />
+                  </>
+                )}
+                
+                {/* Then show raw voices */}
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                  All Voices
+                </div>
                 {availableVoices.map((voice) => (
                   <SelectItem key={voice.id} value={voice.id}>
                     <div className="flex flex-col">

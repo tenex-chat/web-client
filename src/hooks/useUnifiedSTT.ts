@@ -232,12 +232,19 @@ export function useUnifiedSTT(options: UseUnifiedSTTOptions = {}) {
   // Cleanup on unmount ONLY
   useEffect(() => {
     return () => {
+      console.log("useUnifiedSTT: Cleanup on unmount");
       // Use refs to check current state to avoid closure issues
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        console.log("useUnifiedSTT: Stopping active MediaRecorder");
         mediaRecorderRef.current.stop();
       }
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
+        console.log("useUnifiedSTT: Stopping media stream tracks");
+        streamRef.current.getTracks().forEach((track) => {
+          console.log(`useUnifiedSTT: Stopping track ${track.label}`);
+          track.stop();
+        });
+        streamRef.current = null;
       }
     };
   }, []); // Empty deps - only run on unmount

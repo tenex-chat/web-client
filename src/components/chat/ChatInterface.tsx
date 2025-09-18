@@ -14,7 +14,6 @@ import { useChatScroll } from "./hooks/useChatScroll";
 import { ChatHeader } from "./components/ChatHeader";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInputArea } from "./components/ChatInputArea";
-import { useAI } from "@/hooks/useAI";
 import { ReplyProvider } from "./contexts/ReplyContext";
 import { useThreadViewModeStore } from "@/stores/thread-view-mode-store";
 import { useChatInputFocus } from "@/stores/chat-input-focus";
@@ -58,9 +57,6 @@ function ChatInterfaceInner({
     return () => setFocusCallback(null);
   }, [setFocusCallback]);
 
-  // TTS state
-  const { voiceSettings } = useAI();
-  const autoTTS = voiceSettings.autoSpeak;
 
   // Local navigation state
   const [navigationStack, setNavigationStack] = useState<NDKEvent[]>([]);
@@ -190,20 +186,23 @@ function ChatInterfaceInner({
         />
 
         {/* Messages Area */}
-        <ChatMessages
-          messages={messages}
-          project={project}
-          rootEvent={localRootEvent}
-          scrollAreaRef={scrollProps.scrollAreaRef}
-          showScrollToBottom={scrollProps.showScrollToBottom}
-          unreadCount={scrollProps.unreadCount}
-          scrollToBottom={scrollProps.scrollToBottom}
-          onScroll={scrollProps.handleScroll}
-          isNewThread={isNewThread}
-          autoTTS={autoTTS}
-          currentUserPubkey={user?.pubkey}
-          onNavigate={pushToStack}
-        />
+        {localRootEvent ? (
+          <ChatMessages
+            project={project}
+            conversationEvent={localRootEvent}
+            scrollAreaRef={scrollProps.scrollAreaRef}
+            showScrollToBottom={scrollProps.showScrollToBottom}
+            unreadCount={scrollProps.unreadCount}
+            scrollToBottom={scrollProps.scrollToBottom}
+            onScroll={scrollProps.handleScroll}
+            isNewThread={isNewThread}
+            onNavigate={pushToStack}
+          />
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+            {isNewThread ? "Start a new conversation" : "Loading conversation..."}
+          </div>
+        )}
 
         {/* Input Area - fully autonomous, publishes directly to Nostr */}
         <ChatInputArea

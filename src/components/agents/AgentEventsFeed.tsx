@@ -239,7 +239,6 @@ export function AgentEventsFeed({ pubkey }: AgentEventsFeedProps) {
             project={null}
             onTimeClick={handleTimeClick}
             onConversationNavigate={handleConversationNavigate}
-            processedEventIds={new Set()}
           />
         </div>
       );

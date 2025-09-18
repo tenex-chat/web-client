@@ -10,7 +10,7 @@ import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { nip19 } from "nostr-tools";
 import { cn } from "@/lib/utils";
 
-interface CommunityContentProps {
+interface FeedContentProps {
   project: NDKProject;
   onEventClick?: (event: NDKEvent) => void;
 }
@@ -156,10 +156,11 @@ const EventItem: React.FC<EventItemProps> = ({
   );
 };
 
-export const CommunityContent: React.FC<CommunityContentProps> = ({ 
-  project, 
-  onEventClick 
+export const FeedContent: React.FC<FeedContentProps> = ({
+  project,
+  onEventClick
 }) => {
+  
   // Single subscription using project.filter()
   const { events } = useSubscribe(
     [project.filter()],
@@ -173,7 +174,10 @@ export const CommunityContent: React.FC<CommunityContentProps> = ({
       .filter(event => {
         const kind = event.kind || 0;
         // Skip kind 0 (metadata) and ephemeral events (kinds 20000-29999)
-        return kind !== 0 && (kind < 20000 || kind > 29999);
+        if (kind === 0 || (kind >= 20000 && kind <= 29999)) {
+          return false;
+        }
+        return true;
       })
       .sort((a, b) => {
         const timeA = a.created_at || 0;
@@ -207,7 +211,9 @@ export const CommunityContent: React.FC<CommunityContentProps> = ({
   }
 
   return (
-    <div ref={parentRef} className="h-full overflow-auto">
+    <div className="h-full flex flex-col">
+      {/* Event list */}
+      <div ref={parentRef} className="flex-1 overflow-auto">
       <div
         style={{
           height: `${virtualizer.getTotalSize()}px`,
@@ -238,6 +244,7 @@ export const CommunityContent: React.FC<CommunityContentProps> = ({
           );
         })}
       </div>
+    </div>
     </div>
   );
 };

@@ -23,6 +23,7 @@ interface ThreadedMessageProps {
   isConsecutive?: boolean;
   hasNextConsecutive?: boolean;
   isFirstInRoot?: boolean; // Is this the first message at root level
+  isLastReasoningMessage?: boolean; // Is this the last message with reasoning
 }
 
 /**
@@ -39,6 +40,7 @@ export const ThreadedMessage = memo(function ThreadedMessage({
   isConsecutive = false,
   hasNextConsecutive = false,
   isFirstInRoot = false,
+  isLastReasoningMessage = false,
 }: ThreadedMessageProps) {
   const isMobile = useIsMobile();
   const { mode: viewMode } = useThreadViewModeStore();
@@ -50,6 +52,11 @@ export const ThreadedMessage = memo(function ThreadedMessage({
 
   // If we're rendering by eventId (root level), render all messages
   if (eventId && depth === 0) {
+    // Find the last message that has a reasoning tag
+    const lastReasoningMessageIndex = messages.findLastIndex(
+      msg => msg.event.hasTag?.("reasoning")
+    );
+    
     return (
       <>
         {messages.map((msg, index) => {
@@ -69,6 +76,9 @@ export const ThreadedMessage = memo(function ThreadedMessage({
             msg.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
             !messages[index + 1].event.tags?.some(tag => tag[0] === 'p') &&
             !msg.event.tags?.some(tag => tag[0] === 'p');
+            
+          // Check if this message has reasoning and is the last one with reasoning
+          const isLastReasoningMessage = index === lastReasoningMessageIndex;
 
           return (
             <ThreadedMessage
@@ -81,6 +91,7 @@ export const ThreadedMessage = memo(function ThreadedMessage({
               isConsecutive={isConsec}
               hasNextConsecutive={hasNextConsec}
               isFirstInRoot={index === 0} // Mark the first message
+              isLastReasoningMessage={isLastReasoningMessage}
             />
           );
         })}
@@ -118,6 +129,7 @@ export const ThreadedMessage = memo(function ThreadedMessage({
         onTimeClick={onTimeClick}
         onConversationNavigate={onConversationNavigate}
         message={message}
+        isLastMessage={isLastReasoningMessage}
       />
 
       {/* Render replies */}
@@ -182,6 +194,12 @@ export const ThreadedMessage = memo(function ThreadedMessage({
                   reply.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
                   !replies[index + 1].event.tags?.some(tag => tag[0] === 'p') &&
                   !reply.event.tags?.some(tag => tag[0] === 'p');
+                  
+                // Find the last message with reasoning in replies
+                const lastReasoningReplyIndex = replies.findLastIndex(
+                  r => r.event.hasTag?.("reasoning")
+                );
+                const isLastReasoningReply = index === lastReasoningReplyIndex;
 
                 return (
                   <ThreadedMessage
@@ -193,6 +211,7 @@ export const ThreadedMessage = memo(function ThreadedMessage({
                     onConversationNavigate={onConversationNavigate}
                     isConsecutive={isReplyConsecutive}
                     hasNextConsecutive={hasNextReplyConsecutive}
+                    isLastReasoningMessage={isLastReasoningReply}
                   />
                 );
               })}

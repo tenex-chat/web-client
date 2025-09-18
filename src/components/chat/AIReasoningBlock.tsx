@@ -10,13 +10,16 @@ interface AIReasoningBlockProps {
   reasoningEvent: NDKEvent;
   isStreaming?: boolean;
   isMobile?: boolean;
+  isLastMessage?: boolean;
 }
 
 export const AIReasoningBlock = memo(function AIReasoningBlock({
   reasoningEvent,
   isStreaming = false,
+  isLastMessage = false,
 }: AIReasoningBlockProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  // If this is the last message with reasoning, start expanded
+  const [isOpen, setIsOpen] = useState(isLastMessage);
 
   // Get the reasoning content from the event
   const reasoningContent = reasoningEvent.content || "";
@@ -29,6 +32,7 @@ export const AIReasoningBlock = memo(function AIReasoningBlock({
         className="w-full"
         isStreaming={isStreaming}
         open={isOpen}
+        defaultOpen={isLastMessage}
         onOpenChange={setIsOpen}
       >
         <ReasoningTrigger title="AI Reasoning" />

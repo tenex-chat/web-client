@@ -301,6 +301,7 @@ export const Message = memo(function Message({
                 isMobile={isMobile}
                 className="flex-1"
                 message={message}
+                isLastMessage={isLastMessage}
               />
 
               {isConsecutive && (

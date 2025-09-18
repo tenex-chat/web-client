@@ -27,6 +27,7 @@ interface MessageContentProps {
     reactComponentCode?: string;
     reactComponentProps?: Record<string, any>;
   };
+  isLastMessage?: boolean;
 }
 
 /**
@@ -40,6 +41,7 @@ export const MessageContent = memo(function MessageContent({
   isMobile,
   className,
   message,
+  isLastMessage = false,
 }: MessageContentProps) {
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
@@ -138,6 +140,7 @@ export const MessageContent = memo(function MessageContent({
           reasoningEvent={event}
           isStreaming={isStreamingResponse}
           isMobile={isMobile}
+          isLastMessage={isLastMessage}
         />
       ) : (
         <>

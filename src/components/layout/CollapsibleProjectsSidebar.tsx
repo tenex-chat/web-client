@@ -14,6 +14,7 @@ import {
   Monitor,
   Check,
   Inbox,
+  Phone,
 } from "lucide-react";
 import { useAtom } from "jotai";
 import { CreateProjectDialog } from "@/components/dialogs/CreateProjectDialog";
@@ -25,6 +26,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { useInboxUnreadCount } from "@/hooks/useInboxEvents";
 import { useGlobalAgents } from "@/stores/agents";
 import { useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { useWindowManager } from "@/stores/windowManager";
+import { useSortedProjects as useProjectsHook } from "@/hooks/useSortedProjects";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -135,10 +138,12 @@ export function CollapsibleProjectsSidebar({
   const [openProjects] = useAtom(openProjectsAtom);
   const [, toggleProject] = useAtom(toggleProjectAtom);
   const isProjectOpen = useAtom(isProjectOpenAtom)[0];
+  const windowManager = useWindowManager();
+  const allProjects = useProjectsHook();
 
   // Add keyboard shortcuts
   useGlobalSearchShortcut(() => setSearchDialogOpen(true));
-  useInboxShortcut(() => setInboxPopoverOpen(!inboxPopoverOpen));
+  useInboxShortcut(() => setInboxPopoverOpen(prev => !prev));
   
   // Get inbox unread count
   const inboxUnreadCount = useInboxUnreadCount();
@@ -395,48 +400,34 @@ export function CollapsibleProjectsSidebar({
             {/* Inbox button with popover */}
             <SidebarMenuItem>
               <InboxPopover open={inboxPopoverOpen} onOpenChange={setInboxPopoverOpen}>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <SidebarMenuButton 
-                        className="w-full justify-start group-data-[collapsible=icon]:justify-center relative"
-                        data-testid="sidebar-inbox-button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setInboxPopoverOpen(!inboxPopoverOpen);
-                        }}
+                <SidebarMenuButton 
+                  className="w-full justify-start group-data-[collapsible=icon]:justify-center relative"
+                  data-testid="sidebar-inbox-button"
+                >
+                  <div className="relative">
+                    <Inbox className="h-5 w-5" />
+                    {inboxUnreadCount > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] animate-pulse-glow shadow-lg"
+                        style={{ boxShadow: '0 0 10px rgba(239, 68, 68, 0.6)' }}
                       >
-                        <div className="relative">
-                          <Inbox className="h-5 w-5" />
-                          {inboxUnreadCount > 0 && (
-                            <Badge 
-                              variant="destructive" 
-                              className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] animate-pulse-glow shadow-lg"
-                              style={{ boxShadow: '0 0 10px rgba(239, 68, 68, 0.6)' }}
-                            >
-                              {inboxUnreadCount > 99 ? "99+" : inboxUnreadCount}
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="group-data-[collapsible=icon]:hidden ml-2">
-                          Inbox
-                          {inboxUnreadCount > 0 && (
-                            <Badge variant="secondary" className="ml-2">
-                              {inboxUnreadCount}
-                            </Badge>
-                          )}
-                        </span>
-                      </SidebarMenuButton>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>
-                        Inbox
-                        {inboxUnreadCount > 0 && ` (${inboxUnreadCount} unread)`}
-                      </p>
-                      <p className="text-xs text-muted-foreground">⌘I</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                        {inboxUnreadCount > 99 ? "99+" : inboxUnreadCount}
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="group-data-[collapsible=icon]:hidden ml-2">
+                    Inbox
+                    {inboxUnreadCount > 0 && (
+                      <Badge variant="secondary" className="ml-2">
+                        {inboxUnreadCount}
+                      </Badge>
+                    )}
+                  </span>
+                  <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground opacity-60 group-data-[collapsible=icon]:hidden">
+                    <span className="text-xs">⌘</span>I
+                  </kbd>
+                </SidebarMenuButton>
               </InboxPopover>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -497,6 +488,31 @@ export function CollapsibleProjectsSidebar({
                       <Settings className="h-4 w-4 mr-2" />
                       Settings
                     </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      // Open test CallView in a floating window
+                      // Use the first project if available, otherwise show an alert
+                      const firstProject = allProjects[0]?.project;
+                      if (firstProject) {
+                        windowManager.addWindow({
+                          project: firstProject,
+                          type: "call" as any,
+                          data: {
+                            onCallEnd: (rootEvent: any) => {
+                              console.log('Test call ended', rootEvent);
+                            }
+                          }
+                        });
+                      } else {
+                        alert('Please create a project first to test CallView');
+                      }
+                    }}
+                    className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+                  >
+                    <Phone className="h-4 w-4 mr-2" />
+                    Test CallView (Dev)
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuSub>

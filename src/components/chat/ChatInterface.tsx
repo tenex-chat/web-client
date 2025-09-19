@@ -195,7 +195,6 @@ function ChatInterfaceInner({
             unreadCount={scrollProps.unreadCount}
             scrollToBottom={scrollProps.scrollToBottom}
             onScroll={scrollProps.handleScroll}
-            isNewThread={isNewThread}
             onNavigate={pushToStack}
           />
         ) : (

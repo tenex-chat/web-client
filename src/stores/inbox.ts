@@ -42,8 +42,7 @@ export const isEventUnread = (event: NDKEvent, lastVisit: number): boolean => {
 // Event kinds to include in the inbox
 export const INBOX_EVENT_KINDS = [
   1,     // Regular text notes/mentions
-  1111,  // Generic replies
-  1112,  // Agent completion events
+  1111,  // Generic replies (including agent responses)
   30023, // Long-form content mentions
   7,     // Reactions that p-tag the user
 ];

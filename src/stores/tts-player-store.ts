@@ -21,6 +21,8 @@ interface TTSPlayerState {
   duration: number;
   isLoading: boolean;
   error: string | null;
+  isInterrupted: boolean;
+  interruptionReason: "user_speaking" | null;
 }
 
 // Persistent settings
@@ -40,6 +42,8 @@ const initialState: TTSPlayerState = {
   duration: 0,
   isLoading: false,
   error: null,
+  isInterrupted: false,
+  interruptionReason: null,
 };
 
 export const ttsPlayerStateAtom = atom<TTSPlayerState>(initialState);
@@ -54,6 +58,8 @@ export const queueAtom = atom((get) => get(ttsPlayerStateAtom).queue);
 export const isLoadingAtom = atom((get) => get(ttsPlayerStateAtom).isLoading);
 export const errorAtom = atom((get) => get(ttsPlayerStateAtom).error);
 export const currentContentAtom = atom((get) => get(ttsPlayerStateAtom).currentContent);
+export const isInterruptedAtom = atom((get) => get(ttsPlayerStateAtom).isInterrupted);
+export const interruptionReasonAtom = atom((get) => get(ttsPlayerStateAtom).interruptionReason);
 
 // Progress percentage (0-100)
 export const progressPercentageAtom = atom((get) => {
@@ -207,3 +213,15 @@ export const playNextInQueueAtom = atom(null, async (get, set) => {
 
   return nextItem;
 });
+
+// Set interruption state
+export const setInterruptionStateAtom = atom(
+  null,
+  (_get, set, isInterrupted: boolean, reason: "user_speaking" | null = null) => {
+    set(ttsPlayerStateAtom, (prev) => ({
+      ...prev,
+      isInterrupted,
+      interruptionReason: reason,
+    }));
+  }
+);

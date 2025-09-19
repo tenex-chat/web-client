@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Volume2, Square } from "lucide-react";
+import { Volume2, Square, Pause, Mic } from "lucide-react";
 import { useMemo } from "react";
 import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
 import { useAgentVoiceConfig } from "@/hooks/useAgentVoiceConfig";
@@ -37,7 +37,10 @@ export function TTSButton({
     stop,
     currentMessageId,
     isPlaying,
-    hasTTS
+    isPaused,
+    hasTTS,
+    isInterrupted,
+    interruptionReason
   } = useTTSPlayer();
 
   // Get online agents to find the agent's slug
@@ -74,18 +77,32 @@ export function TTSButton({
     }
   };
 
+  // Determine icon and styling based on state
+  const getButtonIcon = () => {
+    if (isThisMessagePlaying && isInterrupted && interruptionReason === "user_speaking") {
+      return <Mic className="h-3.5 w-3.5 animate-pulse text-orange-500" />;
+    }
+    if (isThisMessagePlaying && isPaused) {
+      return <Pause className="h-3.5 w-3.5" />;
+    }
+    if (isThisMessagePlaying) {
+      return <Square className="h-3.5 w-3.5" />;
+    }
+    return <Volume2 className="h-3.5 w-3.5" />;
+  };
+
   const button = (
     <Button
       size={size}
       variant={variant}
-      className={cn("transition-all", className)}
+      className={cn(
+        "transition-all",
+        isThisMessagePlaying && isInterrupted && "ring-2 ring-orange-500/50",
+        className
+      )}
       onClick={handleClick}
     >
-      {isThisMessagePlaying ? (
-        <Square className="h-3.5 w-3.5" />
-      ) : (
-        <Volume2 className="h-3.5 w-3.5" />
-      )}
+      {getButtonIcon()}
     </Button>
   );
 
@@ -93,12 +110,25 @@ export function TTSButton({
     return button;
   }
 
+  const getTooltipText = () => {
+    if (isThisMessagePlaying && isInterrupted && interruptionReason === "user_speaking") {
+      return "TTS paused - you're speaking";
+    }
+    if (isThisMessagePlaying && isPaused) {
+      return "TTS paused";
+    }
+    if (isThisMessagePlaying) {
+      return `Stop TTS (${voiceName})`;
+    }
+    return `Play TTS (${voiceName})`;
+  };
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent>
         <p className="text-xs">
-          {isThisMessagePlaying ? "Stop" : "Play"} TTS ({voiceName})
+          {getTooltipText()}
         </p>
       </TooltipContent>
     </Tooltip>

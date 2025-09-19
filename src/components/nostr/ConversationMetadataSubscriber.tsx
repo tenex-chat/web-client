@@ -33,8 +33,9 @@ const ConversationMetadataSubscriber = () => {
    * Extracted as a callback to avoid recreating on every render.
    */
   const handleEvent = useCallback((event: NDKEvent) => {
-    // Get current metadata for timestamp comparison (uppercase 'E' per NIP-22)
-    const conversationId = event.tags.find(tag => tag[0] === "E")?.[1];
+    // Get current metadata for timestamp comparison
+    // Note: kind:513 events use lowercase 'e' tag to reference conversations
+    const conversationId = event.tags.find(tag => tag[0] === "e")?.[1];
     const currentMetadata = conversationId ? getMetadata(conversationId) : undefined;
     
     // Process the event using our extracted logic

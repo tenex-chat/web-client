@@ -30,12 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Volume2, Key, Users, Check, Trash2, Wand2 } from "lucide-react";
+import { Loader2, Plus, Volume2, Key, Users, Check, Trash2, Wand2, Mic } from "lucide-react";
 import { toast } from "sonner";
 import { AddProviderDialog } from "./AddProviderDialog";
 import { VoiceSelectionDialog } from "./VoiceSelectionDialog";
 import { providerRegistry } from "@/services/ai/provider-registry";
 import { voiceDiscovery } from "@/services/ai/voice-discovery";
+import { useTTSPlayer } from "@/hooks/useTTSPlayer";
 
 export function AISettings() {
   const [activeProvider] = useAtom(activeProviderAtom);
@@ -49,6 +50,9 @@ export function AISettings() {
   const [showVoiceSelection, setShowVoiceSelection] = useState<boolean | 'multi'>(false);
   const [testingConnection, setTestingConnection] = useState<string | null>(null);
   const [previewingVoice, setPreviewingVoice] = useState(false);
+  
+  // Get speech interruption state from TTS player
+  const { speechInterruptionEnabled, setSpeechInterruptionEnabled } = useTTSPlayer();
 
   const handleTestConnection = async (config: LLMConfig) => {
     setTestingConnection(config.id);
@@ -672,6 +676,23 @@ export function AISettings() {
                     onCheckedChange={(autoSpeak) =>
                       setVoiceSettings({ autoSpeak })
                     }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="speech-interruption" className="flex items-center gap-2">
+                      <Mic className="h-4 w-4" />
+                      Speech Interruption
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Pause TTS when you speak, resume when you stop
+                    </p>
+                  </div>
+                  <Switch
+                    id="speech-interruption"
+                    checked={speechInterruptionEnabled}
+                    onCheckedChange={setSpeechInterruptionEnabled}
                   />
                 </div>
               </div>

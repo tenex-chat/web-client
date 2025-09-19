@@ -138,7 +138,7 @@ export class StreamingTTSPlayer {
     try {
       // Combine small chunks for better performance
       let combinedSize = 0;
-      let chunksToAppend: Uint8Array[] = [];
+      const chunksToAppend: Uint8Array[] = [];
       
       while (this.pendingChunks.length > 0 && combinedSize < 8192) { // 8KB threshold
         const chunk = this.pendingChunks[0];
@@ -230,6 +230,42 @@ export class StreamingTTSPlayer {
     if (this.audioElement && this.isPlaying) {
       this.audioElement.pause();
       this.isPlaying = false;
+    }
+  }
+
+  /**
+   * Resume playback from current position
+   */
+  resume(): void {
+    if (this.audioElement && !this.isPlaying) {
+      this.audioElement.play().then(() => {
+        this.isPlaying = true;
+      }).catch(error => {
+        console.error("Error resuming playback:", error);
+      });
+    }
+  }
+
+  /**
+   * Get current playback position in seconds
+   */
+  getCurrentTime(): number {
+    return this.audioElement?.currentTime ?? 0;
+  }
+
+  /**
+   * Get total duration in seconds
+   */
+  getDuration(): number {
+    return this.audioElement?.duration ?? 0;
+  }
+
+  /**
+   * Seek to specific time in seconds
+   */
+  seek(time: number): void {
+    if (this.audioElement && !isNaN(this.audioElement.duration)) {
+      this.audioElement.currentTime = Math.max(0, Math.min(time, this.audioElement.duration));
     }
   }
 

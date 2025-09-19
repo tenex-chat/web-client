@@ -176,6 +176,6 @@ export default [
     },
   },
   {
-    ignores: ['dist/**', 'build/**', 'node_modules/**', '.vite/**', 'coverage/**', 'playwright-report/**'],
+    ignores: ['dist/**', 'build/**', 'node_modules/**', '.vite/**', 'coverage/**', 'playwright-report/**', 'public/**'],
   },
 ];

@@ -24,7 +24,13 @@ class AIService {
     }
 
     try {
-      const provider = providerRegistry.getProvider(this.currentConfig.id);
+      let provider = providerRegistry.getProvider(this.currentConfig.id);
+      
+      // If provider doesn't exist in registry, create it
+      if (!provider) {
+        provider = providerRegistry.createProvider(this.currentConfig);
+      }
+      
       const model =
         this.currentConfig.model ||
         this.getDefaultModel(this.currentConfig.provider);
@@ -61,7 +67,13 @@ Text to clean: ${text}`,
     }
 
     try {
-      const provider = providerRegistry.getProvider(configToUse.id);
+      let provider = providerRegistry.getProvider(configToUse.id);
+      
+      // If provider doesn't exist in registry, create it
+      if (!provider) {
+        provider = providerRegistry.createProvider(configToUse);
+      }
+      
       const model =
         configToUse.model ||
         this.getDefaultModel(configToUse.provider);
@@ -96,7 +108,25 @@ ${conversationPreview}`,
     }
 
     try {
-      const provider = providerRegistry.getProvider(configToUse.id);
+      let provider = providerRegistry.getProvider(configToUse.id);
+      console.log("Initial provider from registry:", provider);
+      
+      // If provider doesn't exist in registry, create it
+      if (!provider) {
+        console.log("Provider not found in registry, creating it now");
+        provider = providerRegistry.createProvider(configToUse);
+      }
+      
+      console.log("Final provider:", provider);
+      console.log("Provider type:", typeof provider);
+      console.log("Config being used:", configToUse);
+      
+      // Check if provider is actually a function before using it
+      if (typeof provider !== 'function') {
+        console.error("Provider is not a function. Provider value:", provider);
+        throw new Error("AI provider not properly initialized. Please reconfigure your LLM settings.");
+      }
+      
       const model =
         configToUse.model ||
         this.getDefaultModel(configToUse.provider);

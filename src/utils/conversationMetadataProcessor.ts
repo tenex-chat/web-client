@@ -18,7 +18,11 @@ export interface MetadataField {
 }
 
 /**
- * Extracts the conversation ID from an event's 'E' tag.
+ * Extracts the conversation ID from an event.
+ * 
+ * This handles two cases:
+ * 1. If the event IS the conversation root (no 'E' tag), returns its ID
+ * 2. If the event references a conversation (has 'E' tag), returns that reference
  * 
  * Why: Per NIP-22, conversation root events are referenced using uppercase 'E' tags.
  * This distinguishes them from regular event references (lowercase 'e').
@@ -30,11 +34,19 @@ export interface MetadataField {
 export function extractConversationId(
   event: NDKEvent | undefined
 ): string | undefined {
-  if (!event || !event.tags) return undefined;
+  if (!event) return undefined;
 
-  // Use uppercase 'E' tag for root conversation events (NIP-22)
-  const conversationIdTag = event.tags.find(tag => tag[0] === "E");
-  return conversationIdTag ? conversationIdTag[1] : undefined;
+  // First check if this event has an 'E' tag (meaning it references a conversation)
+  if (event.tags) {
+    const conversationIdTag = event.tags.find(tag => tag[0] === "E");
+    if (conversationIdTag) {
+      return conversationIdTag[1];
+    }
+  }
+
+  // If no 'E' tag, this event itself IS the conversation root
+  // Return its ID as the conversation ID
+  return event.id;
 }
 
 /**

@@ -8,7 +8,6 @@ export function isBrainstormMessage(event: NDKEvent): boolean {
          event.tags.some(tag => tag[0] === "t" && tag[1] === "brainstorm");
 }
 
-
 /**
  * Get the actual message content from an event
  * For brainstorm messages, the content is not encoded - it's just plain text

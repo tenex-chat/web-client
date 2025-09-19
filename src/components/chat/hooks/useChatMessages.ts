@@ -19,7 +19,7 @@ export function useChatMessages(rootEvent: NDKEvent | null, viewMode: ThreadView
   const [messages, setMessages] = useState<Message[]>([]);
 
   // Subscribe to thread messages using NIP-22 threading
-  // This will include all message types: 1111, 1112, and other kinds
+  // This will include all message types: 1111 (generic replies) and other kinds
   const { events } = useSubscribe(
     rootEvent
       ? [{ ids: [rootEvent.id] }, rootEvent.filter(), rootEvent.nip22Filter()]

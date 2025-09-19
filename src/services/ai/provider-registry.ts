@@ -17,10 +17,11 @@ export interface ProviderConfig {
 type AIProvider =
   | ReturnType<typeof createOpenAI>
   | ReturnType<typeof createAnthropic>
+  | ReturnType<typeof createGoogleGenerativeAI>
   | ReturnType<typeof createOpenRouter>;
 
 export class ProviderRegistry {
-  private providers = new Map<string, AIProvider>();
+  private providers = new Map<string, { provider: AIProvider; config: ProviderConfig }>();
 
   createProvider(config: ProviderConfig) {
     let provider: AIProvider;

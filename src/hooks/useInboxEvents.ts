@@ -3,6 +3,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { useNDKCurrentPubkey, useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { inboxEventsCache, lastInboxVisitAtom, INBOX_EVENT_KINDS } from "@/stores/inbox";
+import { deduplicateEventsByETag, sortEventsByTime } from "@/lib/utils/eventDeduplication";
 
 /**
  * Hook to subscribe to and manage inbox events
@@ -45,43 +46,8 @@ export function useInboxEvents() {
 
   // Deduplicate events by E tag and sort by timestamp (newest first)
   const sortedEvents = useMemo(() => {
-    // Group events by E tag value
-    const eventsByETag = new Map<string | null, NDKEvent[]>();
-    
-    events.forEach(event => {
-      // Get the E tag value (uppercase E tag)
-      const eTag = event.tags.find(tag => tag[0] === 'E')?.[1] || null;
-      
-      // Group events by their E tag value (or null if no E tag)
-      const existing = eventsByETag.get(eTag) || [];
-      existing.push(event);
-      eventsByETag.set(eTag, existing);
-    });
-
-    // For each E tag group, keep only the most recent event
-    const deduplicatedEvents: NDKEvent[] = [];
-    
-    eventsByETag.forEach((groupedEvents, eTag) => {
-      if (eTag === null) {
-        // No E tag - include all events from this group
-        deduplicatedEvents.push(...groupedEvents);
-      } else {
-        // Has E tag - only include the most recent one
-        const mostRecent = groupedEvents.reduce((latest, current) => {
-          const latestTime = latest.created_at || 0;
-          const currentTime = current.created_at || 0;
-          return currentTime > latestTime ? current : latest;
-        });
-        deduplicatedEvents.push(mostRecent);
-      }
-    });
-
-    // Sort all remaining events by creation time (newest first)
-    return deduplicatedEvents.sort((a, b) => {
-      const timeA = a.created_at || 0;
-      const timeB = b.created_at || 0;
-      return timeB - timeA;
-    });
+    const deduplicated = deduplicateEventsByETag(events);
+    return sortEventsByTime(deduplicated);
   }, [events]);
 
   // Calculate unread count

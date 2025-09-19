@@ -68,7 +68,6 @@ export function BrainstormModeButton({
     setIsDropdownOpen(open);
   };
 
-
   // Handle clearing the session
   const handleClear = () => {
     clearBrainstormSession();

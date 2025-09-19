@@ -3,243 +3,17 @@ import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { useSubscribe, useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Users, MessageSquare, FileText, Hash, Bot, Phone, Search, X, Filter, Check } from "lucide-react";
-import { formatRelativeTime } from "@/lib/utils/time";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { nip19 } from "nostr-tools";
-import { cn } from "@/lib/utils";
+import { Users, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu";
-import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
-import { NostrProfile } from "@/components/common/NostrProfile";
-import { useConversationMetadata } from "@/hooks/useConversationMetadata";
+import { AuthorFilterDropdown } from "./AuthorFilterDropdown";
+import { EventItem } from "./EventItem";
+import { deduplicateEventsByETag, sortEventsByTime } from "@/lib/utils/eventDeduplication";
 
 interface FeedContentProps {
   project: NDKProject;
   onEventClick?: (event: NDKEvent) => void;
 }
-
-interface EventItemProps {
-  event: NDKEvent;
-  project: NDKProject;
-  onClick?: () => void;
-}
-
-// Component to show author avatar in the filter button
-const AuthorAvatar: React.FC<{ pubkey: string }> = ({ pubkey }) => {
-  const profile = useProfileValue(pubkey);
-
-  const fallbackName = useMemo(() => {
-    if (profile?.displayName || profile?.name) {
-      return (profile.displayName || profile.name).slice(0, 2).toUpperCase();
-    }
-    try {
-      const npub = nip19.npubEncode(pubkey);
-      return npub.slice(4, 6).toUpperCase();
-    } catch {
-      return 'UN';
-    }
-  }, [profile, pubkey]);
-
-  return (
-    <Avatar className="h-6 w-6">
-      <AvatarImage src={profile?.image || profile?.picture} alt={profile?.displayName || profile?.name} />
-      <AvatarFallback className="text-[10px]">
-        {fallbackName}
-      </AvatarFallback>
-    </Avatar>
-  );
-};
-
-const EventItem: React.FC<EventItemProps> = ({
-  event,
-  project,
-  onClick
-}) => {
-  const profile = useProfileValue(event.pubkey);
-  const conversationMetadata = useConversationMetadata(event);
-  
-  // Format author display name
-  const authorName = useMemo(() => {
-    if (profile?.displayName || profile?.name) {
-      return profile.displayName || profile.name;
-    }
-    try {
-      const npub = nip19.npubEncode(event.pubkey);
-      return `${npub.slice(0, 8)}...${npub.slice(-4)}`;
-    } catch {
-      return 'Unknown';
-    }
-  }, [profile, event.pubkey]);
-
-  // Determine event type and rendering details based on actual kind
-  const { icon, label, title } = useMemo(() => {
-    // If we have a conversation title from metadata, prefer that
-    if (conversationMetadata.hasTitle && conversationMetadata.title) {
-      // Determine the icon and label based on the event kind
-      switch (event.kind) {
-        case NDKKind.Text:
-          return {
-            icon: <MessageSquare className="h-3.5 w-3.5" />,
-            label: "Note",
-            title: conversationMetadata.title
-          };
-        case NDKKind.Article:
-          return {
-            icon: <FileText className="h-3.5 w-3.5" />,
-            label: "Article",
-            title: conversationMetadata.title
-          };
-        case 1111:
-          return {
-            icon: <MessageSquare className="h-3.5 w-3.5" />,
-            label: "Reply",
-            title: conversationMetadata.title
-          };
-        case 29000:
-          return {
-            icon: <Phone className="h-3.5 w-3.5" />,
-            label: "Call",
-            title: conversationMetadata.title
-          };
-        case 1905:
-        case 31905:
-          return {
-            icon: <Bot className="h-3.5 w-3.5" />,
-            label: "Agent",
-            title: conversationMetadata.title
-          };
-        default:
-          return {
-            icon: <Hash className="h-3.5 w-3.5" />,
-            label: `Kind ${event.kind}`,
-            title: conversationMetadata.title
-          };
-      }
-    }
-    
-    // Fall back to original logic if no conversation title
-    switch (event.kind) {
-      case NDKKind.Text: // kind 1 - text note
-        return {
-          icon: <MessageSquare className="h-3.5 w-3.5" />,
-          label: "Note",
-          title: event.content.length > 100 
-            ? event.content.slice(0, 100) + "..." 
-            : event.content
-        };
-        
-      case NDKKind.Article: // kind 30023 - long-form content
-        return {
-          icon: <FileText className="h-3.5 w-3.5" />,
-          label: "Article",
-          title: event.tagValue("title") || event.tagValue("name") || "Untitled"
-        };
-        
-      case 1111: // kind 1111 - generic reply
-        return {
-          icon: <MessageSquare className="h-3.5 w-3.5" />,
-          label: "Reply",
-          title: event.content.length > 100 
-            ? event.content.slice(0, 100) + "..." 
-            : event.content
-        };
-        
-      case 29000: // kind 29000 - call event
-        return {
-          icon: <Phone className="h-3.5 w-3.5" />,
-          label: "Call",
-          title: event.tagValue("subject") || "Voice Call"
-        };
-        
-      case 1905: // kind 1905 - agent event
-      case 31905: // kind 31905 - agent definition
-        return {
-          icon: <Bot className="h-3.5 w-3.5" />,
-          label: "Agent",
-          title: event.tagValue("name") || "Agent Activity"
-        };
-        
-      default:
-        return {
-          icon: <Hash className="h-3.5 w-3.5" />,
-          label: `Kind ${event.kind}`,
-          title: event.content?.slice(0, 100) || "Event"
-        };
-    }
-  }, [event, conversationMetadata]);
-
-  // Get hashtags for the event
-  const hashtags = useMemo(() => {
-    return event.tags
-      .filter(tag => tag[0] === 't')
-      .map(tag => tag[1])
-      .slice(0, 3); // Show max 3 tags
-  }, [event.tags]);
-
-  return (
-    <div
-      className={cn(
-        "px-3 py-3 hover:bg-accent/50 cursor-pointer transition-colors border-b",
-        "group"
-      )}
-      onClick={onClick}
-    >
-      <div className="flex gap-3">
-        {/* Author Avatar */}
-        <Avatar className="h-9 w-9 shrink-0">
-          <AvatarImage src={profile?.image || profile?.picture} alt={authorName} />
-          <AvatarFallback className="text-xs">
-            {authorName.slice(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {/* Header */}
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-sm">{authorName}</span>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              {icon}
-              <span>{label}</span>
-              <span>·</span>
-              <span>{formatRelativeTime(event.created_at || 0)}</span>
-            </div>
-          </div>
-
-          {/* Title/Preview */}
-          <div className="text-sm text-foreground/90 break-words line-clamp-2">
-            {title}
-          </div>
-
-          {/* Hashtags if present */}
-          {hashtags.length > 0 && (
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              {hashtags.map((tag, index) => (
-                <div
-                  key={index}
-                  className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground"
-                >
-                  <Hash className="h-2.5 w-2.5" />
-                  <span>{tag}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export const FeedContent: React.FC<FeedContentProps> = ({
   project,
@@ -249,7 +23,6 @@ export const FeedContent: React.FC<FeedContentProps> = ({
   const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
   const [groupThreads, setGroupThreads] = useState(false);
   const currentUser = useNDKCurrentUser();
-  const agents = useProjectOnlineAgents(project?.dTag);
   
   // Single subscription using project.filter()
   const { events } = useSubscribe(
@@ -272,50 +45,11 @@ export const FeedContent: React.FC<FeedContentProps> = ({
 
     // If groupThreads is enabled, deduplicate by E tag
     if (groupThreads) {
-      // Group events by E tag value
-      const eventsByETag = new Map<string | null, NDKEvent[]>();
-      
-      validEvents.forEach(event => {
-        // Get the E tag value (uppercase E tag)
-        const eTag = event.tags.find(tag => tag[0] === 'E')?.[1] || null;
-        
-        // Group events by their E tag value (or null if no E tag)
-        const existing = eventsByETag.get(eTag) || [];
-        existing.push(event);
-        eventsByETag.set(eTag, existing);
-      });
-
-      // For each E tag group, keep only the most recent event
-      const deduplicatedEvents: NDKEvent[] = [];
-      
-      eventsByETag.forEach((groupedEvents, eTag) => {
-        if (eTag === null) {
-          // No E tag - include all events from this group
-          deduplicatedEvents.push(...groupedEvents);
-        } else {
-          // Has E tag - only include the most recent one
-          const mostRecent = groupedEvents.reduce((latest, current) => {
-            const latestTime = latest.created_at || 0;
-            const currentTime = current.created_at || 0;
-            return currentTime > latestTime ? current : latest;
-          });
-          deduplicatedEvents.push(mostRecent);
-        }
-      });
-
-      // Sort deduplicated events by creation time (newest first)
-      return deduplicatedEvents.sort((a, b) => {
-        const timeA = a.created_at || 0;
-        const timeB = b.created_at || 0;
-        return timeB - timeA;
-      });
+      const deduplicated = deduplicateEventsByETag(validEvents);
+      return sortEventsByTime(deduplicated);
     } else {
       // No grouping, just sort all valid events
-      return validEvents.sort((a, b) => {
-        const timeA = a.created_at || 0;
-        const timeB = b.created_at || 0;
-        return timeB - timeA;
-      });
+      return sortEventsByTime(validEvents);
     }
   }, [events, groupThreads]);
 
@@ -335,23 +69,7 @@ export const FeedContent: React.FC<FeedContentProps> = ({
         return true;
       }
     }
-    
-    // Check call subject (for kind 29000)
-    if (event.kind === 29000) {
-      const subject = event.tagValue("subject") || "";
-      if (subject.toLowerCase().includes(lowerQuery)) {
-        return true;
-      }
-    }
-    
-    // Check agent name (for kinds 1905 and 31905)
-    if (event.kind === 1905 || event.kind === 31905) {
-      const name = event.tagValue("name") || "";
-      if (name.toLowerCase().includes(lowerQuery)) {
-        return true;
-      }
-    }
-    
+
     // Check hashtags
     const hashtags = event.tags
       .filter(tag => tag[0] === 't')
@@ -365,19 +83,6 @@ export const FeedContent: React.FC<FeedContentProps> = ({
     
     return false;
   };
-
-  // Create stable pubkey list for dependency
-  const eventPubkeysKey = useMemo(() => {
-    const validPubkeys = events
-      .filter(event => {
-        const kind = event.kind || 0;
-        return !(kind === 0 || (kind >= 20000 && kind <= 29999));
-      })
-      .map(e => e.pubkey)
-      .sort()
-      .join(',');
-    return validPubkeys;
-  }, [events]);
 
   // Get unique authors with stable sorting - only recalculate when actual event pubkeys change
   const uniqueAuthors = useMemo(() => {
@@ -426,7 +131,7 @@ export const FeedContent: React.FC<FeedContentProps> = ({
     });
 
     return result;
-  }, [events, eventPubkeysKey, currentUser?.pubkey]);
+  }, [events, currentUser?.pubkey]);
 
   // Filter events based on search query and author
   const filteredEvents = useMemo(() => {
@@ -452,7 +157,7 @@ export const FeedContent: React.FC<FeedContentProps> = ({
   const virtualizer = useVirtualizer({
     count: filteredEvents.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 80, // Estimated height for each item
+    estimateSize: () => 120, // Estimated height for each item (increased 50%)
     overscan: 5, // Number of items to render outside of the visible area
   });
 
@@ -499,79 +204,15 @@ export const FeedContent: React.FC<FeedContentProps> = ({
               )}
             </div>
             
-            {/* Author Filter Button */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant={selectedAuthor ? "default" : "outline"}
-                  size="sm"
-                  className="h-9 w-9 p-0"
-                >
-                  {selectedAuthor ? (
-                    <AuthorAvatar pubkey={selectedAuthor} />
-                  ) : (
-                    <Filter className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[200px]">
-                {/* Group threads checkbox */}
-                <DropdownMenuCheckboxItem
-                  checked={groupThreads}
-                  onCheckedChange={setGroupThreads}
-                >
-                  Group threads
-                </DropdownMenuCheckboxItem>
-                
-                <DropdownMenuSeparator />
-                
-                <DropdownMenuItem
-                  onClick={() => setSelectedAuthor(null)}
-                  className={!selectedAuthor ? "bg-accent" : ""}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span>All Authors</span>
-                    {!selectedAuthor && <Check className="h-3.5 w-3.5" />}
-                  </div>
-                </DropdownMenuItem>
-                
-                {uniqueAuthors.length > 0 && <DropdownMenuSeparator />}
-
-                {/* List all authors */}
-                {uniqueAuthors.map(pubkey => {
-                  const isCurrentUser = currentUser && pubkey === currentUser.pubkey;
-
-                  return (
-                    <DropdownMenuItem
-                      key={pubkey}
-                      onClick={() => setSelectedAuthor(pubkey)}
-                      className={selectedAuthor === pubkey ? "bg-accent" : ""}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <NostrProfile
-                            pubkey={pubkey}
-                            variant="avatar"
-                            size="xs"
-                            className="flex-shrink-0"
-                          />
-                          {isCurrentUser ? (
-                            <span>You</span>
-                          ) : (
-                            <NostrProfile
-                              pubkey={pubkey}
-                              variant="name"
-                              className="text-sm"
-                            />
-                          )}
-                        </div>
-                        {selectedAuthor === pubkey && <Check className="h-3.5 w-3.5" />}
-                      </div>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Author Filter Dropdown */}
+            <AuthorFilterDropdown
+              authors={uniqueAuthors}
+              selectedAuthor={selectedAuthor}
+              onAuthorSelect={setSelectedAuthor}
+              currentUserPubkey={currentUser?.pubkey}
+              groupThreads={groupThreads}
+              onGroupThreadsChange={setGroupThreads}
+            />
           </div>
         </div>
       )}
@@ -618,7 +259,6 @@ export const FeedContent: React.FC<FeedContentProps> = ({
                 >
                   <EventItem
                     event={event}
-                    project={project}
                     onClick={() => onEventClick?.(event)}
                   />
                 </div>

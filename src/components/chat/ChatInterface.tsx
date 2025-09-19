@@ -57,7 +57,6 @@ function ChatInterfaceInner({
     return () => setFocusCallback(null);
   }, [setFocusCallback]);
 
-
   // Local navigation state
   const [navigationStack, setNavigationStack] = useState<NDKEvent[]>([]);
   const [localRootEvent, setLocalRootEvent] = useState<NDKEvent | null>(
@@ -141,7 +140,6 @@ function ChatInterfaceInner({
   );
 
   const isNewThread = !localRootEvent;
-
 
   // Handle navigation to parent event
   const handleNavigateToParent = useCallback(async (parentId: string) => {

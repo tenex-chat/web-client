@@ -50,7 +50,7 @@ export const SUBSCRIPTION_LIMITS = {
 // IMPORTANT: Only add custom event kinds here that are NOT already defined in NDKKind
 // or in our NDK wrapper classes (NDKTask, NDKProject, etc.)!
 // DO NOT add standard Nostr kinds like 0, 1, 3, 4, 5, 6, 7, etc.
-// Use NDKKind.Metadata, NDKKind.Text, NDKKind.Contacts, etc. for standard kinds
+// Use NDKKind.Metadata, NDKKind.Contacts, etc. for standard kinds
 // Use NDKTask.kind, NDKProject.kind, etc. for our custom wrapper classes
 export const EVENT_KINDS = {
   AGENT_REQUEST: 3199,

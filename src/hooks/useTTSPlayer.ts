@@ -15,6 +15,8 @@ import {
   errorAtom,
   progressPercentageAtom,
   currentContentAtom,
+  isInterruptedAtom,
+  interruptionReasonAtom,
   setLoadingAtom,
   setErrorAtom,
   updateProgressAtom,
@@ -31,10 +33,18 @@ import {
   setPlaybackRateAtom,
   setVolumeAtom,
   playNextInQueueAtom,
+  setInterruptionStateAtom,
+  pausePlaybackAtom,
+  resumePlaybackAtom,
   type QueueItem,
 } from "@/stores/tts-player-store";
 import { useAI } from "@/hooks/useAI";
 import { extractTTSContent } from "@/lib/utils/extractTTSContent";
+import { useSpeechInterruption } from "@/hooks/useSpeechInterruption";
+import { atomWithStorage } from "jotai/utils";
+
+// Setting for enabling speech interruption
+const speechInterruptionEnabledAtom = atomWithStorage("tts-speech-interruption-enabled", true);
 
 export function useTTSPlayer() {
   const { speak, hasTTS } = useAI();
@@ -45,6 +55,7 @@ export function useTTSPlayer() {
   const playbackRate = useAtomValue(ttsPlaybackRateAtom);
   const volume = useAtomValue(ttsVolumeAtom);
   const [autoPlayNext, setAutoPlayNext] = useAtom(ttsAutoPlayNextAtom);
+  const [speechInterruptionEnabled, setSpeechInterruptionEnabled] = useAtom(speechInterruptionEnabledAtom);
 
   // Read-only atoms
   const isPlaying = useAtomValue(isPlayingAtom);
@@ -57,6 +68,8 @@ export function useTTSPlayer() {
   const error = useAtomValue(errorAtom);
   const progressPercentage = useAtomValue(progressPercentageAtom);
   const currentContent = useAtomValue(currentContentAtom);
+  const isInterrupted = useAtomValue(isInterruptedAtom);
+  const interruptionReason = useAtomValue(interruptionReasonAtom);
 
   // Action atoms
   const setLoading = useSetAtom(setLoadingAtom);
@@ -75,6 +88,9 @@ export function useTTSPlayer() {
   const setPlaybackRateAction = useSetAtom(setPlaybackRateAtom);
   const setVolumeAction = useSetAtom(setVolumeAtom);
   const playNextInQueue = useSetAtom(playNextInQueueAtom);
+  const setInterruptionState = useSetAtom(setInterruptionStateAtom);
+  const pausePlaybackAction = useSetAtom(pausePlaybackAtom);
+  const resumePlaybackAction = useSetAtom(resumePlaybackAtom);
 
   // Clean up audio on unmount
   useEffect(() => {
@@ -86,6 +102,38 @@ export function useTTSPlayer() {
       }
     };
   }, []);
+
+  // Handle speech interruption
+  const { isInterrupted: isSpeechDetected, shouldStop } = useSpeechInterruption(
+    isPlaying,
+    {
+      enabled: speechInterruptionEnabled && hasTTS,
+      stopThreshold: 2000, // Stop after 2 seconds of continuous speech
+      resumeDelay: 500, // Resume after 500ms of silence
+      sensitivity: 0.02, // Voice activity threshold
+    },
+    {
+      onInterruptionStart: () => {
+        // User started speaking - pause TTS
+        setInterruptionState(true, "user_speaking");
+        pausePlaybackAction();
+      },
+      onInterruptionEnd: () => {
+        // User stopped speaking
+        setInterruptionState(false, null);
+      },
+      onResume: () => {
+        // Resume TTS playback
+        if (!shouldStop) {
+          resumePlaybackAction();
+        }
+      },
+      onStop: () => {
+        // User spoke too long - stop TTS completely
+        stop();
+      },
+    }
+  );
 
   const play = useCallback(
     async (
@@ -299,6 +347,9 @@ export function useTTSPlayer() {
     volume,
     autoPlayNext,
     hasTTS,
+    isInterrupted,
+    interruptionReason,
+    speechInterruptionEnabled,
 
     // Actions
     play,
@@ -312,6 +363,7 @@ export function useTTSPlayer() {
     setPlaybackRate: changePlaybackRate,
     setVolume: changeVolume,
     setAutoPlayNext,
+    setSpeechInterruptionEnabled,
     queueMessage,
     removeFromQueue,
     clearQueue,

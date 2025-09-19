@@ -33,7 +33,7 @@ export function useReply() {
   const context = useContext(ReplyContext);
   if (!context) {
     if (process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
+       
       console.warn(
         "useReply used outside ReplyProvider — reply actions will be no-ops.",
       );

@@ -15,7 +15,6 @@ export interface Kind24133Snapshot {
   eventId: string;
 }
 
-
 /**
  * Parse kind 24133 (Operations Status) according to contract
  * Tags: a = project id, e = subject event id, p (0..n) = agent pubkeys
@@ -26,29 +25,6 @@ export function parseKind24133(ev: NDKEvent): Kind24133Snapshot | null {
 
   const projectId = ev.tagValue("a");
   const eId = ev.tagValue("e");
-
-  // DEBUG: Log raw event data
-  console.log("DEBUG parseKind24133 - Raw event:", {
-    kind: ev.kind,
-    id: ev.id?.slice(0, 8),
-    created_at: ev.created_at,
-    projectId,
-    eId,
-    tags: ev.tags,
-    content: ev.content,
-    pubkey: ev.pubkey?.slice(0, 8),
-  });
-  // END DEBUG
-
-  if (!projectId || !eId) {
-    // DEBUG: Log why parsing failed
-    console.log("DEBUG parseKind24133 - Missing required tags:", {
-      projectId,
-      eId,
-    });
-    // END DEBUG
-    return null;
-  }
 
   // Collect all valid 'p' tags (agent pubkeys)
   const agentPubkeys: string[] = [];

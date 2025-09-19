@@ -51,6 +51,38 @@ Text to clean: ${text}`,
     }
   }
 
+  async generateTitle(messages: string[]): Promise<string> {
+    if (!this.currentConfig) {
+      // Fallback to first message or default
+      return messages[0]?.slice(0, 50) || "Untitled Conversation";
+    }
+
+    try {
+      const provider = providerRegistry.getProvider(this.currentConfig.id);
+      const model =
+        this.currentConfig.model ||
+        this.getDefaultModel(this.currentConfig.provider);
+
+      const conversationPreview = messages.slice(0, 5).join("\n---\n");
+
+      const { text: title } = await generateText({
+        model: provider(model),
+        prompt: `Generate a concise, descriptive title (max 50 characters) for this conversation. Return only the title, no quotes or additional text.
+
+Conversation:
+${conversationPreview}`,
+        temperature: 0.7,
+        maxTokens: 20,
+      });
+
+      return title.trim().slice(0, 50);
+    } catch (error) {
+      console.error("Title generation error:", error);
+      // Fallback to first message or default
+      return messages[0]?.slice(0, 50) || "Untitled Conversation";
+    }
+  }
+
   async transcribe(
     audio: Blob,
     provider: "whisper" | "elevenlabs" | "built-in-chrome",

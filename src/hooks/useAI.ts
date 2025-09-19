@@ -33,6 +33,17 @@ export function useAI() {
     }
   }, []);
 
+  const generateTitle = useCallback(async (messages: string[]): Promise<string> => {
+    try {
+      return await aiService.generateTitle(messages);
+    } catch (error) {
+      console.error("Title generation error:", error);
+      toast.error("Failed to generate title");
+      // Return a fallback title
+      return messages[0]?.slice(0, 50) || "Untitled Conversation";
+    }
+  }, []);
+
   const transcribe = useCallback(
     async (audio: Blob): Promise<string> => {
       const provider = sttSettings.provider;
@@ -187,6 +198,7 @@ export function useAI() {
   return {
     // Text operations
     cleanupText,
+    generateTitle,
 
     // Voice operations
     transcribe,

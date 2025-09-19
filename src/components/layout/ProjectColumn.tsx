@@ -11,6 +11,10 @@ import {
   Phone,
   Users,
   Rss,
+  MoreVertical,
+  Clock,
+  Filter,
+  MessageCircleQuestion,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
@@ -27,6 +31,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
@@ -116,6 +121,7 @@ export function ProjectColumn({
   const [hashtagEventModalOpen, setHashtagEventModalOpen] = useState(false);
   const [selectedHashtagEvent, setSelectedHashtagEvent] = useState<NDKEvent | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [timeFilter, setTimeFilter] = useState<string | null>(null);
   const { ndk } = useNDK();
   const agents = useProjectOnlineAgents(project?.dTag);
   const windowManager = useWindowManager();
@@ -323,6 +329,7 @@ export function ProjectColumn({
       onThreadSelect: handleThreadSelectWrapper,
       onDocumentSelect: handleDocumentSelect,
       onAgentSelect: handleAgentSelect,
+      timeFilter: activeTab === "conversations" ? timeFilter : undefined,
       onHashtagEventClick: (event: NDKEvent) => {
         setSelectedHashtagEvent(event);
         setHashtagEventModalOpen(true);
@@ -564,6 +571,86 @@ export function ProjectColumn({
                     </TooltipProvider>
                   )}
                 </h3>
+                {/* Time filter menu for conversations */}
+                {activeTab === "conversations" && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          "h-6 w-6 p-0",
+                          timeFilter && "text-primary"
+                        )}
+                      >
+                        {timeFilter ? (
+                          <Filter className="h-3.5 w-3.5" />
+                        ) : (
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" sideOffset={5}>
+                      <DropdownMenuItem 
+                        onClick={() => setTimeFilter(null)}
+                        className={!timeFilter ? "bg-accent" : ""}
+                      >
+                        <Clock className="mr-2 h-4 w-4" />
+                        All conversations
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                        Activity filters
+                      </div>
+                      <DropdownMenuItem 
+                        onClick={() => setTimeFilter("1h")}
+                        className={timeFilter === "1h" ? "bg-accent" : ""}
+                      >
+                        <Clock className="mr-2 h-4 w-4" />
+                        Active in last hour
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => setTimeFilter("4h")}
+                        className={timeFilter === "4h" ? "bg-accent" : ""}
+                      >
+                        <Clock className="mr-2 h-4 w-4" />
+                        Active in last 4 hours
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => setTimeFilter("1d")}
+                        className={timeFilter === "1d" ? "bg-accent" : ""}
+                      >
+                        <Clock className="mr-2 h-4 w-4" />
+                        Active in last 24 hours
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                        Response filters
+                      </div>
+                      <DropdownMenuItem 
+                        onClick={() => setTimeFilter("needs-response-1h")}
+                        className={timeFilter === "needs-response-1h" ? "bg-accent" : ""}
+                      >
+                        <MessageCircleQuestion className="mr-2 h-4 w-4" />
+                        Needs response (1h)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => setTimeFilter("needs-response-4h")}
+                        className={timeFilter === "needs-response-4h" ? "bg-accent" : ""}
+                      >
+                        <MessageCircleQuestion className="mr-2 h-4 w-4" />
+                        Needs response (4h)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => setTimeFilter("needs-response-1d")}
+                        className={timeFilter === "needs-response-1d" ? "bg-accent" : ""}
+                      >
+                        <MessageCircleQuestion className="mr-2 h-4 w-4" />
+                        Needs response (24h)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
           )}

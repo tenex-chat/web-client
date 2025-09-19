@@ -20,18 +20,21 @@ export interface TabContentProps {
   onSettingsItemClick?: (item: string) => void;
   onEventClick?: (event: NDKEvent) => void;
   agents?: Array<{ pubkey: string; slug: string; status?: string; lastSeen?: number }>;
+  timeFilter?: string | null;
 }
 
 export const ConversationsContent: React.FC<TabContentProps> = ({
   project,
   selectedThread,
   onThreadSelect,
+  timeFilter,
 }) => (
   <ThreadList
     project={project}
     selectedThread={selectedThread}
     onThreadSelect={onThreadSelect!}
     className="h-full"
+    timeFilter={timeFilter}
   />
 );
 

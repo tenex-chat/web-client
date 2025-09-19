@@ -9,6 +9,10 @@ import {
   FileJson,
   ExternalLink,
   X,
+  MoreHorizontal,
+  Layers,
+  List,
+  Type,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -39,7 +43,7 @@ import { ProjectAvatar } from "@/components/ui/project-avatar";
 import { useConversationMetadata } from "@/hooks/useConversationMetadata";
 import { useAI } from "@/hooks/useAI";
 import { ConversationStopButton } from "@/components/chat/ConversationStopButton";
-import { ThreadViewToggle } from "./ThreadViewToggle";
+import { useThreadViewModeStore, type ThreadViewMode } from "@/stores/thread-view-mode-store";
 
 interface ChatHeaderProps {
   rootEvent: NDKEvent | null;
@@ -67,12 +71,14 @@ export function ChatHeader({
   const isMobile = useIsMobile();
   const isNewThread = !rootEvent;
   const [showTTSInfo, setShowTTSInfo] = useState(false);
-  const { hasTTS } = useAI();
+  const { hasTTS, generateTitle, hasProvider } = useAI();
   const ttsEnabled = hasTTS;
   const [copiedFormat, setCopiedFormat] = useState<"markdown" | "json" | "jsonl" | null>(
     null,
   );
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const { ndk } = useNDK();
+  const { mode: viewMode, setMode: setViewMode } = useThreadViewModeStore();
   
   // Check if rootEvent has a parent "e" tag
   const parentEventId = rootEvent?.tags?.find((tag: string[]) => tag[0] === "e")?.[1];
@@ -162,6 +168,54 @@ export function ChatHeader({
     }
   };
 
+  const handleAddTitle = async () => {
+    if (!rootEvent || !messages || !hasProvider) {
+      toast.error("Cannot generate title: no messages or AI provider configured");
+      return;
+    }
+
+    setIsGeneratingTitle(true);
+    try {
+      // Extract message content for title generation
+      const messageContents = messages
+        .slice(0, 5)
+        .map(m => m.content || "")
+        .filter(c => c.length > 0);
+
+      if (messageContents.length === 0) {
+        toast.error("No message content to generate title from");
+        return;
+      }
+
+      const generatedTitle = await generateTitle(messageContents);
+
+      // Publish the title as metadata
+      if (ndk) {
+        const metadataEvent = await ndk.publishEvent({
+          kind: 513, // Conversation metadata kind
+          content: JSON.stringify({ title: generatedTitle }),
+          tags: [["E", rootEvent.id]],
+        });
+
+        if (metadataEvent) {
+          toast.success("Title added successfully");
+        } else {
+          toast.error("Failed to save title");
+        }
+      }
+    } catch (error) {
+      console.error("Error generating title:", error);
+      toast.error("Failed to generate title");
+    } finally {
+      setIsGeneratingTitle(false);
+    }
+  };
+
+  const toggleViewMode = () => {
+    const newMode: ThreadViewMode = viewMode === 'threaded' ? 'flattened' : 'threaded';
+    setViewMode(newMode);
+  };
+
   return (
     <div className="bg-card border-b border-border/60 backdrop-blur-xl bg-card/95 sticky top-0 z-50">
       <div
@@ -233,9 +287,46 @@ export function ChatHeader({
               />
             </div>
           )}
-          {/* Thread View Toggle - only show when there's a conversation with messages */}
+          {/* Options dropdown - only show when there's a conversation with messages */}
           {rootEvent && messages && messages.length > 0 && (
-            <ThreadViewToggle />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
+                  aria-label="Thread options"
+                >
+                  <MoreHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={handleAddTitle}
+                  disabled={isGeneratingTitle || !hasProvider}
+                  className="cursor-pointer"
+                >
+                  <Type className="w-4 h-4 mr-2" />
+                  {isGeneratingTitle ? "Generating..." : "Add Title"}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={toggleViewMode}
+                  className="cursor-pointer"
+                >
+                  {viewMode === 'threaded' ? (
+                    <>
+                      <List className="w-4 h-4 mr-2" />
+                      Switch to Flattened View
+                    </>
+                  ) : (
+                    <>
+                      <Layers className="w-4 h-4 mr-2" />
+                      Switch to Threaded View
+                    </>
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           {/* Copy thread dropdown */}
           {rootEvent && messages && messages.length > 0 && (

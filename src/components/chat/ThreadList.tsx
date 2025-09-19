@@ -109,20 +109,20 @@ export const ThreadList = memo(function ThreadList({
             
             // If someone else has replied
             if (lastOtherReplyTime) {
-              // Check if the other person's reply is within the time threshold
-              const timeSinceLastOtherReply = now - lastOtherReplyTime;
-              if (timeSinceLastOtherReply > threshold) {
-                // Reply is too old, don't show
-                return false;
-              }
-              
               // Check if user has already responded after this reply
               if (lastUserReplyTime && lastUserReplyTime > lastOtherReplyTime) {
                 // User has already responded, don't show
                 return false;
               }
               
-              // Someone replied within threshold and user hasn't responded yet
+              // Check if the time since the other person's reply exceeds the threshold
+              const timeSinceLastOtherReply = now - lastOtherReplyTime;
+              if (timeSinceLastOtherReply < threshold) {
+                // Reply is still within the threshold time, don't show yet
+                return false;
+              }
+              
+              // Someone replied more than threshold ago and user hasn't responded yet
               return true;
             }
             
@@ -211,7 +211,7 @@ export const ThreadList = memo(function ThreadList({
               }
               if (timeFilter.startsWith("needs-response-")) {
                 const time = timeFilter.replace("needs-response-", "");
-                return `No one has responded to you in the last ${time === "1h" ? "hour" : time === "4h" ? "4 hours" : "24 hours"}`;
+                return `All caught up! No threads waiting for your response longer than ${time === "1h" ? "1 hour" : time === "4h" ? "4 hours" : "24 hours"}`;
               }
               return `No conversations with activity in the last ${timeFilter === "1h" ? "hour" : timeFilter === "4h" ? "4 hours" : "24 hours"}`;
             })()}

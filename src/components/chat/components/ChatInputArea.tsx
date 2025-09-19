@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, memo, useState, useEffect } from "react";
-import { Send, Mic, Paperclip, X, Reply } from "lucide-react";
+import { Send, Mic, Paperclip, X, Reply, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -96,6 +96,8 @@ export const ChatInputArea = memo(function ChatInputArea({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quotedEvents, setQuotedEvents] = useState<NostrEntity[]>([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [hasManuallyToggled, setHasManuallyToggled] = useState(false);
 
   // Handle initial content when it changes
   useEffect(() => {
@@ -140,6 +142,13 @@ export const ChatInputArea = memo(function ChatInputArea({
     }, 500);
     return () => clearTimeout(timeoutId);
   }, [messageInput, saveDraft, rootEvent?.id]);
+
+  // Auto-expand when text exceeds 300 characters (unless user manually toggled)
+  useEffect(() => {
+    if (!hasManuallyToggled && messageInput.length > 300 && !isExpanded) {
+      setIsExpanded(true);
+    }
+  }, [messageInput, hasManuallyToggled, isExpanded]);
 
   // Detect bech32 entities in message input
   useEffect(() => {
@@ -581,6 +590,10 @@ export const ChatInputArea = memo(function ChatInputArea({
       }
       setQuotedEvents([]);
       clearBrainstormSession(); // Clear brainstorm mode after sending
+      
+      // Reset expansion state after sending
+      setIsExpanded(false);
+      setHasManuallyToggled(false);
 
       if (replyingTo) {
         clearReply();
@@ -705,24 +718,49 @@ export const ChatInputArea = memo(function ChatInputArea({
     if (item) cancelUpload(item.id);
   };
 
+  // Handle the expand/collapse toggle
+  const handleToggleExpand = useCallback(() => {
+    setIsExpanded(!isExpanded);
+    setHasManuallyToggled(true);
+  }, [isExpanded]);
+
   const isNewThread = !rootEvent;
 
   return (
-    <div
+    <motion.div
       className={cn(
-        "flex-shrink-0 absolute bottom-0 left-0 right-0 z-20",
-        isMobile ? "p-3 pb-safe" : "p-4",
+        "flex-shrink-0 absolute z-20",
+        isExpanded ? "inset-x-0 bottom-0" : "bottom-0 left-0 right-0",
+        isMobile ? (isExpanded ? "p-2" : "p-3 pb-safe") : (isExpanded ? "p-4" : "p-4"),
         className,
       )}
       onPaste={handlePasteEvent}
+      animate={{
+        top: isExpanded ? "20vh" : "auto",  // Start at 20% from top when expanded (80% height)
+        bottom: 0,
+        left: 0,
+        right: 0,
+      }}
+      transition={{
+        duration: 0.3,
+        ease: "easeInOut"
+      }}
     >
-      <div
+      <motion.div
         className={cn(
-          "flex flex-col w-full rounded-2xl relative z-20",
+          "flex flex-col rounded-2xl relative z-20",
           "bg-background/80 backdrop-blur-xl",
           "border border-border/50",
           "shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)]",
+          isExpanded ? "h-full max-h-[80vh]" : "w-full",
         )}
+        animate={{
+          borderRadius: isExpanded ? 8 : 16,
+        }}
+        transition={{
+          duration: 0.3,
+          ease: "easeInOut"
+        }}
       >
         {/* Quoted event previews */}
         <AnimatePresence>
@@ -882,7 +920,11 @@ export const ChatInputArea = memo(function ChatInputArea({
 
         {/* Textarea area */}
         <div
-          className={cn("relative w-full", isMobile ? "p-2 pb-1" : "p-3 pb-2")}
+          className={cn(
+            "relative w-full",
+            isExpanded ? "flex-1 overflow-y-auto max-h-[calc(80vh-120px)]" : "",
+            isMobile ? (isExpanded ? "p-4" : "p-2 pb-1") : (isExpanded ? "p-6" : "p-3 pb-2")
+          )}
         >
           <ChatMentionMenu
             showAgentMenu={mentionProps.showAgentMenu}
@@ -906,9 +948,15 @@ export const ChatInputArea = memo(function ChatInputArea({
               "resize-none bg-transparent border-0 !focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
               "placeholder:text-muted-foreground/60",
               "transition-all duration-200 !shadow-none w-full",
-              isMobile
-                ? "min-h-[40px] text-[15px] py-2.5 px-2 leading-relaxed"
-                : "min-h-[56px] text-base py-3 px-3",
+              isExpanded ? (
+                // Expanded styles: monospace, larger font, fills container
+                "font-mono text-[1.2em] min-h-[calc(80vh-200px)] py-4 px-4"
+              ) : (
+                // Normal styles
+                isMobile
+                  ? "min-h-[40px] text-[15px] py-2.5 px-2 leading-relaxed"
+                  : "min-h-[56px] text-base py-3 px-3"
+              ),
             )}
           />
         </div>
@@ -1129,6 +1177,26 @@ export const ChatInputArea = memo(function ChatInputArea({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Expand/Collapse Toggle Button */}
+            <Button
+              onClick={handleToggleExpand}
+              size="icon"
+              variant="ghost"
+              disabled={disabled || isSubmitting}
+              className={cn(
+                "rounded-lg transition-all duration-200",
+                "hover:bg-accent/80",
+                isMobile ? "h-8 w-8" : "h-9 w-9",
+              )}
+              title={isExpanded ? "Shrink input" : "Expand input"}
+            >
+              {isExpanded ? (
+                <Minimize2 className={cn(isMobile ? "h-3.5 w-3.5" : "h-4 w-4")} />
+              ) : (
+                <Maximize2 className={cn(isMobile ? "h-3.5 w-3.5" : "h-4 w-4")} />
+              )}
+            </Button>
+
             {/* Brainstorm Mode Button - show for new conversations, hide only after sending */}
             {!rootEvent && (!recentMessages || recentMessages.length === 0) && (
               <BrainstormModeButton
@@ -1171,7 +1239,7 @@ export const ChatInputArea = memo(function ChatInputArea({
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Voice Dialog */}
       <VoiceDialog
@@ -1201,6 +1269,6 @@ export const ChatInputArea = memo(function ChatInputArea({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 });

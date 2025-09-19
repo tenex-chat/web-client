@@ -181,7 +181,7 @@ export const FeedContent: React.FC<FeedContentProps> = ({
     <div className="h-full flex flex-col">
       {/* Search Input and Filter - Only show when there are events */}
       {sortedEvents.length > 0 && (
-        <div className="p-3 border-b bg-background/50">
+        <div className="border-b bg-background/50">
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -190,7 +190,7 @@ export const FeedContent: React.FC<FeedContentProps> = ({
                 placeholder="Search events, titles, subjects, hashtags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-9 h-9 text-sm"
+                className="pl-9 pr-9 h-9 text-sm border-0 py-6 !ring-0 !outline-0"
               />
               {searchQuery && (
                 <Button
@@ -205,14 +205,16 @@ export const FeedContent: React.FC<FeedContentProps> = ({
             </div>
             
             {/* Author Filter Dropdown */}
-            <AuthorFilterDropdown
-              authors={uniqueAuthors}
-              selectedAuthor={selectedAuthor}
-              onAuthorSelect={setSelectedAuthor}
-              currentUserPubkey={currentUser?.pubkey}
-              groupThreads={groupThreads}
-              onGroupThreadsChange={setGroupThreads}
-            />
+            <div className="mt-1.5 mr-1.5">
+              <AuthorFilterDropdown
+                authors={uniqueAuthors}
+                selectedAuthor={selectedAuthor}
+                onAuthorSelect={setSelectedAuthor}
+                currentUserPubkey={currentUser?.pubkey}
+                groupThreads={groupThreads}
+                onGroupThreadsChange={setGroupThreads}
+              />
+            </div>
           </div>
         </div>
       )}

@@ -88,45 +88,45 @@ function AgentDisplay({
     >
       <motion.div
         animate={{
-          scale: isSpeaking ? 1.1 : 1,
-          opacity: isTargeted ? 1 : 0.95,
+          scale: isTargeted ? 1.05 : 1,
+          opacity: isTargeted ? 1 : 0.9,
         }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
         className="relative"
       >
-        {/* Ripple effect for speaking */}
+        {/* Professional speaking indicator */}
         {isSpeaking && (
-          <>
+          <div data-testid="agent-speaking-indicator">
+            {/* Single subtle breathing ring */}
             <motion.div
-              className="absolute inset-0 rounded-full bg-white/20"
+              className="absolute inset-0 rounded-full border-2 border-white/30"
               animate={{
-                scale: [1, 1.5],
-                opacity: [0.5, 0],
+                scale: [1, 1.15],
+                opacity: [0.6, 0],
               }}
               transition={{
-                duration: 1.5,
+                duration: 2,
                 repeat: Infinity,
-                ease: "easeOut",
+                ease: [0.4, 0, 0.6, 1], // Custom easing for organic feel
               }}
             />
-            <motion.div
-              className="absolute inset-0 rounded-full bg-white/20"
-              animate={{
-                scale: [1, 1.5],
-                opacity: [0.5, 0],
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: "easeOut",
-                delay: 0.5,
+            
+            {/* Subtle glow effect without multiple layers */}
+            <div 
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: "radial-gradient(circle at center, transparent 40%, rgba(255, 255, 255, 0.08) 70%, transparent 100%)",
               }}
             />
-          </>
+          </div>
         )}
 
         <Avatar
-          className={cn(sizeClasses[size], "relative z-10 transition-all")}
+          className={cn(
+            sizeClasses[size], 
+            "relative z-10 transition-all duration-500",
+            isSpeaking && "ring-1 ring-white/15"
+          )}
         >
           <AvatarImage src={avatarUrl} alt={displayName} />
           <AvatarFallback className="bg-white/10 text-white">
@@ -1292,10 +1292,13 @@ export function CallView({ project, onClose, extraTags, rootEvent, isEmbedded = 
   const sameVoiceProvider = sttProviderName === ttsProviderName;
 
   return (
-    <div className={cn(
-      "bg-black overflow-hidden",
-      isEmbedded ? "h-full" : "fixed inset-0 z-50"
-    )}>
+    <div 
+      data-testid="call-view-container"
+      className={cn(
+        "bg-black overflow-hidden",
+        isEmbedded ? "h-full" : "fixed inset-0 z-50"
+      )}
+    >
       <div className="relative flex flex-col h-full text-white overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 pt-safe-top flex-shrink-0">

@@ -11,13 +11,7 @@ export function useProjectSubscriptions() {
   const currentUser = useNDKCurrentUser();
 
   useEffect(() => {
-    if (!ndk || !currentUser?.pubkey) {
-      logger.debug("[useProjectSubscriptions] Missing NDK or user", {
-        hasNdk: !!ndk,
-        hasPubkey: !!currentUser?.pubkey,
-      });
-      return;
-    }
+    if (!ndk || !currentUser?.pubkey) return;
 
     logger.debug(
       "[useProjectSubscriptions] Initializing subscriptions for user:",

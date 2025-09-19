@@ -7,6 +7,7 @@ import {
   openAIApiKeyAtom,
   llmConfigsAtom,
   activeLLMConfigIdAtom,
+  uiLLMConfigsAtom,
   type LLMConfig,
 } from "@/stores/ai-config-store";
 import {
@@ -22,7 +23,14 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Plus, Volume2, Key, Users, Check, Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Plus, Volume2, Key, Users, Check, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { AddProviderDialog } from "./AddProviderDialog";
 import { VoiceSelectionDialog } from "./VoiceSelectionDialog";
@@ -36,6 +44,7 @@ export function AISettings() {
   const [openAIApiKey, setOpenAIApiKey] = useAtom(openAIApiKeyAtom);
   const [llmConfigs, setLLMConfigs] = useAtom(llmConfigsAtom);
   const [activeConfigId, setActiveConfigId] = useAtom(activeLLMConfigIdAtom);
+  const [uiLLMConfigs, setUILLMConfigs] = useAtom(uiLLMConfigsAtom);
   const [showAddProvider, setShowAddProvider] = useState(false);
   const [showVoiceSelection, setShowVoiceSelection] = useState<boolean | 'multi'>(false);
   const [testingConnection, setTestingConnection] = useState<string | null>(null);
@@ -203,6 +212,124 @@ export function AISettings() {
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Configuration
               </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* UI-Specific LLM Configuration Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wand2 className="h-5 w-5" />
+            UI Features Configuration
+          </CardTitle>
+          <CardDescription>
+            Choose which LLM configurations to use for specific UI features
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {llmConfigs.length > 0 ? (
+            <>
+              {/* Title Generation */}
+              <div className="space-y-2">
+                <Label htmlFor="title-generation-llm">Title Generation</Label>
+                <Select
+                  value={uiLLMConfigs.titleGeneration || "default"}
+                  onValueChange={(value) =>
+                    setUILLMConfigs({ ...uiLLMConfigs, titleGeneration: value === "default" ? undefined : value })
+                  }
+                >
+                  <SelectTrigger id="title-generation-llm">
+                    <SelectValue placeholder="Select LLM for title generation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">
+                      <span className="text-muted-foreground">Use active configuration</span>
+                    </SelectItem>
+                    {llmConfigs.map((config) => (
+                      <SelectItem key={config.id} value={config.id}>
+                        {config.name} ({config.provider})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Used when generating titles for conversations
+                </p>
+              </div>
+
+              {/* Prompt Rewrite (Future) */}
+              <div className="space-y-2 opacity-50">
+                <Label htmlFor="prompt-rewrite-llm">Prompt Enhancement (Coming Soon)</Label>
+                <Select disabled>
+                  <SelectTrigger id="prompt-rewrite-llm">
+                    <SelectValue placeholder="Select LLM for prompt enhancement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {llmConfigs.map((config) => (
+                      <SelectItem key={config.id} value={config.id}>
+                        {config.name} ({config.provider})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Will be used for improving and expanding prompts
+                </p>
+              </div>
+
+              {/* Message Cleanup (Future) */}
+              <div className="space-y-2 opacity-50">
+                <Label htmlFor="cleanup-llm">Message Cleanup (Coming Soon)</Label>
+                <Select disabled>
+                  <SelectTrigger id="cleanup-llm">
+                    <SelectValue placeholder="Select LLM for message cleanup" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {llmConfigs.map((config) => (
+                      <SelectItem key={config.id} value={config.id}>
+                        {config.name} ({config.provider})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Will be used for cleaning up transcribed messages
+                </p>
+              </div>
+
+              {/* Summaries */}
+              <div className="space-y-2">
+                <Label htmlFor="summary-llm">Conversation Summaries</Label>
+                <Select
+                  value={uiLLMConfigs.summaries || "default"}
+                  onValueChange={(value) =>
+                    setUILLMConfigs({ ...uiLLMConfigs, summaries: value === "default" ? undefined : value })
+                  }
+                >
+                  <SelectTrigger id="summary-llm">
+                    <SelectValue placeholder="Select LLM for summaries" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">
+                      <span className="text-muted-foreground">Use active configuration</span>
+                    </SelectItem>
+                    {llmConfigs.map((config) => (
+                      <SelectItem key={config.id} value={config.id}>
+                        {config.name} ({config.provider})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Used for generating conversation summaries
+                </p>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-4 text-sm text-muted-foreground">
+              Add LLM configurations above first to enable UI features
             </div>
           )}
         </CardContent>

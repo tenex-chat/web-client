@@ -3,7 +3,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ThreadList } from "@/components/chat/ThreadList";
 import { DocumentationListSimple } from "@/components/documentation/DocumentationListSimple";
 import { HashtagEventsList } from "@/components/hashtags/HashtagEventsList";
-import { FeedContent } from "./FeedContent";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { NDKEvent, NDKArticle } from "@nostr-dev-kit/ndk-hooks";
 import { Bot, Settings, ChevronRight, Users, Wrench, Shield, AlertTriangle } from "lucide-react";

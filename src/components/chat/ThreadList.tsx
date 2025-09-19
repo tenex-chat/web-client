@@ -84,7 +84,7 @@ export const ThreadList = memo(function ThreadList({
           
           // Group replies by thread and categorize by author
           allReplies.forEach(reply => {
-            const threadIdTag = reply.tags.find(tag => tag[0] === 'E');
+            const threadIdTag = reply.tags?.find(tag => tag[0] === 'E');
             if (threadIdTag && threadIdTag[1] && reply.created_at) {
               if (reply.pubkey === currentUser.pubkey) {
                 // Track user's own replies
@@ -145,7 +145,7 @@ export const ThreadList = memo(function ThreadList({
           
           // Group all replies by thread
           allReplies.forEach(reply => {
-            const threadIdTag = reply.tags.find(tag => tag[0] === 'E');
+            const threadIdTag = reply.tags?.find(tag => tag[0] === 'E');
             if (threadIdTag && threadIdTag[1] && reply.created_at) {
               const currentLast = threadLastReplyMap.get(threadIdTag[1]) || 0;
               if (reply.created_at > currentLast) {

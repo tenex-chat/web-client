@@ -29,22 +29,28 @@ interface ThreadItemProps {
 
 export const ThreadItem = memo(
   function ThreadItem({ thread, isSelected, onSelect }: ThreadItemProps) {
+    // Early return if thread is undefined
+    if (!thread) {
+      return null;
+    }
+
     // Subscribe to metadata updates for this conversation
-    const metadata = useConversationMetadata(thread.id);
+    const metadata = useConversationMetadata(thread);
 
     // Memoize extracted data from thread
     const { title, tTags } = useMemo(() => {
-      const titleTag = thread.tags.find((t) => t[0] === "title");
+      const tags = thread?.tags || [];
+      const titleTag = tags.find((t) => t[0] === "title");
       const fallbackTitle = titleTag
         ? titleTag[1]
-        : thread.content.split("\n")[0].slice(0, 50);
+        : thread?.content?.split("\n")[0].slice(0, 50) || "Untitled";
 
       // Use metadata title if available, otherwise use fallback
       return {
         title: metadata?.title || fallbackTitle,
-        tTags: thread.tags.filter((t) => t[0] === "t").map((t) => t[1]),
+        tTags: tags.filter((t) => t[0] === "t").map((t) => t[1]),
       };
-    }, [thread.tags, thread.content, metadata?.title]);
+    }, [thread?.tags, thread?.content, metadata?.title]);
 
     // Subscribe to replies for this specific thread
     const { events: replies } = useSubscribe(
@@ -92,7 +98,7 @@ export const ThreadItem = memo(
           }
 
           // Check for phase tags in this reply (from any event kind)
-          const phaseTag = reply.tags.find((t) => t[0] === "phase");
+          const phaseTag = reply.tags?.find((t) => t[0] === "phase");
           if (phaseTag && phaseTag[1] && replyTime > latestPhaseTime) {
             latestPhaseTime = replyTime;
             latestPhase = phaseTag[1];

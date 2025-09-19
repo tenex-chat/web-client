@@ -177,16 +177,6 @@ export const ChatInputArea = memo(function ChatInputArea({
     }
   }, [rootEvent?.id, recentMessages?.length, clearBrainstormSession]);
 
-  // When replying, automatically set the selected agent to the author of the message being replied to
-  useEffect(() => {
-    if (replyingTo) {
-      setSelectedAgent(replyingTo.pubkey);
-    } else {
-      // Reset to null when reply is cleared to allow auto-selection
-      setSelectedAgent(null);
-    }
-  }, [replyingTo]);
-
   // Image upload functionality
   const {
     uploadFiles,
@@ -232,11 +222,34 @@ export const ChatInputArea = memo(function ChatInputArea({
     return matches;
   }, [messageInput, onlineAgents]);
 
+  // When replying, automatically set the selected agent to the author of the message being replied to
+  useEffect(() => {
+    if (replyingTo) {
+      setSelectedAgent(replyingTo.pubkey);
+    } else if (!mentionedAgents.length) {
+      // Only reset to null when reply is cleared AND there are no mentions
+      setSelectedAgent(null);
+    }
+  }, [replyingTo, mentionedAgents.length]);
+
+  // Auto-select the first mentioned agent in the selector
+  // This ensures that when a user @mentions an agent, that agent is selected
+  // in the agent selector rather than hiding the selector
+  React.useEffect(() => {
+    if (mentionedAgents.length > 0 && !replyingTo) {
+      // Set the selected agent to the first mentioned agent
+      setSelectedAgent(mentionedAgents[0].pubkey);
+    }
+    // Don't reset when mentions are cleared - let other logic handle that
+  }, [mentionedAgents, replyingTo]);
+
   // Check if we're in a brainstorm conversation
   const isInBrainstormConversation = brainstormSession?.enabled || 
     (rootEvent && isBrainstormMessage(rootEvent));
   
-  const showAgentSelector = mentionedAgents.length === 0 && !replyingTo && !isInBrainstormConversation;
+  // Show agent selector when not replying and not in brainstorm mode
+  // The selector will show the mentioned agent if there is one
+  const showAgentSelector = !replyingTo && !isInBrainstormConversation;
 
   // Determine the default agent based on p-tag logic (same as AgentSelector)
   const defaultAgent = React.useMemo(() => {
@@ -562,7 +575,10 @@ export const ChatInputArea = memo(function ChatInputArea({
       // Clear everything after successful send
       clearCompleted();
       clearDraft();
-      setSelectedAgent(null);
+      // Clear selected agent only if there are no mentions in the sent message
+      if (!mentions.length) {
+        setSelectedAgent(null);
+      }
       setQuotedEvents([]);
       clearBrainstormSession(); // Clear brainstorm mode after sending
 
@@ -1065,26 +1081,6 @@ export const ChatInputArea = memo(function ChatInputArea({
                       />
                     </div>
                   )}
-                  {/* Show mentioned agents */}
-                  {mentionedAgents.map((agent) => (
-                    <div
-                      key={agent.pubkey}
-                      className={cn(
-                        "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
-                        "bg-accent/50 border border-border/50",
-                        "text-sm",
-                      )}
-                    >
-                      <NostrProfile
-                        pubkey={agent.pubkey}
-                        variant="avatar"
-                        size="xs"
-                        fallback={agent.slug}
-                        className="flex-shrink-0"
-                      />
-                      <span className="text-xs font-medium">@{agent.slug}</span>
-                    </div>
-                  ))}
                 </div>
               ))}
 

@@ -1,56 +1,25 @@
-import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
-import { useMemo } from "react";
-import { NDKKind } from "@nostr-dev-kit/ndk-hooks";
-
-interface ConversationMetadata {
-  title?: string;
-  updatedAt?: number;
-}
+import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import { useConversationMetadataStore, ConversationMetadataResult } from "@/stores/conversationMetadataStore";
+import { extractConversationId } from "@/utils/conversationMetadataProcessor";
 
 /**
- * Hook to subscribe to metadata events (kind 513) for a specific conversation
- * These events contain updated metadata like conversation titles
+ * Hook to access conversation metadata for an event.
+ * 
+ * Why this design:
+ * - Consolidates title and summary access into a single hook to reduce duplication
+ * - Returns a consistent object structure that reduces null checks
+ * - Uses the store's improved interface for better developer experience
+ * 
+ * @param event - The NDK event containing a conversation reference (e tag)
+ * @returns ConversationMetadataResult with title, summary, and helper flags
  */
-export function useConversationMetadata(
-  conversationId: string | undefined,
-): ConversationMetadata | null {
-  // Subscribe to kind 513 events for this conversation
-  const { events } = useSubscribe(
-    conversationId
-      ? [
-          {
-            kinds: [513 as NDKKind],
-            "#e": [conversationId],
-          },
-        ]
-      : false,
-    {
-      closeOnEose: false,
-      groupable: true,
-    },
+export const useConversationMetadata = (
+  event: NDKEvent | undefined
+): ConversationMetadataResult => {
+  const conversationId = extractConversationId(event);
+  const getConversationData = useConversationMetadataStore(
+    state => state.getConversationData
   );
-
-  // Process metadata events to extract the latest title
-  const metadata = useMemo(() => {
-    if (!events || events.length === 0) return null;
-
-    // Sort by created_at to get the most recent metadata
-    const sortedEvents = [...events].sort(
-      (a, b) => (b.created_at || 0) - (a.created_at || 0),
-    );
-
-    // Get the most recent event
-    const latestEvent = sortedEvents[0];
-    if (!latestEvent) return null;
-
-    // Extract title from the event tags
-    const titleTag = latestEvent.tags.find((tag) => tag[0] === "title");
-
-    return {
-      title: titleTag?.[1],
-      updatedAt: latestEvent.created_at,
-    };
-  }, [events]);
-
-  return metadata;
-}
+  
+  return getConversationData(conversationId);
+};

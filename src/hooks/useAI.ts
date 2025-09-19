@@ -5,6 +5,8 @@ import {
   voiceSettingsAtom,
   sttSettingsAtom,
   openAIApiKeyAtom,
+  titleGenerationLLMAtom,
+  summaryLLMAtom,
 } from "@/stores/ai-config-store";
 import { aiService } from "@/services/ai/ai-service";
 import { toast } from "sonner";
@@ -14,6 +16,8 @@ export function useAI() {
   const voiceSettings = useAtomValue(voiceSettingsAtom);
   const sttSettings = useAtomValue(sttSettingsAtom);
   const openAIApiKey = useAtomValue(openAIApiKeyAtom);
+  const titleGenerationLLM = useAtomValue(titleGenerationLLMAtom);
+  const summaryLLM = useAtomValue(summaryLLMAtom);
 
   // Update AI service when provider changes
   useEffect(() => {
@@ -35,14 +39,45 @@ export function useAI() {
 
   const generateTitle = useCallback(async (messages: string[]): Promise<string> => {
     try {
-      return await aiService.generateTitle(messages);
+      return await aiService.generateTitle(messages, titleGenerationLLM || undefined);
     } catch (error) {
       console.error("Title generation error:", error);
       toast.error("Failed to generate title");
       // Return a fallback title
       return messages[0]?.slice(0, 50) || "Untitled Conversation";
     }
-  }, []);
+  }, [titleGenerationLLM]);
+
+  const summarizeConversation = useCallback(async (
+    messages: Array<{ author: string; content: string; timestamp?: number }>
+  ): Promise<string> => {
+    if (!summaryLLM && !activeProvider) {
+      const errorMsg = "No LLM configured for summaries. Please configure one in Settings > AI Settings.";
+      console.error(errorMsg);
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    try {
+      // Pass summaryLLM if available, otherwise it will fallback to activeProvider in ai-service
+      return await aiService.summarizeConversation(messages, summaryLLM || activeProvider || undefined);
+    } catch (error) {
+      console.error("Conversation summarization error:", error);
+      // More specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes("No AI provider")) {
+          toast.error("Please configure an LLM in Settings > AI Settings");
+        } else if (error.message.includes("API key")) {
+          toast.error("Invalid or missing API key for the selected LLM");
+        } else {
+          toast.error(`Summarization failed: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to summarize conversation");
+      }
+      throw error; // Re-throw to let the caller handle it
+    }
+  }, [summaryLLM, activeProvider]);
 
   const transcribe = useCallback(
     async (audio: Blob): Promise<string> => {
@@ -199,6 +234,7 @@ export function useAI() {
     // Text operations
     cleanupText,
     generateTitle,
+    summarizeConversation,
 
     // Voice operations
     transcribe,
@@ -207,6 +243,8 @@ export function useAI() {
 
     // Configuration state
     hasProvider: !!activeProvider,
+    hasTitleProvider: !!titleGenerationLLM,
+    hasSummaryProvider: !!summaryLLM,
     hasTTS: voiceSettings.enabled && voiceSettings.voiceIds.length > 0,
     hasSTT,
 

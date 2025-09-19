@@ -113,6 +113,48 @@ export const sttSettingsAtom = atom(
   },
 );
 
+// UI-specific LLM configurations
+export interface UILLMConfigs {
+  titleGeneration?: string; // ID of LLM config to use for title generation
+  promptRewrite?: string; // ID of LLM config to use for prompt rewriting (future)
+  messageCleanup?: string; // ID of LLM config to use for message cleanup (future)
+  summaries?: string; // ID of LLM config to use for summaries (future)
+}
+
+// Atom for UI-specific LLM configurations
+export const uiLLMConfigsAtom = atomWithStorage<UILLMConfigs>(
+  "ui-llm-configs",
+  {}
+);
+
+// Derived atom to get the actual LLM config for title generation
+export const titleGenerationLLMAtom = atom<LLMConfig | null>((get) => {
+  const configs = get(llmConfigsAtom);
+  const uiConfigs = get(uiLLMConfigsAtom);
+  
+  if (uiConfigs.titleGeneration) {
+    const config = configs.find(c => c.id === uiConfigs.titleGeneration);
+    if (config) return config;
+  }
+  
+  // Fallback to active LLM config
+  return get(activeLLMConfigAtom);
+});
+
+// Derived atom to get the actual LLM config for summaries
+export const summaryLLMAtom = atom<LLMConfig | null>((get) => {
+  const configs = get(llmConfigsAtom);
+  const uiConfigs = get(uiLLMConfigsAtom);
+  
+  if (uiConfigs.summaries) {
+    const config = configs.find(c => c.id === uiConfigs.summaries);
+    if (config) return config;
+  }
+  
+  // Fallback to active LLM config
+  return get(activeLLMConfigAtom);
+});
+
 // Helper atom to get/set OpenAI API key for voice settings
 export const openAIApiKeyAtom = atom(
   (get) => {

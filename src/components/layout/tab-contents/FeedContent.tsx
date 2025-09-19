@@ -17,8 +17,11 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
+import { NostrProfile } from "@/components/common/NostrProfile";
+import { useConversationMetadata } from "@/hooks/useConversationMetadata";
 
 interface FeedContentProps {
   project: NDKProject;
@@ -31,12 +34,39 @@ interface EventItemProps {
   onClick?: () => void;
 }
 
-const EventItem: React.FC<EventItemProps> = ({ 
-  event, 
+// Component to show author avatar in the filter button
+const AuthorAvatar: React.FC<{ pubkey: string }> = ({ pubkey }) => {
+  const profile = useProfileValue(pubkey);
+
+  const fallbackName = useMemo(() => {
+    if (profile?.displayName || profile?.name) {
+      return (profile.displayName || profile.name).slice(0, 2).toUpperCase();
+    }
+    try {
+      const npub = nip19.npubEncode(pubkey);
+      return npub.slice(4, 6).toUpperCase();
+    } catch {
+      return 'UN';
+    }
+  }, [profile, pubkey]);
+
+  return (
+    <Avatar className="h-6 w-6">
+      <AvatarImage src={profile?.image || profile?.picture} alt={profile?.displayName || profile?.name} />
+      <AvatarFallback className="text-[10px]">
+        {fallbackName}
+      </AvatarFallback>
+    </Avatar>
+  );
+};
+
+const EventItem: React.FC<EventItemProps> = ({
+  event,
   project,
-  onClick 
+  onClick
 }) => {
   const profile = useProfileValue(event.pubkey);
+  const conversationMetadata = useConversationMetadata(event);
   
   // Format author display name
   const authorName = useMemo(() => {
@@ -53,6 +83,51 @@ const EventItem: React.FC<EventItemProps> = ({
 
   // Determine event type and rendering details based on actual kind
   const { icon, label, title } = useMemo(() => {
+    // If we have a conversation title from metadata, prefer that
+    if (conversationMetadata.hasTitle && conversationMetadata.title) {
+      // Determine the icon and label based on the event kind
+      switch (event.kind) {
+        case NDKKind.Text:
+          return {
+            icon: <MessageSquare className="h-3.5 w-3.5" />,
+            label: "Note",
+            title: conversationMetadata.title
+          };
+        case NDKKind.Article:
+          return {
+            icon: <FileText className="h-3.5 w-3.5" />,
+            label: "Article",
+            title: conversationMetadata.title
+          };
+        case 1111:
+          return {
+            icon: <MessageSquare className="h-3.5 w-3.5" />,
+            label: "Reply",
+            title: conversationMetadata.title
+          };
+        case 29000:
+          return {
+            icon: <Phone className="h-3.5 w-3.5" />,
+            label: "Call",
+            title: conversationMetadata.title
+          };
+        case 1905:
+        case 31905:
+          return {
+            icon: <Bot className="h-3.5 w-3.5" />,
+            label: "Agent",
+            title: conversationMetadata.title
+          };
+        default:
+          return {
+            icon: <Hash className="h-3.5 w-3.5" />,
+            label: `Kind ${event.kind}`,
+            title: conversationMetadata.title
+          };
+      }
+    }
+    
+    // Fall back to original logic if no conversation title
     switch (event.kind) {
       case NDKKind.Text: // kind 1 - text note
         return {
@@ -101,7 +176,7 @@ const EventItem: React.FC<EventItemProps> = ({
           title: event.content?.slice(0, 100) || "Event"
         };
     }
-  }, [event]);
+  }, [event, conversationMetadata]);
 
   // Get hashtags for the event
   const hashtags = useMemo(() => {
@@ -172,6 +247,7 @@ export const FeedContent: React.FC<FeedContentProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
+  const [groupThreads, setGroupThreads] = useState(false);
   const currentUser = useNDKCurrentUser();
   const agents = useProjectOnlineAgents(project?.dTag);
   
@@ -182,23 +258,66 @@ export const FeedContent: React.FC<FeedContentProps> = ({
     [project.dTag]
   );
 
-  // Filter out ephemeral events and kind 0, then sort by creation time (newest first)
+  // Filter out ephemeral events and kind 0, then optionally group by E tag and sort
   const sortedEvents = useMemo(() => {
-    return [...events]
-      .filter(event => {
-        const kind = event.kind || 0;
-        // Skip kind 0 (metadata) and ephemeral events (kinds 20000-29999)
-        if (kind === 0 || (kind >= 20000 && kind <= 29999)) {
-          return false;
+    // First filter out unwanted events
+    const validEvents = events.filter(event => {
+      const kind = event.kind || 0;
+      // Skip kind 0 (metadata) and ephemeral events (kinds 20000-29999)
+      if (kind === 0 || (kind >= 20000 && kind <= 29999)) {
+        return false;
+      }
+      return true;
+    });
+
+    // If groupThreads is enabled, deduplicate by E tag
+    if (groupThreads) {
+      // Group events by E tag value
+      const eventsByETag = new Map<string | null, NDKEvent[]>();
+      
+      validEvents.forEach(event => {
+        // Get the E tag value (uppercase E tag)
+        const eTag = event.tags.find(tag => tag[0] === 'E')?.[1] || null;
+        
+        // Group events by their E tag value (or null if no E tag)
+        const existing = eventsByETag.get(eTag) || [];
+        existing.push(event);
+        eventsByETag.set(eTag, existing);
+      });
+
+      // For each E tag group, keep only the most recent event
+      const deduplicatedEvents: NDKEvent[] = [];
+      
+      eventsByETag.forEach((groupedEvents, eTag) => {
+        if (eTag === null) {
+          // No E tag - include all events from this group
+          deduplicatedEvents.push(...groupedEvents);
+        } else {
+          // Has E tag - only include the most recent one
+          const mostRecent = groupedEvents.reduce((latest, current) => {
+            const latestTime = latest.created_at || 0;
+            const currentTime = current.created_at || 0;
+            return currentTime > latestTime ? current : latest;
+          });
+          deduplicatedEvents.push(mostRecent);
         }
-        return true;
-      })
-      .sort((a, b) => {
+      });
+
+      // Sort deduplicated events by creation time (newest first)
+      return deduplicatedEvents.sort((a, b) => {
         const timeA = a.created_at || 0;
         const timeB = b.created_at || 0;
         return timeB - timeA;
       });
-  }, [events]);
+    } else {
+      // No grouping, just sort all valid events
+      return validEvents.sort((a, b) => {
+        const timeA = a.created_at || 0;
+        const timeB = b.created_at || 0;
+        return timeB - timeA;
+      });
+    }
+  }, [events, groupThreads]);
 
   // Function to check if an event matches the search query
   const eventMatchesSearch = (event: NDKEvent, query: string): boolean => {
@@ -247,62 +366,67 @@ export const FeedContent: React.FC<FeedContentProps> = ({
     return false;
   };
 
-  // Get unique authors with their profiles
+  // Create stable pubkey list for dependency
+  const eventPubkeysKey = useMemo(() => {
+    const validPubkeys = events
+      .filter(event => {
+        const kind = event.kind || 0;
+        return !(kind === 0 || (kind >= 20000 && kind <= 29999));
+      })
+      .map(e => e.pubkey)
+      .sort()
+      .join(',');
+    return validPubkeys;
+  }, [events]);
+
+  // Get unique authors with stable sorting - only recalculate when actual event pubkeys change
   const uniqueAuthors = useMemo(() => {
-    const authorsMap = new Map<string, { pubkey: string; name: string; isAgent: boolean }>();
-    
-    // Add current user first if they have events
-    if (currentUser && sortedEvents.some(e => e.pubkey === currentUser.pubkey)) {
-      authorsMap.set(currentUser.pubkey, {
-        pubkey: currentUser.pubkey,
-        name: "You",
-        isAgent: false
-      });
-    }
-    
-    // Add agents
-    agents.forEach(agent => {
-      if (sortedEvents.some(e => e.pubkey === agent.pubkey)) {
-        authorsMap.set(agent.pubkey, {
-          pubkey: agent.pubkey,
-          name: agent.slug || `Agent ${agent.pubkey.slice(0, 8)}`,
-          isAgent: true
-        });
-      }
-    });
-    
-    // Add other authors (limit to top 10 most active)
+    // Create a stable key from all pubkeys to detect actual changes
+    const pubkeysSet = new Set<string>();
     const authorEventCounts = new Map<string, number>();
-    sortedEvents.forEach(event => {
-      if (!authorsMap.has(event.pubkey)) {
-        authorEventCounts.set(event.pubkey, (authorEventCounts.get(event.pubkey) || 0) + 1);
+
+    // Use events directly to avoid dependency on sortedEvents which changes frequently
+    events.forEach(event => {
+      const kind = event.kind || 0;
+      // Skip the same events we filter out in sortedEvents
+      if (kind === 0 || (kind >= 20000 && kind <= 29999)) {
+        return;
+      }
+      pubkeysSet.add(event.pubkey);
+      authorEventCounts.set(event.pubkey, (authorEventCounts.get(event.pubkey) || 0) + 1);
+    });
+
+    // Convert to array and sort by pubkey first for absolute stability
+    const allAuthors = Array.from(pubkeysSet).sort();
+
+    // Now sort by event count with pubkey as stable tiebreaker
+    const sortedByActivity = allAuthors
+      .sort((a, b) => {
+        const countA = authorEventCounts.get(a) || 0;
+        const countB = authorEventCounts.get(b) || 0;
+        if (countA !== countB) return countB - countA;
+        // Already sorted by pubkey, maintain that order
+        return a.localeCompare(b);
+      })
+      .slice(0, 15);
+
+    // Build final list with current user first
+    const result: string[] = [];
+
+    // Add current user first if they have events
+    if (currentUser?.pubkey && sortedByActivity.includes(currentUser.pubkey)) {
+      result.push(currentUser.pubkey);
+    }
+
+    // Add other authors, maintaining sort order
+    sortedByActivity.forEach(pubkey => {
+      if (pubkey !== currentUser?.pubkey) {
+        result.push(pubkey);
       }
     });
-    
-    // Sort by event count and take top 10
-    const topAuthors = Array.from(authorEventCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
-    
-    topAuthors.forEach(([pubkey]) => {
-      try {
-        const npub = nip19.npubEncode(pubkey);
-        authorsMap.set(pubkey, {
-          pubkey,
-          name: `${npub.slice(0, 8)}...${npub.slice(-4)}`,
-          isAgent: false
-        });
-      } catch {
-        authorsMap.set(pubkey, {
-          pubkey,
-          name: 'Unknown',
-          isAgent: false
-        });
-      }
-    });
-    
-    return Array.from(authorsMap.values());
-  }, [sortedEvents, currentUser, agents]);
+
+    return result;
+  }, [events, eventPubkeysKey, currentUser?.pubkey]);
 
   // Filter events based on search query and author
   const filteredEvents = useMemo(() => {
@@ -381,17 +505,26 @@ export const FeedContent: React.FC<FeedContentProps> = ({
                 <Button
                   variant={selectedAuthor ? "default" : "outline"}
                   size="sm"
-                  className="h-9 px-3 gap-2"
+                  className="h-9 w-9 p-0"
                 >
-                  <Filter className="h-3.5 w-3.5" />
-                  <span className="text-sm">
-                    {selectedAuthor 
-                      ? uniqueAuthors.find(a => a.pubkey === selectedAuthor)?.name || 'Filter'
-                      : 'All Authors'}
-                  </span>
+                  {selectedAuthor ? (
+                    <AuthorAvatar pubkey={selectedAuthor} />
+                  ) : (
+                    <Filter className="h-3.5 w-3.5" />
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[200px]">
+                {/* Group threads checkbox */}
+                <DropdownMenuCheckboxItem
+                  checked={groupThreads}
+                  onCheckedChange={setGroupThreads}
+                >
+                  Group threads
+                </DropdownMenuCheckboxItem>
+                
+                <DropdownMenuSeparator />
+                
                 <DropdownMenuItem
                   onClick={() => setSelectedAuthor(null)}
                   className={!selectedAuthor ? "bg-accent" : ""}
@@ -403,70 +536,40 @@ export const FeedContent: React.FC<FeedContentProps> = ({
                 </DropdownMenuItem>
                 
                 {uniqueAuthors.length > 0 && <DropdownMenuSeparator />}
-                
-                {/* Current User */}
-                {uniqueAuthors.filter(a => a.name === "You").map(author => (
-                  <DropdownMenuItem
-                    key={author.pubkey}
-                    onClick={() => setSelectedAuthor(author.pubkey)}
-                    className={selectedAuthor === author.pubkey ? "bg-accent" : ""}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-3.5 w-3.5" />
-                        <span>{author.name}</span>
+
+                {/* List all authors */}
+                {uniqueAuthors.map(pubkey => {
+                  const isCurrentUser = currentUser && pubkey === currentUser.pubkey;
+
+                  return (
+                    <DropdownMenuItem
+                      key={pubkey}
+                      onClick={() => setSelectedAuthor(pubkey)}
+                      className={selectedAuthor === pubkey ? "bg-accent" : ""}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <NostrProfile
+                            pubkey={pubkey}
+                            variant="avatar"
+                            size="xs"
+                            className="flex-shrink-0"
+                          />
+                          {isCurrentUser ? (
+                            <span>You</span>
+                          ) : (
+                            <NostrProfile
+                              pubkey={pubkey}
+                              variant="name"
+                              className="text-sm"
+                            />
+                          )}
+                        </div>
+                        {selectedAuthor === pubkey && <Check className="h-3.5 w-3.5" />}
                       </div>
-                      {selectedAuthor === author.pubkey && <Check className="h-3.5 w-3.5" />}
-                    </div>
-                  </DropdownMenuItem>
-                ))}
-                
-                {/* Agents */}
-                {uniqueAuthors.filter(a => a.isAgent).length > 0 && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                      Agents
-                    </div>
-                    {uniqueAuthors.filter(a => a.isAgent).map(author => (
-                      <DropdownMenuItem
-                        key={author.pubkey}
-                        onClick={() => setSelectedAuthor(author.pubkey)}
-                        className={selectedAuthor === author.pubkey ? "bg-accent" : ""}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <Bot className="h-3.5 w-3.5" />
-                            <span className="truncate">{author.name}</span>
-                          </div>
-                          {selectedAuthor === author.pubkey && <Check className="h-3.5 w-3.5" />}
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
-                  </>
-                )}
-                
-                {/* Other Users */}
-                {uniqueAuthors.filter(a => a.name !== "You" && !a.isAgent).length > 0 && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                      Other Users
-                    </div>
-                    {uniqueAuthors.filter(a => a.name !== "You" && !a.isAgent).map(author => (
-                      <DropdownMenuItem
-                        key={author.pubkey}
-                        onClick={() => setSelectedAuthor(author.pubkey)}
-                        className={selectedAuthor === author.pubkey ? "bg-accent" : ""}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="truncate">{author.name}</span>
-                          {selectedAuthor === author.pubkey && <Check className="h-3.5 w-3.5" />}
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
-                  </>
-                )}
+                    </DropdownMenuItem>
+                  );
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

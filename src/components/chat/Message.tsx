@@ -68,15 +68,6 @@ export const Message = memo(function Message({
     renderCounts.set(eventId, newCount);
 
     console.log(`Rendering message ${eventId}: ${newCount} times`);
-
-    // Log summary of all render counts
-    if (renderCounts.size > 1) {
-      console.log('=== All message render counts ===');
-      renderCounts.forEach((count, id) => {
-        console.log(`  ${id.substring(0, 8)}...: ${count} renders`);
-      });
-      console.log('================================');
-    }
   });
 
   // Get user status

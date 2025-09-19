@@ -13,6 +13,7 @@ import {
   Layers,
   List,
   Type,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -29,8 +30,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { type NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
+import { NDKEvent, type NDKEvent as NDKEventType, NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { useSubscribe, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "@/components/chat/hooks/useChatMessages";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
@@ -46,7 +48,7 @@ import { ConversationStopButton } from "@/components/chat/ConversationStopButton
 import { useThreadViewModeStore, type ThreadViewMode } from "@/stores/thread-view-mode-store";
 
 interface ChatHeaderProps {
-  rootEvent: NDKEvent | null;
+  rootEvent: NDKEventType | null;
   onBack?: () => void;
   onDetach?: () => void;
   messages?: Message[];
@@ -71,12 +73,13 @@ export function ChatHeader({
   const isMobile = useIsMobile();
   const isNewThread = !rootEvent;
   const [showTTSInfo, setShowTTSInfo] = useState(false);
-  const { hasTTS, generateTitle, hasProvider } = useAI();
+  const { hasTTS, generateTitle, hasTitleProvider, summarizeConversation, hasSummaryProvider } = useAI();
   const ttsEnabled = hasTTS;
   const [copiedFormat, setCopiedFormat] = useState<"markdown" | "json" | "jsonl" | null>(
     null,
   );
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const { ndk } = useNDK();
   const { mode: viewMode, setMode: setViewMode } = useThreadViewModeStore();
   
@@ -169,8 +172,8 @@ export function ChatHeader({
   };
 
   const handleAddTitle = async () => {
-    if (!rootEvent || !messages || !hasProvider) {
-      toast.error("Cannot generate title: no messages or AI provider configured");
+    if (!rootEvent || !messages || !hasTitleProvider) {
+      toast.error("Cannot generate title: no messages or title generation LLM configured");
       return;
     }
 
@@ -179,7 +182,7 @@ export function ChatHeader({
       // Extract message content for title generation
       const messageContents = messages
         .slice(0, 5)
-        .map(m => m.content || "")
+        .map(m => m.event.content || "")
         .filter(c => c.length > 0);
 
       if (messageContents.length === 0) {
@@ -191,15 +194,19 @@ export function ChatHeader({
 
       // Publish the title as metadata
       if (ndk) {
-        const metadataEvent = await ndk.publishEvent({
-          kind: 513, // Conversation metadata kind
-          content: JSON.stringify({ title: generatedTitle }),
-          tags: [["E", rootEvent.id]],
-        });
+        const metadataEvent = new NDKEvent(ndk);
+        metadataEvent.kind = 513; // Conversation metadata kind
+        metadataEvent.content = ""; // Content should be empty for kind:513
+        metadataEvent.tags = [
+          ["e", rootEvent.id], // Use lowercase 'e' for consistency
+          ["title", generatedTitle] // Store title in tags
+        ];
 
-        if (metadataEvent) {
+        try {
+          await metadataEvent.publish();
           toast.success("Title added successfully");
-        } else {
+        } catch (publishError) {
+          console.error("Failed to publish title event:", publishError);
           toast.error("Failed to save title");
         }
       }
@@ -210,6 +217,74 @@ export function ChatHeader({
       setIsGeneratingTitle(false);
     }
   };
+
+  const handleSummarize = async () => {
+    if (!rootEvent || !messages) {
+      toast.error("Cannot generate summary: no messages available");
+      return;
+    }
+
+    if (!hasSummaryProvider) {
+      toast.error("Please configure a summary LLM in Settings > AI Settings > UI Features Configuration");
+      return;
+    }
+
+    setIsGeneratingSummary(true);
+    try {
+      // Prepare messages for summarization with author names
+      const messagesToSummarize = await Promise.all(
+        messages.map(async (msg) => {
+          let authorName = "Unknown";
+          if (msg.author && ndk) {
+            try {
+              const user = await ndk.fetchUser(msg.author);
+              authorName = user?.profile?.displayName || user?.profile?.name || msg.author.slice(0, 8);
+            } catch {
+              authorName = msg.author.slice(0, 8);
+            }
+          }
+          return {
+            author: authorName,
+            content: msg.event.content || "",
+            timestamp: msg.event.created_at
+          };
+        })
+      );
+
+      if (messagesToSummarize.length === 0) {
+        toast.error("No message content to summarize");
+        return;
+      }
+
+      // Generate the summary
+      const summary = await summarizeConversation(messagesToSummarize);
+      
+      // Directly publish the summary 
+      if (ndk && summary) {
+        const summaryEvent = new NDKEvent(ndk);
+        summaryEvent.kind = 513;
+        summaryEvent.content = "";
+        summaryEvent.tags = [
+          ["summary", summary],
+          ["e", rootEvent.id]
+        ];
+
+        try {
+          await summaryEvent.publish();
+          toast.success("Summary published successfully");
+        } catch (publishError) {
+          console.error("Failed to publish summary event:", publishError);
+          toast.error("Failed to publish summary");
+        }
+      }
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      // Error is already shown by the useAI hook, no need for duplicate toast
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
 
   const toggleViewMode = () => {
     const newMode: ThreadViewMode = viewMode === 'threaded' ? 'flattened' : 'threaded';
@@ -303,11 +378,19 @@ export function ChatHeader({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   onClick={handleAddTitle}
-                  disabled={isGeneratingTitle || !hasProvider}
+                  disabled={isGeneratingTitle || !hasTitleProvider}
                   className="cursor-pointer"
                 >
                   <Type className="w-4 h-4 mr-2" />
                   {isGeneratingTitle ? "Generating..." : "Add Title"}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleSummarize}
+                  disabled={isGeneratingSummary || !hasSummaryProvider}
+                  className="cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  {isGeneratingSummary ? "Summarizing..." : "Summarize"}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={toggleViewMode}
@@ -325,27 +408,7 @@ export function ChatHeader({
                     </>
                   )}
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          {/* Copy thread dropdown */}
-          {rootEvent && messages && messages.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-8 h-8 sm:w-9 sm:h-9 hover:bg-accent"
-                  aria-label="Copy thread"
-                >
-                  {copiedFormat ? (
-                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                  ) : (
-                    <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => handleCopyThread("markdown")}
                   className="cursor-pointer"

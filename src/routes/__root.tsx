@@ -22,6 +22,7 @@ import { NDKAgentLesson } from "@/lib/ndk-events/NDKAgentLesson";
 import { GlobalTTSPlayer } from "@/components/tts/GlobalTTSPlayer";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QuoteModal } from "@/components/chat/QuoteModal";
+import ConversationMetadataSubscriber from "@/components/nostr/ConversationMetadataSubscriber";
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -73,6 +74,7 @@ function RootComponent() {
                 <Outlet />
                 <GlobalTTSPlayer />
                 <QuoteModal />
+                <ConversationMetadataSubscriber />
                 <Toaster
                   richColors
                   position="top-center"

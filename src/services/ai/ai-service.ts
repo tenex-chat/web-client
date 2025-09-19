@@ -51,17 +51,20 @@ Text to clean: ${text}`,
     }
   }
 
-  async generateTitle(messages: string[]): Promise<string> {
-    if (!this.currentConfig) {
+  async generateTitle(messages: string[], config?: ProviderConfig): Promise<string> {
+    // Use provided config or fall back to current config
+    const configToUse = config || this.currentConfig;
+    
+    if (!configToUse) {
       // Fallback to first message or default
       return messages[0]?.slice(0, 50) || "Untitled Conversation";
     }
 
     try {
-      const provider = providerRegistry.getProvider(this.currentConfig.id);
+      const provider = providerRegistry.getProvider(configToUse.id);
       const model =
-        this.currentConfig.model ||
-        this.getDefaultModel(this.currentConfig.provider);
+        configToUse.model ||
+        this.getDefaultModel(configToUse.provider);
 
       const conversationPreview = messages.slice(0, 5).join("\n---\n");
 
@@ -80,6 +83,68 @@ ${conversationPreview}`,
       console.error("Title generation error:", error);
       // Fallback to first message or default
       return messages[0]?.slice(0, 50) || "Untitled Conversation";
+    }
+  }
+
+  async summarizeConversation(messages: Array<{ author: string; content: string; timestamp?: number }>, config?: ProviderConfig): Promise<string> {
+    // Use provided config or fall back to current config
+    const configToUse = config || this.currentConfig;
+    
+    if (!configToUse) {
+      console.error("No AI provider configured for summarization");
+      throw new Error("No AI provider configured. Please configure an LLM in Settings.");
+    }
+
+    try {
+      const provider = providerRegistry.getProvider(configToUse.id);
+      const model =
+        configToUse.model ||
+        this.getDefaultModel(configToUse.provider);
+
+      // Format messages with author names and limit context to ~3000 tokens worth
+      // Assuming ~4 chars per token, limit to ~12000 chars
+      let conversationText = "";
+      let charCount = 0;
+      const maxChars = 12000;
+      
+      // Process messages from most recent backwards
+      for (let i = messages.length - 1; i >= 0 && charCount < maxChars; i--) {
+        const msg = messages[i];
+        const formatted = `${msg.author}: ${msg.content}\n\n`;
+        if (charCount + formatted.length > maxChars) {
+          break;
+        }
+        // Build in reverse order so most recent is at the end
+        conversationText = formatted + conversationText;
+        charCount += formatted.length;
+      }
+
+      // Add context about truncation if needed
+      if (messages.length > 0 && charCount >= maxChars) {
+        conversationText = `[Earlier messages truncated]\n\n${conversationText}`;
+      }
+
+      const { text: summary } = await generateText({
+        model: provider(model),
+        prompt: `You are an expert at summarizing conversations. Create a comprehensive summary of the following conversation that captures the key points, decisions, and outcomes. Focus on the most important information and maintain clarity.
+
+The summary should:
+- Be concise but informative (aim for 2-4 paragraphs)
+- Highlight key topics discussed
+- Note any decisions made or action items
+- Capture the overall tone and purpose
+
+Conversation:
+${conversationText}
+
+Summary:`,
+        temperature: 0.5,
+      });
+
+      return summary.trim();
+    } catch (error) {
+      console.error("Conversation summarization error:", error);
+      throw error;
     }
   }
 

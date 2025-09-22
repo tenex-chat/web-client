@@ -39,7 +39,7 @@ export class StreamingTTSPlayer {
       try {
         await this.audioElement.setSinkId(this.outputDeviceId);
       } catch (error) {
-        console.warn("Failed to set audio output device:", error);
+        // Failed to set audio output device
       }
     }
 

@@ -34,6 +34,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
   const animationFrameRef = useRef<number>(0);
   const streamRef = useRef<MediaStream | null>(null);
   const recorderId = useRef<string>(`recorder-${Date.now()}`);
+  const streamCacheKeyRef = useRef<string>("");
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -42,10 +43,11 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
       animationFrameRef.current = 0;
     }
 
-    if (streamRef.current) {
+    if (streamRef.current && streamCacheKeyRef.current) {
       // Release stream through resource manager
-      audioResourceManager.releaseMediaStream(`input-${deviceId || 'default'}`);
+      audioResourceManager.releaseMediaStream(streamCacheKeyRef.current);
       streamRef.current = null;
+      streamCacheKeyRef.current = "";
       setStream(null);
     }
 
@@ -124,11 +126,13 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
       };
 
       // Get media stream through resource manager
+      const cacheKey = `input-${deviceId || 'default'}`;
       const mediaStream = await audioResourceManager.getUserMedia(
         constraints,
-        `input-${deviceId || 'default'}`
+        cacheKey
       );
       streamRef.current = mediaStream;
+      streamCacheKeyRef.current = cacheKey;
       setStream(mediaStream);
 
       // Get shared audio context

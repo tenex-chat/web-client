@@ -64,7 +64,6 @@ export function useVAD(options: UseVADOptions = {}): UseVADReturn {
           onSpeechEnd?.();
         },
         onError: (err) => {
-          console.error("VAD Error:", err);
           setError(err.message);
           onError?.(err);
           cleanup();
@@ -82,7 +81,6 @@ export function useVAD(options: UseVADOptions = {}): UseVADReturn {
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to initialize VAD";
-      console.error("Failed to initialize VAD:", err);
       setError(errorMessage);
       cleanup();
     }
@@ -106,7 +104,6 @@ export function useVAD(options: UseVADOptions = {}): UseVADReturn {
         isPausedRef.current = false;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Failed to start VAD";
-        console.error("Failed to start VAD:", err);
         setError(errorMessage);
       }
     }

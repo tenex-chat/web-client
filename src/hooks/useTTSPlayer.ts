@@ -175,7 +175,6 @@ export function useTTSPlayer() {
       provider?: "openai" | "elevenlabs"
     ) => {
       if (!hasTTS || !content) {
-        console.warn("TTS not available or no content provided");
         return;
       }
 
@@ -192,7 +191,6 @@ export function useTTSPlayer() {
 
       const ttsContent = extractTTSContent(content);
       if (!ttsContent) {
-        console.warn("No TTS content extracted");
         return;
       }
 
@@ -297,7 +295,6 @@ export function useTTSPlayer() {
           });
 
           audio.addEventListener("error", (e) => {
-            console.error("Audio playback error:", e);
             setError("Playback failed");
             URL.revokeObjectURL(audioUrl);
             stopPlayback();
@@ -315,7 +312,6 @@ export function useTTSPlayer() {
           setLoading(false);
         }
       } catch (error) {
-        console.error("TTS playback failed:", error);
         setError(error instanceof Error ? error.message : "TTS playback failed");
         setLoading(false);
         stopPlayback();

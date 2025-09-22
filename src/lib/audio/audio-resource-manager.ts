@@ -3,12 +3,15 @@
  * and manage AudioContext instances efficiently
  */
 
+import { AUDIO_CONFIG } from "./audio-config";
+
 export class AudioResourceManager {
   private static instance: AudioResourceManager | null = null;
   private audioContext: AudioContext | null = null;
   private activeStreams: Map<string, MediaStream> = new Map();
   private activeRecorders: Map<string, MediaRecorder> = new Map();
   private refCount = 0;
+  private cleanupTimer: NodeJS.Timeout | null = null;
 
   private constructor() {}
 
@@ -42,15 +45,22 @@ export class AudioResourceManager {
   releaseAudioContext(): void {
     this.refCount--;
 
+    // Clear any existing cleanup timer
+    if (this.cleanupTimer) {
+      clearTimeout(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+
     // Close context when no longer needed
     if (this.refCount <= 0 && this.audioContext) {
       // Delay closing to allow for rapid re-use
-      setTimeout(() => {
+      this.cleanupTimer = setTimeout(() => {
         if (this.refCount <= 0 && this.audioContext && this.audioContext.state !== 'closed') {
           this.audioContext.close();
           this.audioContext = null;
         }
-      }, 1000);
+        this.cleanupTimer = null;
+      }, AUDIO_CONFIG.RESOURCES.AUDIO_CONTEXT_CLOSE_DELAY_MS);
     }
   }
 

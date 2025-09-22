@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { PhoneOff, Mic, MicOff, Send } from "lucide-react";
+import { PhoneOff, Mic, MicOff, Send, Sparkles, Activity, BarChart3, Circle } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ import { useChatMessages } from "@/components/chat/hooks/useChatMessages";
 import { useProjectOnlineAgents } from "@/hooks/useProjectOnlineAgents";
 import { extractTTSContent } from "@/lib/utils/extractTTSContent";
 import { AgentSelector } from "@/components/chat/components/AgentSelector";
+import { VoiceVisualizer } from "./VoiceVisualizer";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { AgentInstance } from "@/types/agent";
 
@@ -59,6 +60,14 @@ export function CallView({
   const rootEventRef = useRef<NDKEvent | null>(initialRootEvent); // Use ref for immediate updates
   const [selectedAgentPubkey, setSelectedAgentPubkey] = useState<string | null>(null);
   const [transcript, setTranscript] = useState('');
+  const [visualizerType, setVisualizerType] = useState<"waveform" | "pulse" | "bars" | "orb">(
+    () => (localStorage.getItem("voice-visualizer-type") as any) || "pulse"
+  );
+
+  // Save visualizer preference
+  useEffect(() => {
+    localStorage.setItem("voice-visualizer-type", visualizerType);
+  }, [visualizerType]);
 
   // Use ref to track call state for VAD callbacks
   const callStateRef = useRef<CallState>('initializing');
@@ -71,7 +80,7 @@ export function CallView({
   const agents = useProjectOnlineAgents(project.dTag);
   const threadManagement = useThreadManagement(
     project,
-    rootEvent || undefined, // Convert null to undefined
+    rootEvent, // Pass as is (NDKEvent | null)
     extraTags,
     (thread) => {
       setRootEvent(thread);
@@ -417,19 +426,87 @@ export function CallView({
       <div className="flex-1 flex flex-col items-center justify-center px-6">
         {/* Agent display */}
         {activeAgent && <AgentAvatar agent={activeAgent} isActive={callState === 'playing'} />}
-        
+
+        {/* Voice Visualizer */}
+        <div className="mt-8 mb-4">
+          <VoiceVisualizer
+            isActive={callState === 'recording'}
+            audioLevel={audioRecorder.audioLevel}
+            type={visualizerType}
+          />
+        </div>
+
+        {/* Visualizer Type Selector */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setVisualizerType("pulse")}
+            className={cn(
+              "p-2 rounded-lg transition-colors",
+              visualizerType === "pulse" ? "bg-white/20" : "bg-white/5 hover:bg-white/10"
+            )}
+            title="Pulse"
+          >
+            <Circle className="w-4 h-4 text-white" />
+          </button>
+          <button
+            onClick={() => setVisualizerType("waveform")}
+            className={cn(
+              "p-2 rounded-lg transition-colors",
+              visualizerType === "waveform" ? "bg-white/20" : "bg-white/5 hover:bg-white/10"
+            )}
+            title="Waveform"
+          >
+            <Activity className="w-4 h-4 text-white" />
+          </button>
+          <button
+            onClick={() => setVisualizerType("bars")}
+            className={cn(
+              "p-2 rounded-lg transition-colors",
+              visualizerType === "bars" ? "bg-white/20" : "bg-white/5 hover:bg-white/10"
+            )}
+            title="Bars"
+          >
+            <BarChart3 className="w-4 h-4 text-white" />
+          </button>
+          <button
+            onClick={() => setVisualizerType("orb")}
+            className={cn(
+              "p-2 rounded-lg transition-colors",
+              visualizerType === "orb" ? "bg-white/20" : "bg-white/5 hover:bg-white/10"
+            )}
+            title="Orb"
+          >
+            <Sparkles className="w-4 h-4 text-white" />
+          </button>
+        </div>
+
         {/* Status display */}
-        <div className="mt-8 min-h-[100px] max-w-md w-full text-center">
+        <div className="mt-4 min-h-[60px] max-w-md w-full text-center">
           {callState === 'recording' && (
             <div className="text-white">
-              Recording...
+              <span className="inline-flex items-center gap-2">
+                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                Listening...
+              </span>
             </div>
           )}
           {callState === 'processing' && (
-            <div className="text-white/60">Processing...</div>
+            <div className="text-white/60">
+              <div className="mb-2">Processing...</div>
+              {transcript && (
+                <div className="text-white/40 text-sm italic">
+                  "{transcript}"
+                </div>
+              )}
+            </div>
           )}
           {callState === 'playing' && (
             <div className="text-white/60">Agent speaking...</div>
+          )}
+          {callState === 'idle' && transcript && (
+            <div className="text-white/40 text-sm">
+              Last: "{transcript}"
+            </div>
           )}
         </div>
       </div>
@@ -451,17 +528,49 @@ export function CallView({
           onClick={handleMicButton}
           disabled={callState === 'processing'}
           className={cn(
-            "w-16 h-16 rounded-full flex items-center justify-center",
-            callState === 'recording' 
-              ? "bg-white text-black" 
+            "w-16 h-16 rounded-full flex items-center justify-center relative overflow-hidden",
+            callState === 'recording'
+              ? "bg-white text-black"
               : "bg-gray-700 text-white hover:bg-gray-600"
           )}
         >
-          {callState === 'recording' ? (
-            <Mic className="h-7 w-7" />
-          ) : (
-            <MicOff className="h-7 w-7" />
+          {/* Recording indicator ring */}
+          {callState === 'recording' && (
+            <motion.div
+              className="absolute inset-0 rounded-full border-3 border-red-500"
+              animate={{
+                scale: [1, 1.3, 1],
+                opacity: [1, 0, 1],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeOut",
+              }}
+            />
           )}
+
+          {/* Audio level background */}
+          {callState === 'recording' && (
+            <motion.div
+              className="absolute inset-0 bg-red-500/20"
+              animate={{
+                scale: 1 + audioRecorder.audioLevel * 0.5,
+              }}
+              transition={{
+                duration: 0.05,
+                ease: "easeOut",
+              }}
+            />
+          )}
+
+          <div className="relative z-10">
+            {callState === 'recording' ? (
+              <Mic className="h-7 w-7 animate-pulse" />
+            ) : (
+              <MicOff className="h-7 w-7" />
+            )}
+          </div>
         </motion.button>
         
         {/* Send button */}

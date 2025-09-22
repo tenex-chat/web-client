@@ -87,7 +87,6 @@ Text to clean: ${text}`,
 Conversation:
 ${conversationPreview}`,
         temperature: 0.7,
-        maxTokens: 20,
       });
 
       return title.trim().slice(0, 50);
@@ -270,6 +269,7 @@ Summary:`,
     }
   }
 
+  /* Experimental ElevenLabs transcription (currently unused)
   private async transcribeWithElevenLabsExperimental(audio: Blob, apiKey: string): Promise<string> {
     try {
       // Initialize ElevenLabs client
@@ -307,7 +307,7 @@ Summary:`,
       throw error;
     }
   }
-
+  */
 
   async speak(
     text: string,

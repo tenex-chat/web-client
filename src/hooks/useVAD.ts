@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { VADService } from "@/lib/audio/vad-service";
 import { useAudioSettings } from "@/stores/ai-config-store";
+import { AUDIO_CONFIG } from "@/lib/audio/audio-config";
 
 interface UseVADOptions {
   enabled?: boolean;
@@ -68,12 +69,12 @@ export function useVAD(options: UseVADOptions = {}): UseVADReturn {
           onError?.(err);
           cleanup();
         },
-        // Use optimized settings for natural speech
-        positiveSpeechThreshold: 0.4,
-        negativeSpeechThreshold: 0.15,
-        redemptionFrames: 40,  // ~1.3 seconds of silence before ending
-        preSpeechPadFrames: 15,
-        minSpeechFrames: 8,
+        // Use optimized settings for natural speech from config
+        positiveSpeechThreshold: AUDIO_CONFIG.VAD.POSITIVE_SPEECH_THRESHOLD,
+        negativeSpeechThreshold: AUDIO_CONFIG.VAD.NEGATIVE_SPEECH_THRESHOLD,
+        redemptionFrames: AUDIO_CONFIG.VAD.REDEMPTION_FRAMES,
+        preSpeechPadFrames: AUDIO_CONFIG.VAD.PRE_SPEECH_PAD_FRAMES,
+        minSpeechFrames: AUDIO_CONFIG.VAD.MIN_SPEECH_FRAMES,
       });
 
       vadServiceRef.current = vadService;

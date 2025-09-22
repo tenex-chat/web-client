@@ -43,6 +43,7 @@ import { extractTTSContent } from "@/lib/utils/extractTTSContent";
 import { useVAD } from "@/hooks/useVAD";
 import { atomWithStorage } from "jotai/utils";
 import { StreamingTTSPlayer } from "@/lib/audio/streaming-tts-player";
+import { AUDIO_CONFIG } from "@/lib/audio/audio-config";
 
 // Setting for enabling speech interruption
 const speechInterruptionEnabledAtom = atomWithStorage("tts-speech-interruption-enabled", true);
@@ -112,8 +113,6 @@ export function useTTSPlayer() {
   // Handle speech interruption using VAD
   const speechStartTimeRef = useRef<number | null>(null);
   const resumeTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const stopThreshold = 2000; // Stop after 2 seconds of continuous speech
-  const resumeDelay = 500; // Resume after 500ms of silence
   
   const vad = useVAD({
     enabled: speechInterruptionEnabled && hasTTS && isPlaying,
@@ -138,13 +137,13 @@ export function useTTSPlayer() {
         : 0;
       
       // If user spoke for too long, stop TTS completely
-      if (speechDuration >= stopThreshold) {
+      if (speechDuration >= AUDIO_CONFIG.INTERRUPTION.STOP_THRESHOLD_MS) {
         stop();
       } else {
         // Otherwise, resume after delay
         resumeTimerRef.current = setTimeout(() => {
           resumePlaybackAction();
-        }, resumeDelay);
+        }, AUDIO_CONFIG.INTERRUPTION.RESUME_DELAY_MS);
       }
       
       speechStartTimeRef.current = null;
@@ -228,7 +227,7 @@ export function useTTSPlayer() {
                 setDuration(duration);
               }
             }
-          }, 100);
+          }, AUDIO_CONFIG.STREAMING.PROGRESS_UPDATE_INTERVAL_MS);
 
           // Set up event listener for when playback ends
           streamingPlayer.onEnded(() => {

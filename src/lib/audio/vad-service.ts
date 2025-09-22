@@ -1,8 +1,5 @@
-// @ts-ignore - Type issues with the module
-import { MicVAD } from "@ricky0123/vad-web";
-
-// Define types
-type RealTimeVADOptions = Parameters<typeof MicVAD.new>[0];
+import type { VADOptions, MicVADInstance } from "@ricky0123/vad-web";
+import { audioResourceManager } from "./audio-resource-manager";
 
 export interface VADServiceOptions {
   onSpeechStart?: () => void;
@@ -18,11 +15,10 @@ export interface VADServiceOptions {
 }
 
 export class VADService {
-  private vad: InstanceType<typeof MicVAD> | null = null;
+  private vad: MicVADInstance | null = null;
   private isInitialized = false;
   private isListening = false;
   private options: VADServiceOptions;
-  private audioContext: AudioContext | null = null;
   
   constructor(options: VADServiceOptions = {}) {
     this.options = options;
@@ -34,22 +30,18 @@ export class VADService {
     }
     
     try {
-      // Create audio context for audio processing
-      this.audioContext = new AudioContext();
       
-      const vadOptions: Partial<RealTimeVADOptions> = {
+      const vadOptions: VADOptions = {
         onSpeechStart: () => {
-          console.log(`VAD: Speech started - ${Date.now()}ms`);
           this.options.onSpeechStart?.();
         },
         onSpeechEnd: (audio: Float32Array) => {
-          console.log(`VAD: Speech ended with audio length: ${audio.length} - ${Date.now()}ms`);
           // Process the audio if needed
           this.options.frameProcessor?.(audio);
           this.options.onSpeechEnd?.();
         },
         onVADMisfire: () => {
-          console.log(`VAD: Misfire (too short) - ${Date.now()}ms`);
+          // VAD detected speech that was too short
         },
         // Sensitivity settings
         positiveSpeechThreshold: this.options.positiveSpeechThreshold ?? 0.9,
@@ -57,29 +49,30 @@ export class VADService {
         redemptionMs: (this.options.redemptionFrames ?? 8) * 32, // Convert frames to ms (assuming ~32ms per frame)
         preSpeechPadMs: (this.options.preSpeechPadFrames ?? 4) * 32,
         minSpeechMs: (this.options.minSpeechFrames ?? 3) * 32,
-        // Use specific device if provided
+        // Use specific device if provided through resource manager
         ...(deviceId && {
-          stream: await navigator.mediaDevices.getUserMedia({
-            audio: {
-              deviceId: { exact: deviceId },
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
+          stream: await audioResourceManager.getUserMedia(
+            {
+              audio: {
+                deviceId: { exact: deviceId },
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+              },
             },
-          }),
+            `vad-${deviceId}`
+          ),
         }),
       };
       
       // Initialize MicVAD
-      // @ts-ignore - Type issues with the module
-      this.vad = await MicVAD.new(vadOptions);
+      const { MicVAD: MicVADClass } = await import("@ricky0123/vad-web");
+      this.vad = await MicVADClass.new(vadOptions);
       this.isInitialized = true;
-      
-      console.log(`VAD Service initialized successfully - ${Date.now()}ms`);
     } catch (error) {
-      console.error("Failed to initialize VAD:", error);
-      this.options.onError?.(error as Error);
-      throw error;
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.options.onError?.(err);
+      throw err;
     }
   }
   
@@ -95,11 +88,10 @@ export class VADService {
     try {
       await this.vad.start();
       this.isListening = true;
-      console.log(`VAD Service started listening - ${Date.now()}ms`);
     } catch (error) {
-      console.error("Failed to start VAD:", error);
-      this.options.onError?.(error as Error);
-      throw error;
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.options.onError?.(err);
+      throw err;
     }
   }
   
@@ -110,7 +102,6 @@ export class VADService {
     
     this.vad.pause();
     this.isListening = false;
-    console.log(`VAD Service paused - ${Date.now()}ms`);
   }
   
   resume(): void {
@@ -120,7 +111,6 @@ export class VADService {
     
     this.vad.start();
     this.isListening = true;
-    console.log(`VAD Service resumed - ${Date.now()}ms`);
   }
   
   destroy(): void {
@@ -129,14 +119,11 @@ export class VADService {
       this.vad = null;
     }
     
-    if (this.audioContext) {
-      this.audioContext.close();
-      this.audioContext = null;
-    }
+    // Release any cached streams
+    // Note: VAD library manages its own audio context internally
     
     this.isInitialized = false;
     this.isListening = false;
-    console.log(`VAD Service destroyed - ${Date.now()}ms`);
   }
   
   updateOptions(options: Partial<VADServiceOptions>): void {
@@ -145,7 +132,7 @@ export class VADService {
     // If VAD is already initialized, we'd need to recreate it
     // with new options (VAD doesn't support live updates)
     if (this.isInitialized && this.vad) {
-      console.warn("VAD options changed, but VAD is already initialized. Recreate VAD for changes to take effect.");
+      // VAD options changed after initialization - requires recreation for changes to take effect
     }
   }
   

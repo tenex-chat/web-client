@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useAudioSettings } from "@/stores/ai-config-store";
+import { audioResourceManager } from "@/lib/audio/audio-resource-manager";
+import { AUDIO_CONFIG } from "@/lib/audio/audio-config";
 
 interface UseAudioRecorderOptions {
   onDataAvailable?: (data: Float32Array) => void;
@@ -31,6 +33,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
   const audioContextRef = useRef<AudioContext | null>(null);
   const animationFrameRef = useRef<number>(0);
   const streamRef = useRef<MediaStream | null>(null);
+  const recorderId = useRef<string>(`recorder-${Date.now()}`);
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -40,18 +43,19 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
     }
 
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      // Release stream through resource manager
+      audioResourceManager.releaseMediaStream(`input-${deviceId || 'default'}`);
       streamRef.current = null;
       setStream(null);
     }
 
-    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-      audioContextRef.current.close();
+    if (audioContextRef.current) {
+      audioResourceManager.releaseAudioContext();
       audioContextRef.current = null;
     }
 
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
+    if (mediaRecorderRef.current) {
+      audioResourceManager.releaseMediaRecorder(recorderId.current);
       mediaRecorderRef.current = null;
     }
 
@@ -78,17 +82,21 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
         sum += dataArray[i] * dataArray[i];
       }
       const rms = Math.sqrt(sum / bufferLength);
-      const level = Math.min(1, rms * 5); // Scale and clamp to 0-1
+      const level = Math.min(1, rms * AUDIO_CONFIG.RECORDING.RMS_SCALE_FACTOR); // Scale and clamp to 0-1
       
       setAudioLevel(level);
-      
+
       // Call callback if provided
       if (onDataAvailable) {
         onDataAvailable(dataArray);
       }
 
-      if (isRecording) {
+      // Ensure we clean up properly
+      if (isRecording && analyserRef.current) {
         animationFrameRef.current = requestAnimationFrame(updateLevel);
+      } else if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = 0;
       }
     };
 
@@ -115,15 +123,19 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
         }
       };
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Get media stream through resource manager
+      const mediaStream = await audioResourceManager.getUserMedia(
+        constraints,
+        `input-${deviceId || 'default'}`
+      );
       streamRef.current = mediaStream;
       setStream(mediaStream);
 
-      // Set up audio analysis
-      audioContextRef.current = new AudioContext();
+      // Get shared audio context
+      audioContextRef.current = await audioResourceManager.getAudioContext();
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 256;
-      analyserRef.current.smoothingTimeConstant = 0.8;
+      analyserRef.current.fftSize = AUDIO_CONFIG.RECORDING.FFT_SIZE;
+      analyserRef.current.smoothingTimeConstant = AUDIO_CONFIG.RECORDING.SMOOTHING_TIME_CONSTANT;
 
       const source = audioContextRef.current.createMediaStreamSource(mediaStream);
       
@@ -137,9 +149,13 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
         source.connect(analyserRef.current);
       }
 
-      // Set up MediaRecorder
+      // Set up MediaRecorder through resource manager
       const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4";
-      const recorder = new MediaRecorder(mediaStream, { mimeType });
+      const recorder = audioResourceManager.createMediaRecorder(
+        mediaStream,
+        { mimeType },
+        recorderId.current
+      );
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (event) => {
@@ -149,21 +165,21 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
       };
 
       recorder.onerror = (event) => {
-        console.error("MediaRecorder error:", event);
-        setError("Recording failed");
+        const error = event as ErrorEvent;
+        setError(`Recording failed: ${error.message || 'Unknown error'}`);
         cleanup();
       };
 
       // Start recording
-      recorder.start(100); // Collect data every 100ms
+      recorder.start(AUDIO_CONFIG.RECORDING.CHUNK_INTERVAL_MS);
       setIsRecording(true);
       monitorAudioLevel();
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to start recording";
-      console.error("Failed to start recording:", err);
       setError(errorMessage);
       cleanup();
+      throw err;
     }
   }, [audioSettings, deviceId, cleanup, monitorAudioLevel]);
 
@@ -197,7 +213,9 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
   // Auto-start if requested
   useEffect(() => {
     if (autoStart && !isRecording) {
-      startRecording();
+      startRecording().catch(error => {
+        setError(error.message || "Failed to auto-start recording");
+      });
     }
   }, [autoStart]);
 

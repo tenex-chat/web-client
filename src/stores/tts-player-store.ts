@@ -1,5 +1,6 @@
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
+import { AUDIO_CONFIG } from "@/lib/audio/audio-config";
 
 export interface QueueItem {
   id: string;
@@ -26,8 +27,8 @@ interface TTSPlayerState {
 }
 
 // Persistent settings
-export const ttsPlaybackRateAtom = atomWithStorage("tts-playback-rate", 1.0);
-export const ttsVolumeAtom = atomWithStorage("tts-volume", 1.0);
+export const ttsPlaybackRateAtom = atomWithStorage("tts-playback-rate", AUDIO_CONFIG.PLAYBACK.DEFAULT_RATE);
+export const ttsVolumeAtom = atomWithStorage("tts-volume", AUDIO_CONFIG.PLAYBACK.DEFAULT_VOLUME);
 export const ttsAutoPlayNextAtom = atomWithStorage("tts-auto-play-next", false);
 
 // Player state
@@ -163,7 +164,7 @@ export const seekToAtom = atom(null, (get, set, time: number) => {
   }
 });
 
-export const skipForwardAtom = atom(null, (get, set, seconds: number = 10) => {
+export const skipForwardAtom = atom(null, (get, set, seconds: number = AUDIO_CONFIG.PLAYBACK.SKIP_FORWARD_SECONDS) => {
   const state = get(ttsPlayerStateAtom);
   if (state.currentAudio) {
     const newTime = Math.min(state.currentTime + seconds, state.duration);
@@ -171,7 +172,7 @@ export const skipForwardAtom = atom(null, (get, set, seconds: number = 10) => {
   }
 });
 
-export const skipBackwardAtom = atom(null, (get, set, seconds: number = 10) => {
+export const skipBackwardAtom = atom(null, (get, set, seconds: number = AUDIO_CONFIG.PLAYBACK.SKIP_BACKWARD_SECONDS) => {
   const state = get(ttsPlayerStateAtom);
   if (state.currentAudio) {
     const newTime = Math.max(state.currentTime - seconds, 0);
@@ -181,7 +182,7 @@ export const skipBackwardAtom = atom(null, (get, set, seconds: number = 10) => {
 
 export const setPlaybackRateAtom = atom(null, (get, set, rate: number) => {
   const state = get(ttsPlayerStateAtom);
-  const clampedRate = Math.max(0.25, Math.min(rate, 4));
+  const clampedRate = Math.max(AUDIO_CONFIG.PLAYBACK.MIN_RATE, Math.min(rate, AUDIO_CONFIG.PLAYBACK.MAX_RATE));
   set(ttsPlaybackRateAtom, clampedRate);
   if (state.currentAudio) {
     state.currentAudio.playbackRate = clampedRate;
@@ -190,7 +191,7 @@ export const setPlaybackRateAtom = atom(null, (get, set, rate: number) => {
 
 export const setVolumeAtom = atom(null, (get, set, volume: number) => {
   const state = get(ttsPlayerStateAtom);
-  const clampedVolume = Math.max(0, Math.min(volume, 1));
+  const clampedVolume = Math.max(AUDIO_CONFIG.PLAYBACK.MIN_VOLUME, Math.min(volume, AUDIO_CONFIG.PLAYBACK.MAX_VOLUME));
   set(ttsVolumeAtom, clampedVolume);
   if (state.currentAudio) {
     state.currentAudio.volume = clampedVolume;

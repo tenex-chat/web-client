@@ -7,6 +7,7 @@ interface VoiceVisualizerProps {
   audioLevel: number;
   type?: "waveform" | "pulse" | "bars" | "orb";
   className?: string;
+  color?: string; // Optional color for theming
 }
 
 // Waveform Visualizer - Animated sine wave
@@ -162,7 +163,7 @@ export function BarsVisualizer({ isActive, audioLevel, className }: Omit<VoiceVi
 }
 
 // Orb Visualizer - Glowing orb with dynamic glow effect
-export function OrbVisualizer({ isActive, audioLevel, className }: Omit<VoiceVisualizerProps, "type">) {
+export function OrbVisualizer({ isActive, audioLevel, className, color = "hsl(0, 0%, 100%)" }: Omit<VoiceVisualizerProps, "type">) {
   const glowSize = isActive ? 20 + (audioLevel * 30) : 10;
 
   return (
@@ -170,31 +171,45 @@ export function OrbVisualizer({ isActive, audioLevel, className }: Omit<VoiceVis
       {/* Glow effect */}
       <motion.div
         className="absolute inset-0 rounded-full"
-        animate={{
+        style={{
           boxShadow: isActive
-            ? `0 0 ${glowSize}px ${glowSize/2}px rgba(255, 255, 255, 0.5)`
-            : "0 0 10px 5px rgba(255, 255, 255, 0.1)",
+            ? `0 0 ${glowSize}px ${glowSize/2}px ${color.replace(')', ', 0.5)').replace('hsl(', 'hsla(')}`
+            : `0 0 10px 5px ${color.replace(')', ', 0.1)').replace('hsl(', 'hsla(')}`,
         }}
-        transition={{ duration: 0.1 }}
+        animate={{
+          opacity: [1, 0.8, 1]
+        }}
+        transition={{
+          duration: 0.1,
+          opacity: {
+            duration: 2,
+            repeat: isActive ? Infinity : 0,
+            ease: "easeInOut"
+          }
+        }}
       />
 
       {/* Core orb */}
       <motion.div
-        className={cn(
-          "absolute inset-2 rounded-full",
-          isActive
-            ? "bg-gradient-to-br from-white via-white/80 to-white/60"
-            : "bg-gradient-to-br from-white/40 via-white/30 to-white/20"
-        )}
+        className="absolute inset-2 rounded-full"
+        style={{
+          background: isActive
+            ? color
+            : color.replace(')', ', 0.4)').replace('hsl(', 'hsla('),
+        }}
         animate={{
           scale: isActive ? 1 + (audioLevel * 0.2) : 1,
+          filter: isActive ? `brightness(${1 + audioLevel * 0.3})` : 'brightness(0.6)'
         }}
         transition={{ duration: 0.05 }}
       />
 
       {/* Inner light */}
       <motion.div
-        className="absolute inset-4 rounded-full bg-white/40 blur-sm"
+        className="absolute inset-4 rounded-full blur-sm"
+        style={{
+          backgroundColor: color.replace(')', ', 0.6)').replace('hsl(', 'hsla(')
+        }}
         animate={{
           opacity: isActive ? [0.4, 0.8, 0.4] : 0.2,
           scale: isActive ? [1, 1.2, 1] : 1,
@@ -210,14 +225,14 @@ export function OrbVisualizer({ isActive, audioLevel, className }: Omit<VoiceVis
 }
 
 // Main component that renders the selected visualizer
-export function VoiceVisualizer({ isActive, audioLevel, type = "pulse", className }: VoiceVisualizerProps) {
+export function VoiceVisualizer({ isActive, audioLevel, type = "pulse", className, color }: VoiceVisualizerProps) {
   switch (type) {
     case "waveform":
       return <WaveformVisualizer isActive={isActive} audioLevel={audioLevel} className={className} />;
     case "bars":
       return <BarsVisualizer isActive={isActive} audioLevel={audioLevel} className={className} />;
     case "orb":
-      return <OrbVisualizer isActive={isActive} audioLevel={audioLevel} className={className} />;
+      return <OrbVisualizer isActive={isActive} audioLevel={audioLevel} className={className} color={color} />;
     case "pulse":
     default:
       return <PulseVisualizer isActive={isActive} audioLevel={audioLevel} className={className} />;

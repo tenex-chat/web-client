@@ -20,6 +20,31 @@ import { VoiceVisualizer } from "./VoiceVisualizer";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { AgentInstance } from "@/types/agent";
 
+/**
+ * Generate a deterministic color from project's d-tag
+ * (Same logic as ProjectAvatar component)
+ */
+function getProjectColor(project: NDKProject): string {
+  // Get d-tag from project
+  const dTag = project.tags?.find(tag => tag[0] === "d")?.[1] || project.id || project.title || "";
+
+  if (!dTag) return "#94a3b8"; // Default slate-400
+
+  // Simple hash function
+  let hash = 0;
+  for (let i = 0; i < dTag.length; i++) {
+    const char = dTag.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash;
+  }
+
+  // Convert to hue (0-360)
+  const hue = Math.abs(hash) % 360;
+
+  // Return HSL color with fixed saturation/lightness
+  return `hsl(${hue}, 65%, 55%)`;
+}
+
 interface CallViewProps {
   project: NDKProject;
   onClose: (rootEvent?: NDKEvent | null) => void;
@@ -429,6 +454,7 @@ export function CallView({
             isActive={callState === 'recording'}
             audioLevel={audioRecorder.audioLevel}
             type={visualizerType}
+            color={getProjectColor(project)}
           />
         </div>
 

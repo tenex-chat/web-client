@@ -50,6 +50,10 @@ export function MultiProjectView({
   const [callViewProject, setCallViewProject] = useState<NDKProject | null>(
     null,
   );
+  const [callViewContext, setCallViewContext] = useState<{
+    rootEvent?: NDKEvent | null;
+    extraTags?: string[][];
+  } | null>(null);
 
   const { addWindow, canAddWindow, windows } = useWindowManager();
   const isMobile = useIsMobile();
@@ -254,41 +258,41 @@ export function MultiProjectView({
               }
             }}
             onVoiceCallClick={() => {
-              // On desktop, open in floating window; on mobile/tablet, use fullscreen overlay
-              if (isDesktop) {
-                const callContent: DrawerContent = {
-                  project,
-                  type: "call",
-                  data: {
-                    onCallEnd: (rootEvent?: NDKEvent | null) => {
-                      // If a conversation was created during the call, open it in the drawer
-                      if (rootEvent) {
-                        setSelectedThreadEvent(rootEvent);
-                        setDrawerContent({
-                          project,
-                          type: "conversations",
-                          data: rootEvent,
-                          item: rootEvent.id,
-                        });
-                      }
-                    },
-                    extraTags: selectedThreadEvent
-                      ? [["E", selectedThreadEvent.id]]
-                      : undefined,
-                    rootEvent: selectedThreadEvent,
+              // Always try to open in floating window first, regardless of device type
+              const callContent: DrawerContent = {
+                project,
+                type: "call",
+                data: {
+                  onCallEnd: (rootEvent?: NDKEvent | null) => {
+                    // If a conversation was created during the call, open it in the drawer
+                    if (rootEvent) {
+                      setSelectedThreadEvent(rootEvent);
+                      setDrawerContent({
+                        project,
+                        type: "conversations",
+                        data: rootEvent,
+                        item: rootEvent.id,
+                      });
+                    }
                   },
-                };
+                  extraTags: selectedThreadEvent
+                    ? [["E", selectedThreadEvent.id]]
+                    : undefined,
+                  rootEvent: selectedThreadEvent,
+                },
+              };
 
-                if (canAddWindow()) {
-                  addWindow(callContent);
-                } else {
-                  // If we can't add more windows, use fullscreen overlay as fallback
-                  setCallViewProject(project);
-                  setShowCallView(true);
-                }
+              if (canAddWindow()) {
+                addWindow(callContent);
               } else {
-                // Mobile/tablet: use fullscreen overlay
+                // If we can't add more windows, use fullscreen overlay as fallback
                 setCallViewProject(project);
+                setCallViewContext({
+                  rootEvent: selectedThreadEvent,
+                  extraTags: selectedThreadEvent
+                    ? [["E", selectedThreadEvent.id]]
+                    : undefined,
+                });
                 setShowCallView(true);
               }
             }}
@@ -544,6 +548,7 @@ export function MultiProjectView({
           onClose={(rootEvent) => {
             setShowCallView(false);
             setCallViewProject(null);
+            setCallViewContext(null);
             // If a conversation was created during the call, open it in the drawer
             if (rootEvent) {
               setSelectedThreadEvent(rootEvent);
@@ -555,10 +560,8 @@ export function MultiProjectView({
               });
             }
           }}
-          extraTags={
-            selectedThreadEvent ? [["E", selectedThreadEvent.id]] : undefined
-          }
-          rootEvent={selectedThreadEvent}
+          extraTags={callViewContext?.extraTags}
+          rootEvent={callViewContext?.rootEvent}
         />
       )}
 

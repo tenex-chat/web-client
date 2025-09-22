@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useAtom } from "jotai";
 import {
-  activeProviderAtom,
   voiceSettingsAtom,
   sttSettingsAtom,
   openAIApiKeyAtom,
@@ -39,7 +38,6 @@ import { voiceDiscovery } from "@/services/ai/voice-discovery";
 import { useTTSPlayer } from "@/hooks/useTTSPlayer";
 
 export function AISettings() {
-  const [activeProvider] = useAtom(activeProviderAtom);
   const [voiceSettings, setVoiceSettings] = useAtom(voiceSettingsAtom);
   const [sttSettings, setSTTSettings] = useAtom(sttSettingsAtom);
   const [openAIApiKey, setOpenAIApiKey] = useAtom(openAIApiKeyAtom);
@@ -108,7 +106,7 @@ export function AISettings() {
       // Preview the first voice in the list
       const audioBlob = await voiceDiscovery.previewVoice(
         voiceSettings.provider,
-        voiceSettings.voiceIds[0],
+        voiceSettings.voiceIds?.[0] || "alloy",
         "Hello! This is a preview of the selected voice.",
         apiKey,
       );
@@ -366,7 +364,7 @@ export function AISettings() {
                   <Label>STT Provider</Label>
                   <RadioGroup
                     value={sttSettings.provider}
-                    onValueChange={(provider: "whisper" | "elevenlabs" | "built-in-chrome") =>
+                    onValueChange={(provider: "whisper" | "elevenlabs") =>
                       setSTTSettings({ provider })
                     }
                   >
@@ -377,10 +375,6 @@ export function AISettings() {
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="elevenlabs" id="stt-elevenlabs" />
                       <Label htmlFor="stt-elevenlabs">ElevenLabs</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="built-in-chrome" id="stt-chrome" />
-                      <Label htmlFor="stt-chrome">Built-in Chrome</Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -433,12 +427,6 @@ export function AISettings() {
                   </div>
                 )}
                 
-                {sttSettings.provider === "built-in-chrome" && (
-                  <div className="pl-4 space-y-2 text-sm text-muted-foreground">
-                    <p>Uses browser's built-in speech recognition</p>
-                    <p>No API key required</p>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -450,7 +438,14 @@ export function AISettings() {
               <Switch
                 id="tts-enabled"
                 checked={voiceSettings.enabled}
-                onCheckedChange={(enabled) => setVoiceSettings({ enabled })}
+                onCheckedChange={(enabled) => {
+                  // Ensure voiceIds is initialized when enabling TTS
+                  const currentVoiceIds = voiceSettings.voiceIds || [];
+                  setVoiceSettings({ 
+                    enabled,
+                    voiceIds: currentVoiceIds.length > 0 ? currentVoiceIds : ["alloy"] // Default to alloy if no voices
+                  });
+                }}
               />
             </div>
 
@@ -527,16 +522,16 @@ export function AISettings() {
                 )}
 
                 {/* Voice Selection */}
-                {voiceSettings.voiceIds && voiceSettings.voiceIds.length > 1 ? (
+                {voiceSettings.voiceIds?.length && voiceSettings.voiceIds.length > 1 ? (
                   // Multi-voice selection (deterministic assignment)
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <Users className="h-4 w-4" />
-                      Selected Voices ({voiceSettings.voiceIds.length})
+                      Selected Voices ({voiceSettings.voiceIds?.length || 0})
                     </Label>
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-2">
-                        {voiceSettings.voiceIds.map((voiceId) => (
+                        {voiceSettings.voiceIds?.map((voiceId) => (
                           <div
                             key={voiceId}
                             className="flex items-center gap-1 px-2 py-1 bg-secondary rounded-md text-sm"

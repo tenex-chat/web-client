@@ -10,13 +10,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  useCallSettings,
+  useAudioSettings,
   type InterruptionMode,
   type InterruptionSensitivity,
   type VADMode,
-} from "@/stores/call-settings-store";
+} from "@/stores/ai-config-store";
 import { useAudioDevices } from "@/hooks/useAudioDevices";
-import { useChromeSpeechRecognition } from "@/hooks/useChromeSpeechRecognition";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -34,38 +33,34 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 
 export function AudioSettings() {
-  const { audioSettings, updateAudioSettings } = useCallSettings();
+  const { audioSettings, updateAudioSettings } = useAudioSettings();
   const { inputDevices, outputDevices, isLoading, refreshDevices } =
     useAudioDevices();
+
+  // Provide default audio settings if not loaded yet
+  const settings = audioSettings || {
+    inputDeviceId: null,
+    outputDeviceId: null,
+    inputVolume: 100,
+    noiseSuppression: true,
+    echoCancellation: true,
+    voiceActivityDetection: true,
+    vadSensitivity: 50,
+    vadMode: 'push-to-talk' as VADMode,
+    interruptionMode: 'disabled' as InterruptionMode,
+    interruptionSensitivity: 'medium' as InterruptionSensitivity
+  };
 
   // Testing states
   const [isTestingInput, setIsTestingInput] = useState(false);
   const [isTestingOutput, setIsTestingOutput] = useState(false);
-  const [isTestingSpeech, setIsTestingSpeech] = useState(false);
   const [inputLevel, setInputLevel] = useState(0);
-  const [speechTestResult, setSpeechTestResult] = useState<string>("");
 
   // Refs for testing
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number>(0);
-
-  // Chrome speech recognition for testing
-  const {
-    fullTranscript,
-    isSupported: isSpeechSupported,
-    startListening,
-    stopListening,
-    resetTranscript,
-  } = useChromeSpeechRecognition();
-
-  // Update speech test result when transcript changes
-  useEffect(() => {
-    if (fullTranscript) {
-      setSpeechTestResult(fullTranscript);
-    }
-  }, [fullTranscript]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -93,31 +88,37 @@ export function AudioSettings() {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
       setIsTestingInput(false);
       setInputLevel(0);
       return;
     }
 
     try {
+      console.log("Starting mic test with device:", settings.inputDeviceId);
       setIsTestingInput(true);
 
       const constraints: MediaStreamConstraints = {
-        audio: audioSettings.inputDeviceId
+        audio: settings.inputDeviceId
           ? {
-              deviceId: { exact: audioSettings.inputDeviceId },
-              noiseSuppression: audioSettings.noiseSuppression,
-              echoCancellation: audioSettings.echoCancellation,
-              autoGainControl: audioSettings.voiceActivityDetection,
+              deviceId: { exact: settings.inputDeviceId },
+              noiseSuppression: settings.noiseSuppression,
+              echoCancellation: settings.echoCancellation,
+              autoGainControl: settings.voiceActivityDetection,
             }
           : {
-              noiseSuppression: audioSettings.noiseSuppression,
-              echoCancellation: audioSettings.echoCancellation,
-              autoGainControl: audioSettings.voiceActivityDetection,
+              noiseSuppression: settings.noiseSuppression,
+              echoCancellation: settings.echoCancellation,
+              autoGainControl: settings.voiceActivityDetection,
             },
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
+      console.log("Got media stream:", stream.getAudioTracks()[0]?.label);
 
       // Create audio context and analyser
       audioContextRef.current = new AudioContext();
@@ -126,85 +127,80 @@ export function AudioSettings() {
       source.connect(analyserRef.current);
 
       // Monitor audio levels
-      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+      analyserRef.current.fftSize = 256;
+      const bufferLength = analyserRef.current.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
 
       const updateLevel = () => {
-        if (!analyserRef.current || !isTestingInput) return;
+        if (!analyserRef.current || !streamRef.current) return;
 
-        analyserRef.current.getByteFrequencyData(dataArray);
-        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-        const normalizedLevel = Math.min(
-          100,
-          (average / 128) * 100 * (audioSettings.inputVolume / 100),
-        );
+        analyserRef.current.getByteTimeDomainData(dataArray);
+
+        // Calculate RMS (Root Mean Square) for better volume representation
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const normalized = (dataArray[i] - 128) / 128;
+          sum += normalized * normalized;
+        }
+        const rms = Math.sqrt(sum / bufferLength);
+
+        // Convert to percentage (0-100) with input volume consideration
+        const normalizedLevel = Math.min(100, rms * 100 * 2 * (settings.inputVolume / 100));
         setInputLevel(normalizedLevel);
 
         animationFrameRef.current = requestAnimationFrame(updateLevel);
       };
 
+      console.log("Starting audio level monitoring");
       updateLevel();
-    } catch {
-      toast.error("Failed to access microphone");
+    } catch (error) {
+      console.error("Failed to access microphone:", error);
+      toast.error(`Failed to access microphone: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setIsTestingInput(false);
     }
-  }, [isTestingInput, audioSettings]);
+  }, [settings]);
 
   // Test output device
-  const testOutputDevice = useCallback(() => {
+  const testOutputDevice = useCallback(async () => {
     if (isTestingOutput) return;
 
     setIsTestingOutput(true);
 
-    // Create a test tone
-    const audioContext = new AudioContext();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    try {
+      // Create a test tone
+      const audioContext = new AudioContext();
 
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+      // Set the output device if specified
+      if (settings.outputDeviceId && audioContext.setSinkId) {
+        await audioContext.setSinkId(settings.outputDeviceId);
+      }
 
-    oscillator.frequency.value = 440; // A4 note
-    gainNode.gain.value = 0.1; // Low volume
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
 
-    oscillator.start();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
 
-    // Play test audio if output device is selected
-    if (audioSettings.outputDeviceId) {
-      const audio = new Audio();
-      audio.setSinkId?.(audioSettings.outputDeviceId);
+      oscillator.frequency.value = 440; // A4 note
+      gainNode.gain.value = 0.1; // Low volume
 
-      // Create a simple beep sound
-      const oscillatorNode = audioContext.createOscillator();
-      const gainNodeForBeep = audioContext.createGain();
-      oscillatorNode.connect(gainNodeForBeep);
-      gainNodeForBeep.connect(audioContext.destination);
-      oscillatorNode.frequency.value = 800;
-      gainNodeForBeep.gain.value = 0.2;
-      oscillatorNode.start();
-      oscillatorNode.stop(audioContext.currentTime + 0.2);
-    }
+      oscillator.start();
 
-    setTimeout(() => {
-      oscillator.stop();
-      audioContext.close();
+      // Stop after 1 second
+      setTimeout(() => {
+        oscillator.stop();
+        audioContext.close();
+        setIsTestingOutput(false);
+        toast.success("Test tone played");
+      }, 1000);
+    } catch (error) {
+      console.error("Failed to play test tone:", error);
+      toast.error("Failed to play test tone");
       setIsTestingOutput(false);
-      toast.success("Test tone played");
-    }, 1000);
-  }, [isTestingOutput, audioSettings.outputDeviceId]);
+    }
+  }, [settings.outputDeviceId]);
 
   // Test speech recognition
-  const testSpeechRecognition = useCallback(() => {
-    if (isTestingSpeech) {
-      stopListening();
-      setIsTestingSpeech(false);
-      setSpeechTestResult("");
-      resetTranscript();
-    } else {
-      setIsTestingSpeech(true);
-      setSpeechTestResult("Listening...");
-      startListening();
-    }
-  }, [isTestingSpeech, startListening, stopListening, resetTranscript]);
 
   return (
     <div className="space-y-6">
@@ -223,7 +219,7 @@ export function AudioSettings() {
           <div className="space-y-2">
             <Label>Microphone Device</Label>
             <Select
-              value={audioSettings.inputDeviceId || "default"}
+              value={settings.inputDeviceId || "default"}
               onValueChange={(value) =>
                 updateAudioSettings({
                   inputDeviceId: value === "default" ? null : value,
@@ -278,9 +274,9 @@ export function AudioSettings() {
 
           {/* Input volume */}
           <div className="space-y-2">
-            <Label>Input Volume: {audioSettings.inputVolume}%</Label>
+            <Label>Input Volume: {settings.inputVolume}%</Label>
             <Slider
-              value={[audioSettings.inputVolume]}
+              value={[settings.inputVolume]}
               onValueChange={([value]) =>
                 updateAudioSettings({ inputVolume: value })
               }
@@ -307,7 +303,7 @@ export function AudioSettings() {
           <div className="space-y-2">
             <Label>Speaker Device</Label>
             <Select
-              value={audioSettings.outputDeviceId || "default"}
+              value={settings.outputDeviceId || "default"}
               onValueChange={(value) =>
                 updateAudioSettings({
                   outputDeviceId: value === "default" ? null : value,
@@ -356,7 +352,7 @@ export function AudioSettings() {
             <Label htmlFor="noise-suppression">Noise Suppression</Label>
             <Switch
               id="noise-suppression"
-              checked={audioSettings.noiseSuppression}
+              checked={settings.noiseSuppression}
               onCheckedChange={(checked) =>
                 updateAudioSettings({ noiseSuppression: checked })
               }
@@ -367,7 +363,7 @@ export function AudioSettings() {
             <Label htmlFor="echo-cancellation">Echo Cancellation</Label>
             <Switch
               id="echo-cancellation"
-              checked={audioSettings.echoCancellation}
+              checked={settings.echoCancellation}
               onCheckedChange={(checked) =>
                 updateAudioSettings({ echoCancellation: checked })
               }
@@ -379,20 +375,20 @@ export function AudioSettings() {
               <Label htmlFor="vad">Voice Activity Detection</Label>
               <Switch
                 id="vad"
-                checked={audioSettings.voiceActivityDetection}
+                checked={settings.voiceActivityDetection}
                 onCheckedChange={(checked) =>
                   updateAudioSettings({ voiceActivityDetection: checked })
                 }
               />
             </div>
 
-            {audioSettings.voiceActivityDetection && (
+            {settings.voiceActivityDetection && (
               <div className="pl-4 space-y-2">
                 <Label className="text-sm text-muted-foreground">
-                  Sensitivity: {audioSettings.vadSensitivity}%
+                  Sensitivity: {settings.vadSensitivity}%
                 </Label>
                 <Slider
-                  value={[audioSettings.vadSensitivity]}
+                  value={[settings.vadSensitivity]}
                   onValueChange={([value]) =>
                     updateAudioSettings({ vadSensitivity: value })
                   }
@@ -419,7 +415,7 @@ export function AudioSettings() {
         </CardHeader>
         <CardContent>
           <RadioGroup
-            value={audioSettings.vadMode}
+            value={settings.vadMode}
             onValueChange={(value) =>
               updateAudioSettings({ vadMode: value as VADMode })
             }
@@ -461,7 +457,7 @@ export function AudioSettings() {
             </div>
           </RadioGroup>
           
-          {audioSettings.vadMode === "auto" && (
+          {settings.vadMode === "auto" && (
             <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
               <p className="text-xs text-blue-600 dark:text-blue-400">
                 💡 In auto mode, just start speaking naturally. The system will detect when you pause.
@@ -484,7 +480,7 @@ export function AudioSettings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <RadioGroup
-            value={audioSettings.interruptionMode}
+            value={settings.interruptionMode}
             onValueChange={(value) =>
               updateAudioSettings({
                 interruptionMode: value as InterruptionMode,
@@ -530,12 +526,12 @@ export function AudioSettings() {
             </div>
           </RadioGroup>
 
-          {audioSettings.interruptionMode === "headphones" && (
+          {settings.interruptionMode === "headphones" && (
             <div className="pl-4 space-y-3 pt-2">
               <div className="space-y-2">
                 <Label>Interruption Sensitivity</Label>
                 <Select
-                  value={audioSettings.interruptionSensitivity}
+                  value={settings.interruptionSensitivity}
                   onValueChange={(value) =>
                     updateAudioSettings({
                       interruptionSensitivity:
@@ -573,50 +569,6 @@ export function AudioSettings() {
         </CardContent>
       </Card>
 
-      {/* Speech recognition test */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Speech Recognition Test</CardTitle>
-          <CardDescription>
-            Test browser speech recognition capabilities
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isSpeechSupported ? (
-            <div className="space-y-2">
-              <Button
-                size="sm"
-                variant={isTestingSpeech ? "destructive" : "outline"}
-                onClick={testSpeechRecognition}
-                className="gap-2 w-full"
-              >
-                {isTestingSpeech ? (
-                  <>
-                    <Square className="h-3 w-3" />
-                    Stop Recognition Test
-                  </>
-                ) : (
-                  <>
-                    <Activity className="h-3 w-3" />
-                    Test Browser Speech Recognition
-                  </>
-                )}
-              </Button>
-
-              {speechTestResult && (
-                <div className="p-3 bg-secondary rounded-lg">
-                  <p className="text-sm">{speechTestResult}</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Browser speech recognition not supported. Audio will be
-              transcribed using Whisper.
-            </p>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Refresh devices button */}
       <Card>

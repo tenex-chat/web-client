@@ -1,4 +1,4 @@
-import { NDKArticle, NDKKind, NDKUser } from "@nostr-dev-kit/ndk-hooks";
+import { NDKArticle, NDKKind, NDKUser, NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useEvent } from "@nostr-dev-kit/ndk-hooks";
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";

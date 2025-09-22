@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -6,7 +6,10 @@ import { cn } from "@/lib/utils";
 import { SafeNostrEntityCard } from "@/components/common/SafeNostrEntityCard";
 import { MermaidRenderer } from "@/components/markdown/MermaidRenderer";
 import type { Components } from "react-markdown";
-import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
+import type { NDKEvent, NDKArticle, NDKKind } from "@nostr-dev-kit/ndk-hooks";
+import { useEvent } from "@nostr-dev-kit/ndk-hooks";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { DocumentationViewer } from "@/components/documentation/DocumentationViewer";
 
 interface MarkdownComponentsOptions {
   isDarkMode: boolean;
@@ -14,6 +17,99 @@ interface MarkdownComponentsOptions {
   onImageClick?: (src: string) => void;
   projectId?: string | null;
   onConversationClick?: (event: NDKEvent) => void;
+}
+
+/**
+ * Component that renders a nostr link with custom text
+ * Handles opening the appropriate viewer based on the event kind
+ */
+function NostrLinkWithText({
+  bech32,
+  text,
+  onConversationClick,
+}: {
+  bech32: string;
+  text: ReactNode;
+  onConversationClick?: (event: NDKEvent) => void;
+}) {
+  const [sheetOpen, setSheetOpen] = useState(false);
+  
+  // Fetch the event to determine its kind
+  const isEventEntity =
+    bech32.startsWith("nevent1") ||
+    bech32.startsWith("note1") ||
+    bech32.startsWith("naddr1");
+  const event = useEvent(isEventEntity ? bech32 : false, {});
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    if (!event) {
+      // If we don't have the event yet, open in njump as fallback
+      window.open(`https://njump.me/${bech32}`, "_blank");
+      return;
+    }
+
+    // Handle different event kinds
+    switch (event.kind) {
+      case NDKKind.Thread: // kind:11
+        if (onConversationClick) {
+          onConversationClick(event);
+        }
+        break;
+        
+      case NDKArticle.kind: // kind:30023
+        setSheetOpen(true);
+        break;
+        
+      case 31933: // Project event
+        // For project events, we could open a project viewer
+        // For now, open in a new tab with njump
+        window.open(`https://njump.me/${bech32}`, "_blank");
+        break;
+        
+      case NDKKind.GenericReply: // kind:1111 - agent messages
+        // For agent messages, navigate to the conversation if we have a callback
+        // Otherwise open in njump
+        if (onConversationClick) {
+          onConversationClick(event);
+        } else {
+          window.open(`https://njump.me/${bech32}`, "_blank");
+        }
+        break;
+        
+      default:
+        // For other kinds, open in njump
+        window.open(`https://njump.me/${bech32}`, "_blank");
+    }
+  };
+
+  return (
+    <>
+      <a
+        href="#"
+        onClick={handleClick}
+        className="text-blue-500 hover:text-blue-600 underline cursor-pointer"
+      >
+        {text}
+      </a>
+      
+      {/* Sheet for document viewer */}
+      {event && event.kind === NDKArticle.kind && (
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+          <SheetContent
+            className="p-0 flex flex-col w-[65%] sm:max-w-[65%]"
+            side="right"
+          >
+            <DocumentationViewer
+              article={NDKArticle.from(event)}
+              onBack={() => setSheetOpen(false)}
+            />
+          </SheetContent>
+        </Sheet>
+      )}
+    </>
+  );
 }
 
 /**
@@ -134,6 +230,30 @@ export function getMarkdownComponents({
             onConversationClick={onConversationClick}
           />
         );
+      }
+
+      // Check if this is a nostr: protocol link (e.g., nostr:naddr1...)
+      if (
+        href &&
+        typeof href === "string" &&
+        href.startsWith("nostr:")
+      ) {
+        // Extract the bech32 part after "nostr:"
+        const bech32 = href.substring(6);
+        
+        // Validate it's a proper bech32 string
+        if (bech32.match(/^(npub1|nprofile1|nevent1|naddr1|note1)[a-zA-Z0-9]+$/)) {
+          // For markdown links with custom text, we need to create a special
+          // clickable link that preserves the custom text but handles the nostr entity
+          // We'll wrap the SafeNostrEntityCard in a custom component that shows the text
+          return (
+            <NostrLinkWithText
+              bech32={bech32}
+              text={children}
+              onConversationClick={onConversationClick}
+            />
+          );
+        }
       }
 
       // Regular link

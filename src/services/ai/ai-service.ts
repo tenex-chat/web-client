@@ -180,7 +180,7 @@ Summary:`,
 
   async transcribe(
     audio: Blob,
-    provider: "whisper" | "elevenlabs" | "built-in-chrome",
+    provider: "whisper" | "elevenlabs",
     apiKey?: string,
   ): Promise<string> {
     switch (provider) {
@@ -224,11 +224,6 @@ Summary:`,
         }
         
         return this.transcribeWithElevenLabs(audio, apiKey);
-      }
-
-      case "built-in-chrome": {
-        // Use browser's built-in Web Speech API
-        return this.transcribeWithWebSpeechAPI(audio);
       }
 
       default:
@@ -313,47 +308,6 @@ Summary:`,
     }
   }
 
-  private async transcribeWithWebSpeechAPI(audio: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      // Check if Web Speech API is available
-      const SpeechRecognition =
-        (window as any).SpeechRecognition ||
-        (window as any).webkitSpeechRecognition;
-
-      if (!SpeechRecognition) {
-        reject(new Error("Web Speech API not supported in this browser"));
-        return;
-      }
-
-      // Convert blob to audio URL
-      const audioUrl = URL.createObjectURL(audio);
-      
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = "en-US";
-
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        URL.revokeObjectURL(audioUrl);
-        resolve(transcript);
-      };
-
-      recognition.onerror = (event: any) => {
-        URL.revokeObjectURL(audioUrl);
-        reject(new Error(`Speech recognition error: ${event.error}`));
-      };
-
-      recognition.onend = () => {
-        URL.revokeObjectURL(audioUrl);
-      };
-
-      // Note: Web Speech API typically works with microphone input
-      // For pre-recorded audio, we might need a different approach
-      // This is a simplified implementation
-      reject(new Error("Built-in Chrome STT requires live microphone input, not pre-recorded audio"));
-    });
-  }
 
   async speak(
     text: string,

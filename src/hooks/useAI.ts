@@ -222,9 +222,6 @@ export function useAI() {
       case "elevenlabs":
         // Use the shared ElevenLabs API key
         return !!voiceSettings.apiKey;
-      case "built-in-chrome":
-        // Check if Web Speech API is available
-        return !!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition;
       default:
         return false;
     }
@@ -245,7 +242,7 @@ export function useAI() {
     hasProvider: !!activeProvider,
     hasTitleProvider: !!titleGenerationLLM,
     hasSummaryProvider: !!summaryLLM,
-    hasTTS: voiceSettings.enabled && voiceSettings.voiceIds.length > 0,
+    hasTTS: voiceSettings.enabled && voiceSettings.voiceIds?.length > 0,
     hasSTT,
 
     // Settings

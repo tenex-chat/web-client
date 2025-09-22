@@ -201,7 +201,15 @@ export const setVolumeAtom = atom(null, (get, set, volume: number) => {
 export const playNextInQueueAtom = atom(null, async (get, set) => {
   const state = get(ttsPlayerStateAtom);
   if (state.queue.length === 0) {
-    set(stopPlaybackAtom);
+    // Stop playback if queue is empty
+    if (state.currentAudio) {
+      state.currentAudio.pause();
+      state.currentAudio.src = "";
+    }
+    set(ttsPlayerStateAtom, {
+      ...initialState,
+      queue: state.queue, // Preserve queue
+    });
     return null;
   }
 

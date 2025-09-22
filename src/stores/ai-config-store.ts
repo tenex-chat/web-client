@@ -1,4 +1,4 @@
-import { atom } from "jotai";
+import { atom, useAtom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 import type { ProviderConfig } from "@/services/ai/provider-registry";
 
@@ -7,7 +7,12 @@ export interface LLMConfig extends ProviderConfig {
   name: string; // User-defined name (e.g., "My OpenAI Key", "Work GPT")
 }
 
-// Simplified AI configuration
+// Audio configuration types
+export type InterruptionMode = "disabled" | "headphones";
+export type InterruptionSensitivity = "low" | "medium" | "high";
+export type VADMode = "disabled" | "auto" | "push-to-talk";
+
+// Unified AI and audio configuration
 export interface AIConfig {
   activeProvider?: ProviderConfig;
   voiceSettings: {
@@ -20,8 +25,24 @@ export interface AIConfig {
   };
   sttSettings: {
     enabled: boolean;
-    provider: "whisper" | "elevenlabs" | "built-in-chrome";
+    provider: "whisper" | "elevenlabs";
     model: string;
+  };
+  audioSettings: {
+    // Device selection
+    inputDeviceId: string | null;
+    outputDeviceId: string | null;
+    // Audio processing
+    inputVolume: number; // 0-100
+    noiseSuppression: boolean;
+    echoCancellation: boolean;
+    voiceActivityDetection: boolean;
+    vadSensitivity: number; // 0-100, lower = more sensitive
+    // VAD mode for conversation flow
+    vadMode: VADMode;
+    // Interruption settings
+    interruptionMode: InterruptionMode;
+    interruptionSensitivity: InterruptionSensitivity;
   };
 }
 
@@ -39,6 +60,18 @@ const defaultConfig: AIConfig = {
     enabled: false,
     provider: "whisper",
     model: "whisper-1",
+  },
+  audioSettings: {
+    inputDeviceId: null,
+    outputDeviceId: null,
+    inputVolume: 100,
+    noiseSuppression: true,
+    echoCancellation: true,
+    voiceActivityDetection: true,
+    vadSensitivity: 50,
+    vadMode: "push-to-talk",
+    interruptionMode: "disabled",
+    interruptionSensitivity: "medium",
   },
 };
 
@@ -109,6 +142,18 @@ export const sttSettingsAtom = atom(
     set(aiConfigAtom, {
       ...config,
       sttSettings: { ...config.sttSettings, ...settings },
+    });
+  },
+);
+
+// Audio settings atom
+export const audioSettingsAtom = atom(
+  (get) => get(aiConfigAtom).audioSettings,
+  (get, set, settings: Partial<AIConfig["audioSettings"]>) => {
+    const config = get(aiConfigAtom);
+    set(aiConfigAtom, {
+      ...config,
+      audioSettings: { ...config.audioSettings, ...settings },
     });
   },
 );
@@ -185,3 +230,22 @@ export const openAIApiKeyAtom = atom(
     });
   },
 );
+
+// Hook for audio settings (replaces useCallSettings)
+export function useAudioSettings() {
+  const [audioSettings, setAudioSettings] = useAtom(audioSettingsAtom);
+
+  const updateAudioSettings = (settings: Partial<AIConfig["audioSettings"]>) => {
+    setAudioSettings(settings);
+  };
+
+  const resetAudioSettings = () => {
+    setAudioSettings(defaultConfig.audioSettings);
+  };
+
+  return {
+    audioSettings,
+    updateAudioSettings,
+    resetAudioSettings,
+  };
+}

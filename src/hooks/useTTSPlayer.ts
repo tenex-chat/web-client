@@ -40,15 +40,17 @@ import {
 } from "@/stores/tts-player-store";
 import { useAI } from "@/hooks/useAI";
 import { extractTTSContent } from "@/lib/utils/extractTTSContent";
-import { useSpeechInterruption } from "@/hooks/useSpeechInterruption";
+import { useVAD } from "@/hooks/useVAD";
 import { atomWithStorage } from "jotai/utils";
+import { StreamingTTSPlayer } from "@/lib/audio/streaming-tts-player";
 
 // Setting for enabling speech interruption
 const speechInterruptionEnabledAtom = atomWithStorage("tts-speech-interruption-enabled", true);
 
 export function useTTSPlayer() {
-  const { speak, hasTTS } = useAI();
+  const { speak, streamSpeak, hasTTS } = useAI();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const streamingPlayerRef = useRef<StreamingTTSPlayer | null>(null);
 
   // State atoms
   const playerState = useAtomValue(ttsPlayerStateAtom);
@@ -100,46 +102,78 @@ export function useTTSPlayer() {
         audioRef.current.src = "";
         audioRef.current = null;
       }
+      if (streamingPlayerRef.current) {
+        streamingPlayerRef.current.stop();
+        streamingPlayerRef.current = null;
+      }
     };
   }, []);
 
-  // Handle speech interruption
-  const { isInterrupted: isSpeechDetected, shouldStop } = useSpeechInterruption(
-    isPlaying,
-    {
-      enabled: speechInterruptionEnabled && hasTTS,
-      stopThreshold: 2000, // Stop after 2 seconds of continuous speech
-      resumeDelay: 500, // Resume after 500ms of silence
-      sensitivity: 0.02, // Voice activity threshold
+  // Handle speech interruption using VAD
+  const speechStartTimeRef = useRef<number | null>(null);
+  const resumeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const stopThreshold = 2000; // Stop after 2 seconds of continuous speech
+  const resumeDelay = 500; // Resume after 500ms of silence
+  
+  const vad = useVAD({
+    enabled: speechInterruptionEnabled && hasTTS && isPlaying,
+    onSpeechStart: () => {
+      // User started speaking - pause TTS
+      speechStartTimeRef.current = Date.now();
+      setInterruptionState(true, "user_speaking");
+      pausePlaybackAction();
+      
+      // Clear any pending resume timer
+      if (resumeTimerRef.current) {
+        clearTimeout(resumeTimerRef.current);
+        resumeTimerRef.current = null;
+      }
     },
-    {
-      onInterruptionStart: () => {
-        // User started speaking - pause TTS
-        setInterruptionState(true, "user_speaking");
-        pausePlaybackAction();
-      },
-      onInterruptionEnd: () => {
-        // User stopped speaking
-        setInterruptionState(false, null);
-      },
-      onResume: () => {
-        // Resume TTS playback
-        if (!shouldStop) {
-          resumePlaybackAction();
-        }
-      },
-      onStop: () => {
-        // User spoke too long - stop TTS completely
+    onSpeechEnd: () => {
+      // User stopped speaking
+      setInterruptionState(false, null);
+      
+      const speechDuration = speechStartTimeRef.current 
+        ? Date.now() - speechStartTimeRef.current 
+        : 0;
+      
+      // If user spoke for too long, stop TTS completely
+      if (speechDuration >= stopThreshold) {
         stop();
-      },
+      } else {
+        // Otherwise, resume after delay
+        resumeTimerRef.current = setTimeout(() => {
+          resumePlaybackAction();
+        }, resumeDelay);
+      }
+      
+      speechStartTimeRef.current = null;
+    },
+  });
+  
+  // Start/stop VAD based on playback state
+  useEffect(() => {
+    if (speechInterruptionEnabled && hasTTS && isPlaying) {
+      vad.start();
+    } else {
+      vad.pause();
     }
-  );
+    
+    return () => {
+      if (resumeTimerRef.current) {
+        clearTimeout(resumeTimerRef.current);
+        resumeTimerRef.current = null;
+      }
+    };
+  }, [speechInterruptionEnabled, hasTTS, isPlaying, vad]);
 
   const play = useCallback(
     async (
       content: string,
       messageId: string,
-      authorPubkey?: string
+      authorPubkey?: string,
+      _voiceId?: string,
+      provider?: "openai" | "elevenlabs"
     ) => {
       if (!hasTTS || !content) {
         console.warn("TTS not available or no content provided");
@@ -150,6 +184,11 @@ export function useTTSPlayer() {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = "";
+        audioRef.current = null;
+      }
+      if (streamingPlayerRef.current) {
+        streamingPlayerRef.current.stop();
+        streamingPlayerRef.current = null;
       }
 
       const ttsContent = extractTTSContent(content);
@@ -170,59 +209,112 @@ export function useTTSPlayer() {
           duration: 0,
         });
 
-        // Get audio blob from AI service
-        const audioBlob = await speak(ttsContent, authorPubkey || messageId);
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
+        // Use streaming for ElevenLabs, regular speak for OpenAI
+        if (provider === "elevenlabs") {
+          // Initialize streaming player
+          const streamingPlayer = new StreamingTTSPlayer();
+          streamingPlayerRef.current = streamingPlayer;
 
-        // Apply current settings
-        audio.playbackRate = playbackRate;
-        audio.volume = volume;
+          // Apply current settings
+          streamingPlayer.setPlaybackRate(playbackRate);
+          streamingPlayer.setVolume(volume);
 
-        // Set up event listeners
-        audio.addEventListener("loadedmetadata", () => {
-          setDuration(audio.duration);
-        });
-
-        audio.addEventListener("timeupdate", () => {
-          updateProgress(audio.currentTime);
-        });
-
-        audio.addEventListener("ended", async () => {
-          URL.revokeObjectURL(audioUrl);
-
-          // Check if we should play next in queue
-          if (autoPlayNext && queue.length > 0) {
-            const nextItem = await playNextInQueue();
-            if (nextItem) {
-              await play(
-                nextItem.content,
-                nextItem.messageId,
-                nextItem.authorPubkey
-              );
+          // Track playback time updates
+          const updateInterval = setInterval(() => {
+            if (streamingPlayer.playing) {
+              updateProgress(streamingPlayer.getCurrentTime());
+              const duration = streamingPlayer.getDuration();
+              if (!isNaN(duration) && duration > 0) {
+                setDuration(duration);
+              }
             }
-          } else {
+          }, 100);
+
+          // Set up event listener for when playback ends
+          streamingPlayer.onEnded(() => {
+            // Cleanup interval
+            clearInterval(updateInterval);
+            
+            // Check if we should play next in queue
+            if (autoPlayNext && queue.length > 0) {
+              playNextInQueue();
+            } else {
+              stopPlayback();
+            }
+          });
+
+          let firstChunkReceived = false;
+
+          // Start streaming with chunk callback
+          await streamSpeak(
+            ttsContent,
+            authorPubkey || messageId,
+            async (chunk) => {
+              // Add chunk to player for immediate playback
+              await streamingPlayer.addChunk(chunk);
+              
+              if (!firstChunkReceived) {
+                firstChunkReceived = true;
+                setPlayingState({
+                  isPlaying: true,
+                  isPaused: false,
+                });
+                setLoading(false);
+              }
+            }
+          );
+
+          // Signal end of stream
+          await streamingPlayer.endStream();
+
+        } else {
+          // Fallback to non-streaming for OpenAI or other providers
+          const audioBlob = await speak(ttsContent, authorPubkey || messageId);
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+
+          // Apply current settings
+          audio.playbackRate = playbackRate;
+          audio.volume = volume;
+
+          // Set up event listeners
+          audio.addEventListener("loadedmetadata", () => {
+            setDuration(audio.duration);
+          });
+
+          audio.addEventListener("timeupdate", () => {
+            updateProgress(audio.currentTime);
+          });
+
+          audio.addEventListener("ended", async () => {
+            URL.revokeObjectURL(audioUrl);
+
+            // Check if we should play next in queue
+            if (autoPlayNext && queue.length > 0) {
+              playNextInQueue();
+            } else {
+              stopPlayback();
+            }
+          });
+
+          audio.addEventListener("error", (e) => {
+            console.error("Audio playback error:", e);
+            setError("Playback failed");
+            URL.revokeObjectURL(audioUrl);
             stopPlayback();
-          }
-        });
+          });
 
-        audio.addEventListener("error", (e) => {
-          console.error("Audio playback error:", e);
-          setError("Playback failed");
-          URL.revokeObjectURL(audioUrl);
-          stopPlayback();
-        });
+          // Store reference and start playback
+          audioRef.current = audio;
+          setCurrentAudio(audio);
+          await audio.play();
 
-        // Store reference and start playback
-        audioRef.current = audio;
-        setCurrentAudio(audio);
-        await audio.play();
-
-        setPlayingState({
-          isPlaying: true,
-          isPaused: false,
-        });
-        setLoading(false);
+          setPlayingState({
+            isPlaying: true,
+            isPaused: false,
+          });
+          setLoading(false);
+        }
       } catch (error) {
         console.error("TTS playback failed:", error);
         setError(error instanceof Error ? error.message : "TTS playback failed");
@@ -233,6 +325,7 @@ export function useTTSPlayer() {
     [
       hasTTS,
       speak,
+      streamSpeak,
       playbackRate,
       volume,
       autoPlayNext,
@@ -254,11 +347,21 @@ export function useTTSPlayer() {
       audioRef.current.src = "";
       audioRef.current = null;
     }
+    if (streamingPlayerRef.current) {
+      streamingPlayerRef.current.stop();
+      streamingPlayerRef.current = null;
+    }
     stopPlayback();
   }, [stopPlayback]);
 
   const pause = useCallback(() => {
-    if (playerState.currentAudio && isPlaying) {
+    if (streamingPlayerRef.current && isPlaying) {
+      streamingPlayerRef.current.pause();
+      setPlayingState({
+        isPlaying: false,
+        isPaused: true,
+      });
+    } else if (playerState.currentAudio && isPlaying) {
       playerState.currentAudio.pause();
       setPlayingState({
         isPlaying: false,
@@ -268,7 +371,13 @@ export function useTTSPlayer() {
   }, [playerState.currentAudio, isPlaying, setPlayingState]);
 
   const resume = useCallback(() => {
-    if (playerState.currentAudio && isPaused) {
+    if (streamingPlayerRef.current && isPaused) {
+      streamingPlayerRef.current.resume();
+      setPlayingState({
+        isPlaying: true,
+        isPaused: false,
+      });
+    } else if (playerState.currentAudio && isPaused) {
       playerState.currentAudio.play();
       setPlayingState({
         isPlaying: true,
@@ -309,6 +418,10 @@ export function useTTSPlayer() {
   const changePlaybackRate = useCallback(
     (rate: number) => {
       setPlaybackRateAction(rate);
+      // Update streaming player if active
+      if (streamingPlayerRef.current) {
+        streamingPlayerRef.current.setPlaybackRate(rate);
+      }
     },
     [setPlaybackRateAction]
   );
@@ -316,6 +429,10 @@ export function useTTSPlayer() {
   const changeVolume = useCallback(
     (vol: number) => {
       setVolumeAction(vol);
+      // Update streaming player if active
+      if (streamingPlayerRef.current) {
+        streamingPlayerRef.current.setVolume(vol);
+      }
     },
     [setVolumeAction]
   );

@@ -6,18 +6,16 @@ import {
   Play,
   Square,
   TestTube,
-  Activity,
   Headphones,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  useCallSettings,
+  useAudioSettings,
   type InterruptionMode,
   type InterruptionSensitivity,
   type VADMode,
-} from "@/stores/call-settings-store";
+} from "@/stores/ai-config-store";
 import { useAudioDevices } from "@/hooks/useAudioDevices";
-import { useChromeSpeechRecognition } from "@/hooks/useChromeSpeechRecognition";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -46,38 +44,20 @@ interface CallSettingsProps {
 }
 
 export function CallSettings({ className }: CallSettingsProps) {
-  const { audioSettings, updateAudioSettings } = useCallSettings();
+  const { audioSettings, updateAudioSettings } = useAudioSettings();
   const { inputDevices, outputDevices, isLoading, refreshDevices } =
     useAudioDevices();
 
   // Testing states
   const [isTestingInput, setIsTestingInput] = useState(false);
   const [isTestingOutput, setIsTestingOutput] = useState(false);
-  const [isTestingSpeech, setIsTestingSpeech] = useState(false);
   const [inputLevel, setInputLevel] = useState(0);
-  const [speechTestResult, setSpeechTestResult] = useState<string>("");
 
   // Refs for testing
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number>(0);
-
-  // Chrome speech recognition for testing
-  const {
-    fullTranscript,
-    isSupported: isSpeechSupported,
-    startListening,
-    stopListening,
-    resetTranscript,
-  } = useChromeSpeechRecognition();
-
-  // Update speech test result when transcript changes
-  useEffect(() => {
-    if (fullTranscript) {
-      setSpeechTestResult(fullTranscript);
-    }
-  }, [fullTranscript]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -204,19 +184,6 @@ export function CallSettings({ className }: CallSettingsProps) {
     }, 1000);
   }, [isTestingOutput, audioSettings.outputDeviceId]);
 
-  // Test speech recognition
-  const testSpeechRecognition = useCallback(() => {
-    if (isTestingSpeech) {
-      stopListening();
-      setIsTestingSpeech(false);
-      setSpeechTestResult("");
-      resetTranscript();
-    } else {
-      setIsTestingSpeech(true);
-      setSpeechTestResult("Listening...");
-      startListening();
-    }
-  }, [isTestingSpeech, startListening, stopListening, resetTranscript]);
 
   return (
     <Sheet>
@@ -581,44 +548,6 @@ export function CallSettings({ className }: CallSettingsProps) {
 
           <Separator />
 
-          {/* Speech recognition test */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium">Speech Recognition</h3>
-
-            {isSpeechSupported ? (
-              <div className="space-y-2">
-                <Button
-                  size="sm"
-                  variant={isTestingSpeech ? "destructive" : "outline"}
-                  onClick={testSpeechRecognition}
-                  className="gap-2 w-full"
-                >
-                  {isTestingSpeech ? (
-                    <>
-                      <Square className="h-3 w-3" />
-                      Stop Recognition Test
-                    </>
-                  ) : (
-                    <>
-                      <Activity className="h-3 w-3" />
-                      Test Browser Speech Recognition
-                    </>
-                  )}
-                </Button>
-
-                {speechTestResult && (
-                  <div className="p-3 bg-secondary rounded-lg">
-                    <p className="text-sm">{speechTestResult}</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Browser speech recognition not supported. Audio will be
-                transcribed using Whisper.
-              </p>
-            )}
-          </div>
 
           {/* Refresh devices button */}
           <div className="pt-4">

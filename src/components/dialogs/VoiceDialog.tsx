@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Square, Edit2, Check, X, RotateCcw, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import NDKBlossom from "@nostr-dev-kit/ndk-blossom";
 import { useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
-import { useSpeechToText } from "@/hooks/useSpeechToText";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useAI } from "@/hooks/useAI";
 import { toast } from "sonner";
 import { UPLOAD_LIMITS } from "@/lib/constants";
@@ -41,7 +41,6 @@ export function VoiceDialog({
   autoRecordAndSend = false,
 }: VoiceDialogProps) {
   const { ndk } = useNDK();
-  const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -52,66 +51,61 @@ export function VoiceDialog({
   const [uploadedAudioUrl, setUploadedAudioUrl] = useState<string | null>(null);
   const [waveformData, setWaveformData] = useState<number[]>([]);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
   const animationFrameRef = useRef<number>(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { transcribe } = useSpeechToText();
-  const { cleanupText } = useAI();
+  const { transcribe, cleanupText, hasSTT, sttSettings } = useAI();
+  
+  // Use the new audio recorder hook
+  const {
+    isRecording,
+    startRecording: startAudioRecording,
+    stopRecording: stopAudioRecording,
+    audioLevel,
+    error: recordingError,
+  } = useAudioRecorder({
+    onDataAvailable: (data) => {
+      // Update waveform data
+      const maxAmplitude = Math.max(...data.map(Math.abs));
+      if (maxAmplitude > 0.01) {
+        setWaveformData(prev => {
+          const newData = [...prev, maxAmplitude];
+          return newData.slice(-100); // Keep last 100 samples
+        });
+      }
+    },
+  });
 
-  const updateDuration = useCallback(() => {
+  const updateDuration = () => {
     if (isRecording && startTimeRef.current > 0) {
       const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
       setRecordingDuration(duration);
       animationFrameRef.current = requestAnimationFrame(updateDuration);
     }
-  }, [isRecording]);
+  };
 
-  const drawWaveform = useCallback(() => {
-    if (!canvasRef.current || !analyserRef.current) return;
+  const drawWaveform = () => {
+    if (!canvasRef.current || !isRecording) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const bufferLength = analyserRef.current.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    const waveformCollector: number[] = [];
-
     const draw = () => {
-      if (!isRecording || !analyserRef.current) return;
+      if (!isRecording) return;
 
-      analyserRef.current.getByteFrequencyData(dataArray);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const barWidth = (canvas.width / bufferLength) * 2.5;
-      const barCount = Math.floor(canvas.width / (barWidth + 2));
-      const step = Math.floor(bufferLength / barCount);
-
-      // Collect waveform data (normalized amplitude values)
-      let maxAmplitude = 0;
+      // Draw waveform bars based on audio level
+      const barCount = 20;
+      const barWidth = canvas.width / barCount - 2;
+      
       for (let i = 0; i < barCount; i++) {
-        const amplitude = (dataArray[i * step] || 0) / 255;
-        maxAmplitude = Math.max(maxAmplitude, amplitude);
-      }
-      if (maxAmplitude > 0.1) {
-        waveformCollector.push(maxAmplitude);
-        // Keep only last MAX_WAVEFORM_SAMPLES for the waveform
-        if (waveformCollector.length > 100) {
-          waveformCollector.shift();
-        }
-        setWaveformData([...waveformCollector]);
-      }
-
-      for (let i = 0; i < barCount; i++) {
-        const barHeight =
-          ((dataArray[i * step] || 0) / 255) * canvas.height * 0.8;
+        // Create animated bars based on audio level
+        const variance = Math.random() * 0.5 + 0.5;
+        const barHeight = audioLevel * canvas.height * 0.8 * variance;
         const x = i * (barWidth + 2);
         const y = (canvas.height - barHeight) / 2;
 
@@ -136,58 +130,59 @@ export function VoiceDialog({
     };
 
     draw();
-  }, [isRecording]);
+  };
 
-  const stopRecording = useCallback(() => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state === "recording"
-    ) {
-      mediaRecorderRef.current.stop();
-    }
-    setIsRecording(false);
-
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-
+  const stopRecording = async () => {
+    const blob = await stopAudioRecording();
+    
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = 0;
     }
-  }, []);
+    
+    const finalDuration = Math.floor(
+      (Date.now() - startTimeRef.current) / 1000,
+    );
+    setRecordingDuration(finalDuration);
+    
+    if (blob) {
+      setAudioBlob(blob);
+      const url = URL.createObjectURL(blob);
+      setAudioUrl(url);
+    }
+  };
 
   // Cleanup when dialog closes
   useEffect(() => {
     if (!open) {
       // Dialog is closing, ensure we stop recording
-      stopRecording();
+      if (isRecording) {
+        stopRecording();
+      }
       if (audioUrl) {
         URL.revokeObjectURL(audioUrl);
       }
     }
-  }, [open, audioUrl, stopRecording]);
+  }, [open]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      stopRecording();
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      if (isRecording) {
+        stopAudioRecording();
+      }
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
     };
-  }, [audioUrl, stopRecording]);
+  }, []);
 
   useEffect(() => {
     if (isRecording && startTimeRef.current > 0) {
       updateDuration();
       drawWaveform();
     }
-  }, [isRecording, updateDuration, drawWaveform]);
+  }, [isRecording]);
 
   useEffect(() => {
     if (open && !isRecording && !audioBlob) {
@@ -228,64 +223,14 @@ export function VoiceDialog({
       setTranscription("");
       setEditedTranscription("");
       setIsEditing(false);
+      setWaveformData([]);
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-
-      if (!stream.active) {
-        throw new Error("Microphone stream is not active");
-      }
-
-      audioContextRef.current = new AudioContext();
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      const source = audioContextRef.current.createMediaStreamSource(stream);
-      source.connect(analyserRef.current);
-      analyserRef.current.fftSize = 256;
-
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : "audio/mp4";
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstart = () => {
-        startTimeRef.current = Date.now();
-        setIsRecording(true);
-      };
-
-      mediaRecorder.onstop = () => {
-        const finalDuration = Math.floor(
-          (Date.now() - startTimeRef.current) / 1000,
-        );
-        setRecordingDuration(finalDuration);
-
-        const blob = new Blob(chunksRef.current, {
-          type: mediaRecorder.mimeType || mimeType,
-        });
-        setAudioBlob(blob);
-        const url = URL.createObjectURL(blob);
-        setAudioUrl(url);
-        setIsRecording(false);
-      };
-
-      mediaRecorder.onerror = (event) => {
-        console.error("MediaRecorder error:", event);
-        toast.error("Recording error occurred");
-        setIsRecording(false);
-      };
-
-      mediaRecorder.start(1000);
+      startTimeRef.current = Date.now();
+      await startAudioRecording();
+      
     } catch (error) {
       console.error("Error starting recording:", error);
-      toast.error("Failed to start recording");
-      setIsRecording(false);
+      toast.error(recordingError || "Failed to start recording");
     }
   };
 
@@ -295,9 +240,61 @@ export function VoiceDialog({
     setIsProcessing(true);
 
     try {
+      // Check STT availability first
+      if (!hasSTT) {
+        let errorMsg = "Speech-to-text not configured properly.";
+        
+        if (!sttSettings.enabled) {
+          errorMsg = "Speech-to-text is disabled. Please enable it in Settings > AI";
+        } else {
+          switch (sttSettings.provider) {
+            case "whisper":
+              errorMsg = "OpenAI API key not configured. Please configure it in Settings > AI";
+              break;
+            case "elevenlabs":
+              errorMsg = "ElevenLabs API key not configured. Please configure it in Settings > AI";
+              break;
+          }
+        }
+        
+        toast.error(errorMsg, {
+          duration: 5000,
+          action: {
+            label: "Go to Settings",
+            onClick: () => {
+              window.location.href = "/#/settings?tab=ai";
+            },
+          },
+        });
+        setIsProcessing(false);
+        return;
+      }
+
       // Run transcription and upload in parallel but handle failures independently
       const transcriptionPromise = transcribe(audioBlob).catch((error) => {
         console.error("Transcription failed:", error);
+        const errorMessage = error instanceof Error ? error.message : "Failed to transcribe audio";
+        
+        // Show detailed error message with action button for API key issues
+        if (errorMessage.includes("API key")) {
+          toast.error(errorMessage, {
+            duration: 6000,
+            action: {
+              label: "Fix Settings",
+              onClick: () => {
+                window.location.href = "/#/settings?tab=ai";
+              },
+            },
+          });
+        } else if (errorMessage.includes("rate limit")) {
+          const provider = sttSettings.provider === "elevenlabs" ? "ElevenLabs" : "OpenAI";
+          toast.error(`${provider} rate limit exceeded. Please try again later.`, {
+            duration: 5000,
+          });
+        } else {
+          toast.error(errorMessage, { duration: 5000 });
+        }
+        
         // Return null to allow upload to continue even if transcription fails
         return null;
       });
@@ -442,8 +439,10 @@ export function VoiceDialog({
     }
   };
 
-  const resetState = () => {
-    stopRecording();
+  const resetState = async () => {
+    if (isRecording) {
+      await stopRecording();
+    }
     if (audioUrl) {
       URL.revokeObjectURL(audioUrl);
     }
@@ -455,6 +454,7 @@ export function VoiceDialog({
     setRecordingDuration(0);
     setIsProcessing(false);
     setUploadedAudioUrl(null);
+    setWaveformData([]);
   };
 
   const startEditing = () => {

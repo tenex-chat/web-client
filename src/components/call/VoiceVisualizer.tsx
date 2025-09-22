@@ -12,7 +12,7 @@ interface VoiceVisualizerProps {
 // Waveform Visualizer - Animated sine wave
 export function WaveformVisualizer({ isActive, audioLevel, className }: Omit<VoiceVisualizerProps, "type">) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number>(0);
 
   useEffect(() => {
     if (!canvasRef.current) return;

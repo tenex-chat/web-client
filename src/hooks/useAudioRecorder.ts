@@ -68,16 +68,16 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
 
   // Audio level monitoring
   const monitorAudioLevel = useCallback(() => {
-    if (!analyserRef.current || !isRecording) return;
+    if (!analyserRef.current) return;
 
     const bufferLength = analyserRef.current.frequencyBinCount;
     const dataArray = new Float32Array(bufferLength);
-    
+
     const updateLevel = () => {
-      if (!analyserRef.current || !isRecording) return;
+      if (!analyserRef.current) return;
 
       analyserRef.current.getFloatTimeDomainData(dataArray);
-      
+
       // Calculate RMS (root mean square) for better level indication
       let sum = 0;
       for (let i = 0; i < bufferLength; i++) {
@@ -85,7 +85,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
       }
       const rms = Math.sqrt(sum / bufferLength);
       const level = Math.min(1, rms * AUDIO_CONFIG.RECORDING.RMS_SCALE_FACTOR); // Scale and clamp to 0-1
-      
+
       setAudioLevel(level);
 
       // Call callback if provided
@@ -93,17 +93,21 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
         onDataAvailable(dataArray);
       }
 
-      // Ensure we clean up properly
-      if (isRecording && analyserRef.current) {
+      // Continue animation loop while recording
+      if (mediaRecorderRef.current?.state === 'recording' && analyserRef.current) {
         animationFrameRef.current = requestAnimationFrame(updateLevel);
-      } else if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = 0;
+      } else {
+        // Stop animation and reset level
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = 0;
+        }
+        setAudioLevel(0);
       }
     };
 
     updateLevel();
-  }, [isRecording, onDataAvailable]);
+  }, [onDataAvailable]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -177,6 +181,8 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
       // Start recording
       recorder.start(AUDIO_CONFIG.RECORDING.CHUNK_INTERVAL_MS);
       setIsRecording(true);
+
+      // Start monitoring audio levels
       monitorAudioLevel();
 
     } catch (err) {

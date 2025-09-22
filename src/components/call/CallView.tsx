@@ -107,16 +107,12 @@ export function CallView({
   const vad = useVAD({
     enabled: settings.vadMode === 'auto',
     onSpeechStart: () => {
-      console.log(`VAD triggered speech start, callState: ${callStateRef.current}`);
       if (callStateRef.current === 'idle') {
-        console.log('VAD: Triggering startRecording');
         startRecording();
       }
     },
     onSpeechEnd: () => {
-      console.log(`VAD triggered speech end, callState: ${callStateRef.current}`);
       if (callStateRef.current === 'recording') {
-        console.log('VAD: Triggering stopRecording');
         stopRecording();
       }
     }

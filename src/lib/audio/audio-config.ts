@@ -25,7 +25,7 @@ export const AUDIO_CONFIG = {
     CHUNK_INTERVAL_MS: 100, // Collect audio data every 100ms
     FFT_SIZE: 256, // FFT size for audio analysis
     SMOOTHING_TIME_CONSTANT: 0.8, // Audio level smoothing
-    RMS_SCALE_FACTOR: 5, // Scale factor for RMS audio level
+    RMS_SCALE_FACTOR: 10, // Scale factor for RMS audio level (higher = more sensitive)
   },
 
   // Streaming TTS settings

@@ -55,7 +55,8 @@ export function CallView({
   
   // Core state
   const [callState, setCallState] = useState<CallState>('initializing');
-  const [rootEvent, setRootEvent] = useState<NDKEvent | null>(initialRootEvent);
+  const [rootEvent, setRootEvent] = useState<NDKEvent | null>(initialRootEvent || null);
+  const rootEventRef = useRef<NDKEvent | null>(initialRootEvent); // Use ref for immediate updates
   const [selectedAgentPubkey, setSelectedAgentPubkey] = useState<string | null>(null);
   const [transcript, setTranscript] = useState('');
 
@@ -65,17 +66,28 @@ export function CallView({
   useEffect(() => {
     callStateRef.current = callState;
   }, [callState]);
-  
+
   // Hooks
   const agents = useProjectOnlineAgents(project.dTag);
   const threadManagement = useThreadManagement(
-    project, 
+    project,
     rootEvent || undefined, // Convert null to undefined
-    extraTags, 
-    undefined, 
+    extraTags,
+    (thread) => {
+      setRootEvent(thread);
+      rootEventRef.current = thread;
+    },
     agents
   );
-  const messages = useChatMessages(rootEvent);
+  const messages = useChatMessages(threadManagement.localRootEvent || rootEvent || null);
+
+  // Keep rootEventRef in sync with threadManagement's state
+  useEffect(() => {
+    if (threadManagement.localRootEvent) {
+      setRootEvent(threadManagement.localRootEvent);
+      rootEventRef.current = threadManagement.localRootEvent;
+    }
+  }, [threadManagement.localRootEvent]);
   
   // Audio hooks
   const { sttSettings, transcribe } = useAI();
@@ -196,7 +208,7 @@ export function CallView({
             }
 
             try {
-              if (!rootEvent) {
+              if (!rootEventRef.current) {
                 // Create new thread
                 const newThread = await threadManagement.createThread(
                   transcribedText,
@@ -207,6 +219,7 @@ export function CallView({
                 );
 
                 if (newThread) {
+                  rootEventRef.current = newThread; // Update ref immediately
                   setRootEvent(newThread);
                 }
               } else {
@@ -426,7 +439,7 @@ export function CallView({
         {/* End call */}
         <motion.button
           whileTap={{ scale: 0.95 }}
-          onClick={() => onClose(rootEvent)}
+          onClick={() => onClose(threadManagement.localRootEvent || rootEvent)}
           className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600"
         >
           <PhoneOff className="h-7 w-7 text-white" />

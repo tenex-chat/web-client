@@ -168,7 +168,7 @@ export class TTSManager {
       onEnd?.();
     });
 
-    audio.addEventListener("error", (e) => {
+    audio.addEventListener("error", () => {
       URL.revokeObjectURL(audioUrl);
       throw new Error("Audio playback failed");
     });

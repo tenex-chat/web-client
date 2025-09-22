@@ -294,7 +294,7 @@ export function useTTSPlayer() {
             }
           });
 
-          audio.addEventListener("error", (e) => {
+          audio.addEventListener("error", () => {
             setError("Playback failed");
             URL.revokeObjectURL(audioUrl);
             stopPlayback();

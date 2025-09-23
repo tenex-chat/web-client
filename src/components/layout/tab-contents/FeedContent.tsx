@@ -84,13 +84,29 @@ export const FeedContent: React.FC<FeedContentProps> = ({
     return false;
   };
 
-  // Get unique authors with stable sorting - only recalculate when actual event pubkeys change
+  // Extract unique pubkeys first
+  const uniquePubkeysString = useMemo(() => {
+    const pubkeysSet = new Set<string>();
+    
+    events.forEach(event => {
+      const kind = event.kind || 0;
+      // Skip the same events we filter out in sortedEvents
+      if (kind === 0 || (kind >= 20000 && kind <= 29999)) {
+        return;
+      }
+      pubkeysSet.add(event.pubkey);
+    });
+
+    // Create a stable string key from sorted pubkeys
+    return Array.from(pubkeysSet).sort().join(',');
+  }, [events]);
+
+  // Get unique authors with stable sorting - only recalculate when the set of pubkeys actually changes
   const uniqueAuthors = useMemo(() => {
-    // Create a stable key from all pubkeys to detect actual changes
     const pubkeysSet = new Set<string>();
     const authorEventCounts = new Map<string, number>();
 
-    // Use events directly to avoid dependency on sortedEvents which changes frequently
+    // Use events directly to count events per author
     events.forEach(event => {
       const kind = event.kind || 0;
       // Skip the same events we filter out in sortedEvents
@@ -101,37 +117,31 @@ export const FeedContent: React.FC<FeedContentProps> = ({
       authorEventCounts.set(event.pubkey, (authorEventCounts.get(event.pubkey) || 0) + 1);
     });
 
-    // Convert to array and sort by pubkey first for absolute stability
+    // Convert to array and sort by pubkey for absolute stability
+    // This ensures the order is deterministic and doesn't change randomly
     const allAuthors = Array.from(pubkeysSet).sort();
 
-    // Now sort by event count with pubkey as stable tiebreaker
-    const sortedByActivity = allAuthors
-      .sort((a, b) => {
-        const countA = authorEventCounts.get(a) || 0;
-        const countB = authorEventCounts.get(b) || 0;
-        if (countA !== countB) return countB - countA;
-        // Already sorted by pubkey, maintain that order
-        return a.localeCompare(b);
-      })
-      .slice(0, 15);
+    // Create a stable sorted list - sort by pubkey only for complete stability
+    // This prevents re-ordering when event counts change
+    const stableSortedAuthors = allAuthors.slice(0, 15);
 
     // Build final list with current user first
     const result: string[] = [];
 
     // Add current user first if they have events
-    if (currentUser?.pubkey && sortedByActivity.includes(currentUser.pubkey)) {
+    if (currentUser?.pubkey && stableSortedAuthors.includes(currentUser.pubkey)) {
       result.push(currentUser.pubkey);
     }
 
-    // Add other authors, maintaining sort order
-    sortedByActivity.forEach(pubkey => {
+    // Add other authors, maintaining the stable alphabetical order
+    stableSortedAuthors.forEach(pubkey => {
       if (pubkey !== currentUser?.pubkey) {
         result.push(pubkey);
       }
     });
 
     return result;
-  }, [events, currentUser?.pubkey]);
+  }, [uniquePubkeysString, currentUser?.pubkey]); // Only depend on the stable string key
 
   // Filter events based on search query and author
   const filteredEvents = useMemo(() => {

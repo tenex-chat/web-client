@@ -94,7 +94,13 @@ export function CallView({
   
   const messages = useChatMessages(threadManagement.localRootEvent || rootEvent || null);
   
-  // Custom hooks for audio and messaging
+  // Custom hooks for audio and messaging  
+  const messaging = useCallMessaging({
+    threadManagement,
+    messages,
+    activeAgent
+  });
+  
   const audioRecording = useCallAudioRecording({
     enabled: true,
     onTranscriptionComplete: async (text) => {
@@ -109,12 +115,6 @@ export function CallView({
     }
   });
   
-  const messaging = useCallMessaging({
-    threadManagement,
-    messages,
-    activeAgent
-  });
-  
   const { clearQueue } = useTTSQueue({
     enabled: true,
     messages,
@@ -127,19 +127,35 @@ export function CallView({
     }
   });
   
-  // VAD setup
+  // Use refs to provide stable access to mutable state in VAD callbacks, avoiding dependency issues.
+  // This pattern prevents the callbacks from being recreated on every render, which would cause
+  // the VAD service to lose its connection to the speech detection handlers.
+  const callStateRef = useRef(callState);
+  const audioRecordingRef = useRef(audioRecording);
+  
+  // Keep refs synchronized with current state values
+  useEffect(() => {
+    callStateRef.current = callState;
+  }, [callState]);
+  
+  useEffect(() => {
+    audioRecordingRef.current = audioRecording;
+  }, [audioRecording]);
+  
+  // Create stable callbacks that won't change during the component lifecycle.
+  // These callbacks use refs to access current state, preventing stale closures.
   const handleVADSpeechStart = useCallback(() => {
-    if (callState === 'idle') {
+    if (callStateRef.current === 'idle') {
       setCallState('recording');
-      audioRecording.startRecording();
+      audioRecordingRef.current.startRecording();
     }
-  }, [callState, audioRecording]);
+  }, []);
   
   const handleVADSpeechEnd = useCallback(() => {
-    if (callState === 'recording') {
-      audioRecording.stopRecording();
+    if (callStateRef.current === 'recording') {
+      audioRecordingRef.current.stopRecording();
     }
-  }, [callState, audioRecording]);
+  }, []);
   
   const vad = useVAD({
     enabled: settings.vadMode === 'auto',

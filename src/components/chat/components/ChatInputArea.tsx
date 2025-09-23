@@ -707,9 +707,25 @@ export const ChatInputArea = memo(function ChatInputArea({
       return;
     }
 
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+    // In expanded mode: Cmd/Ctrl+Enter sends, Enter adds new line
+    // In normal mode: Enter sends, Shift+Enter adds new line
+    if (e.key === "Enter") {
+      const isCmdOrCtrlEnter = e.metaKey || e.ctrlKey;
+      
+      if (isExpanded) {
+        // Expanded mode: Cmd/Ctrl+Enter to send
+        if (isCmdOrCtrlEnter) {
+          e.preventDefault();
+          handleSend();
+        }
+        // Regular Enter just adds a new line (default behavior)
+      } else {
+        // Normal mode: Enter to send (unless Shift is held)
+        if (!e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      }
     }
   };
 
@@ -941,7 +957,9 @@ export const ChatInputArea = memo(function ChatInputArea({
             onChange={(e) => mentionProps.handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              isNewThread ? "Start a new conversation..." : "Type a message..."
+              isExpanded 
+                ? (isNewThread ? "Start a new conversation... (Cmd+Enter to send)" : "Type a message... (Cmd+Enter to send)")
+                : (isNewThread ? "Start a new conversation..." : "Type a message...")
             }
             disabled={disabled || isSubmitting}
             className={cn(
@@ -1188,7 +1206,7 @@ export const ChatInputArea = memo(function ChatInputArea({
                 "hover:bg-accent/80",
                 isMobile ? "h-8 w-8" : "h-9 w-9",
               )}
-              title={isExpanded ? "Shrink input" : "Expand input"}
+              title={isExpanded ? "Shrink input (Cmd+Enter to send)" : "Expand input (Enter for new lines)"}
             >
               {isExpanded ? (
                 <Minimize2 className={cn(isMobile ? "h-3.5 w-3.5" : "h-4 w-4")} />

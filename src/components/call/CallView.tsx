@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { PhoneOff, Mic, MicOff, Send, Sparkles, Activity, BarChart3, Circle } from "lucide-react";
+import { PhoneOff, Mic, MicOff, Send } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -85,14 +85,6 @@ export function CallView({
   const rootEventRef = useRef<NDKEvent | null>(initialRootEvent); // Use ref for immediate updates
   const [selectedAgentPubkey, setSelectedAgentPubkey] = useState<string | null>(null);
   const [transcript, setTranscript] = useState('');
-  const [visualizerType, setVisualizerType] = useState<"waveform" | "pulse" | "bars" | "orb">(
-    () => (localStorage.getItem("voice-visualizer-type") as any) || "pulse"
-  );
-
-  // Save visualizer preference
-  useEffect(() => {
-    localStorage.setItem("voice-visualizer-type", visualizerType);
-  }, [visualizerType]);
 
   // Use ref to track call state for VAD callbacks
   const callStateRef = useRef<CallState>('initializing');
@@ -453,53 +445,8 @@ export function CallView({
           <VoiceVisualizer
             isActive={callState === 'recording'}
             audioLevel={audioRecorder.audioLevel}
-            type={visualizerType}
             color={getProjectColor(project)}
           />
-        </div>
-
-        {/* Visualizer Type Selector */}
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => setVisualizerType("pulse")}
-            className={cn(
-              "p-2 rounded-lg transition-colors",
-              visualizerType === "pulse" ? "bg-white/20" : "bg-white/5 hover:bg-white/10"
-            )}
-            title="Pulse"
-          >
-            <Circle className="w-4 h-4 text-white" />
-          </button>
-          <button
-            onClick={() => setVisualizerType("waveform")}
-            className={cn(
-              "p-2 rounded-lg transition-colors",
-              visualizerType === "waveform" ? "bg-white/20" : "bg-white/5 hover:bg-white/10"
-            )}
-            title="Waveform"
-          >
-            <Activity className="w-4 h-4 text-white" />
-          </button>
-          <button
-            onClick={() => setVisualizerType("bars")}
-            className={cn(
-              "p-2 rounded-lg transition-colors",
-              visualizerType === "bars" ? "bg-white/20" : "bg-white/5 hover:bg-white/10"
-            )}
-            title="Bars"
-          >
-            <BarChart3 className="w-4 h-4 text-white" />
-          </button>
-          <button
-            onClick={() => setVisualizerType("orb")}
-            className={cn(
-              "p-2 rounded-lg transition-colors",
-              visualizerType === "orb" ? "bg-white/20" : "bg-white/5 hover:bg-white/10"
-            )}
-            title="Orb"
-          >
-            <Sparkles className="w-4 h-4 text-white" />
-          </button>
         </div>
 
         {/* Status display */}

@@ -6,8 +6,8 @@ export function extractTTSContent(content: string): string {
 
   let cleanContent = content;
 
-  // Remove thinking blocks
-  cleanContent = cleanContent.replace(/<thinking>[\s\S]*?<\/thinking>/g, "");
+  // Remove thinking and reasoning blocks and their content entirely
+  cleanContent = cleanContent.replace(/<(thinking|reasoning)>[\s\S]*?<\/\1>/g, "");
 
   // Remove code blocks (they're not great for TTS)
   cleanContent = cleanContent.replace(/```[\s\S]*?```/g, " [code block] ");

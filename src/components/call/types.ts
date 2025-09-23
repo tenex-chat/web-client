@@ -1,0 +1,1 @@
+export type CallState = 'initializing' | 'idle' | 'recording' | 'processing' | 'playing';

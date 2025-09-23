@@ -48,43 +48,55 @@ export function useVAD(options: UseVADOptions = {}): UseVADReturn {
     isPausedRef.current = false;
   }, []);
 
+  const createVADCallbacks = useCallback(() => ({
+    onSpeechStart: () => {
+      if (!isPausedRef.current) {
+        setIsListening(true);
+        onSpeechStart?.();
+      }
+    },
+    onSpeechEnd: () => {
+      setIsListening(false);
+      onSpeechEnd?.();
+    },
+    onError: (err: Error) => {
+      setError(err.message);
+      onError?.(err);
+      cleanup();
+    }
+  }), [onSpeechStart, onSpeechEnd, onError, cleanup]);
+
+  const getVADSettings = useCallback(() => ({
+    positiveSpeechThreshold: AUDIO_CONFIG.VAD.POSITIVE_SPEECH_THRESHOLD,
+    negativeSpeechThreshold: AUDIO_CONFIG.VAD.NEGATIVE_SPEECH_THRESHOLD,
+    redemptionFrames: AUDIO_CONFIG.VAD.REDEMPTION_FRAMES,
+    preSpeechPadFrames: AUDIO_CONFIG.VAD.PRE_SPEECH_PAD_FRAMES,
+    minSpeechFrames: AUDIO_CONFIG.VAD.MIN_SPEECH_FRAMES,
+  }), []);
+
   const initialize = useCallback(async () => {
     if (!enabled || vadServiceRef.current) return;
 
     try {
+      const callbacks = createVADCallbacks();
+      const settings = getVADSettings();
+      
       const vadService = new VADService({
-        onSpeechStart: () => {
-          if (!isPausedRef.current) {
-            setIsListening(true);
-            onSpeechStart?.();
-          }
-        },
-        onSpeechEnd: () => {
-          setIsListening(false);
-          onSpeechEnd?.();
-        },
-        onError: (err) => {
-          setError(err.message);
-          onError?.(err);
-          cleanup();
-        },
-        // Use optimized settings for natural speech from config
-        positiveSpeechThreshold: AUDIO_CONFIG.VAD.POSITIVE_SPEECH_THRESHOLD,
-        negativeSpeechThreshold: AUDIO_CONFIG.VAD.NEGATIVE_SPEECH_THRESHOLD,
-        redemptionFrames: AUDIO_CONFIG.VAD.REDEMPTION_FRAMES,
-        preSpeechPadFrames: AUDIO_CONFIG.VAD.PRE_SPEECH_PAD_FRAMES,
-        minSpeechFrames: AUDIO_CONFIG.VAD.MIN_SPEECH_FRAMES,
+        ...callbacks,
+        ...settings
       });
 
       vadServiceRef.current = vadService;
-      await vadService.initialize(inputDeviceId || audioSettings?.inputDeviceId || undefined);
+      
+      const deviceId = inputDeviceId || audioSettings?.inputDeviceId || undefined;
+      await vadService.initialize(deviceId);
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to initialize VAD";
       setError(errorMessage);
       cleanup();
     }
-  }, [enabled, inputDeviceId, audioSettings?.inputDeviceId, onSpeechStart, onSpeechEnd, onError, cleanup]);
+  }, [enabled, inputDeviceId, audioSettings?.inputDeviceId, createVADCallbacks, getVADSettings, cleanup]);
 
   const start = useCallback(async () => {
     if (!enabled) {
@@ -111,7 +123,8 @@ export function useVAD(options: UseVADOptions = {}): UseVADReturn {
 
   const stop = useCallback(() => {
     if (vadServiceRef.current) {
-      vadServiceRef.current.pause(); // Pause the VAD service
+      vadServiceRef.current.destroy(); // Fully destroy the VAD service to release microphone
+      vadServiceRef.current = null;
     }
     setIsActive(false);
     setIsListening(false);

@@ -93,23 +93,36 @@ export function CallView({
     callStateRef.current = callState;
   }, [callState]);
 
+  // Log rootEvent state changes
+  useEffect(() => {
+    console.log('CallView: rootEvent state changed', { id: rootEvent?.id });
+  }, [rootEvent]);
+
   // Hooks
   const agents = useProjectOnlineAgents(project.dTag);
+  console.log('CallView: useThreadManagement initialized with rootEvent:', { id: rootEvent?.id });
   const threadManagement = useThreadManagement(
     project,
     rootEvent, // Pass as is (NDKEvent | null)
     extraTags,
     (thread) => {
+      console.log('CallView: setRootEvent callback from useThreadManagement triggered.', { newThreadId: thread?.id, oldRootEventId: rootEventRef.current?.id });
       setRootEvent(thread);
       rootEventRef.current = thread;
     },
     agents
   );
+  console.log("CallView: useChatMessages initialized with root event:", { id: (threadManagement.localRootEvent || rootEvent || null)?.id });
   const messages = useChatMessages(threadManagement.localRootEvent || rootEvent || null);
 
   // Keep rootEventRef in sync with threadManagement's state
   useEffect(() => {
     if (threadManagement.localRootEvent) {
+      console.log('CallView: Syncing rootEvent from threadManagement.localRootEvent.', {
+        newRootEventId: threadManagement.localRootEvent.id,
+        oldRootEventInState: rootEvent?.id,
+        oldRootEventInRef: rootEventRef.current?.id,
+      });
       setRootEvent(threadManagement.localRootEvent);
       rootEventRef.current = threadManagement.localRootEvent;
     }
@@ -136,6 +149,9 @@ export function CallView({
   });
   
   const playedMessageIdsRef = useRef(new Set<string>());
+  const isInitialLoad = useRef(true);
+  const ttsQueueRef = useRef<Array<{ content: string; id: string; pubkey: string }>>([]);
+  const isProcessingQueueRef = useRef(false);
 
   // Get active agent based on selection or default to first
   const activeAgent = selectedAgentPubkey
@@ -229,8 +245,15 @@ export function CallView({
               return;
             }
 
+            console.log('CallView: Preparing to send message via stopRecording.', {
+              rootEventId: rootEventRef.current?.id,
+              hasRootEvent: !!rootEventRef.current,
+              transcript: transcribedText,
+            });
+
             try {
               if (!rootEventRef.current) {
+                console.log('CallView: No rootEvent in ref, creating new thread.');
                 // Create new thread
                 const newThread = await threadManagement.createThread(
                   transcribedText,
@@ -241,10 +264,12 @@ export function CallView({
                 );
 
                 if (newThread) {
+                  console.log('CallView: New thread created in stopRecording.', { newThreadId: newThread.id });
                   rootEventRef.current = newThread; // Update ref immediately
                   setRootEvent(newThread);
                 }
               } else {
+                console.log('CallView: Existing rootEvent in ref, sending reply in stopRecording.', { rootEventId: rootEventRef.current.id });
                 // Reply to existing thread
                 await threadManagement.sendReply(
                   transcribedText,
@@ -301,8 +326,16 @@ export function CallView({
     
     setCallState('processing');
     
+    console.log('CallView: Preparing to send message via handleSendMessage.', {
+      rootEventIdFromState: rootEvent?.id,
+      rootEventIdFromRef: rootEventRef.current?.id,
+      hasRootEvent: !!rootEvent,
+      message: messageText,
+    });
+
     try {
       if (!rootEvent) {
+        console.log('CallView: No rootEvent in state, creating new thread in handleSendMessage.');
         // Create new thread
         const newThread = await threadManagement.createThread(
           messageText,
@@ -313,9 +346,11 @@ export function CallView({
         );
         
         if (newThread) {
+          console.log('CallView: New thread created in handleSendMessage.', { newThreadId: newThread.id });
           setRootEvent(newThread);
         }
       } else {
+        console.log('CallView: Existing rootEvent in state, sending reply in handleSendMessage.', { rootEventId: rootEvent.id });
         // Reply to existing thread
         await threadManagement.sendReply(
           messageText,
@@ -338,9 +373,75 @@ export function CallView({
     }
   }, [transcript, activeAgent, rootEvent, threadManagement, messages]);
   
-  // Auto-play agent messages
+  // Process TTS queue - plays messages one at a time
+  const processNextInQueue = useCallback(async () => {
+    // Check if already processing or queue is empty
+    if (isProcessingQueueRef.current || ttsQueueRef.current.length === 0) {
+      return;
+    }
+
+    // Check if TTS is currently playing
+    if (ttsPlayer.isPlaying) {
+      return;
+    }
+
+    // Mark as processing
+    isProcessingQueueRef.current = true;
+
+    // Get next message from queue
+    const nextMessage = ttsQueueRef.current.shift();
+    if (!nextMessage) {
+      isProcessingQueueRef.current = false;
+      return;
+    }
+
+    try {
+      setCallState('playing');
+      
+      await ttsPlayer.play(nextMessage.content, nextMessage.id, nextMessage.pubkey)
+        .then(() => {
+          setCallState('idle');
+          
+          // Resume VAD if in auto mode
+          if (settings.vadMode === 'auto' && vad.isActive) {
+            vad.resume();
+          }
+
+          // Mark processing as done
+          isProcessingQueueRef.current = false;
+          
+          // Process next message in queue after a small delay
+          setTimeout(() => {
+            processNextInQueue();
+          }, 100);
+        })
+        .catch(error => {
+          console.error("TTS playback failed:", error);
+          setCallState('idle');
+          isProcessingQueueRef.current = false;
+          
+          // Try next message in queue
+          setTimeout(() => {
+            processNextInQueue();
+          }, 100);
+        });
+    } catch (error) {
+      console.error("Failed to process TTS queue:", error);
+      isProcessingQueueRef.current = false;
+      setCallState('idle');
+    }
+  }, [ttsPlayer, settings.vadMode, vad]);
+  
+  // Auto-play agent messages - adds them to the queue
   useEffect(() => {
-    if (!ttsPlayer.hasTTS || !user || ttsPlayer.isPlaying) return;
+    // Initialize playedMessageIdsRef with all existing messages on first load
+    if (isInitialLoad.current && messages.length > 0) {
+      messages.forEach(msg => playedMessageIdsRef.current.add(msg.id));
+      isInitialLoad.current = false;
+      return;
+    }
+
+    if (!ttsPlayer.hasTTS || !user) return;
     
     const unplayedMessages = messages.filter(msg => {
       if (msg.event.pubkey === user.pubkey) return false;
@@ -352,29 +453,35 @@ export function CallView({
     });
     
     if (unplayedMessages.length > 0) {
-      const latestMessage = unplayedMessages[unplayedMessages.length - 1];
-      const content = extractTTSContent(latestMessage.event.content);
-      
-      if (content) {
-        setCallState('playing');
-        playedMessageIdsRef.current.add(latestMessage.id);
+      // Add all unplayed messages to queue
+      unplayedMessages.forEach(message => {
+        const content = extractTTSContent(message.event.content);
         
-        ttsPlayer.play(content, latestMessage.id, latestMessage.event.pubkey)
-          .then(() => {
-            setCallState('idle');
-            
-            // Resume VAD if in auto mode
-            if (settings.vadMode === 'auto' && vad.isActive) {
-              vad.resume();
-            }
-          })
-          .catch(error => {
-            console.error("TTS playback failed:", error);
-            setCallState('idle');
+        if (content && !playedMessageIdsRef.current.has(message.id)) {
+          // Mark as played (added to queue)
+          playedMessageIdsRef.current.add(message.id);
+          
+          // Add to TTS queue
+          ttsQueueRef.current.push({
+            content,
+            id: message.id,
+            pubkey: message.event.pubkey
           });
-      }
+        }
+      });
+      
+      // Start processing the queue
+      processNextInQueue();
     }
-  }, [messages, user, ttsPlayer, settings.vadMode, vad]);
+  }, [messages, user, ttsPlayer.hasTTS, processNextInQueue]);
+  
+  // Monitor TTS player state to process queue when playback ends
+  useEffect(() => {
+    // When TTS stops playing and we have items in queue, process next
+    if (!ttsPlayer.isPlaying && !isProcessingQueueRef.current && ttsQueueRef.current.length > 0) {
+      processNextInQueue();
+    }
+  }, [ttsPlayer.isPlaying, processNextInQueue]);
   
   // Handle mic button
   const handleMicButton = () => {
@@ -405,6 +512,9 @@ export function CallView({
       if (audioRecorder.isRecording) {
         audioRecorder.stopRecording();
       }
+      // Clear the TTS queue
+      ttsQueueRef.current = [];
+      isProcessingQueueRef.current = false;
     };
   }, []);
   
@@ -485,7 +595,13 @@ export function CallView({
         {/* End call */}
         <motion.button
           whileTap={{ scale: 0.95 }}
-          onClick={() => onClose(threadManagement.localRootEvent || rootEvent)}
+          onClick={() => {
+            // Clear the TTS queue before closing
+            ttsQueueRef.current = [];
+            isProcessingQueueRef.current = false;
+            ttsPlayer.stop();
+            onClose(threadManagement.localRootEvent || rootEvent);
+          }}
           className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600"
         >
           <PhoneOff className="h-7 w-7 text-white" />

@@ -11,7 +11,7 @@ interface UseCallMessagingOptions {
       mentions: AgentInstance[],
       images: any[],
       autoTTS: boolean,
-      targetAgent: string | null
+      selectedAgent: string | null
     ) => Promise<NDKEvent | null>;
     sendReply: (
       content: string,
@@ -19,7 +19,7 @@ interface UseCallMessagingOptions {
       images: any[],
       autoTTS: boolean,
       messages: any[],
-      targetAgent: string | null
+      selectedAgent: string | null
     ) => Promise<NDKEvent | null>;
   };
   messages: any[];

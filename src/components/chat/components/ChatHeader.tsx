@@ -18,6 +18,8 @@ import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { ProjectAvatar } from "@/components/ui/project-avatar";
 import { useConversationMetadata } from "@/hooks/useConversationMetadata";
 import { ConversationStopButton } from "@/components/chat/ConversationStopButton";
+import { isBrainstormMessage } from "@/lib/utils/brainstorm";
+import { BrainstormViewToggle } from "./BrainstormViewToggle";
 
 interface ChatHeaderProps {
   rootEvent: NDKEventType | null;
@@ -56,6 +58,9 @@ export function ChatHeader({
    * This logic should be handled by the parent component that manages the drawer visibility.
    * The parent component (e.g., ChatDrawer or Layout) should manage its own keyboard shortcuts.
    */
+
+  // Check if this is a brainstorm conversation
+  const isBrainstormConversation = rootEvent && isBrainstormMessage(rootEvent);
 
   // Get thread title
   const threadTitle = useMemo(() => {
@@ -145,7 +150,12 @@ export function ChatHeader({
               messages={messages}
             />
           )}
-          
+
+          {/* Brainstorm View Toggle */}
+          {isBrainstormConversation && (
+            <BrainstormViewToggle className="mr-2" />
+          )}
+
           {/* Conversation Stop Button */}
           {rootEvent && project?.tagId() && (
             <ConversationStopButton

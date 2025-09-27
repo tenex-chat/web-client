@@ -84,15 +84,21 @@ export function CallView({
     ? agents.find(a => a.pubkey === selectedAgentPubkey) || agents[0]
     : agents[0];
   
-  const threadManagement = useThreadManagement(
+  const threadManagement = useThreadManagement({
     project,
-    rootEvent,
+    initialRootEvent: rootEvent,
     extraTags,
-    setRootEvent,
-    agents
-  );
+    onThreadCreated: setRootEvent,
+    onlineAgents: agents
+  });
   
-  const messages = useChatMessages(threadManagement.localRootEvent || rootEvent || null);
+  // Call view is not expected to handle brainstorm conversations
+  const messages = useChatMessages(
+    threadManagement.localRootEvent || rootEvent || null,
+    'threaded',
+    false,
+    false
+  );
   
   // Custom hooks for audio and messaging  
   const messaging = useCallMessaging({
@@ -115,45 +121,60 @@ export function CallView({
     }
   });
   
-  const { clearQueue } = useTTSQueue({
-    enabled: true,
-    messages,
-    userPubkey: user?.pubkey,
-    onPlaybackStateChange: (isPlaying) => {
-      setCallState(isPlaying ? 'playing' : 'idle');
-      if (!isPlaying && settings.vadMode === 'auto' && vad.isActive) {
-        vad.resume();
-      }
-    }
-  });
+  // We'll define this after vad is created
+  // const { clearQueue } = useTTSQueue(...
   
   // Use refs to provide stable access to mutable state in VAD callbacks, avoiding dependency issues.
   // This pattern prevents the callbacks from being recreated on every render, which would cause
   // the VAD service to lose its connection to the speech detection handlers.
   const callStateRef = useRef(callState);
   const audioRecordingRef = useRef(audioRecording);
+  const vadRef = useRef<ReturnType<typeof useVAD>>();
+  const clearQueueRef = useRef<() => void>();
   
   // Keep refs synchronized with current state values
   useEffect(() => {
+    console.log(`[${performance.now().toFixed(2)}ms] [CallView] Call state changed from`, callStateRef.current, 'to', callState);
     callStateRef.current = callState;
   }, [callState]);
-  
+
   useEffect(() => {
     audioRecordingRef.current = audioRecording;
   }, [audioRecording]);
+
+  // We'll set these refs after vad and clearQueue are defined
   
   // Create stable callbacks that won't change during the component lifecycle.
   // These callbacks use refs to access current state, preventing stale closures.
   const handleVADSpeechStart = useCallback(() => {
-    if (callStateRef.current === 'idle') {
+    const now = performance.now();
+    console.log(`[${now.toFixed(2)}ms] [CallView] handleVADSpeechStart - current state:`, callStateRef.current);
+
+    // Always check if TTS is actually playing, regardless of our state tracking
+    const ttsQueue = clearQueueRef.current;
+    if (ttsQueue) {
+      console.log(`[${now.toFixed(2)}ms] [CallView] Stopping any playing TTS and clearing queue`);
+      ttsQueue();
+    }
+
+    // Start recording regardless of state (unless already recording/processing)
+    if (callStateRef.current !== 'recording' && callStateRef.current !== 'processing') {
+      console.log(`[${now.toFixed(2)}ms] [CallView] Starting recording`);
       setCallState('recording');
       audioRecordingRef.current.startRecording();
+    } else {
+      console.log(`[${now.toFixed(2)}ms] [CallView] Already recording/processing, not starting new recording`);
     }
   }, []);
-  
+
   const handleVADSpeechEnd = useCallback(() => {
+    const now = performance.now();
+    console.log(`[${now.toFixed(2)}ms] [CallView] handleVADSpeechEnd - current state:`, callStateRef.current);
     if (callStateRef.current === 'recording') {
+      console.log(`[${now.toFixed(2)}ms] [CallView] Stopping recording`);
       audioRecordingRef.current.stopRecording();
+    } else {
+      console.log(`[${now.toFixed(2)}ms] [CallView] Ignoring speech end - not in recording state`);
     }
   }, []);
   
@@ -162,6 +183,26 @@ export function CallView({
     onSpeechStart: handleVADSpeechStart,
     onSpeechEnd: handleVADSpeechEnd
   });
+
+  // Now define useTTSQueue after vad is available
+  const { clearQueue } = useTTSQueue({
+    enabled: true,
+    messages,
+    userPubkey: user?.pubkey,
+    onPlaybackStateChange: (isPlaying) => {
+      console.log(`[${performance.now().toFixed(2)}ms] [CallView] TTS playback state changed:`, isPlaying);
+      setCallState(isPlaying ? 'playing' : 'idle');
+    }
+  });
+
+  // Now sync the refs
+  useEffect(() => {
+    vadRef.current = vad;
+  }, [vad]);
+
+  useEffect(() => {
+    clearQueueRef.current = clearQueue;
+  }, [clearQueue]);
   
   // Sync rootEvent with threadManagement
   useEffect(() => {
@@ -170,40 +211,34 @@ export function CallView({
     }
   }, [threadManagement.localRootEvent]);
   
-  // Update call state based on recording state
-  useEffect(() => {
-    if (audioRecording.isRecording && callState !== 'processing') {
-      setCallState('recording');
-    }
-  }, [audioRecording.isRecording, callState]);
+  // Removed redundant effect - call state is already managed by the VAD callbacks
   
-  // Initialize call
+  // Initialize call - only run once when component mounts
   useEffect(() => {
     const initializeCall = async () => {
       try {
         // Request mic permission
         await navigator.mediaDevices.getUserMedia({ audio: true })
           .then(stream => stream.getTracks().forEach(track => track.stop()));
-        
-        if (settings.vadMode === 'auto') {
-          await vad.start();
+
+        if (settings.vadMode === 'auto' && vadRef.current) {
+          await vadRef.current.start();
           if (!vadToastShownRef.current) {
             toast.success("Voice detection active - just start speaking!");
             vadToastShownRef.current = true;
           }
         }
-        
+
         setCallState('idle');
       } catch (error) {
         console.error("Failed to initialize:", error);
         toast.error("Microphone access required");
       }
     };
-    
-    if (callState === 'initializing') {
-      initializeCall();
-    }
-  }, [callState, settings.vadMode, vad]);
+
+    // Only initialize once when component mounts
+    initializeCall();
+  }, []); // Empty deps - run once on mount
   
   // Handle mic button
   const handleMicButton = useCallback(() => {
@@ -241,19 +276,21 @@ export function CallView({
     onClose(threadManagement.localRootEvent || rootEvent);
   }, [clearQueue, onClose, threadManagement.localRootEvent, rootEvent]);
   
-  // Cleanup on unmount
+  // Cleanup on unmount - ONLY on unmount, not when dependencies change
   useEffect(() => {
     return () => {
-      vad.stop();
-      clearQueue();
-      
-      if (audioRecording.isRecording) {
-        audioRecording.stopRecording().catch(err => {
+      console.log(`[${performance.now().toFixed(2)}ms] [CallView] Component unmounting - cleaning up`);
+      vadRef.current?.stop();
+      clearQueueRef.current?.();
+
+      // Use ref to get current recording state to avoid dependency issues
+      if (audioRecordingRef.current.isRecording) {
+        audioRecordingRef.current.stopRecording().catch(err => {
           console.error("Error stopping audio recorder on unmount:", err);
         });
       }
     };
-  }, [vad, clearQueue, audioRecording]);
+  }, []); // Empty deps - only run cleanup on unmount
   
   return (
     <div className={cn(

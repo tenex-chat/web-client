@@ -39,7 +39,7 @@ export function useAutoResizeTextarea({
     } else {
       textarea.style.overflowY = "hidden";
     }
-  }, [value, maxHeight, minHeight]);
+  }, [/* effect dep */ value, maxHeight, minHeight]);
 
   // Set initial styles on mount
   useEffect(() => {

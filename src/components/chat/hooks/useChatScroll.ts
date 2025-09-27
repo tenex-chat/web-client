@@ -84,7 +84,7 @@ export function useChatScroll(messages: Message[]): ChatScrollProps {
         }
       }
     }
-  }, [messages, checkIfNearBottom]);
+  }, [messages]);
 
   // Handle scroll events
   const handleScroll = useCallback(

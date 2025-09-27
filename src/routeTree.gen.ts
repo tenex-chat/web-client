@@ -28,6 +28,7 @@ import { Route as AuthAgentDefinitionAgentDefinitionEventIdRouteImport } from '.
 import { Route as AuthProjectsProjectIdIndexRouteImport } from './routes/_auth/projects/$projectId/index'
 import { Route as AuthAgentsPacksIndexRouteImport } from './routes/_auth/agents/packs/index'
 import { Route as AuthProjectsProjectIdSettingsRouteImport } from './routes/_auth/projects/$projectId/settings'
+import { Route as AuthProjectsProjectIdCallRouteImport } from './routes/_auth/projects/$projectId/call'
 import { Route as AuthAgentsPacksNaddrRouteImport } from './routes/_auth/agents/packs/$naddr'
 
 const McpToolsRoute = McpToolsRouteImport.update({
@@ -127,6 +128,12 @@ const AuthProjectsProjectIdSettingsRoute =
     path: '/$projectId/settings',
     getParentRoute: () => AuthProjectsRoute,
   } as any)
+const AuthProjectsProjectIdCallRoute =
+  AuthProjectsProjectIdCallRouteImport.update({
+    id: '/$projectId/call',
+    path: '/$projectId/call',
+    getParentRoute: () => AuthProjectsRoute,
+  } as any)
 const AuthAgentsPacksNaddrRoute = AuthAgentsPacksNaddrRouteImport.update({
   id: '/$naddr',
   path: '/$naddr',
@@ -150,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/agents/': typeof AuthAgentsIndexRoute
   '/projects/': typeof AuthProjectsIndexRoute
   '/agents/packs/$naddr': typeof AuthAgentsPacksNaddrRoute
+  '/projects/$projectId/call': typeof AuthProjectsProjectIdCallRoute
   '/projects/$projectId/settings': typeof AuthProjectsProjectIdSettingsRoute
   '/agents/packs/': typeof AuthAgentsPacksIndexRoute
   '/projects/$projectId': typeof AuthProjectsProjectIdIndexRoute
@@ -168,6 +176,7 @@ export interface FileRoutesByTo {
   '/agents': typeof AuthAgentsIndexRoute
   '/projects': typeof AuthProjectsIndexRoute
   '/agents/packs/$naddr': typeof AuthAgentsPacksNaddrRoute
+  '/projects/$projectId/call': typeof AuthProjectsProjectIdCallRoute
   '/projects/$projectId/settings': typeof AuthProjectsProjectIdSettingsRoute
   '/agents/packs': typeof AuthAgentsPacksIndexRoute
   '/projects/$projectId': typeof AuthProjectsProjectIdIndexRoute
@@ -191,6 +200,7 @@ export interface FileRoutesById {
   '/_auth/agents/': typeof AuthAgentsIndexRoute
   '/_auth/projects/': typeof AuthProjectsIndexRoute
   '/_auth/agents/packs/$naddr': typeof AuthAgentsPacksNaddrRoute
+  '/_auth/projects/$projectId/call': typeof AuthProjectsProjectIdCallRoute
   '/_auth/projects/$projectId/settings': typeof AuthProjectsProjectIdSettingsRoute
   '/_auth/agents/packs/': typeof AuthAgentsPacksIndexRoute
   '/_auth/projects/$projectId/': typeof AuthProjectsProjectIdIndexRoute
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/agents/'
     | '/projects/'
     | '/agents/packs/$naddr'
+    | '/projects/$projectId/call'
     | '/projects/$projectId/settings'
     | '/agents/packs/'
     | '/projects/$projectId'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/projects'
     | '/agents/packs/$naddr'
+    | '/projects/$projectId/call'
     | '/projects/$projectId/settings'
     | '/agents/packs'
     | '/projects/$projectId'
@@ -254,6 +266,7 @@ export interface FileRouteTypes {
     | '/_auth/agents/'
     | '/_auth/projects/'
     | '/_auth/agents/packs/$naddr'
+    | '/_auth/projects/$projectId/call'
     | '/_auth/projects/$projectId/settings'
     | '/_auth/agents/packs/'
     | '/_auth/projects/$projectId/'
@@ -401,6 +414,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthProjectsProjectIdSettingsRouteImport
       parentRoute: typeof AuthProjectsRoute
     }
+    '/_auth/projects/$projectId/call': {
+      id: '/_auth/projects/$projectId/call'
+      path: '/$projectId/call'
+      fullPath: '/projects/$projectId/call'
+      preLoaderRoute: typeof AuthProjectsProjectIdCallRouteImport
+      parentRoute: typeof AuthProjectsRoute
+    }
     '/_auth/agents/packs/$naddr': {
       id: '/_auth/agents/packs/$naddr'
       path: '/$naddr'
@@ -443,12 +463,14 @@ const AuthAgentsRouteWithChildren = AuthAgentsRoute._addFileChildren(
 
 interface AuthProjectsRouteChildren {
   AuthProjectsIndexRoute: typeof AuthProjectsIndexRoute
+  AuthProjectsProjectIdCallRoute: typeof AuthProjectsProjectIdCallRoute
   AuthProjectsProjectIdSettingsRoute: typeof AuthProjectsProjectIdSettingsRoute
   AuthProjectsProjectIdIndexRoute: typeof AuthProjectsProjectIdIndexRoute
 }
 
 const AuthProjectsRouteChildren: AuthProjectsRouteChildren = {
   AuthProjectsIndexRoute: AuthProjectsIndexRoute,
+  AuthProjectsProjectIdCallRoute: AuthProjectsProjectIdCallRoute,
   AuthProjectsProjectIdSettingsRoute: AuthProjectsProjectIdSettingsRoute,
   AuthProjectsProjectIdIndexRoute: AuthProjectsProjectIdIndexRoute,
 }

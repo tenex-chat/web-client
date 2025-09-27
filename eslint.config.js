@@ -3,6 +3,7 @@ import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
+import reactHooksAddons from 'eslint-plugin-react-hooks-addons';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
@@ -96,6 +97,7 @@ export default [
       '@typescript-eslint': typescript,
       'react': react,
       'react-hooks': reactHooks,
+      'react-hooks-addons': reactHooksAddons,
       'react-refresh': reactRefresh,
     },
     rules: {
@@ -118,6 +120,9 @@ export default [
       // React Hooks rules
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
+
+      // React Hooks Addons - checks for unused dependencies in useEffect/useLayoutEffect
+      'react-hooks-addons/no-unused-deps': 'warn',
       
       // React Refresh
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],

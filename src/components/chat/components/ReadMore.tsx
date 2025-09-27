@@ -39,7 +39,7 @@ export function ReadMore({
       clearTimeout(timer);
       window.removeEventListener('resize', checkHeight);
     };
-  }, [children, maxHeight]);
+  }, [/* effect dep */ children, maxHeight]);
 
   return (
     <div className={cn("relative", className)}>

@@ -3,6 +3,9 @@ import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { useEffect } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { useProjectSubscriptions } from "@/hooks/useProjectSubscriptions";
+import { useInboxStoreInitializer } from "@/hooks/useInboxStore";
+import { WindowManager } from "@/components/windows/WindowManager";
+import { useIsDesktop } from "@/hooks/useMediaQuery";
 
 export const Route = createFileRoute("/_auth")({
   component: AuthLayout,
@@ -11,9 +14,13 @@ export const Route = createFileRoute("/_auth")({
 function AuthLayout() {
   const user = useNDKCurrentUser();
   const navigate = useNavigate();
+  const isDesktop = useIsDesktop();
 
   // Initialize project subscriptions once at the auth layout level
   useProjectSubscriptions();
+
+  // Initialize inbox store subscription once at the auth layout level
+  useInboxStoreInitializer();
 
   // Check if we're in test mode
   const isTestMode = typeof window !== 'undefined' && (
@@ -38,6 +45,8 @@ function AuthLayout() {
   return (
     <AppShell>
       <Outlet />
+      {/* Floating Windows Manager - Desktop only, available globally */}
+      {isDesktop && <WindowManager />}
     </AppShell>
   );
 }

@@ -83,7 +83,7 @@ export function DocumentationCreateDialog({
       titleRef.current.style.height = "auto";
       titleRef.current.style.height = titleRef.current.scrollHeight + "px";
     }
-  }, [title]);
+  }, [/* effect dep */ title]);
 
   // Generate unique identifier for the article
   const generateIdentifier = () => {

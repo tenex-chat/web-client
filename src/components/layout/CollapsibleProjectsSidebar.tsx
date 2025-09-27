@@ -14,7 +14,6 @@ import {
   Monitor,
   Check,
   Inbox,
-  Phone,
 } from "lucide-react";
 import { useAtom } from "jotai";
 import { CreateProjectDialog } from "@/components/dialogs/CreateProjectDialog";
@@ -23,7 +22,7 @@ import { InboxPopover } from "@/components/inbox/InboxPopover";
 import { useGlobalSearchShortcut, useInboxShortcut } from "@/hooks/useKeyboardShortcuts";
 import { useSortedProjects } from "@/hooks/useSortedProjects";
 import { useTheme } from "@/hooks/useTheme";
-import { useInboxUnreadCount } from "@/hooks/useInboxEvents";
+import { useInboxUnreadCount } from "@/hooks/useInboxStore";
 import { useGlobalAgents } from "@/stores/agents";
 import { useProfile } from "@nostr-dev-kit/ndk-hooks";
 import { useWindowManager } from "@/stores/windowManager";
@@ -135,11 +134,8 @@ export function CollapsibleProjectsSidebar({
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [inboxPopoverOpen, setInboxPopoverOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-  const [openProjects] = useAtom(openProjectsAtom);
   const [, toggleProject] = useAtom(toggleProjectAtom);
   const isProjectOpen = useAtom(isProjectOpenAtom)[0];
-  const windowManager = useWindowManager();
-  const allProjects = useProjectsHook();
 
   // Add keyboard shortcuts
   useGlobalSearchShortcut(() => setSearchDialogOpen(true));
@@ -488,31 +484,6 @@ export function CollapsibleProjectsSidebar({
                       <Settings className="h-4 w-4 mr-2" />
                       Settings
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      // Open test CallView in a floating window
-                      // Use the first project if available, otherwise show an alert
-                      const firstProject = allProjects[0]?.project;
-                      if (firstProject) {
-                        windowManager.addWindow({
-                          project: firstProject,
-                          type: "call" as any,
-                          data: {
-                            onCallEnd: (rootEvent: any) => {
-                              console.log('Test call ended', rootEvent);
-                            }
-                          }
-                        });
-                      } else {
-                        alert('Please create a project first to test CallView');
-                      }
-                    }}
-                    className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
-                  >
-                    <Phone className="h-4 w-4 mr-2" />
-                    Test CallView (Dev)
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuSub>

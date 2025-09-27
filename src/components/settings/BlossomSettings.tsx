@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAtom } from "jotai";
 import { Upload, Server, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,41 @@ export function BlossomSettings() {
 
   const registry = BlossomServerRegistry.getInstance();
 
+  // Sync servers between atom and registry on mount
+  useEffect(() => {
+    const registryServers = registry.getServers();
+    
+    // If atom is empty but registry has servers (first load or cleared storage)
+    if (servers.length === 0 && registryServers.length > 0) {
+      setServers(registryServers);
+    } 
+    // If atom has servers, ensure they're all in the registry
+    else if (servers.length > 0) {
+      servers.forEach(server => {
+        // Check if server exists in registry
+        if (!registry.getServerInfo(server.url)) {
+          // Add missing server to registry
+          registry.addServer({
+            url: server.url,
+            name: server.name,
+            priority: server.priority,
+            capabilities: {
+              ...server.capabilities,
+              // Ensure supportedMimeTypes is set
+              supportedMimeTypes: server.capabilities.supportedMimeTypes || ["*/*"],
+            },
+          });
+        }
+      });
+      
+      // Update atom with the full list from registry (includes defaults)
+      const allServers = registry.getServers();
+      if (allServers.length !== servers.length) {
+        setServers(allServers);
+      }
+    }
+  }, []);
+
   const addServer = () => {
     if (!newServerUrl || !newServerName) {
       toast.error("Please enter both server URL and name");
@@ -58,6 +93,7 @@ export function BlossomSettings() {
       priority: servers.length + 1,
       capabilities: {
         maxFileSize: 50 * 1024 * 1024, // Default 50MB
+        supportedMimeTypes: ["*/*"], // Support all mime types by default
         requiresAuth: true,
         supportedFeatures: [],
       },
@@ -75,6 +111,7 @@ export function BlossomSettings() {
   };
 
   const removeServer = (url: string) => {
+    // Update both registry and atom state
     registry.removeServer(url);
     setServers(servers.filter((s) => s.url !== url));
     toast.success("Server removed");
@@ -215,7 +252,7 @@ export function BlossomSettings() {
         <CardContent className="space-y-4">
           {/* Existing servers */}
           <div className="space-y-2">
-            {registry.getServers().map((server) => (
+            {servers.map((server) => (
               <div
                 key={server.url}
                 className="flex items-center justify-between p-3 border rounded-lg"

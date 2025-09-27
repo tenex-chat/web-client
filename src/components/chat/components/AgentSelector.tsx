@@ -18,6 +18,7 @@ import {
 import { NostrProfile } from "@/components/common/NostrProfile";
 import type { AgentInstance } from "@/types/agent";
 import type { Message } from "../hooks/useChatMessages";
+import { logger } from "@/lib/logger";
 
 interface AgentSelectorProps {
   onlineAgents: AgentInstance[] | null;
@@ -42,6 +43,8 @@ export function AgentSelector({
   const defaultAgent = useMemo(() => {
     if (!onlineAgents || onlineAgents.length === 0) return null;
 
+    let result = null;
+
     // If there are recent messages, find the most recent non-user agent
     if (recentMessages.length > 0) {
       const recentAgent = [...recentMessages].reverse().find((msg) => {
@@ -50,12 +53,22 @@ export function AgentSelector({
       });
 
       if (recentAgent) {
-        return recentAgent.event.pubkey;
+        result = recentAgent.event.pubkey;
+        logger.debug("[AgentSelector] Default agent from recent messages", {
+          agentPubkey: result,
+          agentSlug: onlineAgents.find(a => a.pubkey === result)?.slug
+        });
+        return result;
       }
     }
 
     // Otherwise, default to the PM (first agent)
-    return onlineAgents[0].pubkey;
+    result = onlineAgents[0].pubkey;
+    logger.debug("[AgentSelector] Default agent is PM (first agent)", {
+      agentPubkey: result,
+      agentSlug: onlineAgents[0].slug
+    });
+    return result;
   }, [onlineAgents, recentMessages]);
 
   // Use selected agent or default
@@ -69,21 +82,37 @@ export function AgentSelector({
 
   const handleSelect = useCallback(
     (agentPubkey: string) => {
+      const selectedAgentObj = onlineAgents?.find(a => a.pubkey === agentPubkey);
+      
       // If selecting the same agent that's already the default and nothing is explicitly selected, do nothing
       if (agentPubkey === defaultAgent && !selectedAgent) {
+        logger.debug("[AgentSelector] Selected default agent (no change)", {
+          agentPubkey,
+          agentSlug: selectedAgentObj?.slug
+        });
         setOpen(false);
         return;
       }
 
       // If selecting the same agent that's already explicitly selected, reset to auto mode
       if (agentPubkey === selectedAgent) {
+        logger.info("[AgentSelector] Resetting to auto mode", {
+          previousAgent: agentPubkey,
+          previousAgentSlug: selectedAgentObj?.slug
+        });
         onAgentSelect(null);
       } else {
+        logger.info("[AgentSelector] Agent selected", {
+          agentPubkey,
+          agentSlug: selectedAgentObj?.slug,
+          previousAgent: selectedAgent,
+          previousAgentSlug: onlineAgents?.find(a => a.pubkey === selectedAgent)?.slug
+        });
         onAgentSelect(agentPubkey);
       }
       setOpen(false);
     },
-    [defaultAgent, selectedAgent, onAgentSelect],
+    [defaultAgent, selectedAgent, onAgentSelect, onlineAgents],
   );
 
   if (!onlineAgents || onlineAgents.length === 0) {

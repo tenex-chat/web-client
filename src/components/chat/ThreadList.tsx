@@ -49,7 +49,7 @@ export const ThreadList = memo(function ThreadList({
           },
         ]
       : false,
-    {},
+    { subId: 'thread-list' },
   );
 
   // Sort and filter threads based on timeFilter

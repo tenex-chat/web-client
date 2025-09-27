@@ -23,17 +23,18 @@ import {
   ChevronRight,
   Loader2,
   X,
-  Bot,
   Wrench,
   FileText,
-  Check,
   Package,
+  Bot,
+  Check,
 } from "lucide-react";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import { NDKAgentDefinitionPack } from "@/lib/ndk-events/NDKAgentDefinitionPack";
 import { NDKMCPTool } from "@/lib/ndk-events/NDKMCPTool";
 import { PackCard } from "@/components/agents/PackCard";
+import { AgentDefinitionCard } from "@/components/agents/AgentDefinitionCard";
 import { cn } from "@/lib/utils";
 
 interface CreateProjectDialogProps {
@@ -405,24 +406,21 @@ export function CreateProjectDialog({
                     Select a pre-configured collection of agents
                   </p>
                 </div>
-                <div className="overflow-x-auto">
-                  <div className="flex gap-4 pb-2">
-                    {packs.map((pack) => (
-                      <div key={pack.id} className="flex-shrink-0">
-                        <PackCard
-                          pack={pack}
-                          onClick={() => {
-                            if (selectedPackId === pack.id) {
-                              setSelectedPackId(null);
-                            } else {
-                              setSelectedPackId(pack.id);
-                            }
-                          }}
-                          selected={selectedPackId === pack.id}
-                        />
-                      </div>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {packs.map((pack) => (
+                    <PackCard
+                      key={pack.id}
+                      pack={pack}
+                      onClick={() => {
+                        if (selectedPackId === pack.id) {
+                          setSelectedPackId(null);
+                        } else {
+                          setSelectedPackId(pack.id);
+                        }
+                      }}
+                      selected={selectedPackId === pack.id}
+                    />
+                  ))}
                 </div>
                 {selectedPackId && (
                   <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
@@ -452,7 +450,7 @@ export function CreateProjectDialog({
               Select individual agents to work on this project (optional)
             </p>
 
-            <ScrollArea className="h-[300px] border rounded-lg p-4">
+            <div className="border rounded-lg p-4">
               {isLoadingAgents ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -462,52 +460,49 @@ export function CreateProjectDialog({
                   No agents available
                 </p>
               ) : (
-                <div className="space-y-2">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {availableAgents.map((agent) => (
                     <div
                       key={agent.id}
                       className={cn(
-                        "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
-                        selectedAgents.has(agent.id)
-                          ? "bg-primary/10 border-primary"
-                          : "hover:bg-accent",
+                        "relative rounded-lg transition-all",
+                        selectedAgents.has(agent.id) && "ring-2 ring-primary",
                       )}
-                      onClick={() => {
-                        const newSelected = new Set(selectedAgents);
-                        if (newSelected.has(agent.id)) {
-                          newSelected.delete(agent.id);
-                        } else {
-                          newSelected.add(agent.id);
-                        }
-                        setSelectedAgents(newSelected);
-                      }}
                     >
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>
-                          <Bot className="h-5 w-5" />
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="flex-1">
-                        <p className="font-medium">
-                          {agent.name || "Unnamed Agent"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {agent.description || "No description"}
-                        </p>
-                        <Badge variant="secondary" className="mt-1">
-                          {agent.role}
-                        </Badge>
-                      </div>
-
+                      <AgentDefinitionCard
+                        agent={agent}
+                        onClick={() => {
+                          const newSelected = new Set(selectedAgents);
+                          if (newSelected.has(agent.id)) {
+                            newSelected.delete(agent.id);
+                          } else {
+                            newSelected.add(agent.id);
+                          }
+                          setSelectedAgents(newSelected);
+                        }}
+                      />
                       {selectedAgents.has(agent.id) && (
-                        <Check className="h-5 w-5 text-primary" />
+                        <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                          <svg
+                            className="w-4 h-4 text-primary-foreground"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={3}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
                       )}
                     </div>
                   ))}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </div>
         );
 
@@ -518,7 +513,7 @@ export function CreateProjectDialog({
               Select MCP tools to enable for this project (optional)
             </p>
 
-            <ScrollArea className="h-[300px] border rounded-lg p-4">
+            <div className="border rounded-lg p-4">
               {isLoadingTools ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -573,7 +568,7 @@ export function CreateProjectDialog({
                   ))}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </div>
         );
 
@@ -668,8 +663,8 @@ export function CreateProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Create New Project</DialogTitle>
           <DialogDescription>
             Step {currentStepIndex + 1} of {steps.length}:{" "}
@@ -678,7 +673,7 @@ export function CreateProjectDialog({
         </DialogHeader>
 
         {/* Step indicators */}
-        <div className="flex items-center justify-center gap-2 py-2">
+        <div className="flex items-center justify-center gap-2 py-2 flex-shrink-0">
           {steps.map((step, index) => (
             <div
               key={step}
@@ -711,9 +706,11 @@ export function CreateProjectDialog({
           ))}
         </div>
 
-        <div className="min-h-[350px]">{renderStepContent()}</div>
+        <div className="flex-1 overflow-y-auto px-1">
+          <div className="pb-4">{renderStepContent()}</div>
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0">
           {currentStepIndex > 0 && (
             <Button
               variant="outline"

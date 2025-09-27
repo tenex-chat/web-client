@@ -19,6 +19,7 @@ import { NDKEvent, useNDK } from "@nostr-dev-kit/ndk-hooks";
 import { toast } from "sonner";
 import type { ProjectModel } from "@/lib/ndk-events/NDKProjectStatus";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
+import { logger } from "@/lib/logger";
 
 interface ModelSelectorProps {
   selectedAgentPubkey: string | null;
@@ -46,12 +47,24 @@ export function ModelSelector({
 
   // Update selected model when agent changes
   React.useEffect(() => {
-    setSelectedModel(selectedAgentModel || null);
-  }, [selectedAgentModel]);
+    if (selectedAgentModel !== selectedModel) {
+      logger.debug("[ModelSelector] Model updated for agent", {
+        agentPubkey: selectedAgentPubkey,
+        previousModel: selectedModel,
+        newModel: selectedAgentModel || null
+      });
+      setSelectedModel(selectedAgentModel || null);
+    }
+  }, [selectedAgentModel, selectedAgentPubkey]);
 
   const handleModelChange = useCallback(
     async (modelSlug: string) => {
       if (!ndk || !selectedAgentPubkey || !project) {
+        logger.error("[ModelSelector] Unable to change model: missing required information", {
+          hasNdk: !!ndk,
+          agentPubkey: selectedAgentPubkey,
+          projectId: project?.tagId()
+        });
         toast.error("Unable to change model: missing required information");
         setOpen(false);
         return;
@@ -59,14 +72,28 @@ export function ModelSelector({
 
       // If selecting the same model, just close
       if (modelSlug === selectedModel) {
+        logger.debug("[ModelSelector] Selected same model, no change", {
+          model: modelSlug,
+          agentPubkey: selectedAgentPubkey
+        });
         setOpen(false);
         return;
       }
 
       setIsChanging(true);
+      logger.info("[ModelSelector] Changing agent model", {
+        agentPubkey: selectedAgentPubkey,
+        previousModel: selectedModel,
+        newModel: modelSlug,
+        projectId: project.tagId()
+      });
+      
       try {
         const projectTagId = project.tagId();
         if (!projectTagId) {
+          logger.error("[ModelSelector] Project tag ID not found", {
+            projectDTag: project.dTag
+          });
           toast.error("Project tag ID not found");
           setIsChanging(false);
           setOpen(false);
@@ -87,13 +114,27 @@ export function ModelSelector({
         // Note: We're not including tool tags here, which means
         // the agent will keep its existing tools configuration
 
+        logger.debug("[ModelSelector] Publishing model change event", {
+          eventKind: 24020,
+          tags: changeEvent.tags
+        });
+
         await changeEvent.sign();
         await changeEvent.publish();
 
         // Update local state immediately for responsive UI
         setSelectedModel(modelSlug);
+        logger.info("[ModelSelector] Model changed successfully", {
+          agentPubkey: selectedAgentPubkey,
+          newModel: modelSlug
+        });
         toast.success(`Model changed to ${modelSlug}`);
       } catch (error) {
+        logger.error("[ModelSelector] Failed to change model", {
+          error: error instanceof Error ? error.message : String(error),
+          agentPubkey: selectedAgentPubkey,
+          attemptedModel: modelSlug
+        });
         console.error("Failed to change model:", error);
         toast.error("Failed to change model");
       } finally {

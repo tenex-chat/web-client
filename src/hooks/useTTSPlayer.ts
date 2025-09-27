@@ -39,13 +39,8 @@ import {
 import { useAI } from "@/hooks/useAI";
 import { openAIApiKeyAtom } from "@/stores/ai-config-store";
 import { extractTTSContent } from "@/lib/utils/extractTTSContent";
-import { useVAD } from "@/hooks/useVAD";
 import { atomWithStorage } from "jotai/utils";
 import { ttsManager } from "@/services/ai/tts-manager";
-import { AUDIO_CONFIG } from "@/lib/audio/audio-config";
-
-// Setting for enabling speech interruption
-const speechInterruptionEnabledAtom = atomWithStorage("tts-speech-interruption-enabled", true);
 
 export function useTTSPlayer() {
   const { hasTTS, voiceSettings } = useAI();
@@ -56,7 +51,6 @@ export function useTTSPlayer() {
   const playbackRate = useAtomValue(ttsPlaybackRateAtom);
   const volume = useAtomValue(ttsVolumeAtom);
   const [autoPlayNext, setAutoPlayNext] = useAtom(ttsAutoPlayNextAtom);
-  const [speechInterruptionEnabled, setSpeechInterruptionEnabled] = useAtom(speechInterruptionEnabledAtom);
 
   // Read-only atoms
   const isPlaying = useAtomValue(isPlayingAtom);
@@ -99,61 +93,9 @@ export function useTTSPlayer() {
     };
   }, []);
 
-  // Handle speech interruption using VAD
-  const speechStartTimeRef = useRef<number | null>(null);
-  const resumeTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
-  const vad = useVAD({
-    enabled: speechInterruptionEnabled && hasTTS && isPlaying,
-    onSpeechStart: () => {
-      // User started speaking - pause TTS
-      speechStartTimeRef.current = Date.now();
-      setInterruptionState(true, "user_speaking");
-      pausePlaybackAction();
-      
-      // Clear any pending resume timer
-      if (resumeTimerRef.current) {
-        clearTimeout(resumeTimerRef.current);
-        resumeTimerRef.current = null;
-      }
-    },
-    onSpeechEnd: () => {
-      // User stopped speaking
-      setInterruptionState(false, null);
-      
-      const speechDuration = speechStartTimeRef.current 
-        ? Date.now() - speechStartTimeRef.current 
-        : 0;
-      
-      // If user spoke for too long, stop TTS completely
-      if (speechDuration >= AUDIO_CONFIG.INTERRUPTION.STOP_THRESHOLD_MS) {
-        stop();
-      } else {
-        // Otherwise, resume after delay
-        resumeTimerRef.current = setTimeout(() => {
-          resumePlaybackAction();
-        }, AUDIO_CONFIG.INTERRUPTION.RESUME_DELAY_MS);
-      }
-      
-      speechStartTimeRef.current = null;
-    },
-  });
-  
-  // Start/stop VAD based on playback state
-  useEffect(() => {
-    if (speechInterruptionEnabled && hasTTS && isPlaying) {
-      vad.start();
-    } else {
-      vad.pause();
-    }
-    
-    return () => {
-      if (resumeTimerRef.current) {
-        clearTimeout(resumeTimerRef.current);
-        resumeTimerRef.current = null;
-      }
-    };
-  }, [speechInterruptionEnabled, hasTTS, isPlaying, vad]);
+  // Note: Speech interruption has been removed from the TTS player.
+  // Interruption should be handled at the application level (e.g., in CallView)
+  // where VAD is already being used for STT, to avoid multiple VAD instances.
 
   const play = useCallback(
     async (
@@ -353,7 +295,6 @@ export function useTTSPlayer() {
     hasTTS,
     isInterrupted,
     interruptionReason,
-    speechInterruptionEnabled,
 
     // Actions
     play,
@@ -367,7 +308,6 @@ export function useTTSPlayer() {
     setPlaybackRate: changePlaybackRate,
     setVolume: changeVolume,
     setAutoPlayNext,
-    setSpeechInterruptionEnabled,
     queueMessage,
     removeFromQueue,
     clearQueue,

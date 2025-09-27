@@ -1,4 +1,5 @@
 import { atom } from "jotai";
+import { atomWithStorage } from "jotai/utils";
 import type { BlossomServerInfo } from "@/services/blossom/BlossomServerRegistry";
 import { UPLOAD_LIMITS } from "@/lib/constants";
 
@@ -47,8 +48,11 @@ export const dragStateAtom = atom<DragState>({
   draggedFiles: [],
 });
 
-// Server configurations atom
-export const blossomServersAtom = atom<BlossomServerInfo[]>([]);
+// Server configurations atom - persisted to localStorage
+export const blossomServersAtom = atomWithStorage<BlossomServerInfo[]>(
+  "blossom_servers_config",
+  []
+);
 
 // Server health status atom
 export const serverHealthAtom = atom<Map<string, ServerHealth>>(new Map());

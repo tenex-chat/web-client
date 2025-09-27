@@ -8,8 +8,9 @@ import {
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { Message } from "./useChatMessages";
 import type { AgentInstance } from "@/types/agent";
-import { findNostrEntities } from "@/lib/utils/nostrEntityParser";
+import type { NostrEntity } from "@/lib/utils/nostrEntityParser";
 import { isBrainstormMessage } from "@/lib/utils/brainstorm";
+import { useBrainstormMode } from "@/stores/brainstorm-mode-store";
 
 export interface ImageUpload {
   url: string;
@@ -21,23 +22,36 @@ export interface ImageUpload {
   };
 }
 
+export interface ThreadManagementOptions {
+  project: NDKProject | null | undefined;
+  initialRootEvent: NDKEvent | null;
+  extraTags?: string[][];
+  onThreadCreated?: (thread: NDKEvent) => void;
+  onlineAgents?: { pubkey: string; slug: string }[];
+  replyingTo?: NDKEvent | null;
+  quotedEvents?: NostrEntity[];
+}
+
 /**
  * Hook for managing thread operations
  * Handles creating threads, sending replies, and NDK event tagging
  */
-export function useThreadManagement(
-  project: NDKProject | null | undefined,
-  initialRootEvent: NDKEvent | null,
-  extraTags?: string[][],
-  onThreadCreated?: (thread: NDKEvent) => void,
-  onlineAgents?: { pubkey: string; slug: string }[],
-  replyingTo?: NDKEvent | null,
-) {
+export function useThreadManagement({
+  project,
+  initialRootEvent,
+  extraTags,
+  onThreadCreated,
+  onlineAgents,
+  replyingTo,
+  quotedEvents = [],
+}: ThreadManagementOptions) {
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
   const [localRootEvent, setLocalRootEvent] = useState<NDKEvent | null>(
     initialRootEvent,
   );
+  const { getCurrentSession } = useBrainstormMode();
+  const brainstormSession = getCurrentSession();
 
   const createThread = useCallback(
     async (
@@ -45,23 +59,20 @@ export function useThreadManagement(
       mentions: AgentInstance[],
       images: ImageUpload[],
       autoTTS: boolean,
-      targetAgent: string | null,
+      selectedAgent: string | null,
     ) => {
       if (!ndk || !user) return null;
 
-      // Create the initial thread event (kind 11)
       const newThreadEvent = new NDKThread(ndk);
       newThreadEvent.content = content;
       newThreadEvent.title = content.slice(0, 50);
 
       if (project) newThreadEvent.tag(project.tagReference());
 
-      // Add extra tags if provided
       if (extraTags && extraTags.length > 0) {
         newThreadEvent.tags.push(...extraTags);
       }
 
-      // Add image tags for each uploaded image
       images.forEach((upload) => {
         if (upload.metadata) {
           newThreadEvent.tags.push([
@@ -77,37 +88,51 @@ export function useThreadManagement(
         }
       });
 
-      // Add p-tags for mentioned agents
       mentions.forEach((agent) => {
         newThreadEvent.tags.push(["p", agent.pubkey]);
       });
 
-      // If a specific agent is targeted, add their p-tag
-      if (targetAgent && mentions.every((m) => m.pubkey !== targetAgent)) {
-        newThreadEvent.tags.push(["p", targetAgent]);
-      }
-      // If no mentions and no target, add first agent (PM) p-tag when starting new conversation
-      else if (
+      if (selectedAgent && mentions.every((m) => m.pubkey !== selectedAgent)) {
+        newThreadEvent.tags.push(["p", selectedAgent]);
+      } else if (
         mentions.length === 0 &&
-        !targetAgent &&
+        !selectedAgent &&
         onlineAgents &&
         onlineAgents.length > 0
       ) {
-        // First agent in the list is the project manager
         const projectManager = onlineAgents[0];
         newThreadEvent.tags.push(["p", projectManager.pubkey]);
       }
 
-      // Log warning if there are unresolved mentions
-      const hasUnresolvedMentions =
-        /@[\w-]+/.test(content) && mentions.length === 0;
-      if (hasUnresolvedMentions) {
-        // Silent warning - mentions might be for agents not in this project
+      // Extract and add hashtags from content
+      const hashtagRegex = /#(\w+)/g;
+      const hashtags = new Set<string>();
+      let match;
+      while ((match = hashtagRegex.exec(content)) !== null) {
+        hashtags.add(match[1].toLowerCase());
       }
+      hashtags.forEach(tag => {
+        newThreadEvent.tags.push(["t", tag]);
+      });
 
-      // Add voice mode tag if auto-TTS is enabled
       if (autoTTS) {
         newThreadEvent.tags.push(["mode", "voice"]);
+      }
+
+      // Handle brainstorm mode encoding
+      if (brainstormSession?.enabled && brainstormSession.moderatorPubkey) {
+        // Add brainstorm mode tags
+        newThreadEvent.tags.push(["mode", "brainstorm"]);
+        newThreadEvent.tags.push(["t", "brainstorm"]);
+
+        // Clear existing p-tags and add only the moderator with p-tag
+        newThreadEvent.tags = newThreadEvent.tags.filter(tag => tag[0] !== "p");
+        newThreadEvent.tags.push(["p", brainstormSession.moderatorPubkey]);
+
+        // Add participants as ["participant", "<pubkey>"] tags without p-tagging
+        brainstormSession.participantPubkeys.forEach(participantPubkey => {
+          newThreadEvent.tags.push(["participant", participantPubkey]);
+        });
       }
 
       await newThreadEvent.sign(undefined, { pTags: false });
@@ -121,7 +146,16 @@ export function useThreadManagement(
 
       return newThreadEvent;
     },
-    [ndk, user, project, extraTags, onThreadCreated, onlineAgents],
+    [
+      ndk,
+      user,
+      project,
+      extraTags,
+      onlineAgents,
+      onThreadCreated,
+      brainstormSession,
+      quotedEvents,
+    ],
   );
 
   const sendReply = useCallback(
@@ -131,9 +165,8 @@ export function useThreadManagement(
       images: ImageUpload[],
       autoTTS: boolean,
       recentMessages: Message[],
-      targetAgent: string | null,
+      selectedAgent: string | null,
     ) => {
-      console.log('send reply', { ndk: !!ndk, user: !!user, localRootEvent: !!localRootEvent })
       if (!ndk || !user || !localRootEvent) return null;
 
       // If replying to a specific message, use that as the reply target
@@ -149,9 +182,10 @@ export function useThreadManagement(
 
       // Add project tag if project exists
       if (project) {
-        replyEvent.tags.push(["a", project.tagId()]);
-      } else {
-        console.warn("NO PROJECT ON REPLY")
+        const tagId = project.tagId();
+        if (tagId) {
+          replyEvent.tags.push(["a", tagId]);
+        }
       }
 
       // Add image tags for each uploaded image
@@ -170,33 +204,32 @@ export function useThreadManagement(
         }
       });
 
-      // Add p-tags for mentioned agents
-      mentions.forEach((agent) => {
-        replyEvent.tags.push(["p", agent.pubkey]);
-      });
+      // Only add p-tags if NOT in brainstorm mode (brainstorm mode will handle p-tags later)
+      if (!(localRootEvent && isBrainstormMessage(localRootEvent))) {
+        // Add p-tags for mentioned agents
+        mentions.forEach((agent) => {
+          replyEvent.tags.push(["p", agent.pubkey]);
+        });
 
-      // Check if there are @ mentions in the content that weren't resolved
-      const hasUnresolvedMentions =
-        /@[\w-]+/.test(content) && mentions.length === 0;
+        // Check if there are @ mentions in the content that weren't resolved
+        const hasUnresolvedMentions =
+          /@[\w-]+/.test(content) && mentions.length === 0;
 
-      // If a specific agent is targeted, add their p-tag
-      if (targetAgent && mentions.every((m) => m.pubkey !== targetAgent)) {
-        replyEvent.tags.push(["p", targetAgent]);
-      }
-      // Only auto-tag the most recent non-user if there are NO @ mentions at all
-      // (resolved or unresolved) in the content and no target agent
-      else if (
-        !hasUnresolvedMentions &&
-        mentions.length === 0 &&
-        !targetAgent &&
-        recentMessages.length > 0
-      ) {
-        const mostRecentNonUserMessage = [...recentMessages]
-          .reverse()
-          .find((msg) => msg.event.pubkey !== user.pubkey);
+        if (selectedAgent && mentions.every((m) => m.pubkey !== selectedAgent)) {
+          replyEvent.tags.push(["p", selectedAgent]);
+        } else if (
+          !hasUnresolvedMentions &&
+          mentions.length === 0 &&
+          !selectedAgent &&
+          recentMessages.length > 0
+        ) {
+          const mostRecentNonUserMessage = [...recentMessages]
+            .reverse()
+            .find((msg) => msg.event.pubkey !== user.pubkey);
 
-        if (mostRecentNonUserMessage) {
-          replyEvent.tags.push(["p", mostRecentNonUserMessage.event.pubkey]);
+          if (mostRecentNonUserMessage) {
+            replyEvent.tags.push(["p", mostRecentNonUserMessage.event.pubkey]);
+          }
         }
       }
 
@@ -205,7 +238,7 @@ export function useThreadManagement(
         replyEvent.tags.push(["mode", "voice"]);
       }
 
-      // In brainstorm conversations, preserve brainstorm mode tags and always p-tag the moderator
+      // In brainstorm conversations, preserve brainstorm mode tags and always p-tag ONLY the moderator
       if (localRootEvent && isBrainstormMessage(localRootEvent)) {
         // Add brainstorm mode tags to the reply
         const hasBrainstormMode = replyEvent.tags.some(
@@ -214,14 +247,14 @@ export function useThreadManagement(
         if (!hasBrainstormMode) {
           replyEvent.tags.push(["mode", "brainstorm"]);
         }
-        
+
         const hasBrainstormTag = replyEvent.tags.some(
           tag => tag[0] === "t" && tag[1] === "brainstorm"
         );
         if (!hasBrainstormTag) {
           replyEvent.tags.push(["t", "brainstorm"]);
         }
-        
+
         // Also preserve participant tags from the root event
         const participantTags = localRootEvent.tags.filter(tag => tag[0] === "participant");
         participantTags.forEach(participantTag => {
@@ -232,17 +265,12 @@ export function useThreadManagement(
             replyEvent.tags.push(participantTag);
           }
         });
-        
-        // P-tag the moderator
+
+        // Clear all existing p-tags and only add the moderator
+        replyEvent.tags = replyEvent.tags.filter(tag => tag[0] !== "p");
         const moderatorPubkey = localRootEvent.tagValue("p");
         if (moderatorPubkey) {
-          // Check if moderator is not already p-tagged
-          const hasModeratorPTag = replyEvent.tags.some(
-            tag => tag[0] === "p" && tag[1] === moderatorPubkey
-          );
-          if (!hasModeratorPTag) {
-            replyEvent.tags.push(["p", moderatorPubkey]);
-          }
+          replyEvent.tags.push(["p", moderatorPubkey]);
         }
       }
 
@@ -261,10 +289,10 @@ export function useThreadManagement(
       images: ImageUpload[],
       autoTTS: boolean,
       recentMessages: Message[],
-      targetAgent: string | null = null,
+      selectedAgent: string | null = null,
     ) => {
       if (!localRootEvent) {
-        return createThread(content, mentions, images, autoTTS, targetAgent);
+        return createThread(content, mentions, images, autoTTS, selectedAgent);
       } else {
         return sendReply(
           content,
@@ -272,7 +300,7 @@ export function useThreadManagement(
           images,
           autoTTS,
           recentMessages,
-          targetAgent,
+          selectedAgent,
         );
       }
     },

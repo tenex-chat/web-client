@@ -9,9 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { InboxEventCard } from "./InboxEventCard";
-import { useInboxEvents } from "@/hooks/useInboxEvents";
-import { useAtom, useAtomValue } from "jotai";
-import { lastInboxVisitAtom, markInboxAsReadAtom } from "@/stores/inbox";
+import { useInbox } from "@/hooks/useInboxStore";
 
 interface InboxPopoverProps {
   children: React.ReactNode;
@@ -21,11 +19,9 @@ interface InboxPopoverProps {
 
 export function InboxPopover({ children, open, onOpenChange }: InboxPopoverProps) {
   const navigate = useNavigate();
-  const [, markAsRead] = useAtom(markInboxAsReadAtom);
-  const lastVisit = useAtomValue(lastInboxVisitAtom);
-  
-  // Get inbox events and unread count
-  const { events, unreadCount } = useInboxEvents();
+
+  // Get inbox events and unread count from the store
+  const { events, unreadCount, lastVisit, markAsRead } = useInbox();
 
   const handleOpenInboxPage = () => {
     onOpenChange?.(false);
@@ -102,7 +98,6 @@ export function InboxPopover({ children, open, onOpenChange }: InboxPopoverProps
                   <InboxEventCard
                     event={event}
                     isUnread={event.created_at ? event.created_at > lastVisit : false}
-                    compact
                   />
                 </div>
               ))}

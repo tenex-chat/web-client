@@ -184,7 +184,6 @@ export function CallSettings({ className }: CallSettingsProps) {
     }, 1000);
   }, [isTestingOutput, audioSettings.outputDeviceId]);
 
-
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -547,7 +546,6 @@ export function CallSettings({ className }: CallSettingsProps) {
           </div>
 
           <Separator />
-
 
           {/* Refresh devices button */}
           <div className="pt-4">

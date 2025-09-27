@@ -57,6 +57,7 @@ export class BlossomServerRegistry {
 
   private constructor() {
     this.initializeServers();
+    this.loadUserServers();
     this.startHealthChecks();
   }
 
@@ -70,6 +71,48 @@ export class BlossomServerRegistry {
   private initializeServers(): void {
     for (const server of this.defaultServers) {
       this.servers.set(server.url, server);
+    }
+  }
+
+  private loadUserServers(): void {
+    try {
+      const stored = localStorage.getItem('blossom_user_servers');
+      if (stored) {
+        const userServers = JSON.parse(stored) as BlossomServerInfo[];
+        for (const server of userServers) {
+          // Restore server with fresh metrics and ensure mime types
+          this.servers.set(server.url, {
+            ...server,
+            capabilities: {
+              ...server.capabilities,
+              // Ensure supportedMimeTypes is set for legacy saved servers
+              supportedMimeTypes: server.capabilities.supportedMimeTypes || ["*/*"],
+            },
+            metrics: {
+              url: server.url,
+              lastChecked: 0,
+              isAvailable: true,
+              averageLatency: 0,
+              successRate: 1,
+              totalUploads: 0,
+              failedUploads: 0,
+            },
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load user servers:', error);
+    }
+  }
+
+  private saveUserServers(): void {
+    try {
+      const userServers = Array.from(this.servers.values()).filter(
+        (server) => !this.defaultServers.some((d) => d.url === server.url)
+      );
+      localStorage.setItem('blossom_user_servers', JSON.stringify(userServers));
+    } catch (error) {
+      console.error('Failed to save user servers:', error);
     }
   }
 
@@ -138,7 +181,22 @@ export class BlossomServerRegistry {
       mimeType || "*/*",
     );
 
+    console.log('Selecting best server:', {
+      totalServers: this.servers.size,
+      serverUrls: Array.from(this.servers.keys()),
+      availableServers: availableServers.length,
+      fileSize,
+      mimeType
+    });
+
     if (availableServers.length === 0) {
+      console.error('No available servers found!', {
+        allServers: Array.from(this.servers.values()).map(s => ({
+          url: s.url,
+          maxSize: s.capabilities.maxFileSize,
+          mimeTypes: s.capabilities.supportedMimeTypes
+        }))
+      });
       return null;
     }
 
@@ -232,12 +290,17 @@ export class BlossomServerRegistry {
     };
     this.servers.set(serverInfo.url, server);
 
+    // Save user servers to localStorage
+    this.saveUserServers();
+
     // Immediately check health of new server
     this.checkServerHealth(server);
   }
 
   removeServer(url: string): void {
     this.servers.delete(url);
+    // Save user servers to localStorage
+    this.saveUserServers();
   }
 
   getServers(): BlossomServerInfo[] {

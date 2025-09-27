@@ -170,7 +170,7 @@ function useToast() {
         listeners.splice(index, 1);
       }
     };
-  }, [state]);
+  }, [/* effect dep */ state]);
 
   return {
     ...state,

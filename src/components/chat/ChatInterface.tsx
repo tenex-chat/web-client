@@ -17,6 +17,8 @@ import { ChatInputArea } from "./components/ChatInputArea";
 import { ReplyProvider } from "./contexts/ReplyContext";
 import { useThreadViewModeStore } from "@/stores/thread-view-mode-store";
 import { useChatInputFocus } from "@/stores/chat-input-focus";
+import { isBrainstormMessage } from "@/lib/utils/brainstorm";
+import { useBrainstormView } from "@/stores/brainstorm-view-store";
 
 interface ChatInterfaceProps {
   project?: NDKProject | null;
@@ -104,8 +106,17 @@ function ChatInterfaceInner({
   // Thread view mode
   const { mode: viewMode } = useThreadViewModeStore();
 
+  // Check if this is a brainstorm conversation
+  const isBrainstormConversation = localRootEvent && isBrainstormMessage(localRootEvent);
+  const { showNotChosen } = useBrainstormView();
+
   // Message management
-  const messages = useChatMessages(localRootEvent, viewMode);
+  const messages = useChatMessages(
+    localRootEvent,
+    viewMode,
+    isBrainstormConversation,
+    isBrainstormConversation ? showNotChosen : false
+  );
 
   // Scroll management
   const scrollProps = useChatScroll(messages);

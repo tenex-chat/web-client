@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThreadedMessage } from "./ThreadedMessage";
+import { FlattenedConversation } from "./FlattenedConversation";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { motion, AnimatePresence } from "framer-motion";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
 import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
-
+import { useThreadViewModeStore } from "@/stores/thread-view-mode-store";
 interface ChatMessagesProps {
   project: NDKProject | null | undefined;
   conversationEvent: NDKEvent;
@@ -35,6 +36,7 @@ export const ChatMessages = memo(function ChatMessages({
   onNavigate,
 }: ChatMessagesProps) {
   const isMobile = useIsMobile();
+  const { mode: viewMode } = useThreadViewModeStore();
 
   return (
     <div className="flex-1 overflow-hidden relative">
@@ -45,13 +47,23 @@ export const ChatMessages = memo(function ChatMessages({
       >
         <div className={isMobile ? "py-0 pb-48" : "py-2 pb-48"}>
           <div className="divide-y divide-transparent">
-            <ThreadedMessage
-              eventId={conversationEvent.id}
-              depth={0}
-              project={project}
-              onTimeClick={onNavigate}
-              onConversationNavigate={onNavigate}
-            />
+            {viewMode === 'flattened' ? (
+              <FlattenedConversation
+                conversationEvent={conversationEvent}
+                project={project}
+                onTimeClick={onNavigate}
+                onConversationNavigate={onNavigate}
+              />
+            ) : (
+              <ThreadedMessage
+                eventId={conversationEvent.id}
+                rootEvent={conversationEvent}
+                depth={0}
+                project={project}
+                onTimeClick={onNavigate}
+                onConversationNavigate={onNavigate}
+              />
+            )}
           </div>
         </div>
       </ScrollArea>

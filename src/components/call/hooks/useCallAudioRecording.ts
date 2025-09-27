@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useAI } from "@/hooks/useAI";
@@ -38,14 +38,17 @@ export function useCallAudioRecording({
   }, []);
 
   const startRecording = useCallback(async () => {
+    const now = performance.now();
+    console.log(`[${now.toFixed(2)}ms] [useCallAudioRecording] startRecording called`);
     if (!enabled || audioRecorder.isRecording || isProcessing) {
-      console.log(`Recording skipped: enabled=${enabled}, isRecording=${audioRecorder.isRecording}, isProcessing=${isProcessing}`);
+      console.log(`[${now.toFixed(2)}ms] [useCallAudioRecording] Recording skipped: enabled=${enabled}, isRecording=${audioRecorder.isRecording}, isProcessing=${isProcessing}`);
       return;
     }
 
-    console.log(`Starting recording: provider=${sttSettings.provider}, enabled=${sttSettings.enabled}`);
+    console.log(`[${now.toFixed(2)}ms] [useCallAudioRecording] Starting recording: provider=${sttSettings.provider}, enabled=${sttSettings.enabled}`);
     setTranscript('');
     await audioRecorder.startRecording();
+    console.log(`[${performance.now().toFixed(2)}ms] [useCallAudioRecording] Recording started successfully`);
   }, [enabled, audioRecorder, isProcessing, sttSettings]);
 
   const processAudioBlob = async (blob: Blob): Promise<string | null> => {
@@ -66,11 +69,14 @@ export function useCallAudioRecording({
   };
 
   const stopRecording = useCallback(async (): Promise<string | null> => {
+    const now = performance.now();
+    console.log(`[${now.toFixed(2)}ms] [useCallAudioRecording] stopRecording called`);
     if (!audioRecorder.isRecording || processingRef.current) {
-      console.log(`Stop recording skipped: isRecording=${audioRecorder.isRecording}, processing=${processingRef.current}`);
+      console.log(`[${now.toFixed(2)}ms] [useCallAudioRecording] Stop recording skipped: isRecording=${audioRecorder.isRecording}, processing=${processingRef.current}`);
       return null;
     }
 
+    console.log(`[${now.toFixed(2)}ms] [useCallAudioRecording] Setting processing to true`);
     processingRef.current = true;
     setIsProcessing(true);
     onTranscriptionStart?.();
@@ -101,6 +107,24 @@ export function useCallAudioRecording({
       setIsProcessing(false);
     }
   }, [audioRecorder, sttSettings.enabled, transcribe, onTranscriptionComplete, onTranscriptionStart, onTranscriptionError]);
+
+  // Create a ref to access current audioRecorder in cleanup
+  const audioRecorderRef = useRef(audioRecorder);
+  useEffect(() => {
+    audioRecorderRef.current = audioRecorder;
+  }, [audioRecorder]);
+
+  // Cleanup on unmount - ensure recording stops if component unmounts while recording
+  useEffect(() => {
+    return () => {
+      if (audioRecorderRef.current.isRecording) {
+        console.log(`[${performance.now().toFixed(2)}ms] [useCallAudioRecording] Component ACTUALLY unmounting - stopping recording`);
+        audioRecorderRef.current.stopRecording().catch(err => {
+          console.error('[useCallAudioRecording] Error stopping recording on unmount:', err);
+        });
+      }
+    };
+  }, []); // Empty deps - only cleanup on actual unmount
 
   return {
     isRecording: audioRecorder.isRecording,

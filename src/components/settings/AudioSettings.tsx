@@ -569,7 +569,6 @@ export function AudioSettings() {
         </CardContent>
       </Card>
 
-
       {/* Refresh devices button */}
       <Card>
         <CardContent className="pt-6">

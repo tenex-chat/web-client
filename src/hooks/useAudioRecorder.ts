@@ -62,7 +62,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
     }
 
     analyserRef.current = null;
-    setIsRecording(false);
+    // Don't set isRecording here - let start/stop manage it
     setAudioLevel(0);
   }, []);
 
@@ -110,6 +110,9 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
   }, [onDataAvailable]);
 
   const startRecording = useCallback(async () => {
+    const now = performance.now();
+    console.log(`[${now.toFixed(2)}ms] [useAudioRecorder] startRecording called, current isRecording=${isRecording}`);
+
     try {
       cleanup(); // Clean up any existing recording
       setError(null);
@@ -181,6 +184,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
       // Start recording
       recorder.start(AUDIO_CONFIG.RECORDING.CHUNK_INTERVAL_MS);
       setIsRecording(true);
+      console.log(`[${performance.now().toFixed(2)}ms] [useAudioRecorder] Recording started, recorder.state=${recorder.state}`);
 
       // Start monitoring audio levels
       monitorAudioLevel();
@@ -188,13 +192,19 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to start recording";
       setError(errorMessage);
+      setIsRecording(false); // Reset recording state on error
       cleanup();
       throw err;
     }
   }, [audioSettings, deviceId, cleanup, monitorAudioLevel]);
 
   const stopRecording = useCallback(async (): Promise<Blob | null> => {
+    const now = performance.now();
+    const recorderState = mediaRecorderRef.current?.state;
+    console.log(`[${now.toFixed(2)}ms] [useAudioRecorder] stopRecording called, recorderState=${recorderState}`);
+
     if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== "recording") {
+      console.log(`[${now.toFixed(2)}ms] [useAudioRecorder] Cannot stop - no recorder or state=${recorderState}`);
       return null;
     }
 
@@ -211,7 +221,9 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
         resolve(blob);
       };
 
+      console.log(`[${performance.now().toFixed(2)}ms] [useAudioRecorder] Calling recorder.stop()`);
       recorder.stop();
+      setIsRecording(false); // Immediately set recording to false
     });
   }, [cleanup]);
 

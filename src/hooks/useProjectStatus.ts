@@ -63,7 +63,7 @@ export function useProjectStatus(
     } else {
       setStatus({ isOnline: false });
     }
-  }, [events, projectTagId, ndk]);
+  }, [events, projectTagId]);
 
   return status;
 }

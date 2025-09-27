@@ -190,19 +190,81 @@ function isDirectReplyToRoot(
 }
 
 /**
- * Checks if an event has a "not-chosen" tag
- * In brainstorm mode, messages with this tag should be hidden by default
+ * Gets all moderator selection events for a conversation
+ * Moderator selection events MUST be kind 7 (reaction)
+ * These events E-tag the root and can have multiple e-tags for selected events
  */
-function hasNotChosenTag(event: NDKEvent): boolean {
-  return event.tags.some(tag => tag[0] === "not-chosen");
+function getModeratorSelections(
+  events: NDKEvent[],
+  rootEvent: NDKEvent | null,
+): Set<string> {
+  if (!rootEvent) return new Set();
+
+  const selectedEventIds = new Set<string>();
+
+  for (const event of events) {
+    // Moderator selection events MUST be kind 7 (reaction events)
+    if (event.kind !== 7) {
+      continue;
+    }
+
+    // Check if this event E-tags the conversation root
+    const rootETag = event.tagValue("E");
+
+    if (rootETag === rootEvent.id) {
+      // Get ALL lowercase e-tags which indicate selected events
+      const eTags = event.getMatchingTags("e");
+      for (const tag of eTags) {
+        const selectedEventId = tag[1];
+        if (selectedEventId && selectedEventId !== rootEvent.id) {
+          // Don't add the root event ID - it's always shown
+          // Only add actual selected reply events
+          selectedEventIds.add(selectedEventId);
+          console.log(`[Brainstorm] Found moderator selection event (kind:7) ${event.id} selecting ${selectedEventId}`);
+        }
+      }
+    }
+  }
+
+  return selectedEventIds;
 }
 
 /**
- * Checks if an event references the conversation root via uppercase "E" tag
- * Used in flattened view mode to show all events referencing the root
+ * Checks if an event should be shown in brainstorm mode
+ * Shows: the root event, moderator selection events, and selected events
  */
-function hasUppercaseETag(event: NDKEvent, rootEventId: string): boolean {
-  return event.tags.some(tag => tag[0] === "E" && tag[1] === rootEventId);
+function shouldShowInBrainstormMode(
+  event: NDKEvent,
+  rootEvent: NDKEvent | null,
+  selectedEventIds: Set<string>,
+  hasModeratorSelections: boolean,
+  currentUserPubkey?: string,
+): boolean {
+  if (!rootEvent) return false; // In brainstorm mode, we need a root event
+
+  // Always show the root event
+  if (event.id === rootEvent.id) {
+    return true;
+  }
+
+  // Always show messages from the current user (human)
+  if (currentUserPubkey && event.pubkey === currentUserPubkey) {
+    return true;
+  }
+
+  // Never show moderator selection events (kind 7) in the UI - they're just for filtering
+  if (event.kind === 7) {
+    return false;
+  }
+
+  // If no moderator selections exist yet, only show root event and current user messages
+  if (!hasModeratorSelections) {
+    return false;
+  }
+
+  // Only show events that have been explicitly selected by the moderator
+  const isSelected = selectedEventIds.has(event.id);
+  return isSelected;
 }
 
 /**
@@ -212,6 +274,9 @@ export function processEventsToMessages(
   events: NDKEvent[],
   rootEvent: NDKEvent | null = null,
   viewMode: ThreadViewMode = 'threaded',
+  isBrainstorm: boolean = false,
+  showAll: boolean = false,
+  currentUserPubkey?: string,
 ): Message[] {
   const finalMessages: Message[] = [];
   const streamingSessions = new Map<string, StreamingSession>();
@@ -219,31 +284,83 @@ export function processEventsToMessages(
   // Sort events chronologically
   const sortedEvents = sortEvents(events);
 
+  // If rootEvent is not provided, try to find it in the events array
+  // The root event is typically the one without an "e" tag or the earliest event
+  if (!rootEvent && sortedEvents.length > 0) {
+    // Look for an event that might be the root (no "e" tags, or specific kinds)
+    rootEvent = sortedEvents.find(event => {
+      // Check if this could be a root event (kind 11 for brainstorm)
+      if (event.kind === 11) return true;
+      // Or an event without "e" tags (not a reply)
+      const eTags = event.getMatchingTags("e");
+      return eTags.length === 0;
+    }) || sortedEvents[0]; // Fallback to first event if no clear root found
+  }
+
+  // Get moderator selections if in brainstorm mode
+  let selectedEventIds: Set<string> = new Set();
+  if (isBrainstorm) {
+    selectedEventIds = getModeratorSelections(sortedEvents, rootEvent);
+  }
+  const hasModeratorSelections = selectedEventIds.size > 0;
+
   // Process each event
   for (const event of sortedEvents) {
-    // Filter out events with "not-chosen" tag in brainstorm mode
-    if (hasNotChosenTag(event)) {
-      continue;
-    }
-    
-    // In flattened mode, include ALL events that we've fetched
-    // In threaded mode, only include direct replies (lowercase e tag)
-    if (viewMode === 'flattened') {
-      // In flattened mode, we already fetched the right events via the filters
-      // Just process all of them chronologically
+    // Handle brainstorm conversations
+    if (isBrainstorm) {
+      if (!showAll) {
+        // Filter to only selected events when not showing all
+        const shouldShow = shouldShowInBrainstormMode(event, rootEvent, selectedEventIds, hasModeratorSelections, currentUserPubkey);
+        console.log(`[Brainstorm] Event ${event.id} kind:${event.kind} shouldShow:${shouldShow}`);
+        if (!shouldShow) {
+          // Also clean up any streaming session for this pubkey if it's not selected
+          if (streamingSessions.has(event.pubkey)) {
+            streamingSessions.delete(event.pubkey);
+          }
+          continue;
+        }
+      } else {
+        // Show all: still hide kind:7 moderation events and streaming events
+        if (event.kind === 7) {
+          console.log(`[Brainstorm] Event ${event.id} is kind:7 - hiding even in show all mode`);
+          continue;
+        }
+        if (event.kind === EVENT_KINDS.STREAMING_RESPONSE) {
+          console.log(`[Brainstorm] Event ${event.id} is streaming - hiding even in show all mode`);
+          continue;
+        }
+      }
+      // Process the event directly in brainstorm mode
       processEvent(event, streamingSessions, finalMessages);
     } else {
-      // Threaded mode: only include direct replies to the root event
-      // Nested replies will still be accessible through their parent's reply count
-      if (isDirectReplyToRoot(event, rootEvent)) {
+      // Non-brainstorm mode: apply view mode filtering
+      if (viewMode === 'flattened') {
+        // In flattened mode, we already fetched the right events via the filters
+        // Just process all of them chronologically
         processEvent(event, streamingSessions, finalMessages);
+      } else {
+        // Threaded mode: only include direct replies to the root event
+        // Nested replies will still be accessible through their parent's reply count
+        if (isDirectReplyToRoot(event, rootEvent)) {
+          processEvent(event, streamingSessions, finalMessages);
+        }
       }
     }
   }
 
   // Add active streaming sessions to final messages
+  // In brainstorm mode, only add streaming sessions for selected events
   const streamingMessages = streamingSessionsToMessages(streamingSessions);
-  finalMessages.push(...streamingMessages);
+  if (isBrainstorm && !showAll) {
+    // Filter streaming messages to only include those from selected events
+    streamingMessages.forEach(msg => {
+      if (shouldShowInBrainstormMode(msg.event, rootEvent, selectedEventIds, hasModeratorSelections, currentUserPubkey)) {
+        finalMessages.push(msg);
+      }
+    });
+  } else {
+    finalMessages.push(...streamingMessages);
+  }
 
   // Sort everything by timestamp (filter out messages without timestamps)
   const messagesWithTime = finalMessages

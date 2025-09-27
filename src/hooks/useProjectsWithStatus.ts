@@ -128,7 +128,7 @@ export function useProjectsWithStatus(projects: NDKProject[]) {
 
     setProjectsWithStatus(sorted);
     setIsLoading(false);
-  }, [events, projects, ndk, projectTagIds]);
+  }, [events, projects, projectTagIds]);
 
   return {
     projectsWithStatus,

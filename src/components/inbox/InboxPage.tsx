@@ -1,10 +1,7 @@
 import { useEffect } from "react";
-import { useAtom, useAtomValue } from "jotai";
 import { useNDKCurrentPubkey } from "@nostr-dev-kit/ndk-hooks";
 import { Inbox, Filter } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { markInboxAsReadAtom, lastInboxVisitAtom } from "@/stores/inbox";
-import { useInboxEvents } from "@/hooks/useInboxEvents";
+import { useInbox } from "@/hooks/useInboxStore";
 import { InboxEventCard } from "./InboxEventCard";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,9 +19,10 @@ import {
 
 export function InboxPage() {
   const currentPubkey = useNDKCurrentPubkey();
-  const [, markAsRead] = useAtom(markInboxAsReadAtom);
-  const lastVisit = useAtomValue(lastInboxVisitAtom);
-  
+
+  // Get inbox events from the store
+  const { events, lastVisit, markAsRead } = useInbox();
+
   // Debug log
   useEffect(() => {
     console.log('[InboxPage] Component mounted at', window.location.pathname);
@@ -32,9 +30,6 @@ export function InboxPage() {
       console.log('[InboxPage] Component unmounting from', window.location.pathname);
     };
   }, []);
-  
-  // Fetch inbox events
-  const { events, loading } = useInboxEvents();
   
   // Mark inbox as read when the page is opened
   useEffect(() => {

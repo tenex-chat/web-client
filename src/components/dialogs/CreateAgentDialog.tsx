@@ -158,7 +158,7 @@ export function CreateAgentDialog({
     }
     // Reset to first step when dialog opens/closes
     setCurrentStep("basics");
-  }, [forkFromAgent, open, cloneMode, fromKind0Metadata, conversionMode]);
+  }, [forkFromAgent, /* effect dep */ open, cloneMode, fromKind0Metadata, conversionMode]);
 
   const handleCreate = async () => {
     if (!ndk) {

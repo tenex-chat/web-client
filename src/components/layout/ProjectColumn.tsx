@@ -44,6 +44,8 @@ import { ProjectStatusIndicator } from "@/components/status/ProjectStatusIndicat
 // import { FABMenu } from "@/components/ui/fab-menu"; // TODO: Create FABMenu component
 import { EventModal } from "@/components/hashtags/EventModal";
 import { useWindowManager } from "@/stores/windowManager";
+import { useNavigate } from "@tanstack/react-router";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 import {
   ConversationsContent,
   DocsContent,
@@ -125,6 +127,8 @@ export function ProjectColumn({
   const { ndk } = useNDK();
   const agents = useProjectOnlineAgents(project?.dTag);
   const windowManager = useWindowManager();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const projectStatus = useProjectStatus(project?.dTag);
   
   // Long press detection refs
@@ -239,18 +243,28 @@ export function ProjectColumn({
     if (!isLongPress.current) {
       if (activeTab === "conversations") {
         // Short press - trigger new conversation
-        if (onItemClick) {
+        if (mode === "standalone") {
+          handleThreadSelect("new");
+        } else if (onItemClick) {
           onItemClick(project, "conversations", "new");
         }
       } else if (activeTab === "agents") {
         setAddAgentsDialogOpen(true);
+      } else if (activeTab === "docs") {
+        // For docs in standalone mode, we need to create a new document
+        if (mode === "standalone") {
+          // TODO: Implement new document creation
+          console.log("New document creation not yet implemented");
+        } else if (onItemClick) {
+          onItemClick(project, activeTab, "new");
+        }
       } else if (onItemClick) {
         onItemClick(project, activeTab, "new");
       }
     }
     
     isLongPress.current = false;
-  }, [activeTab, onItemClick, project]);
+  }, [activeTab, mode, handleThreadSelect, onItemClick, project]);
   
   const handleAddButtonMouseLeave = useCallback(() => {
     if (longPressTimer.current) {
@@ -263,28 +277,39 @@ export function ProjectColumn({
   // Handle dropdown menu actions
   const handleNewConversation = useCallback(() => {
     setDropdownOpen(false);
-    if (onItemClick) {
+    if (mode === "standalone") {
+      handleThreadSelect("new");
+    } else if (onItemClick) {
       onItemClick(project, "conversations", "new");
     }
-  }, [onItemClick, project]);
+  }, [mode, handleThreadSelect, onItemClick, project]);
   
   const handleNewVoiceCall = useCallback(() => {
     setDropdownOpen(false);
-    // Open CallView in a floating window
-    windowManager.addWindow({
-      project,
-      type: "call" as any,
-      data: {
-        onCallEnd: (rootEvent: NDKEvent | null) => {
-          // If a conversation was created during the call, select it
-          if (rootEvent) {
-            setSelectedThread(rootEvent);
-            setViewState("detail");
+
+    if (isMobile) {
+      // On mobile, navigate to full-screen call route
+      navigate({
+        to: "/projects/$projectId/call",
+        params: { projectId: project.dTag || project.encode() }
+      });
+    } else {
+      // On desktop, open CallView in a floating window
+      windowManager.addWindow({
+        project,
+        type: "call" as any,
+        data: {
+          onCallEnd: (rootEvent: NDKEvent | null) => {
+            // If a conversation was created during the call, select it
+            if (rootEvent) {
+              setSelectedThread(rootEvent);
+              setViewState("detail");
+            }
           }
         }
-      }
-    });
-  }, [project, windowManager]);
+      });
+    }
+  }, [project, windowManager, isMobile, navigate]);
 
   const renderContent = () => {
     // In standalone mode with detail view, render full content
@@ -299,21 +324,31 @@ export function ProjectColumn({
           setSelectedThread(undefined);
         },
         () => {
-          // Handle voice call click - open in floating window
-          windowManager.addWindow({
-            project,
-            type: "call" as any,
-            data: {
-              rootEvent: selectedThread,
-              onCallEnd: (rootEvent: NDKEvent | null) => {
-                // If a conversation was created during the call, select it
-                if (rootEvent) {
-                  setSelectedThread(rootEvent);
-                  setViewState("detail");
+          // Handle voice call click
+          if (isMobile) {
+            // On mobile, navigate to full-screen call route
+            navigate({
+              to: "/projects/$projectId/call",
+              params: { projectId: project.dTag || project.encode() },
+              search: { threadId: selectedThread?.id }
+            });
+          } else {
+            // On desktop, open in floating window
+            windowManager.addWindow({
+              project,
+              type: "call" as any,
+              data: {
+                rootEvent: selectedThread,
+                onCallEnd: (rootEvent: NDKEvent | null) => {
+                  // If a conversation was created during the call, select it
+                  if (rootEvent) {
+                    setSelectedThread(rootEvent);
+                    setViewState("detail");
+                  }
                 }
               }
-            }
-          });
+            });
+          }
         },
       );
     }
@@ -510,7 +545,7 @@ export function ProjectColumn({
                 </div>
               </div>
             ) : (
-              // Mobile standalone header
+              // Mobile standalone header - title only, tabs moved below
               <div className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   <ProjectAvatar
@@ -655,9 +690,12 @@ export function ProjectColumn({
             </div>
           )}
 
-          {/* Icon Tab Bar - hide in desktop standalone mode since tabs are inline */}
+          {/* Icon Tab Bar - show for mobile standalone mode (below header) and column mode */}
           {!(mode === "standalone" && viewMode === "desktop") && (
-            <div className="flex items-center justify-between px-2 pb-1">
+            <div className={cn(
+              "flex items-center justify-between px-2",
+              mode === "standalone" && viewMode === "mobile" ? "py-2 border-t" : "pb-1"
+            )}>
               <TooltipProvider>
                 <div className="flex gap-1">
                   {tabs.map((tab) => (
@@ -713,11 +751,10 @@ export function ProjectColumn({
                 </div>
             </TooltipProvider>
 
-            {/* Add button - conditionally shown based on active tab and mode */}
-            {mode === "column" &&
-              (activeTab === "conversations" ||
-                activeTab === "docs" ||
-                activeTab === "agents") && (
+            {/* Add button - shown for both column and standalone modes */}
+            {(activeTab === "conversations" ||
+              activeTab === "docs" ||
+              activeTab === "agents") && (
                 activeTab === "conversations" ? (
                   <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                     <DropdownMenuTrigger asChild>
@@ -753,6 +790,13 @@ export function ProjectColumn({
                     onClick={() => {
                       if (activeTab === "agents") {
                         setAddAgentsDialogOpen(true);
+                      } else if (activeTab === "docs") {
+                        if (mode === "standalone") {
+                          // TODO: Implement new document creation
+                          console.log("New document creation not yet implemented");
+                        } else if (onItemClick) {
+                          onItemClick(project, activeTab, "new");
+                        }
                       } else if (onItemClick) {
                         onItemClick(project, activeTab, "new");
                       }

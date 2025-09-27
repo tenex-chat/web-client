@@ -131,7 +131,7 @@ function ProjectDetailPage() {
       mode="standalone"
       renderFullContent={renderFullContent}
       className="h-full"
-      viewMode="desktop" // Add desktop view mode support
+      viewMode={isMobile ? "mobile" : "desktop"}
     />
   );
 }

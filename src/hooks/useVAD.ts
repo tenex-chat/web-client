@@ -39,24 +39,33 @@ export function useVAD(options: UseVADOptions = {}): UseVADReturn {
   const isPausedRef = useRef(false);
 
   const cleanup = useCallback(() => {
+    console.log(`[${performance.now().toFixed(2)}ms] [useVAD] cleanup() called`);
     if (vadServiceRef.current) {
+      console.log(`[${performance.now().toFixed(2)}ms] [useVAD] Destroying VAD service`);
       vadServiceRef.current.destroy();
       vadServiceRef.current = null;
     }
     setIsActive(false);
     setIsListening(false);
     isPausedRef.current = false;
+    console.log(`[${performance.now().toFixed(2)}ms] [useVAD] cleanup() complete`);
   }, []);
 
   const createVADCallbacks = useCallback(() => ({
     onSpeechStart: () => {
+      const now = performance.now();
+      console.log(`[${now.toFixed(2)}ms] [useVAD] onSpeechStart - isPaused:`, isPausedRef.current);
       if (!isPausedRef.current) {
         setIsListening(true);
+        console.log(`[${now.toFixed(2)}ms] [useVAD] Calling user onSpeechStart callback`);
         onSpeechStart?.();
       }
     },
     onSpeechEnd: () => {
+      const now = performance.now();
+      console.log(`[${now.toFixed(2)}ms] [useVAD] onSpeechEnd`);
       setIsListening(false);
+      console.log(`[${now.toFixed(2)}ms] [useVAD] Calling user onSpeechEnd callback`);
       onSpeechEnd?.();
     },
     onError: (err: Error) => {
@@ -75,6 +84,7 @@ export function useVAD(options: UseVADOptions = {}): UseVADReturn {
   }), []);
 
   const initialize = useCallback(async () => {
+    console.log(`[${performance.now().toFixed(2)}ms] [useVAD] initialize() called - enabled:`, enabled, 'hasService:', !!vadServiceRef.current);
     if (!enabled || vadServiceRef.current) return;
 
     try {
@@ -99,17 +109,20 @@ export function useVAD(options: UseVADOptions = {}): UseVADReturn {
   }, [enabled, inputDeviceId, audioSettings?.inputDeviceId, createVADCallbacks, getVADSettings, cleanup]);
 
   const start = useCallback(async () => {
+    console.log(`[${performance.now().toFixed(2)}ms] [useVAD] start() called - enabled:`, enabled, 'hasService:', !!vadServiceRef.current);
     if (!enabled) {
       setError("VAD is disabled");
       return;
     }
 
     if (!vadServiceRef.current) {
+      console.log(`[${performance.now().toFixed(2)}ms] [useVAD] No VAD service, initializing...`);
       await initialize();
     }
 
     if (vadServiceRef.current) {
       try {
+        console.log(`[${performance.now().toFixed(2)}ms] [useVAD] Starting VAD service`);
         await vadServiceRef.current.start();
         setIsActive(true);
         setError(null);
@@ -122,13 +135,16 @@ export function useVAD(options: UseVADOptions = {}): UseVADReturn {
   }, [enabled, initialize]);
 
   const stop = useCallback(() => {
+    console.log(`[${performance.now().toFixed(2)}ms] [useVAD] stop() called`);
     if (vadServiceRef.current) {
+      console.log(`[${performance.now().toFixed(2)}ms] [useVAD] Destroying VAD service from stop()`);
       vadServiceRef.current.destroy(); // Fully destroy the VAD service to release microphone
       vadServiceRef.current = null;
     }
     setIsActive(false);
     setIsListening(false);
     isPausedRef.current = false;
+    console.log(`[${performance.now().toFixed(2)}ms] [useVAD] stop() complete`);
   }, []);
 
   const pause = useCallback(() => {
@@ -162,7 +178,7 @@ export function useVAD(options: UseVADOptions = {}): UseVADReturn {
         }
       });
     }
-  }, [inputDeviceId, audioSettings?.inputDeviceId]);
+  }, [/* effect dep */ inputDeviceId, audioSettings?.inputDeviceId, enabled, isActive, cleanup, initialize]);
 
   return {
     isActive,

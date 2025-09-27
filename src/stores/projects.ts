@@ -312,15 +312,18 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         return;
       }
 
+      const oneMinuteAgo = Math.floor(Date.now()/1000) - 60;
+
       const filter = {
         kinds: [24010], // PROJECT_STATUS event kind
         "#p": [userInfo.pubkey], // Status events for the current user's projects
+        since: oneMinuteAgo
       };
 
       // Subscribe to all project status events for this user
       const sub = ndk.subscribe(
         filter,
-        { closeOnEose: false, groupable: true, subId: "status" },
+        { closeOnEose: false, groupable: false, subId: "status" },
         {
           onEvent: (event: NDKEvent) => get().updateProjectStatus(event),
         },
@@ -361,6 +364,23 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
       return;
     }
 
+    // LOG: 24010 event received
+    logger.info("[ProjectStore] Received 24010 status event", {
+      projectDTag: finalDTag,
+      projectTagId,
+      eventId: event.id,
+      agents: status.agents.map(a => ({
+        pubkey: a.pubkey,
+        name: a.name,
+        model: a.model,
+        tools: a.tools,
+        isGlobal: a.isGlobal
+      })),
+      models: status.models,
+      isOnline: status.isOnline,
+      timestamp: new Date(event.created_at! * 1000).toISOString()
+    });
+
     // Check for global agents and add them to the agents store
     for (const tag of event.tags) {
       if (tag[0] === "agent") {
@@ -374,6 +394,43 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
 
     // Check if this is actually a change
     const existingStatus = projectStatus.get(finalDTag);
+
+    // LOG: Check for status changes
+    if (existingStatus) {
+      const hasAgentChanges = existingStatus.agents.length !== status.agents.length ||
+        status.agents.some((agent, idx) => {
+          const existing = existingStatus.agents[idx];
+          return !existing || 
+            existing.pubkey !== agent.pubkey || 
+            existing.name !== agent.name ||
+            existing.model !== agent.model ||
+            JSON.stringify(existing.tools) !== JSON.stringify(agent.tools);
+        });
+      
+      const hasModelChanges = existingStatus.models.length !== status.models.length ||
+        status.models.some((model, idx) => {
+          const existing = existingStatus.models[idx];
+          return !existing || existing.name !== model.name;
+        });
+
+      if (hasAgentChanges || hasModelChanges) {
+        logger.info("[ProjectStore] Project status changes detected", {
+          projectDTag: finalDTag,
+          previousAgents: existingStatus.agents.map(a => ({ pubkey: a.pubkey, name: a.name, model: a.model })),
+          newAgents: status.agents.map(a => ({ pubkey: a.pubkey, name: a.name, model: a.model })),
+          previousModels: existingStatus.models,
+          newModels: status.models,
+          hasAgentChanges,
+          hasModelChanges
+        });
+      }
+    } else {
+      logger.info("[ProjectStore] Initial project status set", {
+        projectDTag: finalDTag,
+        agents: status.agents.map(a => ({ pubkey: a.pubkey, name: a.name, model: a.model })),
+        models: status.models
+      });
+    }
 
     // Check for new agents and show toast notification
     if (status.agents.length > 0) {

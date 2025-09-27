@@ -6,11 +6,11 @@
 export const AUDIO_CONFIG = {
   // VAD (Voice Activity Detection) settings
   VAD: {
-    POSITIVE_SPEECH_THRESHOLD: 0.4, // 0-1, threshold for detecting speech start
-    NEGATIVE_SPEECH_THRESHOLD: 0.15, // 0-1, threshold for detecting speech end
-    REDEMPTION_FRAMES: 40, // ~1.3 seconds of silence before ending speech
-    PRE_SPEECH_PAD_FRAMES: 15, // Frames to include before detected speech
-    MIN_SPEECH_FRAMES: 8, // Minimum frames for valid speech detection
+    POSITIVE_SPEECH_THRESHOLD: 0.6, // 0-1, threshold for detecting speech start (higher = less sensitive)
+    NEGATIVE_SPEECH_THRESHOLD: 0.35, // 0-1, threshold for detecting speech end (higher = needs more silence)
+    REDEMPTION_FRAMES: 60, // ~2 seconds of silence before ending speech (increased from 40)
+    PRE_SPEECH_PAD_FRAMES: 20, // Frames to include before detected speech (increased from 15)
+    MIN_SPEECH_FRAMES: 15, // Minimum frames for valid speech detection (increased from 8)
     FRAME_MS: 32, // Approximate milliseconds per frame
   },
 

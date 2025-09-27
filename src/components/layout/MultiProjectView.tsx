@@ -16,7 +16,6 @@ import { useSubscribe } from "@nostr-dev-kit/ndk-hooks";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CallView } from "@/components/call/CallView";
-import { WindowManager } from "@/components/windows/WindowManager";
 import { useWindowManager } from "@/stores/windowManager";
 import { useIsMobile, useIsDesktop } from "@/hooks/useMediaQuery";
 import { ArrowLeft, ExternalLink, X } from "lucide-react";
@@ -562,13 +561,6 @@ export function MultiProjectView({
           }}
           extraTags={callViewContext?.extraTags}
           rootEvent={callViewContext?.rootEvent}
-        />
-      )}
-
-      {/* Floating Windows Manager - Desktop only */}
-      {!isMobile && (
-        <WindowManager
-          onAttach={handleAttachWindow}
         />
       )}
 

@@ -65,10 +65,14 @@ export function useTTSQueue({
   }, [ttsPlayer, onPlaybackStateChange]);
 
   const addToQueue = useCallback((message: TTSMessage) => {
+    console.log(`[${performance.now().toFixed(2)}ms] [useTTSQueue] addToQueue called for:`, message.id);
     if (!playedMessageIdsRef.current.has(message.id)) {
+      console.log(`[${performance.now().toFixed(2)}ms] [useTTSQueue] Adding message to queue and marking as played:`, message.id);
       playedMessageIdsRef.current.add(message.id);
       queueRef.current.push(message);
       processNextInQueue();
+    } else {
+      console.log(`[${performance.now().toFixed(2)}ms] [useTTSQueue] Message already played, skipping:`, message.id);
     }
   }, [processNextInQueue]);
 
@@ -80,13 +84,19 @@ export function useTTSQueue({
 
   // Auto-play agent messages
   useEffect(() => {
+    console.log(`[${performance.now().toFixed(2)}ms] [useTTSQueue] Effect running, messages:`, messages.length, 'isInitialLoad:', isInitialLoad.current);
+
     if (isInitialLoad.current && messages.length > 0) {
+      console.log(`[${performance.now().toFixed(2)}ms] [useTTSQueue] Initial load - marking`, messages.length, 'messages as played');
       messages.forEach(msg => playedMessageIdsRef.current.add(msg.id));
       isInitialLoad.current = false;
       return;
     }
 
-    if (!enabled || !ttsPlayer.hasTTS || !userPubkey) return;
+    if (!enabled || !ttsPlayer.hasTTS || !userPubkey) {
+      console.log(`[${performance.now().toFixed(2)}ms] [useTTSQueue] Skipping - enabled:`, enabled, 'hasTTS:', ttsPlayer.hasTTS, 'userPubkey:', !!userPubkey);
+      return;
+    }
     
     const messagesToPlay = messages
       .filter(msg => {
@@ -94,7 +104,12 @@ export function useTTSQueue({
         const isNotPlayed = !playedMessageIdsRef.current.has(msg.id);
         const isNotReasoning = !msg.event.hasTag?.("reasoning");
         const isCorrectKind = msg.event.kind === 1111;
-        
+
+        if (!isAgentMessage) console.log(`[${performance.now().toFixed(2)}ms] [useTTSQueue] Skipping user message:`, msg.id);
+        if (!isNotPlayed) console.log(`[${performance.now().toFixed(2)}ms] [useTTSQueue] Already played:`, msg.id);
+        if (!isNotReasoning) console.log(`[${performance.now().toFixed(2)}ms] [useTTSQueue] Reasoning message:`, msg.id);
+        if (!isCorrectKind) console.log(`[${performance.now().toFixed(2)}ms] [useTTSQueue] Wrong kind:`, msg.event.kind, 'for', msg.id);
+
         return isAgentMessage && isNotPlayed && isNotReasoning && isCorrectKind;
       })
       .map(msg => ({
@@ -104,8 +119,12 @@ export function useTTSQueue({
       }))
       .filter(msg => msg.content);
 
-    messagesToPlay.forEach(addToQueue);
-  }, [messages, userPubkey, enabled, ttsPlayer.hasTTS, addToQueue]);
+    console.log(`[${performance.now().toFixed(2)}ms] [useTTSQueue] Messages to play:`, messagesToPlay.length);
+    messagesToPlay.forEach(msg => {
+      console.log(`[${performance.now().toFixed(2)}ms] [useTTSQueue] Adding to queue:`, msg.id, 'content preview:', msg.content.substring(0, 50));
+      addToQueue(msg);
+    });
+  }, [messages, userPubkey, enabled, ttsPlayer.hasTTS]); // Removed addToQueue to prevent infinite loop
 
   // Monitor TTS player state
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useEffect } from "react";
+import { memo, useMemo, useState } from "react";
 import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import { MessageActionsToolbar } from "./MessageActionsToolbar";
 import { MessageContent } from "./MessageContent";
 import { MetadataChangeMessage } from "./MetadataChangeMessage";
 import { TypingIndicator } from "./TypingIndicator";
+import { Sparkles } from "lucide-react";
 import {
   extractLLMMetadata,
   getEventPhase,
@@ -20,8 +21,7 @@ import { getUserStatus } from "@/lib/utils/userStatus";
 import { useNDKCurrentUser } from "@nostr-dev-kit/ndk-hooks";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
-// Global render counter for tracking
-const renderCounts = new Map<string, number>();
+// Removed debug render counter
 
 interface MessageProps {
   event: NDKEvent;
@@ -60,15 +60,7 @@ export const Message = memo(function Message({
   const isMobile = useIsMobile();
   const [showMetadataDialog, setShowMetadataDialog] = useState(false);
 
-  // Track render count
-  useEffect(() => {
-    const eventId = event.id || 'unknown';
-    const currentCount = renderCounts.get(eventId) || 0;
-    const newCount = currentCount + 1;
-    renderCounts.set(eventId, newCount);
-
-    console.log(`Rendering message ${eventId}: ${newCount} times`);
-  });
+  // Removed debug tracking
 
   // Get user status
   const userStatus = useMemo(() => {
@@ -263,7 +255,8 @@ export const Message = memo(function Message({
           <div className="flex-1 min-w-0">
             {!isConsecutive && (
               <div className="flex items-start justify-between gap-2 mb-0.5">
-                <MessageHeaderContent
+                <div className="flex items-center gap-1 flex-1">
+                  <MessageHeaderContent
                   event={event}
                   userStatus={userStatus}
                   recipientPubkeys={recipientPubkeys}
@@ -273,7 +266,8 @@ export const Message = memo(function Message({
                   isMobile={isMobile}
                   projectId={project?.tagId()}
                   isConsecutive={false}
-                />
+                  />
+                </div>
 
                 <MessageActionsToolbar
                   event={event}

@@ -1,21 +1,24 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NostrProfile } from "@/components/common/NostrProfile";
 import { Message } from "./Message";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
-import { EVENT_KINDS } from "@/lib/constants";
 import { useAtomValue, useSetAtom } from "jotai";
 import { expandedRepliesAtom, toggleRepliesAtom } from "./atoms/expandedReplies";
 import { useIsMobile } from "@/hooks/useMediaQuery";
-import { useThreadViewModeStore } from "@/stores/thread-view-mode-store";
-import { useMessages } from "./hooks/useMessages";
+import { useChatMessages } from "./hooks/useChatMessages";
 import type { Message as MessageType } from "@/components/chat/hooks/useChatMessages";
+import { NDKEvent as NDKEventType } from "@nostr-dev-kit/ndk-hooks";
+import { isBrainstormMessage } from "@/lib/utils/brainstorm";
+import { useBrainstormView } from "@/stores/brainstorm-view-store";
+import { calculateMessageProperties } from "./utils/messageUtils";
 
 interface ThreadedMessageProps {
   eventId?: string;
   message?: MessageType;
+  rootEvent: NDKEventType;
   depth: number;
   project?: NDKProject | null;
   onTimeClick?: (event: NDKEvent) => void;
@@ -33,6 +36,7 @@ interface ThreadedMessageProps {
 export const ThreadedMessage = memo(function ThreadedMessage({
   eventId,
   message,
+  rootEvent,
   depth,
   project,
   onTimeClick,
@@ -43,229 +47,167 @@ export const ThreadedMessage = memo(function ThreadedMessage({
   isLastReasoningMessage = false,
 }: ThreadedMessageProps) {
   const isMobile = useIsMobile();
-  const { mode: viewMode } = useThreadViewModeStore();
   const expandedReplies = useAtomValue(expandedRepliesAtom);
   const toggleReplies = useSetAtom(toggleRepliesAtom);
 
-  // Use the hook to get messages for this event
-  const messages = useMessages(eventId || message?.event.id || null, viewMode);
+  // Removed debug logging
 
-  // If we're rendering by eventId (root level), render all messages
-  if (eventId && depth === 0) {
-    // Find the last message that has a reasoning tag
-    const lastReasoningMessageIndex = messages.findLastIndex(
-      msg => msg.event.hasTag?.("reasoning")
-    );
-    
-    // In flattened mode, render all messages directly without recursion
-    if (viewMode === 'flattened') {
-      return (
-        <>
-          {messages.map((msg, index) => {
-            // Calculate consecutive status
-            const isConsec =
-              index > 0 &&
-              messages[index - 1].event.pubkey === msg.event.pubkey &&
-              messages[index - 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-              msg.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-              !msg.event.tags?.some(tag => tag[0] === 'p') &&
-              !messages[index - 1].event.tags?.some(tag => tag[0] === 'p');
+  // Check if this is a brainstorm conversation
+  const isBrainstormConversation = rootEvent && isBrainstormMessage(rootEvent);
+  const { showNotChosen } = useBrainstormView();
 
-            const hasNextConsec =
-              index < messages.length - 1 &&
-              messages[index + 1].event.pubkey === msg.event.pubkey &&
-              messages[index + 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-              msg.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-              !messages[index + 1].event.tags?.some(tag => tag[0] === 'p') &&
-              !msg.event.tags?.some(tag => tag[0] === 'p');
-              
-            // Check if this message has reasoning and is the last one with reasoning
-            const isLastReasoningMessage = index === lastReasoningMessageIndex;
+  // Determine which event we're working with
+  // At depth 0 with eventId, we're rendering the root
+  // Otherwise we have a message to render
+  const currentEvent = eventId && depth === 0 ? rootEvent : message?.event;
+  if (!currentEvent) return null;
 
-            // In flattened mode, render directly without recursion
-            return (
-              <Message
-                key={msg.id}
-                event={msg.event}
-                project={project}
-                isConsecutive={isConsec}
-                hasNextConsecutive={hasNextConsec}
-                isNested={false}
-                onTimeClick={onTimeClick}
-                onConversationNavigate={onConversationNavigate}
-                message={msg}
-                isLastMessage={isLastReasoningMessage}
-              />
-            );
-          })}
-        </>
-      );
-    }
-    
-    // Threaded mode: render with recursion
+  // Create a Message object for the current event if we don't have one
+  const currentMessage: MessageType = message || { id: currentEvent.id, event: currentEvent };
+
+  // Get direct replies to this event
+  const replies = useChatMessages(
+    currentEvent,
+    'threaded', // Always threaded mode in this component
+    isBrainstormConversation,
+    isBrainstormConversation ? showNotChosen : false
+  );
+
+  // Calculate properties for replies - must be called unconditionally for hooks consistency
+  const replyProperties = useMemo(
+    () => calculateMessageProperties(replies),
+    [replies]
+  );
+
+  // For nested messages (depth > 0), handle expansion state - must be called unconditionally
+  const isExpanded = expandedReplies.has(currentEvent.id);
+
+  const handleToggle = useCallback(() => {
+    toggleReplies(currentEvent.id);
+  }, [currentEvent.id, toggleReplies]);
+
+  // At root level, render the root event and its direct replies
+  if (depth === 0) {
+
     return (
       <>
-        {messages.map((msg, index) => {
-          // Calculate consecutive status
-          const isConsec =
-            index > 0 &&
-            messages[index - 1].event.pubkey === msg.event.pubkey &&
-            messages[index - 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-            msg.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-            !msg.event.tags?.some(tag => tag[0] === 'p') &&
-            !messages[index - 1].event.tags?.some(tag => tag[0] === 'p');
+        {/* Render the root event itself */}
+        <Message
+          event={currentEvent}
+          project={project}
+          isConsecutive={false}
+          hasNextConsecutive={replies.length > 0}
+          isNested={false}
+          onTimeClick={onTimeClick}
+          onConversationNavigate={onConversationNavigate}
+          message={currentMessage}
+          isLastMessage={replies.length === 0 && currentEvent.hasTag?.("reasoning")}
+        />
 
-          const hasNextConsec =
-            index < messages.length - 1 &&
-            messages[index + 1].event.pubkey === msg.event.pubkey &&
-            messages[index + 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-            msg.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-            !messages[index + 1].event.tags?.some(tag => tag[0] === 'p') &&
-            !msg.event.tags?.some(tag => tag[0] === 'p');
-            
-          // Check if this message has reasoning and is the last one with reasoning
-          const isLastReasoningMessage = index === lastReasoningMessageIndex;
-
-          return (
-            <ThreadedMessage
-              key={msg.id}
-              message={msg}
-              depth={1}
-              project={project}
-              onTimeClick={onTimeClick}
-              onConversationNavigate={onConversationNavigate}
-              isConsecutive={isConsec}
-              hasNextConsecutive={hasNextConsec}
-              isFirstInRoot={index === 0} // Mark the first message
-              isLastReasoningMessage={isLastReasoningMessage}
-            />
-          );
-        })}
+        {/* Render direct replies recursively */}
+        {replyProperties.map(({ message, isConsecutive, hasNextConsecutive, isLastReasoningMessage }) => (
+          <ThreadedMessage
+            key={message.id}
+            message={message}
+            rootEvent={rootEvent}
+            depth={1}
+            project={project}
+            onTimeClick={onTimeClick}
+            onConversationNavigate={onConversationNavigate}
+            isConsecutive={isConsecutive}
+            hasNextConsecutive={hasNextConsecutive}
+            isLastReasoningMessage={isLastReasoningMessage}
+          />
+        ))}
       </>
     );
   }
 
-  // In flattened mode, everything is always expanded
-  // In threaded mode, only expand if explicitly in the expanded set
-  const isExpanded = viewMode === 'flattened' || expandedReplies.has(message?.event.id || '');
-
-  // Get replies for this message using the same hook
-  // Filter to exclude the message itself from its own replies
-  // Skip replies if this is the first message at root level (they're already displayed)
-  const replies = isFirstInRoot ? [] : messages.filter(msg => msg.event.id !== message?.event.id);
-
-  const handleToggle = useCallback(() => {
-    if (message) {
-      toggleReplies(message.event.id);
-    }
-  }, [message?.event.id, toggleReplies]);
-
-  // Single message handling (depth > 0)
-  if (!message) return null;
-
+  // For nested messages (depth > 0)
   return (
-    <div>
-      {/* Render the message itself */}
-      <Message
-        event={message.event}
-        project={project}
-        isConsecutive={isConsecutive}
-        hasNextConsecutive={hasNextConsecutive}
-        isNested={depth > 0}
-        onTimeClick={onTimeClick}
-        onConversationNavigate={onConversationNavigate}
-        message={message}
-        isLastMessage={isLastReasoningMessage}
-      />
+			<>
+				{/* Render the current event */}
+				<Message
+					event={currentEvent}
+					project={project}
+					isConsecutive={isConsecutive}
+					hasNextConsecutive={hasNextConsecutive}
+					isNested={depth > 0}
+					onTimeClick={onTimeClick}
+					onConversationNavigate={onConversationNavigate}
+					message={message || { id: currentEvent.id, event: currentEvent }}
+					isLastMessage={isLastReasoningMessage}
+				/>
 
-      {/* Render replies */}
-      {replies.length > 0 && (
-        <>
-          {/* Toggle button for replies (only in threaded mode) */}
-          {viewMode === 'threaded' && (
-            <div className={cn(
-              isMobile ? "ml-9" : "ml-12",
-              "mt-1.5 relative"
-            )}>
-              <button
-                type="button"
-                onClick={handleToggle}
-                className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 transition-colors font-medium hover:bg-blue-50 dark:hover:bg-blue-950/30 px-2 py-1 rounded"
-              >
-                <div className="flex -space-x-1.5">
-                  {/* Get unique pubkeys from replies to avoid showing duplicates */}
-                  {[...new Set(replies.map(r => r.event.pubkey))].slice(0, 20).map((pubkey, idx) => (
-                    <div key={pubkey} style={{ zIndex: 20 - idx }}>
-                      <NostrProfile
-                        pubkey={pubkey}
-                        variant="avatar"
-                        className="w-5 h-5 border-2 border-background rounded"
-                      />
-                    </div>
-                  ))}
-                  {[...new Set(replies.map(r => r.event.pubkey))].length > 20 && (
-                    <span className="ml-1 text-[10px] text-muted-foreground">
-                      +{[...new Set(replies.map(r => r.event.pubkey))].length - 20}
-                    </span>
-                  )}
-                </div>
-                <span>
-                  {replies.length} {replies.length === 1 ? "reply" : "replies"}
-                </span>
-                {isExpanded ? (
-                  <ChevronDown className="w-3 h-3" />
-                ) : (
-                  <ChevronRight className="w-3 h-3" />
-                )}
-              </button>
-            </div>
-          )}
+				{/* Render replies */}
+				{replies.length > 0 && (
+					<>
+						{/* Toggle button for replies */}
+						<div
+							className={cn(isMobile ? "ml-9" : "ml-12", "mt-1.5 relative")}
+						>
+							<button
+									type="button"
+									onClick={handleToggle}
+									className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 transition-colors font-medium hover:bg-blue-50 dark:hover:bg-blue-950/30 px-2 py-1 rounded"
+								>
+									<div className="flex -space-x-1.5">
+										{/* Get unique pubkeys from replies to avoid showing duplicates */}
+										{[...new Set(replies.map((r) => r.event.pubkey))]
+											.slice(0, 20)
+											.map((pubkey, idx) => (
+												<div key={pubkey} style={{ zIndex: 20 - idx }}>
+													<NostrProfile
+														pubkey={pubkey}
+														variant="avatar"
+														className="w-5 h-5 border-2 border-background rounded"
+													/>
+												</div>
+											))}
+										{[...new Set(replies.map((r) => r.event.pubkey))].length >
+											20 && (
+											<span className="ml-1 text-[10px] text-muted-foreground">
+												+
+												{[...new Set(replies.map((r) => r.event.pubkey))]
+													.length - 20}
+											</span>
+										)}
+									</div>
+									<span>
+										{replies.length}{" "}
+										{replies.length === 1 ? "reply" : "replies"}
+									</span>
+									{isExpanded ? (
+										<ChevronDown className="w-3 h-3" />
+									) : (
+										<ChevronRight className="w-3 h-3" />
+									)}
+								</button>
+						</div>
 
-          {/* Render reply messages */}
-          {isExpanded && (
-            <div className={cn(isMobile ? "ml-9" : "ml-12", "mt-2")}>
-              {replies.map((reply, index) => {
-                // Calculate consecutive status
-                const isReplyConsecutive =
-                  index > 0 &&
-                  replies[index - 1].event.pubkey === reply.event.pubkey &&
-                  replies[index - 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-                  reply.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-                  !reply.event.tags?.some(tag => tag[0] === 'p') &&
-                  !replies[index - 1].event.tags?.some(tag => tag[0] === 'p');
-
-                const hasNextReplyConsecutive =
-                  index < replies.length - 1 &&
-                  replies[index + 1].event.pubkey === reply.event.pubkey &&
-                  replies[index + 1].event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-                  reply.event.kind !== EVENT_KINDS.CONVERSATION_METADATA &&
-                  !replies[index + 1].event.tags?.some(tag => tag[0] === 'p') &&
-                  !reply.event.tags?.some(tag => tag[0] === 'p');
-                  
-                // Find the last message with reasoning in replies
-                const lastReasoningReplyIndex = replies.findLastIndex(
-                  r => r.event.hasTag?.("reasoning")
-                );
-                const isLastReasoningReply = index === lastReasoningReplyIndex;
-
-                return (
-                  <ThreadedMessage
-                    key={reply.id}
-                    message={reply}
-                    depth={depth + 1}
-                    project={project}
-                    onTimeClick={onTimeClick}
-                    onConversationNavigate={onConversationNavigate}
-                    isConsecutive={isReplyConsecutive}
-                    hasNextConsecutive={hasNextReplyConsecutive}
-                    isLastReasoningMessage={isLastReasoningReply}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
+						{/* Render reply messages */}
+						{isExpanded && (
+							<div className={cn(isMobile ? "ml-9" : "ml-12", "mt-2")}>
+								{replyProperties.map(
+									({ message, isConsecutive, hasNextConsecutive, isLastReasoningMessage }) => (
+										<ThreadedMessage
+											key={message.id}
+											message={message}
+											rootEvent={rootEvent}
+											depth={depth + 1}
+											project={project}
+											onTimeClick={onTimeClick}
+											onConversationNavigate={onConversationNavigate}
+											isConsecutive={isConsecutive}
+											hasNextConsecutive={hasNextConsecutive}
+											isLastReasoningMessage={isLastReasoningMessage}
+										/>
+									)
+								)}
+							</div>
+						)}
+					</>
+				)}
+			</>
+		);
 });

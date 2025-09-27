@@ -36,6 +36,7 @@ import {
 } from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "@/components/chat/hooks/useChatMessages";
 import type { NDKProject } from "@/lib/ndk-events/NDKProject";
+import { logger } from "@/lib/logger";
 
 interface ConversationAgentsProps {
   messages: Message[];
@@ -278,7 +279,7 @@ export function ConversationAgents({
           },
         ]
       : false,
-    { closeOnEose: false, groupable: true },
+    { closeOnEose: false, groupable: true, subId: 'ConversationAgents' },
     [rootEvent?.id],
   );
 
@@ -336,9 +337,24 @@ export function ConversationAgents({
   ) => {
     if (!ndk || !user || !rootEvent) return;
 
+    const agentInfo = conversationAgents.find(a => a.pubkey === agentPubkey);
+    
+    logger.info("[ConversationAgents] Saving agent changes", {
+      agentPubkey,
+      agentSlug: agentInfo?.slug,
+      previousModel: agentInfo?.model,
+      newModel,
+      previousTools: agentInfo?.tools,
+      newTools: tools,
+      projectId: project.tagId()
+    });
+
     try {
       const projectTagId = project.tagId();
       if (!projectTagId) {
+        logger.error("[ConversationAgents] Project tag ID not found", {
+          projectDTag: project.dTag
+        });
         toast.error("Project tag ID not found");
         return;
       }
@@ -358,10 +374,28 @@ export function ConversationAgents({
         changeEvent.tags.push(["tool", tool]);
       });
 
+      logger.debug("[ConversationAgents] Publishing agent change event", {
+        eventKind: 24020,
+        tags: changeEvent.tags
+      });
+
       await changeEvent.sign();
       await changeEvent.publish();
+      
+      logger.info("[ConversationAgents] Agent settings updated successfully", {
+        agentPubkey,
+        agentSlug: agentInfo?.slug,
+        newModel,
+        tools
+      });
       toast.success(`Agent settings updated`);
-    } catch {
+    } catch (error) {
+      logger.error("[ConversationAgents] Failed to update agent settings", {
+        error: error instanceof Error ? error.message : String(error),
+        agentPubkey,
+        attemptedModel: newModel,
+        attemptedTools: tools
+      });
       toast.error("Failed to update agent settings");
     }
   };

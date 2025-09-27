@@ -45,13 +45,6 @@ export function parseKind24133(ev: NDKEvent): Kind24133Snapshot | null {
     eventId: ev.id || "",
   };
 
-  // DEBUG: Log parsed result
-  console.log("DEBUG parseKind24133 - Parsed snapshot:", {
-    ...result,
-    agentPubkeys: result.agentPubkeys.map((pk) => pk.slice(0, 8)),
-  });
-  // END DEBUG
-
   return result;
 }
 

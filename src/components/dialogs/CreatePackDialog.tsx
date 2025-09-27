@@ -143,7 +143,7 @@ export function CreatePackDialog({
     // Reset to first step when dialog opens/closes
     setCurrentStep("info");
     setSearchQuery("");
-  }, [forkFromPack, editPack, open]);
+  }, [forkFromPack, editPack, /* effect dep */ open]);
 
   const handleCreate = async () => {
     if (!ndk) {

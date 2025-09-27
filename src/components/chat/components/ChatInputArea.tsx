@@ -25,15 +25,17 @@ import type { Message } from "../hooks/useChatMessages";
 import { useBlossomUpload } from "@/hooks/useBlossomUpload";
 import { useMentions } from "@/hooks/useMentions";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
-import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { useAI } from "@/hooks/useAI";
 import { toast } from "sonner";
 import { useProjectStatus } from "@/stores/projects";
+import { NDKTask } from "@/lib/ndk-events/NDKTask";
 import { findNostrEntities, type NostrEntity } from "@/lib/utils/nostrEntityParser";
 import { EventPreview } from "./EventPreview";
 import { BrainstormModeButton } from "./BrainstormModeButton";
 import { useBrainstormMode } from "@/stores/brainstorm-mode-store";
 import { isBrainstormMessage, getBrainstormModerator, getBrainstormParticipants } from "@/lib/utils/brainstorm";
+import { useThreadManagement } from "../hooks/useThreadManagement";
+import { logger } from "@/lib/logger";
 
 interface ChatInputAreaProps {
   project?: NDKProject | null;
@@ -48,16 +50,6 @@ interface ChatInputAreaProps {
   textareaRef?: React.RefObject<HTMLTextAreaElement>;
   initialContent?: string;
   onContentUsed?: () => void;
-}
-
-interface ImageUpload {
-  url: string;
-  metadata?: {
-    sha256: string;
-    mimeType: string;
-    size: number;
-    blurhash?: string;
-  };
 }
 
 /**
@@ -186,6 +178,17 @@ export const ChatInputArea = memo(function ChatInputArea({
     }
   }, [rootEvent?.id, recentMessages?.length, clearBrainstormSession]);
 
+  // Use the thread management hook
+  const { createThread, sendReply } = useThreadManagement({
+    project,
+    initialRootEvent: rootEvent,
+    extraTags,
+    onThreadCreated,
+    onlineAgents,
+    replyingTo,
+    quotedEvents,
+  });
+
   // Image upload functionality
   const {
     uploadFiles,
@@ -289,8 +292,24 @@ export const ChatInputArea = memo(function ChatInputArea({
     const statusAgent = projectStatus.agents.find(
       (a) => a.pubkey === currentAgent,
     );
-    return statusAgent?.model;
-  }, [currentAgent, projectStatus]);
+    const model = statusAgent?.model;
+    
+    // Log the agent-model mapping
+    logger.debug("[ChatInputArea] Agent-Model Mapping", {
+      currentAgent,
+      currentAgentSlug: onlineAgents?.find(a => a.pubkey === currentAgent)?.slug,
+      currentModel: model,
+      allAgentsWithModels: projectStatus.agents.map(a => ({
+        pubkey: a.pubkey,
+        name: a.name,
+        model: a.model
+      })),
+      availableModels: projectStatus.models,
+      projectDTag
+    });
+    
+    return model;
+  }, [currentAgent, projectStatus, onlineAgents, projectDTag]);
 
   // Build message content with images
   const buildMessageContent = useCallback(() => {
@@ -309,244 +328,6 @@ export const ChatInputArea = memo(function ChatInputArea({
     }
     return content;
   }, [messageInput, uploadQueue]);
-
-  // Create a new thread
-  const createThread = useCallback(
-    async (
-      content: string,
-      mentions: AgentInstance[],
-      images: ImageUpload[],
-    ) => {
-      if (!ndk || !user) return null;
-
-      const newThreadEvent = new NDKThread(ndk);
-      newThreadEvent.content = content;
-      newThreadEvent.title = content.slice(0, 50);
-
-      if (project) newThreadEvent.tag(project.tagReference());
-
-      if (extraTags.length > 0) {
-        newThreadEvent.tags.push(...extraTags);
-      }
-
-      images.forEach((upload) => {
-        if (upload.metadata) {
-          newThreadEvent.tags.push([
-            "image",
-            upload.metadata.sha256,
-            upload.url,
-            upload.metadata.mimeType,
-            upload.metadata.size.toString(),
-          ]);
-          if (upload.metadata.blurhash) {
-            newThreadEvent.tags.push(["blurhash", upload.metadata.blurhash]);
-          }
-        }
-      });
-
-      mentions.forEach((agent) => {
-        newThreadEvent.tags.push(["p", agent.pubkey]);
-      });
-
-      if (selectedAgent && mentions.every((m) => m.pubkey !== selectedAgent)) {
-        newThreadEvent.tags.push(["p", selectedAgent]);
-      } else if (
-        mentions.length === 0 &&
-        !selectedAgent &&
-        onlineAgents &&
-        onlineAgents.length > 0
-      ) {
-        const projectManager = onlineAgents[0];
-        newThreadEvent.tags.push(["p", projectManager.pubkey]);
-      }
-
-      // Extract and add hashtags from content
-      const hashtagRegex = /#(\w+)/g;
-      const hashtags = new Set<string>();
-      let match;
-      while ((match = hashtagRegex.exec(content)) !== null) {
-        hashtags.add(match[1].toLowerCase());
-      }
-      hashtags.forEach(tag => {
-        newThreadEvent.tags.push(["t", tag]);
-      });
-
-      if (autoTTS) {
-        newThreadEvent.tags.push(["mode", "voice"]);
-      }
-
-      // Handle brainstorm mode encoding
-      if (brainstormSession?.enabled && brainstormSession.moderatorPubkey) {
-        // Add brainstorm mode tags
-        newThreadEvent.tags.push(["mode", "brainstorm"]);
-        newThreadEvent.tags.push(["t", "brainstorm"]);
-        
-        // Clear existing p-tags and add only the moderator with p-tag
-        newThreadEvent.tags = newThreadEvent.tags.filter(tag => tag[0] !== "p");
-        newThreadEvent.tags.push(["p", brainstormSession.moderatorPubkey]);
-        
-        // Add participants as ["participant", "<pubkey>"] tags without p-tagging
-        brainstormSession.participantPubkeys.forEach(participantPubkey => {
-          newThreadEvent.tags.push(["participant", participantPubkey]);
-        });
-      }
-
-      await newThreadEvent.sign(undefined, { pTags: false });
-      await newThreadEvent.publish();
-
-      if (onThreadCreated) {
-        onThreadCreated(newThreadEvent);
-      }
-
-      return newThreadEvent;
-    },
-    [
-      ndk,
-      user,
-      project,
-      extraTags,
-      onlineAgents,
-      selectedAgent,
-      autoTTS,
-      onThreadCreated,
-      brainstormSession,
-      quotedEvents,
-    ],
-  );
-
-  // Send a reply
-  const sendReply = useCallback(
-    async (
-      content: string,
-      mentions: AgentInstance[],
-      images: ImageUpload[],
-    ) => {
-      if (!ndk || !user || !rootEvent) return null;
-
-      const targetEvent = replyingTo || rootEvent;
-      const replyEvent = targetEvent.reply();
-      replyEvent.content = content;
-
-      replyEvent.tags = replyEvent.tags.filter((tag) => tag[0] !== "p");
-
-      if (project) {
-        const tagId = project.tagId();
-        if (tagId) {
-          replyEvent.tags.push(["a", tagId]);
-        }
-      }
-
-      images.forEach((upload) => {
-        if (upload.metadata) {
-          replyEvent.tags.push([
-            "image",
-            upload.metadata.sha256,
-            upload.url,
-            upload.metadata.mimeType,
-            upload.metadata.size.toString(),
-          ]);
-          if (upload.metadata.blurhash) {
-            replyEvent.tags.push(["blurhash", upload.metadata.blurhash]);
-          }
-        }
-      });
-
-      mentions.forEach((agent) => {
-        replyEvent.tags.push(["p", agent.pubkey]);
-      });
-
-      // Extract and add hashtags from reply content
-      const hashtagRegex = /#(\w+)/g;
-      const hashtags = new Set<string>();
-      let match;
-      while ((match = hashtagRegex.exec(content)) !== null) {
-        hashtags.add(match[1].toLowerCase());
-      }
-      hashtags.forEach(tag => {
-        replyEvent.tags.push(["t", tag]);
-      });
-
-      const hasUnresolvedMentions =
-        /@[\w-]+/.test(content) && mentions.length === 0;
-
-      if (selectedAgent && mentions.every((m) => m.pubkey !== selectedAgent)) {
-        replyEvent.tags.push(["p", selectedAgent]);
-      } else if (
-        !hasUnresolvedMentions &&
-        mentions.length === 0 &&
-        !selectedAgent &&
-        recentMessages.length > 0
-      ) {
-        const mostRecentNonUserMessage = [...recentMessages]
-          .reverse()
-          .find((msg) => msg.event.pubkey !== user.pubkey);
-
-        if (mostRecentNonUserMessage) {
-          replyEvent.tags.push(["p", mostRecentNonUserMessage.event.pubkey]);
-        }
-      }
-
-      if (autoTTS) {
-        replyEvent.tags.push(["mode", "voice"]);
-      }
-
-      // In brainstorm conversations, preserve brainstorm mode tags and always p-tag the moderator
-      if (rootEvent && isBrainstormMessage(rootEvent)) {
-        // Add brainstorm mode tags to the reply
-        const hasBrainstormMode = replyEvent.tags.some(
-          tag => tag[0] === "mode" && tag[1] === "brainstorm"
-        );
-        if (!hasBrainstormMode) {
-          replyEvent.tags.push(["mode", "brainstorm"]);
-        }
-        
-        const hasBrainstormTag = replyEvent.tags.some(
-          tag => tag[0] === "t" && tag[1] === "brainstorm"
-        );
-        if (!hasBrainstormTag) {
-          replyEvent.tags.push(["t", "brainstorm"]);
-        }
-        
-        // Also preserve participant tags from the root event
-        const participantTags = rootEvent.tags.filter(tag => tag[0] === "participant");
-        participantTags.forEach(participantTag => {
-          const hasThisParticipant = replyEvent.tags.some(
-            tag => tag[0] === "participant" && tag[1] === participantTag[1]
-          );
-          if (!hasThisParticipant) {
-            replyEvent.tags.push(participantTag);
-          }
-        });
-        
-        // P-tag the moderator
-        const moderatorPubkey = rootEvent.tagValue("p");
-        if (moderatorPubkey) {
-          // Check if moderator is not already p-tagged
-          const hasModeratorPTag = replyEvent.tags.some(
-            tag => tag[0] === "p" && tag[1] === moderatorPubkey
-          );
-          if (!hasModeratorPTag) {
-            replyEvent.tags.push(["p", moderatorPubkey]);
-          }
-        }
-      }
-      
-      await replyEvent.sign(undefined, { pTags: false });
-      await replyEvent.publish();
-
-      return replyEvent;
-    },
-    [
-      ndk,
-      user,
-      rootEvent,
-      project,
-      replyingTo,
-      selectedAgent,
-      recentMessages,
-      autoTTS,
-    ],
-  );
 
   // Main send handler - publishes directly to Nostr
   const handleSend = useCallback(async () => {
@@ -576,9 +357,9 @@ export const ChatInputArea = memo(function ChatInputArea({
 
       // Send directly to Nostr
       if (!rootEvent) {
-        await createThread(content, mentions, completedUploads);
+        await createThread(content, mentions, completedUploads, autoTTS, selectedAgent);
       } else {
-        await sendReply(content, mentions, completedUploads);
+        await sendReply(content, mentions, completedUploads, autoTTS, recentMessages, selectedAgent);
       }
 
       // Clear everything after successful send
@@ -662,9 +443,9 @@ export const ChatInputArea = memo(function ChatInputArea({
           setIsSubmitting(true);
           try {
             if (!rootEvent) {
-              await createThread(content, mentions, completedUploads);
+              await createThread(content, mentions, completedUploads, autoTTS, selectedAgent);
             } else {
-              await sendReply(content, mentions, completedUploads);
+              await sendReply(content, mentions, completedUploads, autoTTS, recentMessages, selectedAgent);
             }
             setMessageInput("");
             clearCompleted();

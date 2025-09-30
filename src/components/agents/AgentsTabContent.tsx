@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useNDK, useSubscribe, useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { useNDK, useSubscribe, useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { type NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import { Bot, Plus, Settings, Volume2 } from "lucide-react";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
@@ -51,7 +51,8 @@ function AgentCard({
   onVoiceSettings: (agent: AgentData, e: React.MouseEvent) => void;
   hasVoice: boolean;
 }) {
-  const profile = useProfile(agent.pubkey);
+  const user = useUser(agent.pubkey);
+  const profile = useProfileValue(user);
   const avatarUrl = profile?.image || profile?.picture || agent.picture;
   const isOnline = agent.status === "online";
 

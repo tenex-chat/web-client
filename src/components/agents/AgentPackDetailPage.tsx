@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { useNDK, useEvent } from "@nostr-dev-kit/ndk-hooks";
-import { useNDKCurrentUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
+import { useNDKCurrentUser, useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { Package, Plus, Users, Copy, ArrowLeft, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,7 +25,8 @@ export function AgentPackDetailPage() {
   const packEvent = useEvent(naddr);
   const pack = packEvent ? new NDKAgentDefinitionPack(ndk, packEvent) : null;
 
-  const profile = useProfileValue(pack?.pubkey);
+  const packAuthor = useUser(pack?.pubkey);
+  const profile = useProfileValue(packAuthor);
 
   const isAuthor = user?.pubkey === pack?.pubkey;
 

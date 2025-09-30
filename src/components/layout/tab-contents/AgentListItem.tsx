@@ -1,5 +1,5 @@
 import React from "react";
-import { useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bot, ChevronRight } from "lucide-react";
 
@@ -16,7 +16,8 @@ interface AgentListItemProps {
 
 export const AgentListItem = React.memo(
   ({ agent, isOnline, onClick }: AgentListItemProps) => {
-    const profile = useProfile(agent.pubkey);
+    const user = useUser(agent.pubkey);
+    const profile = useProfileValue(user);
     const avatarUrl = profile?.image || profile?.picture;
     const displayName =
       agent.slug || profile?.displayName || profile?.name || "Unknown Agent";

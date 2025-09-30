@@ -1,5 +1,4 @@
-import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
-import { NDKUser } from "@nostr-dev-kit/ndk-hooks";
+import { useUser, useProfileValue, NDKUser } from "@nostr-dev-kit/ndk-hooks";
 import { NostrAvatar } from "@/components/ui/nostr-avatar";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +21,8 @@ export function NostrProfile({
   nameClassName = "",
   avatarClassName = "",
 }: NostrProfileProps) {
-  const userProfile = useProfileValue(pubkey);
+  const user = useUser(pubkey);
+  const userProfile = useProfileValue(user);
 
   const sizeClasses = {
     xs: { avatar: "w-5 h-5", text: "text-xs" },

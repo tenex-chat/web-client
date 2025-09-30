@@ -1,4 +1,4 @@
-import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
+import { useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { Package } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -20,7 +20,8 @@ export function PackCard({
   className,
   selected,
 }: PackCardProps) {
-  const profile = useProfileValue(pack.pubkey);
+  const user = useUser(pack.pubkey);
+  const profile = useProfileValue(user);
   const agentCount = pack.agentEventIds.length;
 
   const backgroundColor = useMemo(() => {

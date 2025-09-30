@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { NDKEvent } from '@nostr-dev-kit/ndk-hooks';
-import { useProfileValue } from '@nostr-dev-kit/ndk-hooks';
+import { useUser, useProfileValue } from '@nostr-dev-kit/ndk-hooks';
 import { nip19 } from 'nostr-tools';
 import { formatRelativeTime } from '@/lib/utils/time';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,7 +18,8 @@ export const HashtagEventItem = React.memo(function HashtagEventItem({
   hashtags, 
   onClick 
 }: HashtagEventItemProps) {
-  const profile = useProfileValue(event.pubkey);
+  const user = useUser(event.pubkey);
+  const profile = useProfileValue(user);
   
   // Format author display name
   const authorName = React.useMemo(() => {

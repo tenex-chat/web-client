@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useNDKCurrentUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
+import { useNDKCurrentUser, useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import { useAudioSettings } from "@/stores/ai-config-store";
 import { useVAD } from "@/hooks/useVAD";
@@ -356,7 +356,8 @@ export function CallView({
 
 // Simple agent avatar component
 function AgentAvatar({ agent, isActive }: { agent: AgentInstance; isActive: boolean }) {
-  const profile = useProfileValue(agent.pubkey);
+  const user = useUser(agent.pubkey);
+  const profile = useProfileValue(user);
   const avatarUrl = profile?.image || profile?.picture;
   const displayName = agent.slug || profile?.displayName || profile?.name || "Agent";
   

@@ -1,34 +1,20 @@
 import { NDKArticle } from "@nostr-dev-kit/ndk-hooks";
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  Copy,
-  Hash,
-  MessageSquare,
-  Plus,
-  History,
-  Edit,
-  User,
-  ExternalLink,
-  X,
-} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useMarkdownComponents } from "@/lib/markdown/config";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { formatRelativeTime } from "@/lib/utils/time";
 import { useMemo, useState, useCallback } from "react";
-import { ChatInterface } from "@/components/chat/ChatInterface";
 import { NDKProject } from "@/lib/ndk-events/NDKProject";
 import type { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
-import { useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { cn } from "@/lib/utils";
-import { ChangelogTabContent } from "@/components/changelog/ChangelogTabContent";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ArticleHeader } from "./ArticleHeader";
+import { MetadataSection } from "./MetadataSection";
+import { CommentsSidebar } from "./CommentsSidebar";
+import { ChangelogSidebar } from "./ChangelogSidebar";
+import { useContentWidth } from "./useContentWidth";
+import { calculateReadingTime, extractTags } from "./documentationHelpers";
 
 interface DocumentationViewerProps {
   article: NDKArticle;
@@ -51,20 +37,21 @@ export function DocumentationViewer({
   const [showChangelog, setShowChangelog] = useState(false);
   const [chatThread, setChatThread] = useState<NDKEvent | undefined>(undefined);
 
-  const profile = useProfile(article.pubkey);
+  const authorUser = useUser(article.pubkey);
+  const profile = useProfileValue(authorUser);
   const authorName = profile?.displayName || profile?.name || "Unknown Author";
   const authorAvatar = profile?.image || profile?.picture;
 
-  // Get markdown components with Mermaid support
   const markdownComponents = useMarkdownComponents();
 
-  const readingTime = useMemo(() => {
-    const content = article.content || "";
-    const wordsPerMinute = 200;
-    const words = content.trim().split(/\s+/).length;
-    const minutes = Math.ceil(words / wordsPerMinute);
-    return `${minutes} min read`;
-  }, [article.content]);
+  const readingTime = useMemo(
+    () => calculateReadingTime(article.content || ""),
+    [article.content],
+  );
+
+  const tags = useMemo(() => extractTags(article.tags), [article.tags]);
+
+  const contentWidth = useContentWidth(showComments, showChangelog);
 
   const handleThreadCreated = useCallback(async (thread: NDKEvent) => {
     setChatThread(thread);
@@ -75,176 +62,53 @@ export function DocumentationViewer({
       const encoded = article.encode();
       await navigator.clipboard.writeText(encoded);
       toast.success("Article link copied to clipboard");
-    } catch {
+    } catch (error) {
+      console.error("Failed to copy link:", error);
       toast.error("Failed to copy link");
     }
   };
 
-  const tags = article.tags
-    .filter((tag) => tag[0] === "t")
-    .map((tag) => tag[1]);
+  const handleToggleChangelog = () => {
+    setShowChangelog(!showChangelog);
+    if (!showChangelog) setShowComments(false);
+  };
 
-  // Calculate content width based on active sidebars
-  const getContentWidth = () => {
-    if (showComments || showChangelog) {
-      return "w-2/3"; // 66% width when sidebar is active
-    }
-    return "w-full"; // 100% width when no sidebars
+  const handleToggleComments = () => {
+    setShowComments(!showComments);
+    if (!showComments) setShowChangelog(false);
   };
 
   return (
     <div className="h-full flex w-full">
-      {/* Main Content Area */}
       <div
         className={cn(
           "flex flex-col transition-all duration-300",
-          getContentWidth(),
+          contentWidth,
         )}
       >
-        {/* Header */}
-        <div className="border-b">
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-2 absolute left-4">
-              {onBack && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onBack}
-                  className="h-9 w-9"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            <div className="max-w-3xl mx-auto w-full flex items-center justify-between">
-              <div>
-                {projectTitle && (
-                  <p className="text-sm text-muted-foreground">
-                    {projectTitle} / Documentation
-                  </p>
-                )}
-                <h1 className="text-xl font-semibold">{article.title}</h1>
-              </div>
-              <div className="flex items-center gap-2">
-                {onEdit && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onEdit}
-                    className="h-9 w-9"
-                    title="Edit documentation"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setShowChangelog(!showChangelog);
-                    if (!showChangelog) setShowComments(false); // Close comments when opening changelog
-                  }}
-                  className="h-9 w-9"
-                  title="Toggle changelog"
-                >
-                  <History className="h-4 w-4" />
-                </Button>
-                {project && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setShowComments(!showComments);
-                      if (!showComments) setShowChangelog(false); // Close changelog when opening comments
-                    }}
-                    className="h-9 w-9"
-                    title="Toggle comments"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleCopyLink}
-                  className="h-9 w-9"
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-                {onDetach && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onDetach}
-                    className="h-9 w-9"
-                    title="Detach to floating window"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                )}
-                {onBack && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onBack}
-                    className="h-9 w-9"
-                    title="Close"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <ArticleHeader
+          title={article.title}
+          projectTitle={projectTitle}
+          onBack={onBack}
+          onEdit={onEdit}
+          onToggleChangelog={handleToggleChangelog}
+          onToggleComments={handleToggleComments}
+          onCopyLink={handleCopyLink}
+          onDetach={onDetach}
+          hasProject={!!project}
+        />
 
-        {/* Content */}
         <ScrollArea className="flex-1">
           <div className="p-6 max-w-3xl mx-auto">
-            {/* Metadata */}
-            <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={authorAvatar} alt={authorName} />
-                  <AvatarFallback>
-                    <User className="h-3 w-3" />
-                  </AvatarFallback>
-                </Avatar>
-                <span>{authorName}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                <span>{formatRelativeTime(article.created_at || 0)}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                <span>{readingTime}</span>
-              </div>
-            </div>
+            <MetadataSection
+              authorName={authorName}
+              authorAvatar={authorAvatar}
+              createdAt={article.created_at || 0}
+              readingTime={readingTime}
+              tags={tags}
+              summary={article.summary}
+            />
 
-            {/* Tags */}
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-6">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="gap-1">
-                    <Hash className="h-3 w-3" />
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            )}
-
-            {/* Summary */}
-            {article.summary && (
-              <div className="mb-8 p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm font-medium mb-2">Summary</p>
-                <p className="text-sm text-muted-foreground">
-                  {article.summary}
-                </p>
-              </div>
-            )}
-
-            {/* Article Content */}
             <div className="prose prose-neutral dark:prose-invert max-w-none [&_.mermaid-container]:!max-w-none [&_.mermaid-container]:overflow-x-auto">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
@@ -257,45 +121,15 @@ export function DocumentationViewer({
         </ScrollArea>
       </div>
 
-      {/* Changelog Sidebar */}
-      {showChangelog && (
-        <div className="w-1/3 border-l flex flex-col">
-          <div className="p-4 border-b flex items-center justify-between">
-            <h2 className="font-semibold">Changelog</h2>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <ChangelogTabContent article={article} />
-          </div>
-        </div>
-      )}
+      {showChangelog && <ChangelogSidebar article={article} />}
 
-      {/* Comments Sidebar */}
       {showComments && project && (
-        <div className="w-1/3 border-l flex flex-col">
-          <div className="p-4 border-b flex items-center justify-between">
-            <h2 className="font-semibold">Comments</h2>
-            {!chatThread && (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-                onClick={() => {
-                  /* Start new chat - ChatInterface will handle creation */
-                }}
-                title="Start new discussion"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <ChatInterface
-            project={project}
-            rootEvent={chatThread}
-            extraTags={[article.tagReference()]}
-            className="flex-1"
-            onThreadCreated={handleThreadCreated}
-          />
-        </div>
+        <CommentsSidebar
+          project={project}
+          chatThread={chatThread}
+          extraTags={[article.tagReference()]}
+          onThreadCreated={handleThreadCreated}
+        />
       )}
     </div>
   );

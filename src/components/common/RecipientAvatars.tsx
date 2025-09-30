@@ -1,4 +1,4 @@
-import { useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   HoverCard,
@@ -16,7 +16,8 @@ interface RecipientAvatarsProps {
 }
 
 function RecipientAvatar({ pubkey }: { pubkey: string }) {
-  const profile = useProfile(pubkey);
+  const user = useUser(pubkey);
+  const profile = useProfileValue(user);
 
   const displayName =
     profile?.displayName || profile?.name || pubkey.slice(0, 8);

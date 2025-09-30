@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { TanStackRouterVite } from '@tanstack/router-vite-plugin'
 import { fileURLToPath, URL } from 'node:url'
+import { resolve } from 'node:path'
 
 export default defineConfig({
   plugins: [
@@ -16,6 +17,23 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['onnxruntime-web'],
     include: ['@ricky0123/vad-web'],
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        widget: resolve(__dirname, 'src/widget/index.tsx'),
+      },
+      output: {
+        entryFileNames: (chunkInfo) => {
+          // Name the widget bundle as 'widget.js'
+          if (chunkInfo.name === 'widget') {
+            return 'widget.js';
+          }
+          return 'assets/[name]-[hash].js';
+        },
+      },
+    },
   },
   server: {
     port: 3000,

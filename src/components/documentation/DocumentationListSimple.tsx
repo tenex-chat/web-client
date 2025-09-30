@@ -1,5 +1,5 @@
 import { NDKArticle, NDKKind } from "@nostr-dev-kit/ndk-hooks";
-import { useSubscribe, useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { useSubscribe, useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { FileText, Clock, Hash, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatRelativeTime } from "@/lib/utils/time";
@@ -23,7 +23,8 @@ function DocumentationItem({
   article: NDKArticle;
   onSelect: () => void;
 }) {
-  const profile = useProfile(article.pubkey);
+  const user = useUser(article.pubkey);
+  const profile = useProfileValue(user);
   const avatarUrl = profile?.image || profile?.picture;
   const displayName = profile?.displayName || profile?.name || "Unknown Author";
 

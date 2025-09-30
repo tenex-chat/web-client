@@ -3,7 +3,8 @@ import {
   useNDK,
   useNDKCurrentUser,
   useSubscribe,
-  useProfile,
+  useUser,
+  useProfileValue,
 } from "@nostr-dev-kit/ndk-hooks";
 import { NDKEvent } from "@nostr-dev-kit/ndk-hooks";
 import {
@@ -31,7 +32,8 @@ interface AgentItemProps {
 }
 
 function AgentItem({ pubkey, isSelected, onToggle }: AgentItemProps) {
-  const profile = useProfile(pubkey);
+  const user = useUser(pubkey);
+  const profile = useProfileValue(user);
   const name = profile?.displayName || profile?.name || pubkey.slice(0, 8);
   const avatarUrl = profile?.image || profile?.picture;
 

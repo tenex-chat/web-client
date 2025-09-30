@@ -1,4 +1,4 @@
-import { useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { Bot, Layers } from "lucide-react";
 import { NDKAgentDefinition } from "@/lib/ndk-events/NDKAgentDefinition";
 import {
@@ -21,7 +21,8 @@ export function AgentDefinitionCard({
   agent,
   onClick,
 }: AgentDefinitionCardProps) {
-  const authorProfile = useProfile(agent.pubkey);
+  const authorUser = useUser(agent.pubkey);
+  const authorProfile = useProfileValue(authorUser);
   const agentColor = generateAgentColor(agent.name || agent.id);
 
   return (

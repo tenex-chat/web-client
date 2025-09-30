@@ -24,9 +24,13 @@ import { useSortedProjects } from "@/hooks/useSortedProjects";
 import { useTheme } from "@/hooks/useTheme";
 import { useInboxUnreadCount } from "@/hooks/useInboxStore";
 import { useGlobalAgents } from "@/stores/agents";
-import { useProfile } from "@nostr-dev-kit/ndk-hooks";
-import { useWindowManager } from "@/stores/windowManager";
-import { useSortedProjects as useProjectsHook } from "@/hooks/useSortedProjects";
+import {
+  useUser,
+  useProfileValue,
+  useNDKCurrentPubkey,
+  useNDKSessionLogout,
+  useNDKCurrentUser,
+} from "@nostr-dev-kit/ndk-hooks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,12 +69,6 @@ import {
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  useNDKCurrentPubkey,
-  useProfileValue,
-  useNDKSessionLogout,
-  useNDKCurrentUser,
-} from "@nostr-dev-kit/ndk-hooks";
-import {
   openProjectsAtom,
   toggleProjectAtom,
   isProjectOpenAtom,
@@ -82,7 +80,8 @@ interface CollapsibleProjectsSidebarProps {
 }
 
 function GlobalAgentItem({ pubkey, slug }: { pubkey: string; slug: string }) {
-  const profile = useProfile(pubkey);
+  const user = useUser(pubkey);
+  const profile = useProfileValue(user);
   const navigate = useNavigate();
 
   const displayName = profile?.displayName || profile?.name || slug;

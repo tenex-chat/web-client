@@ -2,6 +2,7 @@ import { type NDKKind } from "@nostr-dev-kit/ndk-hooks";
 import {
   useNDK,
   useSubscribe,
+  useUser,
   useProfileValue,
 } from "@nostr-dev-kit/ndk-hooks";
 import { useState, useMemo, useEffect } from "react";
@@ -53,7 +54,8 @@ export function AgentProfilePage({
 
   // The agent IS the pubkey - get their profile
   // Must call all hooks before any conditional returns
-  const profile = useProfileValue(pubkey);
+  const user = useUser(pubkey);
+  const profile = useProfileValue(user);
 
   // The pubkey parameter is the agent's pubkey (not the author of an NDKAgentDefinition event)
   // For agent profiles, we may not have an NDKAgentDefinition event - the agent might just be in status events

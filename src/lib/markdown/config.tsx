@@ -400,6 +400,45 @@ export function getMarkdownComponents({
     },
 
     hr: () => <hr className="my-3 border-gray-300 dark:border-gray-600" />,
+
+    // Table components with styling
+    table: ({ children }) => (
+      <div className="overflow-x-auto my-4">
+        <table className="w-full border-collapse">
+          {children}
+        </table>
+      </div>
+    ),
+
+    thead: ({ children }) => (
+      <thead className="bg-gray-100 dark:bg-gray-800">
+        {children}
+      </thead>
+    ),
+
+    tbody: ({ children }) => (
+      <tbody>
+        {children}
+      </tbody>
+    ),
+
+    tr: ({ children }) => (
+      <tr className="border-b border-gray-300 dark:border-gray-600">
+        {children}
+      </tr>
+    ),
+
+    th: ({ children }) => (
+      <th className="px-3 py-2 text-left font-semibold border border-gray-300 dark:border-gray-600">
+        {children}
+      </th>
+    ),
+
+    td: ({ children }) => (
+      <td className="px-3 py-2 border border-gray-300 dark:border-gray-600">
+        {children}
+      </td>
+    ),
   };
 
   return components;

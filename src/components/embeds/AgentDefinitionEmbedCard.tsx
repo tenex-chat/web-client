@@ -28,7 +28,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   useNDKCurrentUser,
   useNDK,
-  useProfile,
+  useUser,
+  useProfileValue,
 } from "@nostr-dev-kit/ndk-hooks";
 import { toast } from "sonner";
 import { useLocation } from "@tanstack/react-router";
@@ -67,7 +68,8 @@ export function AgentDefinitionEmbedCard({
   );
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
-  const authorProfile = useProfile(event.pubkey);
+  const authorUser = useUser(event.pubkey);
+  const authorProfile = useProfileValue(authorUser);
 
   // Try to extract project ID from the current path
   const location = useLocation();

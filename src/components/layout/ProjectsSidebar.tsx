@@ -31,7 +31,7 @@ import { ProjectCard } from "@/components/projects/ProjectCard";
 import { logger } from "@/lib/logger";
 import { useProjectsStore } from "@/stores/projects";
 import { useGlobalAgents } from "@/stores/agents";
-import { useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 
 interface ProjectsSidebarProps {
   className?: string;
@@ -39,7 +39,8 @@ interface ProjectsSidebarProps {
 }
 
 function GlobalAgentItem({ pubkey, slug }: { pubkey: string; slug: string }) {
-  const profile = useProfile(pubkey);
+  const user = useUser(pubkey);
+  const profile = useProfileValue(user);
   const navigate = useNavigate();
 
   const displayName = profile?.displayName || profile?.name || slug;

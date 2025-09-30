@@ -4,6 +4,7 @@ import {
   useSubscribe,
   useNDKCurrentUser,
   useEvent,
+  useUser,
   useProfileValue,
 } from "@nostr-dev-kit/ndk-hooks";
 import { useState, useMemo, useCallback } from "react";
@@ -46,7 +47,8 @@ export function LessonView() {
     [lessonEvent],
   );
 
-  const agentProfile = useProfileValue(lessonEvent?.pubkey);
+  const agentUser = useUser(lessonEvent?.pubkey);
+  const agentProfile = useProfileValue(agentUser);
 
   const { events: comments } = useSubscribe([
     {

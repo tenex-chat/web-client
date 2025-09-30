@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ProjectAgent } from "@/lib/ndk-events/NDKProjectStatus";
-import { useProfile } from "@nostr-dev-kit/ndk-hooks";
+import { useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { Bot, Wrench } from "lucide-react";
 import {
   Tooltip,
@@ -17,7 +17,8 @@ interface AgentStatusListProps {
 }
 
 function AgentStatusItem({ agent }: { agent: ProjectAgent }) {
-  const profile = useProfile(agent.pubkey);
+  const user = useUser(agent.pubkey);
+  const profile = useProfileValue(user);
   const avatarUrl = profile?.image || profile?.picture;
 
   return (

@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { MessageSquare, FileText, Hash, Bot, Phone } from "lucide-react";
 import { NDKEvent, NDKKind } from "@nostr-dev-kit/ndk-hooks";
-import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
+import { useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatRelativeTime } from "@/lib/utils/time";
@@ -15,7 +15,8 @@ export const EventItem: React.FC<EventItemProps> = ({
   event,
   onClick
 }) => {
-  const profile = useProfileValue(event.pubkey);
+  const user = useUser(event.pubkey);
+  const profile = useProfileValue(user);
   const conversationTitle = useConversationTitleForEvent(event);
 
   // Format author display name

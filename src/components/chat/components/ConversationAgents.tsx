@@ -32,6 +32,7 @@ import { useProjectAvailableTools } from "@/hooks/useProjectAvailableTools";
 import {
   useNDK,
   useNDKCurrentUser,
+  useUser,
   useProfileValue,
 } from "@nostr-dev-kit/ndk-hooks";
 import type { Message } from "@/components/chat/hooks/useChatMessages";
@@ -69,7 +70,8 @@ function AgentAvatar({
     tools: string[],
   ) => Promise<void>;
 }) {
-  const profile = useProfileValue(agent.pubkey);
+  const agentUser = useUser(agent.pubkey);
+  const profile = useProfileValue(agentUser);
   const avatarUrl = profile?.picture;
   const displayName = profile?.displayName || profile?.name || agent.pubkey;
   const isMobile = useIsMobile();
@@ -263,7 +265,8 @@ export function ConversationAgents({
 }: ConversationAgentsProps) {
   const { ndk } = useNDK();
   const user = useNDKCurrentUser();
-  useProfileValue(user?.pubkey);
+  const currentUser = useUser(user?.pubkey);
+  useProfileValue(currentUser);
   const onlineAgents = useProjectOnlineAgents(project.dTag);
   const availableModels = useProjectOnlineModels(project.dTag);
   const availableTools = useProjectAvailableTools(project.dTag);

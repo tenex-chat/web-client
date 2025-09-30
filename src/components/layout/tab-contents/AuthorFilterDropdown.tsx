@@ -10,7 +10,7 @@ import {
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import { NostrProfile } from "@/components/common/NostrProfile";
-import { useProfileValue } from "@nostr-dev-kit/ndk-hooks";
+import { useUser, useProfileValue } from "@nostr-dev-kit/ndk-hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { nip19 } from "nostr-tools";
 
@@ -25,7 +25,8 @@ interface AuthorFilterDropdownProps {
 
 // Component to show author avatar in the filter button
 const AuthorAvatar: React.FC<{ pubkey: string }> = ({ pubkey }) => {
-  const profile = useProfileValue(pubkey);
+  const user = useUser(pubkey);
+  const profile = useProfileValue(user);
 
   const fallbackName = React.useMemo(() => {
     if (profile?.displayName || profile?.name) {
